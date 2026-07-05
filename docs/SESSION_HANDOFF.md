@@ -81,12 +81,12 @@ Expo:
 
 ## 本番前に残っている重要課題
 
-- Webはまだ `localStorage` が主保存。Supabase主保存へ変更が必要。
+- WebはNext.js API経由でSupabase保存する構造に変更済み。ただしSupabase環境変数未設定時はlocalStorageフォールバック。
 - Mobileはまだ `apps/mobile/lib/demoData.ts` のデモデータ表示。
 - Supabase Authの実ログイン未接続。
-- Adminはまだ本番管理者権限で保護されていない。
-- Supabase RLS policy未設定。
-- Stripe Checkout/Webhook未接続。
+- AdminはSupabase API読み取り優先に変更済み。`ADMIN_ACCESS_TOKEN` による簡易API保護は追加済み。本格的なSupabase Auth管理者権限は未接続。
+- Supabase RLS policy SQLは作成済み。実プロジェクトへの適用は未実施。
+- Stripe Checkout/Webhook API土台は実装済み。Stripeアカウント/環境変数/商品Price作成は未実施。
 - Push通知送信ジョブ未実装。
 - Supabase Storage写真アップロード未実装。
 
@@ -118,6 +118,13 @@ GitHubが必要な理由:
 - Stripe Checkout/Webhookの土台を追加する。完了。
 - Stripe SDK追加はpnpm storeの問題で一旦避け、Stripe REST API直叩きで実装。
 - Stripe接続に必要なenvは `STRIPE_SECRET_KEY`, `STRIPE_SUPPORT_PACK_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`。
+- AdminをSupabase API読み取り優先に変更。完了。
+- Admin APIは `ADMIN_ACCESS_TOKEN` 設定時に `x-admin-token` が必要。
+- Admin UIはlocalStorage `oyano_admin_token` をヘッダーに使う。未設定時はlocalStorageデモ表示にフォールバック。
+- Admin API追加済み:
+  - `GET /api/admin/cases`
+  - `GET /api/admin/cases/[caseId]`
+  - `GET /api/admin/support-packs`
 
 その後に Step 2: Supabase本番準備。
 

@@ -88,6 +88,7 @@
 
 - Step 3: WebをSupabase主保存に変更
 - Step 4: AdminをSupabase読み取り + 管理者制限に変更
+- Step 4補足: Admin読み取りAPIの土台は追加済み。`ADMIN_ACCESS_TOKEN` 設定時はAPIに `x-admin-token` が必要。
 - Step 5: MobileをSupabase Auth + 実データ取得に変更
 - Step 6: Stripe Checkout/Webhook実装
 - Step 6補足: Checkout/Webhook APIの土台は追加済み。Stripeアカウント作成後に `STRIPE_SECRET_KEY`, `STRIPE_SUPPORT_PACK_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` を入れる。

@@ -1,11 +1,28 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { listLocalCases } from "@/lib/store";
 import { statusLabel } from "@oyano/shared";
+import type { AdminCaseRow } from "@/app/api/admin/cases/route";
+
+function adminHeaders(): HeadersInit {
+  const token = window.localStorage.getItem("oyano_admin_token");
+  return token ? { "x-admin-token": token } : {};
+}
 
 export function AdminCases() {
-  const cases = listLocalCases();
+  const [remoteCases, setRemoteCases] = useState<AdminCaseRow[] | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/cases", { headers: adminHeaders() })
+      .then((response) => response.ok ? response.json() : null)
+      .then((body: { cases?: AdminCaseRow[] } | null) => {
+        setRemoteCases(body?.cases ?? []);
+      });
+  }, []);
+
+  const cases = remoteCases && remoteCases.length > 0 ? remoteCases : listLocalCases();
   return (
     <table className="admin-table">
       <thead>
