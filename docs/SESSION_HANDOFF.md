@@ -30,6 +30,8 @@ GitHub準備の進捗:
 - `.env`, `.env.local`, `node_modules`, `.next`, `.expo` はgit管理対象外。
 - ユーザー判断でGitHub repo作成は後回し。
 - GitHubなしでも進められる本番化作業を先に進める。
+- ユーザーが「他の先進めれる？」と確認。
+- Supabaseアカウント作成待ちの間、Stripe Checkout/Webhookの土台を先に実装する。
 
 作成・更新済み:
 
@@ -113,6 +115,9 @@ GitHubが必要な理由:
 - Supabase本番用RLS SQLを準備する。完了。
 - Supabase task template seed SQLを準備する。完了。
 - `supabase/README.md` にSQL実行順と環境変数メモを追加。完了。
+- Stripe Checkout/Webhookの土台を追加する。完了。
+- Stripe SDK追加はpnpm storeの問題で一旦避け、Stripe REST API直叩きで実装。
+- Stripe接続に必要なenvは `STRIPE_SECRET_KEY`, `STRIPE_SUPPORT_PACK_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`。
 
 その後に Step 2: Supabase本番準備。
 

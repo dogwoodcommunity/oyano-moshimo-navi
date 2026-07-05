@@ -90,5 +90,6 @@
 - Step 4: AdminをSupabase読み取り + 管理者制限に変更
 - Step 5: MobileをSupabase Auth + 実データ取得に変更
 - Step 6: Stripe Checkout/Webhook実装
+- Step 6補足: Checkout/Webhook APIの土台は追加済み。Stripeアカウント作成後に `STRIPE_SECRET_KEY`, `STRIPE_SUPPORT_PACK_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` を入れる。
 - Step 7: Push通知ジョブ実装
 - Step 8: Vercel/EAS/Store公開準備
