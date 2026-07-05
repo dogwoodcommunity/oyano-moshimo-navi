@@ -260,6 +260,78 @@ textarea {
   margin-top: 24px;
 }
 
+.diagnosis-intro {
+  align-items: end;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
+  margin-top: 18px;
+}
+
+.progress-rail {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+}
+
+.progress-step {
+  align-items: center;
+  border-radius: 8px;
+  color: var(--muted);
+  display: flex;
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px 10px;
+}
+
+.progress-step.active {
+  background: var(--surface-soft);
+  color: var(--green);
+}
+
+.diagnosis-form {
+  max-width: 960px;
+}
+
+.form-section {
+  display: grid;
+  gap: 16px;
+}
+
+.form-section-head {
+  align-items: flex-start;
+  display: flex;
+  gap: 12px;
+}
+
+.form-section-head h2 {
+  font-size: 22px;
+  line-height: 1.2;
+  margin: 0 0 4px;
+}
+
+.step-badge {
+  align-items: center;
+  background: var(--green-dark);
+  border-radius: 8px;
+  color: white;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 42px;
+}
+
+.compact-columns {
+  gap: 16px;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -307,6 +379,26 @@ textarea {
   gap: 10px;
   min-height: 44px;
   padding: 10px 12px;
+}
+
+.consent-check {
+  margin-top: 2px;
+}
+
+.submit-bar {
+  align-items: center;
+  background: #173f2e;
+  border-radius: 8px;
+  color: white;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+  padding: 18px;
+}
+
+.submit-bar .hint {
+  color: rgba(255, 255, 255, 0.72);
+  margin: 4px 0 0;
 }
 
 .columns {
@@ -456,6 +548,16 @@ textarea {
 
   .section-head {
     align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .diagnosis-intro {
+    align-items: stretch;
+    grid-template-columns: 1fr;
+  }
+
+  .submit-bar {
+    align-items: stretch;
     flex-direction: column;
   }
 }
