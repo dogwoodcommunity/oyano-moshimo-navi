@@ -1,0 +1,16 @@
+{
+  "expo": {
+    "name": "親のもしもナビ",
+    "slug": "oyano-moshimo-navi",
+    "scheme": "oyanomoshimo",
+    "version": "0.3.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": ["expo-router", "expo-notifications"],
+    "extra": {
+      "router": {
+        "origin": false
+      }
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "oyano-moshimo-navi-v0-3",
+  "private": true,
+  "version": "0.3.0",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:web": "pnpm --filter web run dev",
+    "dev:mobile": "pnpm --filter mobile run start",
+    "lint": "pnpm --filter web run lint",
+    "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"
+  }
+}
