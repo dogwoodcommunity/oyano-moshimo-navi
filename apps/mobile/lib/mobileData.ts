@@ -138,3 +138,22 @@ export async function fetchTasks(personId: string): Promise<MobileTask[]> {
     category: row.category ?? undefined
   }));
 }
+
+export async function updatePersonStatus(
+  personId: string,
+  previousStatus: ParentStatus,
+  nextStatus: ParentStatus
+): Promise<{ source: "supabase" | "demo"; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { source: "demo" };
+
+  const { error } = await supabase.from("person_status_events").insert({
+    person_id: personId,
+    previous_status: previousStatus,
+    new_status: nextStatus,
+    note: "mobile status update"
+  });
+
+  if (error) return { source: "demo", error: error.message };
+  return { source: "supabase" };
+}
