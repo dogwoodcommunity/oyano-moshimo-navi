@@ -23,18 +23,25 @@ export default function ResultPage() {
 
   return (
     <main className="container">
-      <p className="pill">{result.diagnosisType}</p>
-      <h1 className="page-title">診断結果</h1>
-      <p className="lead">{result.summary}</p>
+      <section className="result-summary">
+        <p className="pill">{result.diagnosisType}</p>
+        <h1 className="page-title">診断結果</h1>
+        <p className="lead">{result.summary}</p>
+        <div className="meta-row">
+          <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
+          <span className="meta-chip">アプリ引き継ぎ可</span>
+          <span className="meta-chip">専門判断は断定しません</span>
+        </div>
+      </section>
 
       <section className="columns">
-        <div className="panel">
+        <div className="panel elevated">
           <h2>まずやること3つ</h2>
           <ol className="list">
             {result.firstSteps.map((step) => <li key={step}>{step}</li>)}
           </ol>
         </div>
-        <div className="panel">
+        <div className="panel elevated">
           <h2>家族に確認すること</h2>
           <ul className="list">
             {result.familyQuestions.map((item) => <li key={item}>{item}</li>)}
@@ -43,12 +50,19 @@ export default function ResultPage() {
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>
-        <h2>期限のあるタスク</h2>
-        <div className="grid">
+        <div className="section-head">
+          <h2>期限のあるタスク</h2>
+          <span className="hint">Expoアプリへ引き継ぐと家族ボードで管理できます。</span>
+        </div>
+        <div className="task-list">
           {result.tasks.map((task) => (
-            <article className="panel task" key={`${task.title}-${task.dueDate}`}>
+            <article className="task-card" key={`${task.title}-${task.dueDate}`}>
               <strong>{task.title}</strong>
-              <span className="hint">期限: {task.dueDate} / 優先度: {task.priority} / {task.category}</span>
+              <div className="meta-row">
+                <span className="meta-chip">期限 {task.dueDate}</span>
+                <span className="meta-chip">優先度 {task.priority}</span>
+                <span className="meta-chip">{task.category}</span>
+              </div>
               <span>{task.description}</span>
             </article>
           ))}
@@ -71,7 +85,7 @@ export default function ResultPage() {
         </div>
       </section>
 
-      <section className="panel" style={{ marginTop: 18 }}>
+      <section className="panel handoff-band" style={{ marginTop: 18 }}>
         <h2>アプリ引き継ぎ</h2>
         <p className="hint">Expoアプリでは家族ボード、期限通知、写真管理、タイムライン、実家カルテを継続管理します。</p>
         <div className="actions">
