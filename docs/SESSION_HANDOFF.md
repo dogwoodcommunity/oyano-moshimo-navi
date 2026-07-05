@@ -127,6 +127,7 @@ GitHubが必要な理由:
   - `GET /api/admin/support-packs`
 - MobileにSupabaseデータ取得サービス `apps/mobile/lib/mobileData.ts` を追加。完了。
 - Mobile dashboard/person/tasks はSupabaseがあれば実データ、なければdemoDataにフォールバック。
+- Mobile Magic Link送信をSupabase Auth `signInWithOtp` に接続。Supabase未設定時はデモログインにフォールバック。
 
 その後に Step 2: Supabase本番準備。
 

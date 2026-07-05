@@ -3,6 +3,7 @@ import { Link, router, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { registerPushToken, saveTaskDueDates } from "@/lib/notifications";
 import { demoResult } from "@/lib/demoData";
+import { sendMagicLink } from "@/lib/auth";
 
 const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 
@@ -10,8 +11,15 @@ export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [email, setEmail] = useState("");
   const [pushToken, setPushToken] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
   async function continueToApp() {
+    if (email.trim()) {
+      const result = await sendMagicLink(email.trim());
+      setMessage(result.message);
+      if (result.sent) return;
+    }
+
     const userId = DEMO_USER_ID;
     const token = await registerPushToken(userId);
     setPushToken(token);
@@ -31,6 +39,7 @@ export default function WelcomeScreen() {
           <Text style={styles.buttonText}>ログインして引き継ぐ</Text>
         </Pressable>
         <Text style={styles.hint}>caseId: {params.caseId ?? "demo"} / token: {params.token ?? "demo"}</Text>
+        {message ? <Text style={styles.hint}>{message}</Text> : null}
         {pushToken ? <Text style={styles.hint}>push token saved: {pushToken}</Text> : null}
       </View>
       <Link href="/(tabs)/dashboard" style={styles.link}>デモでdashboardへ</Link>
