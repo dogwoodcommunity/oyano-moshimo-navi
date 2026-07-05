@@ -4,6 +4,7 @@ import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { registerPushToken, saveTaskDueDates } from "@/lib/notifications";
 import { demoResult } from "@/lib/demoData";
 import { sendMagicLink } from "@/lib/auth";
+import { consumeWebHandoff } from "@/lib/handoff";
 
 const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 
@@ -21,6 +22,10 @@ export default function WelcomeScreen() {
     }
 
     const userId = DEMO_USER_ID;
+    const handoff = await consumeWebHandoff(params.caseId, params.token);
+    if (handoff) {
+      setMessage(`Web診断を引き継ぎました。タスク ${handoff.tasksCreated}件`);
+    }
     const token = await registerPushToken(userId);
     setPushToken(token);
     await saveTaskDueDates(userId, demoResult.tasks.map((task, index) => ({ id: `demo-task-${index}`, title: task.title, dueDate: task.dueDate })));

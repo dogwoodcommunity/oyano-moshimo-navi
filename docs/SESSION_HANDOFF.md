@@ -146,6 +146,8 @@ GitHubが必要な理由:
 - GitHub Actions CI `.github/workflows/ci.yml` を追加。
 - Supabase product seed `supabase/product_seed.sql` を追加。
 - Supabase indexes `supabase/indexes.sql` を追加。
+- Web handoff consume API `POST /api/handoff/consume` を追加。case_result tokenを検証し、family/person/tasksを生成してcaseをconvertedにする。
+- Mobile `consumeWebHandoff` を追加し、welcome画面からWeb診断引き継ぎAPIを呼ぶ。
 
 その後に Step 2: Supabase本番準備。
 
