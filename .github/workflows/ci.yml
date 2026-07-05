@@ -35,3 +35,9 @@ jobs:
 
       - name: Build web
         run: pnpm --filter web run build
+
+      - name: Smoke web
+        run: |
+          pnpm --filter web run start -- -p 3000 &
+          sleep 5
+          node scripts/smoke-web.mjs http://localhost:3000
