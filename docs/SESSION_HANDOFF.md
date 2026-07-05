@@ -128,6 +128,14 @@ GitHubが必要な理由:
 - MobileにSupabaseデータ取得サービス `apps/mobile/lib/mobileData.ts` を追加。完了。
 - Mobile dashboard/person/tasks はSupabaseがあれば実データ、なければdemoDataにフォールバック。
 - Mobile Magic Link送信をSupabase Auth `signInWithOtp` に接続。Supabase未設定時はデモログインにフォールバック。
+- Vercel設定 `vercel.json` を追加。Cronは `/api/cron/send-due-notifications` を30分ごとに叩く想定。
+- Expo EAS設定 `apps/mobile/eas.json` を追加。
+- デプロイ手順 `docs/DEPLOYMENT.md` を追加。
+- Supabase Storage setup SQL `supabase/storage_setup.sql` を追加。
+- Web API `POST /api/storage/home-photo-upload-url` を追加。
+- Mobile写真アップロードservice `apps/mobile/lib/photoUpload.ts` を追加。
+- Vercel Cron用API `GET /api/cron/send-due-notifications` を追加。Expo Push APIへ送信し、`scheduled_notifications` を `sent` に更新する。
+- 本番化チェックリスト `docs/PRODUCTION_CHECKLIST.md` を追加。
 
 その後に Step 2: Supabase本番準備。
 

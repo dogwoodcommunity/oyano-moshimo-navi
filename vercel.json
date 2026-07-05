@@ -1,0 +1,13 @@
+{
+  "installCommand": "pnpm install --frozen-lockfile",
+  "buildCommand": "pnpm --filter web run build",
+  "devCommand": "pnpm --filter web run dev",
+  "outputDirectory": "apps/web/.next",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/send-due-notifications",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

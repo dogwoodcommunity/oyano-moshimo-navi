@@ -5,6 +5,7 @@ SQL Editorで以下の順に実行する。
 1. `schema.sql`
 2. `task_template_seed.sql`
 3. `production_rls.sql`
+4. `storage_setup.sql`
 
 ## 重要
 
@@ -39,3 +40,4 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 - `cases`
 - `case_results`
 - `support_packs`
+- `storage.buckets` の `home-photos`
