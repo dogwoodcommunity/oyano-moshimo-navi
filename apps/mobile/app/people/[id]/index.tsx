@@ -3,6 +3,7 @@ import { Link, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchPerson, type MobilePerson } from "@/lib/mobileData";
+import { colors, radius, shadow } from "@/lib/theme";
 
 export default function PersonScreen() {
   const params = useLocalSearchParams<{ id: string }>();
@@ -15,11 +16,14 @@ export default function PersonScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>{person.displayName}</Text>
-      <View style={styles.card}>
-        <Text style={styles.kicker}>現在ステータス</Text>
-        <Text style={styles.cardTitle}>{statusLabel(person.currentStatus)}</Text>
-        <Text style={styles.body}>person id: {params.id}</Text>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>対象者</Text>
+        <Text style={styles.title}>{person.displayName}</Text>
+      </View>
+      <View style={[styles.card, styles.statusCard]}>
+        <Text style={styles.kickerLight}>現在ステータス</Text>
+        <Text style={styles.statusTitle}>{statusLabel(person.currentStatus)}</Text>
+        <Text style={styles.bodyLight}>person id: {params.id}</Text>
       </View>
       <View style={styles.grid}>
         <Link href={`/people/${params.id}/status`} style={styles.tile}>状態変更</Link>
@@ -38,12 +42,17 @@ export default function PersonScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#fbfcf7", gap: 14, padding: 18 },
-  title: { color: "#17211b", fontSize: 32, fontWeight: "900" },
-  card: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, gap: 10, padding: 16 },
-  kicker: { color: "#2f6f4e", fontWeight: "800" },
-  cardTitle: { color: "#17211b", fontSize: 22, fontWeight: "900" },
-  body: { color: "#344039", lineHeight: 22 },
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
+  header: { gap: 6, paddingTop: 8 },
+  title: { color: colors.ink, fontSize: 34, fontWeight: "900" },
+  card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 16, ...shadow },
+  statusCard: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
+  kicker: { color: colors.green, fontWeight: "900" },
+  kickerLight: { color: "#cfe2d7", fontWeight: "900" },
+  statusTitle: { color: "#fff", fontSize: 24, fontWeight: "900" },
+  cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
+  body: { color: colors.muted, lineHeight: 22 },
+  bodyLight: { color: "rgba(255,255,255,0.7)", lineHeight: 22 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
-  tile: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, color: "#17211b", fontWeight: "800", minWidth: "46%", overflow: "hidden", padding: 16 }
+  tile: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.ink, fontWeight: "900", minWidth: "46%", overflow: "hidden", padding: 16 }
 });
