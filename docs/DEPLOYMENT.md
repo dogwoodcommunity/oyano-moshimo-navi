@@ -40,10 +40,16 @@ curl "https://<web-domain>/api/cron/send-due-notifications?cronToken=<CRON_SECRE
 curl "https://<web-domain>/api/health"
 ```
 
+主要ページ/APIの疎通確認:
+
+```bash
+node scripts/smoke-web.mjs "https://<web-domain>"
+```
+
 Admin env確認:
 
 - `/admin/env`
-- `ADMIN_ACCESS_TOKEN` 設定時はブラウザlocalStorageに `oyano_admin_token` を入れて確認する。
+- `ADMIN_ACCESS_TOKEN` 設定時は `/admin` または `/admin/env` のAdmin token欄に保存して確認する。
 
 ## Mobile: EAS
 

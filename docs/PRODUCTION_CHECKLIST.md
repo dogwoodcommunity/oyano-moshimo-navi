@@ -27,6 +27,7 @@
 - [ ] `vercel.json` の設定でbuildできることを確認
 - [ ] 環境変数を設定
 - [ ] `/admin/env` で設定漏れを確認
+- [ ] `node scripts/smoke-web.mjs <Vercel URL>` を実行
 - [ ] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [ ] `/admin` を確認
 - [ ] `/api/cron/send-due-notifications` を確認
