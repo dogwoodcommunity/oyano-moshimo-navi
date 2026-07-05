@@ -11,6 +11,7 @@
 - [ ] Project `oyano-moshimo-prod` を作成
 - [ ] `supabase/schema.sql` を実行
 - [ ] `supabase/task_template_seed.sql` を実行
+- [ ] `supabase/task_generation.sql` を実行
 - [ ] `supabase/product_seed.sql` を実行
 - [ ] `supabase/indexes.sql` を実行
 - [ ] `supabase/production_rls.sql` を実行

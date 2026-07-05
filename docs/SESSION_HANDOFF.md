@@ -149,6 +149,7 @@ GitHubが必要な理由:
 - Web handoff consume API `POST /api/handoff/consume` を追加。case_result tokenを検証し、family/person/tasksを生成してcaseをconvertedにする。
 - Mobile `consumeWebHandoff` を追加し、welcome画面からWeb診断引き継ぎAPIを呼ぶ。
 - 環境変数マトリクス `docs/ENVIRONMENT_MATRIX.md` を追加。
+- Supabase task generation trigger `supabase/task_generation.sql` を追加。`person_status_events` 追加時に `task_templates` から未作成taskを生成し、`people.current_status` も同期する。
 
 その後に Step 2: Supabase本番準備。
 
@@ -165,11 +166,14 @@ GitHubが必要な理由:
 
 1. `supabase/schema.sql` をSQL Editorで実行
 2. `supabase/task_template_seed.sql` をSQL Editorで実行
-3. `supabase/production_rls.sql` をSQL Editorで実行
-4. Auth Email Magic Link設定
-5. 環境変数取得
-6. Storage bucket作成
-7. WebからSupabase保存確認
+3. `supabase/task_generation.sql` をSQL Editorで実行
+4. `supabase/product_seed.sql` をSQL Editorで実行
+5. `supabase/indexes.sql` をSQL Editorで実行
+6. `supabase/production_rls.sql` をSQL Editorで実行
+7. `supabase/storage_setup.sql` をSQL Editorで実行
+8. Auth Email Magic Link設定
+9. 環境変数取得
+10. WebからSupabase保存確認
 
 ## 運用ルール
 

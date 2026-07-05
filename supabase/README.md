@@ -4,10 +4,11 @@ SQL Editorで以下の順に実行する。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
-3. `product_seed.sql`
-4. `indexes.sql`
-5. `production_rls.sql`
-6. `storage_setup.sql`
+3. `task_generation.sql`
+4. `product_seed.sql`
+5. `indexes.sql`
+6. `production_rls.sql`
+7. `storage_setup.sql`
 
 ## 重要
 
@@ -41,5 +42,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 
 - `cases`
 - `case_results`
+- `person_status_events`
+- `tasks`
 - `support_packs`
 - `storage.buckets` の `home-photos`
