@@ -136,6 +136,11 @@ GitHubが必要な理由:
 - Mobile写真アップロードservice `apps/mobile/lib/photoUpload.ts` を追加。
 - Vercel Cron用API `GET /api/cron/send-due-notifications` を追加。Expo Push APIへ送信し、`scheduled_notifications` を `sent` に更新する。
 - 本番化チェックリスト `docs/PRODUCTION_CHECKLIST.md` を追加。
+- Web法務ページのひな形を追加:
+  - `/legal/privacy`
+  - `/legal/terms`
+  - `/legal/tokushoho`
+  - `/legal/disclaimer`
 
 その後に Step 2: Supabase本番準備。
 

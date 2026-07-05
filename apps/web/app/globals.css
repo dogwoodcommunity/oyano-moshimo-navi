@@ -245,6 +245,16 @@ textarea {
   margin-top: 18px;
 }
 
+.footer {
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: center;
+  padding: 24px clamp(18px, 4vw, 56px);
+}
+
 @media (max-width: 760px) {
   .hero {
     grid-template-columns: 1fr;

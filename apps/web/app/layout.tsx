@@ -22,6 +22,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </header>
           {children}
+          <footer className="footer">
+            <Link href="/legal/privacy">プライバシー</Link>
+            <Link href="/legal/terms">利用規約</Link>
+            <Link href="/legal/tokushoho">特商法</Link>
+            <Link href="/legal/disclaimer">免責</Link>
+          </footer>
         </div>
       </body>
     </html>
