@@ -112,3 +112,34 @@ export async function requestSupportPack(caseId: string): Promise<void> {
 
   await postJson("/api/support-packs", { caseId });
 }
+
+export function createLocalDemoCase(): CaseRecord {
+  const id = crypto.randomUUID();
+  const answers: DiagnosisAnswers = {
+    selectedStatus: "home_clearance",
+    parentSituation: "実家が空き家になりそうで、家財整理と名義確認を家族で進めたい。",
+    familyStructure: "母、長男、長女",
+    hasHome: "yes",
+    knowsAssets: "some",
+    concerns: ["実家の片付け", "相続・名義変更", "相談先探し"],
+    homeClearance: "鍵は長男が保管。電気・水道は契約状況を未確認。",
+    contactName: "ローカル確認用",
+    contactEmail: "demo@example.com",
+    consentToContact: true
+  };
+  const record: CaseRecord = {
+    id,
+    selectedStatus: answers.selectedStatus,
+    answers,
+    contactName: answers.contactName,
+    contactEmail: answers.contactEmail,
+    status: "result_ready",
+    createdAt: new Date().toISOString(),
+    result: buildDiagnosisResult(answers),
+    handoffToken: createHandoffToken(id),
+    supportPackStatus: "requested"
+  };
+
+  writeCases([record, ...readCases()]);
+  return record;
+}

@@ -156,6 +156,8 @@ GitHubが必要な理由:
 - Mobile status画面を実person id対応に更新。`apps/mobile/lib/mobileData.ts` の `updatePersonStatus` から `person_status_events` に保存し、DB triggerでtasks生成につなぐ。
 - Mobile tasks画面から `tasks.status` を更新できるようにした。完了時は `completed_at` と `updated_at` も保存する。
 - Supabase task notification trigger `supabase/task_notification_generation.sql` を追加。task due_dateから前日9:00 JSTの `scheduled_notifications` を作成する。`scheduled_notifications` RLSも本人のall操作に更新。
+- ローカル開発手順 `docs/LOCAL_DEVELOPMENT.md` と `scripts/local-doctor.mjs` を追加。`pnpm run doctor:local` で主要ファイル・env example・依存の存在を確認できる。
+- Web Adminにローカルデモcase生成UI `apps/web/components/AdminLocalTools.tsx` を追加。Supabase未設定でも `/admin` からlocalStorage caseを作って詳細確認できる。
 
 その後に Step 2: Supabase本番準備。
 

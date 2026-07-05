@@ -13,6 +13,7 @@ Web入口 + Expo継続アプリの二段構えMVPです。
 
 ```bash
 pnpm install
+pnpm run doctor:local
 pnpm run dev:web
 pnpm run dev:mobile
 ```
@@ -27,3 +28,5 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 ```
 
 未設定の場合も、WebはブラウザlocalStorage、Mobileはデモデータで主要導線を確認できます。
+
+ローカルでの確認手順は `docs/LOCAL_DEVELOPMENT.md` を参照してください。

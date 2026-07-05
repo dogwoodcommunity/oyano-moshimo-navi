@@ -9,6 +9,7 @@
   "scripts": {
     "dev:web": "pnpm --filter web run dev",
     "dev:mobile": "pnpm --filter mobile run start",
+    "doctor:local": "node scripts/local-doctor.mjs",
     "lint": "pnpm --filter web run lint",
     "smoke:web": "node scripts/smoke-web.mjs",
     "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"

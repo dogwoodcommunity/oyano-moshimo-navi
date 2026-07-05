@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AdminCases } from "@/components/AdminCases";
+import { AdminLocalTools } from "@/components/AdminLocalTools";
 import { AdminTokenControl } from "@/components/AdminTokenControl";
 
 export default function AdminPage() {
@@ -13,6 +14,7 @@ export default function AdminPage() {
         <Link className="secondary" href="/admin/env">env</Link>
       </div>
       <AdminTokenControl />
+      <AdminLocalTools />
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>最近のcase</h2>
         <AdminCases />
