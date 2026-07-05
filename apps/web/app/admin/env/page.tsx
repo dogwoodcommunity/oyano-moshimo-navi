@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AdminTokenControl } from "@/components/AdminTokenControl";
 
 type EnvRow = {
   key: string;
@@ -24,6 +25,7 @@ export default function AdminEnvPage() {
   return (
     <main className="container">
       <h1 className="page-title">env確認</h1>
+      <AdminTokenControl />
       <section className="panel">
         <table className="admin-table">
           <thead>
