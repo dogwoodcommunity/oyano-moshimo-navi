@@ -155,6 +155,7 @@ GitHubが必要な理由:
 - GitHub Actions CIにWeb smoke stepを追加。build後にNext serverを起動して `scripts/smoke-web.mjs` を実行する。
 - Mobile status画面を実person id対応に更新。`apps/mobile/lib/mobileData.ts` の `updatePersonStatus` から `person_status_events` に保存し、DB triggerでtasks生成につなぐ。
 - Mobile tasks画面から `tasks.status` を更新できるようにした。完了時は `completed_at` と `updated_at` も保存する。
+- Supabase task notification trigger `supabase/task_notification_generation.sql` を追加。task due_dateから前日9:00 JSTの `scheduled_notifications` を作成する。`scheduled_notifications` RLSも本人のall操作に更新。
 
 その後に Step 2: Supabase本番準備。
 
@@ -172,13 +173,14 @@ GitHubが必要な理由:
 1. `supabase/schema.sql` をSQL Editorで実行
 2. `supabase/task_template_seed.sql` をSQL Editorで実行
 3. `supabase/task_generation.sql` をSQL Editorで実行
-4. `supabase/product_seed.sql` をSQL Editorで実行
-5. `supabase/indexes.sql` をSQL Editorで実行
-6. `supabase/production_rls.sql` をSQL Editorで実行
-7. `supabase/storage_setup.sql` をSQL Editorで実行
-8. Auth Email Magic Link設定
-9. 環境変数取得
-10. WebからSupabase保存確認
+4. `supabase/task_notification_generation.sql` をSQL Editorで実行
+5. `supabase/product_seed.sql` をSQL Editorで実行
+6. `supabase/indexes.sql` をSQL Editorで実行
+7. `supabase/production_rls.sql` をSQL Editorで実行
+8. `supabase/storage_setup.sql` をSQL Editorで実行
+9. Auth Email Magic Link設定
+10. 環境変数取得
+11. WebからSupabase保存確認
 
 ## 運用ルール
 

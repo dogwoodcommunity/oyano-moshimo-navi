@@ -304,8 +304,9 @@ using (user_id = auth.uid())
 with check (user_id = auth.uid());
 
 create policy "scheduled_notifications own"
-on scheduled_notifications for select
-using (user_id = auth.uid());
+on scheduled_notifications for all
+using (user_id = auth.uid())
+with check (user_id = auth.uid());
 
 create policy "task_templates public read"
 on task_templates for select
