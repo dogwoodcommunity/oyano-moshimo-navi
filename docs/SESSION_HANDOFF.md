@@ -21,6 +21,14 @@ Step 1: 現状棚卸し 完了。
 
 Step 2に入る前に、GitHubへ上げる準備中。
 
+GitHub準備の進捗:
+
+- `git init` 完了。
+- 初回commit完了。
+- commit: `47f6f57 Initial oyano moshimo v0.3 monorepo`
+- `.env.example` をWeb/Mobileに追加済み。
+- `.env`, `.env.local`, `node_modules`, `.next`, `.expo` はgit管理対象外。
+
 作成・更新済み:
 
 - `docs/PRODUCTION_ROADMAP.md`
@@ -85,6 +93,7 @@ Expo:
 現在分かっていること:
 
 - このディレクトリはまだgit repositoryではなかった。
+- 現在はgit repository化済み。
 - GitHub CLI `gh` は入っているが、`dogwoodcommunity` のtokenがinvalid。
 - そのため、ローカルgit初期化と初回commitまではCodex側で進められる。
 - GitHubへのrepo作成/pushには、ユーザー側のGitHub再ログインが必要。
