@@ -125,6 +125,8 @@ GitHubが必要な理由:
   - `GET /api/admin/cases`
   - `GET /api/admin/cases/[caseId]`
   - `GET /api/admin/support-packs`
+- MobileにSupabaseデータ取得サービス `apps/mobile/lib/mobileData.ts` を追加。完了。
+- Mobile dashboard/person/tasks はSupabaseがあれば実データ、なければdemoDataにフォールバック。
 
 その後に Step 2: Supabase本番準備。
 

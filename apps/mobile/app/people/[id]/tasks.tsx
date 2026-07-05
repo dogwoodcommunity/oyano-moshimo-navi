@@ -1,11 +1,20 @@
+import { useEffect, useState } from "react";
+import { useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { demoResult } from "@/lib/demoData";
+import { demoDashboardData, fetchTasks, type MobileTask } from "@/lib/mobileData";
 
 export default function TasksScreen() {
+  const params = useLocalSearchParams<{ id: string }>();
+  const [tasks, setTasks] = useState<MobileTask[]>(demoDashboardData().tasks);
+
+  useEffect(() => {
+    fetchTasks(params.id).then(setTasks);
+  }, [params.id]);
+
   const columns = [
-    ["未着手", demoResult.tasks.filter((_, index) => index % 3 === 0)],
-    ["進行中", demoResult.tasks.filter((_, index) => index % 3 === 1)],
-    ["完了", demoResult.tasks.filter((_, index) => index % 3 === 2)]
+    ["未着手", tasks.filter((task) => task.status === "todo")],
+    ["進行中", tasks.filter((task) => task.status === "doing")],
+    ["完了", tasks.filter((task) => task.status === "done")]
   ] as const;
 
   return (
@@ -18,7 +27,7 @@ export default function TasksScreen() {
             <View style={styles.task} key={task.title}>
               <Text style={styles.taskTitle}>{task.title}</Text>
               <Text style={styles.body}>期限: {task.dueDate} / 優先度: {task.priority}</Text>
-              <Text style={styles.body}>{task.description}</Text>
+              <Text style={styles.body}>{task.description ?? ""}</Text>
             </View>
           ))}
         </View>

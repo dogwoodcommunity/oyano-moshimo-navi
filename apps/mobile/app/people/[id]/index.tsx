@@ -1,16 +1,24 @@
+import { useEffect, useState } from "react";
 import { Link, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
-import { demoPerson, demoResult } from "@/lib/demoData";
+import { demoDashboardData, fetchPerson, type MobilePerson } from "@/lib/mobileData";
 
 export default function PersonScreen() {
   const params = useLocalSearchParams<{ id: string }>();
+  const fallback = demoDashboardData();
+  const [person, setPerson] = useState<MobilePerson>(fallback.person);
+
+  useEffect(() => {
+    fetchPerson(params.id).then(setPerson);
+  }, [params.id]);
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>{demoPerson.displayName}</Text>
+      <Text style={styles.title}>{person.displayName}</Text>
       <View style={styles.card}>
         <Text style={styles.kicker}>現在ステータス</Text>
-        <Text style={styles.cardTitle}>{statusLabel(demoPerson.currentStatus)}</Text>
+        <Text style={styles.cardTitle}>{statusLabel(person.currentStatus)}</Text>
         <Text style={styles.body}>person id: {params.id}</Text>
       </View>
       <View style={styles.grid}>
@@ -23,7 +31,7 @@ export default function PersonScreen() {
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>未登録情報</Text>
-        {demoResult.registryItems.map((item) => <Text key={item} style={styles.body}>・{item}</Text>)}
+        {fallback.registryItems.map((item) => <Text key={item} style={styles.body}>・{item}</Text>)}
       </View>
     </ScrollView>
   );

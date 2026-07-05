@@ -1,25 +1,32 @@
+import { useEffect, useState } from "react";
 import { Link } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
-import { demoPerson, demoResult } from "@/lib/demoData";
+import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 
 export default function DashboardScreen() {
-  const overdue = demoResult.tasks.filter((task) => task.priority === 1).length;
+  const [data, setData] = useState<DashboardData>(demoDashboardData());
+  const overdue = data.tasks.filter((task) => task.priority === 1).length;
+
+  useEffect(() => {
+    fetchDashboardData().then(setData);
+  }, []);
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <Text style={styles.title}>家族ボード</Text>
       <View style={styles.card}>
-        <Text style={styles.kicker}>{statusLabel(demoPerson.currentStatus)}</Text>
-        <Text style={styles.cardTitle}>{demoPerson.displayName}</Text>
-        <Text style={styles.body}>未完了タスク {demoResult.tasks.length}件 / 重要 {overdue}件</Text>
+        <Text style={styles.kicker}>{statusLabel(data.person.currentStatus)}</Text>
+        <Text style={styles.cardTitle}>{data.person.displayName}</Text>
+        <Text style={styles.body}>未完了タスク {data.tasks.length}件 / 重要 {overdue}件</Text>
         <View style={styles.row}>
-          <Link href={`/people/${demoPerson.id}`} style={styles.button}>対象者を見る</Link>
-          <Link href={`/people/${demoPerson.id}/tasks`} style={styles.secondary}>タスク</Link>
+          <Link href={`/people/${data.person.id}`} style={styles.button}>対象者を見る</Link>
+          <Link href={`/people/${data.person.id}/tasks`} style={styles.secondary}>タスク</Link>
         </View>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>今日やること</Text>
-        {demoResult.firstSteps.map((step) => <Text key={step} style={styles.body}>・{step}</Text>)}
+        {data.firstSteps.map((step) => <Text key={step} style={styles.body}>・{step}</Text>)}
       </View>
     </ScrollView>
   );
