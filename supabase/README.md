@@ -4,8 +4,10 @@ SQL Editorで以下の順に実行する。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
-3. `production_rls.sql`
-4. `storage_setup.sql`
+3. `product_seed.sql`
+4. `indexes.sql`
+5. `production_rls.sql`
+6. `storage_setup.sql`
 
 ## 重要
 
