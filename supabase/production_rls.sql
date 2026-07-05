@@ -130,6 +130,16 @@ using (
   )
 );
 
+create policy "status_events insert family"
+on person_status_events for insert
+with check (
+  exists (
+    select 1 from people
+    where people.id = person_status_events.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
 create policy "tasks read family"
 on tasks for select
 using (
@@ -179,9 +189,43 @@ using (
   )
 );
 
+create policy "asset_items manage family"
+on asset_items for all
+using (
+  exists (
+    select 1 from people
+    where people.id = asset_items.person_id
+      and is_family_member(people.family_id)
+  )
+)
+with check (
+  exists (
+    select 1 from people
+    where people.id = asset_items.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
 create policy "timeline_events read family"
 on timeline_events for select
 using (
+  exists (
+    select 1 from people
+    where people.id = timeline_events.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+create policy "timeline_events manage family"
+on timeline_events for all
+using (
+  exists (
+    select 1 from people
+    where people.id = timeline_events.person_id
+      and is_family_member(people.family_id)
+  )
+)
+with check (
   exists (
     select 1 from people
     where people.id = timeline_events.person_id
@@ -195,6 +239,56 @@ using (
   exists (
     select 1 from people
     where people.id = homes.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+create policy "homes manage family"
+on homes for all
+using (
+  exists (
+    select 1 from people
+    where people.id = homes.person_id
+      and is_family_member(people.family_id)
+  )
+)
+with check (
+  exists (
+    select 1 from people
+    where people.id = homes.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+create policy "home_photos read family"
+on home_photos for select
+using (
+  exists (
+    select 1
+    from homes
+    join people on people.id = homes.person_id
+    where homes.id = home_photos.home_id
+      and is_family_member(people.family_id)
+  )
+);
+
+create policy "home_photos manage family"
+on home_photos for all
+using (
+  exists (
+    select 1
+    from homes
+    join people on people.id = homes.person_id
+    where homes.id = home_photos.home_id
+      and is_family_member(people.family_id)
+  )
+)
+with check (
+  exists (
+    select 1
+    from homes
+    join people on people.id = homes.person_id
+    where homes.id = home_photos.home_id
       and is_family_member(people.family_id)
   )
 );

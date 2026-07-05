@@ -112,6 +112,7 @@ GitHubが必要な理由:
 - Supabase service role keyをサーバー側だけで使える構造にする。完了。
 - Supabase本番用RLS SQLを準備する。完了。
 - Supabase task template seed SQLを準備する。完了。
+- `supabase/README.md` にSQL実行順と環境変数メモを追加。完了。
 
 その後に Step 2: Supabase本番準備。
 
