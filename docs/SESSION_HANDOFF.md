@@ -141,6 +141,8 @@ GitHubが必要な理由:
   - `/legal/terms`
   - `/legal/tokushoho`
   - `/legal/disclaimer`
+- Health check API `GET /api/health` を追加。
+- Admin env確認 `GET /api/admin/env-check` と `/admin/env` を追加。
 
 その後に Step 2: Supabase本番準備。
 
