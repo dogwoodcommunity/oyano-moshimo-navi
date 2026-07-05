@@ -69,11 +69,12 @@
 
 1. Supabaseで新規Projectを作成
 2. SQL Editorで `supabase/schema.sql` を実行
-3. AuthのEmail Magic Linkを有効化
-4. WebとMobile用の環境変数を控える
-5. RLS policy追加用のSQLを作成
-6. Storage bucketを作成
-7. ローカルWebからSupabaseへcaseが作成されるか確認
+3. SQL Editorで `supabase/task_template_seed.sql` を実行
+4. SQL Editorで `supabase/production_rls.sql` を実行
+5. AuthのEmail Magic Linkを有効化
+6. WebとMobile用の環境変数を控える
+7. Storage bucketを作成
+8. ローカルWebからSupabaseへcaseが作成されるか確認
 
 ### このStepの完了条件
 
@@ -81,6 +82,7 @@
 - Web `/diagnosis` の結果が `case_results` に保存される
 - `/support-pack` の依頼が `support_packs` に保存される
 - Supabase上で不要な公開読み取りができない
+- `SUPABASE_SERVICE_ROLE_KEY` はNext.jsサーバー側だけで使い、ブラウザやExpoに出さない
 
 ## Step 3以降
 

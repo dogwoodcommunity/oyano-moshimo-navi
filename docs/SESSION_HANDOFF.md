@@ -28,6 +28,8 @@ GitHub準備の進捗:
 - commit: `47f6f57 Initial oyano moshimo v0.3 monorepo`
 - `.env.example` をWeb/Mobileに追加済み。
 - `.env`, `.env.local`, `node_modules`, `.next`, `.expo` はgit管理対象外。
+- ユーザー判断でGitHub repo作成は後回し。
+- GitHubなしでも進められる本番化作業を先に進める。
 
 作成・更新済み:
 
@@ -88,7 +90,7 @@ Expo:
 
 ## 次にやること
 
-まずGitHub準備。
+まずGitHub準備。ただしユーザーが「とりあえず後でつくるから先進めてくれ」と言ったため、GitHub pushは保留。
 
 現在分かっていること:
 
@@ -104,7 +106,14 @@ GitHubが必要な理由:
 - 本番デプロイ履歴、rollback、環境変数管理、共同作業がしやすい。
 - SupabaseやStripe接続後の変更履歴を安全に残せる。
 
-GitHub準備後に Step 2: Supabase本番準備。
+現在の次作業:
+
+- Web保存をNext.js API経由に変更する。完了。
+- Supabase service role keyをサーバー側だけで使える構造にする。完了。
+- Supabase本番用RLS SQLを準備する。完了。
+- Supabase task template seed SQLを準備する。完了。
+
+その後に Step 2: Supabase本番準備。
 
 ユーザーにお願いしている作業:
 
@@ -118,11 +127,12 @@ GitHub準備後に Step 2: Supabase本番準備。
 その後にやること:
 
 1. `supabase/schema.sql` をSQL Editorで実行
-2. Auth Email Magic Link設定
-3. 環境変数取得
-4. RLS policy作成
-5. Storage bucket作成
-6. WebからSupabase保存確認
+2. `supabase/task_template_seed.sql` をSQL Editorで実行
+3. `supabase/production_rls.sql` をSQL Editorで実行
+4. Auth Email Magic Link設定
+5. 環境変数取得
+6. Storage bucket作成
+7. WebからSupabase保存確認
 
 ## 運用ルール
 

@@ -1,6 +1,5 @@
 "use client";
 
-import { createClient } from "@supabase/supabase-js";
 import { buildDiagnosisResult, createHandoffToken, type DiagnosisAnswers, type DiagnosisResult, type ParentStatus } from "@oyano/shared";
 
 export type CaseRecord = {
@@ -17,13 +16,6 @@ export type CaseRecord = {
 };
 
 const STORAGE_KEY = "oyano_cases_v03";
-
-function browserSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
-}
 
 function readCases(): CaseRecord[] {
   if (typeof window === "undefined") return [];
@@ -43,8 +35,28 @@ export function getLocalCase(caseId: string): CaseRecord | undefined {
   return readCases().find((item) => item.id === caseId);
 }
 
+async function postJson<T>(path: string, body: unknown): Promise<T | null> {
+  try {
+    const response = await fetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    if (!response.ok) {
+      return null;
+    }
+
+    return await response.json() as T;
+  } catch {
+    return null;
+  }
+}
+
 export async function createCase(selectedStatus: ParentStatus): Promise<CaseRecord> {
-  const record: CaseRecord = {
+  const apiResult = await postJson<{ record: CaseRecord }>("/api/cases", { selectedStatus });
+
+  const record: CaseRecord = apiResult?.record ?? {
     id: crypto.randomUUID(),
     selectedStatus,
     answers: { selectedStatus },
@@ -53,22 +65,18 @@ export async function createCase(selectedStatus: ParentStatus): Promise<CaseReco
     supportPackStatus: "none"
   };
 
-  const client = browserSupabase();
-  if (client) {
-    await client.from("cases").insert({
-      id: record.id,
-      selected_status: selectedStatus,
-      answers: record.answers,
-      status: "draft",
-      anonymous_token: `anon_${record.id}`
-    });
-  }
-
   writeCases([record, ...readCases()]);
   return record;
 }
 
 export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers): Promise<CaseRecord> {
+  const apiResult = await postJson<{ record: CaseRecord }>(`/api/cases/${caseId}/diagnosis`, answers);
+  if (apiResult?.record) {
+    const cases = readCases();
+    writeCases([apiResult.record, ...cases.filter((item) => item.id !== caseId)]);
+    return apiResult.record;
+  }
+
   const result = buildDiagnosisResult(answers);
   const handoffToken = createHandoffToken(caseId);
   const cases = readCases();
@@ -92,28 +100,6 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
   const next = [record, ...cases.filter((item) => item.id !== caseId)];
   writeCases(next);
 
-  const client = browserSupabase();
-  if (client) {
-    await client.from("cases").upsert({
-      id: record.id,
-      selected_status: answers.selectedStatus,
-      answers,
-      contact_name: answers.contactName,
-      contact_email: answers.contactEmail,
-      consent_to_contact: answers.consentToContact ?? false,
-      status: "result_ready"
-    });
-    await client.from("case_results").insert({
-      case_id: record.id,
-      diagnosis_type: result.diagnosisType,
-      summary: result.summary,
-      first_steps: result.firstSteps,
-      tasks: result.tasks,
-      provider_categories: result.providerCategories,
-      app_handoff_token: handoffToken
-    });
-  }
-
   return record;
 }
 
@@ -124,12 +110,5 @@ export async function requestSupportPack(caseId: string): Promise<void> {
   const nextRecord = { ...record, supportPackStatus: "requested" as const };
   writeCases([nextRecord, ...cases.filter((item) => item.id !== caseId)]);
 
-  const client = browserSupabase();
-  if (client) {
-    await client.from("support_packs").insert({
-      case_id: caseId,
-      status: "requested",
-      requested_scope: { source: "web_result", stripe_checkout_pending: true }
-    });
-  }
+  await postJson("/api/support-packs", { caseId });
 }
