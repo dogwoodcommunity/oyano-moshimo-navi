@@ -157,3 +157,23 @@ export async function updatePersonStatus(
   if (error) return { source: "demo", error: error.message };
   return { source: "supabase" };
 }
+
+export async function updateTaskStatus(
+  taskId: string,
+  status: MobileTask["status"]
+): Promise<{ source: "supabase" | "demo"; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { source: "demo" };
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      status,
+      completed_at: status === "done" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", taskId);
+
+  if (error) return { source: "demo", error: error.message };
+  return { source: "supabase" };
+}
