@@ -17,6 +17,7 @@
 - [ ] `supabase/storage_setup.sql` を実行
 - [ ] Auth Email Magic Linkを有効化
 - [ ] Site URL / Redirect URLにWeb/ExpoのURLを追加
+- [ ] `docs/ENVIRONMENT_MATRIX.md` に沿って環境変数を設定
 - [ ] `home-photos` bucket確認
 
 ## 3. Vercel
@@ -24,6 +25,7 @@
 - [ ] GitHub repoをimport
 - [ ] `vercel.json` の設定でbuildできることを確認
 - [ ] 環境変数を設定
+- [ ] `/admin/env` で設定漏れを確認
 - [ ] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [ ] `/admin` を確認
 - [ ] `/api/cron/send-due-notifications` を確認

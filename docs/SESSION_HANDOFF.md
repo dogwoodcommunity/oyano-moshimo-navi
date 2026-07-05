@@ -148,6 +148,7 @@ GitHubが必要な理由:
 - Supabase indexes `supabase/indexes.sql` を追加。
 - Web handoff consume API `POST /api/handoff/consume` を追加。case_result tokenを検証し、family/person/tasksを生成してcaseをconvertedにする。
 - Mobile `consumeWebHandoff` を追加し、welcome画面からWeb診断引き継ぎAPIを呼ぶ。
+- 環境変数マトリクス `docs/ENVIRONMENT_MATRIX.md` を追加。
 
 その後に Step 2: Supabase本番準備。
 
