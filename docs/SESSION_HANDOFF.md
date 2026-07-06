@@ -231,3 +231,11 @@ GitHubが必要な理由:
 - これ以降、各ステップの完了時にこのファイルを更新する。
 - チャットが切れた場合、新チャットではまずこのファイルを読む。
 - 判断や未決事項もここに残す。
+
+## 2026-07-06 14:09 JST 追記
+
+- GitHub CLIのブラウザ認証を完了し、remoteをHTTPSへ設定した。
+- Repository: https://github.com/dogwoodcommunity/oyano-moshimo-navi
+- `main` branchをGitHubへpush済み。最新push時点の先頭commitは `28a299e Add Supabase API grants verification`。
+- `apps/web/.env.local` と `apps/mobile/.env.local` はローカルだけにあり、gitignore対象。Supabaseのservice role keyなどの秘密情報はGitHubへ保存していない。
+- 本番Supabase初期構築とローカル接続確認は完了済み。次の大きな作業はVercelへWebを本番デプロイし、同じ環境変数をVercel側へ安全に設定すること。
