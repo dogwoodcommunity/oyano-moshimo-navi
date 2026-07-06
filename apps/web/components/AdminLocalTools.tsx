@@ -12,8 +12,11 @@ export function AdminLocalTools() {
   }
 
   return (
-    <section className="panel" style={{ marginTop: 18 }}>
-      <h2>Local demo</h2>
+    <section className="panel admin-control-panel" style={{ marginTop: 18 }}>
+      <div>
+        <p className="eyebrow">Local fallback</p>
+        <h2>Local demo</h2>
+      </div>
       <p className="hint">Supabase未設定でも、localStorageに確認用caseを作成できます。</p>
       <div className="actions">
         <button className="secondary" type="button" onClick={createDemo}>
@@ -23,4 +26,3 @@ export function AdminLocalTools() {
     </section>
   );
 }
-

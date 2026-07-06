@@ -24,8 +24,11 @@ export function AdminTokenControl() {
   }
 
   return (
-    <section className="panel" style={{ marginTop: 18 }}>
-      <h2>Admin token</h2>
+    <section className="panel admin-control-panel" style={{ marginTop: 18 }}>
+      <div>
+        <p className="eyebrow">Access</p>
+        <h2>Admin token</h2>
+      </div>
       <div className="field">
         <label htmlFor="admin-token">ADMIN_ACCESS_TOKEN</label>
         <input
@@ -62,4 +65,3 @@ export function AdminTokenControl() {
     </section>
   );
 }
-

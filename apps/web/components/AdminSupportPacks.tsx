@@ -39,26 +39,28 @@ export function AdminSupportPacks() {
   const rows = supportPacks ?? [];
 
   return (
-    <table className="admin-table">
-      <thead>
-        <tr>
-          <th>case</th>
-          <th>status</th>
-          <th>contact</th>
-          <th>created</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((item) => (
-          <tr key={item.id}>
-            <td>{item.caseId ? <Link href={`/admin/cases/${item.caseId}`}>{item.caseId.slice(0, 8)}</Link> : "-"}</td>
-            <td>{item.status}</td>
-            <td>{item.contactName || "-"} {item.contactEmail || ""}</td>
-            <td>{new Date(item.createdAt).toLocaleString("ja-JP")}</td>
+    <div className="admin-table-wrap">
+      <table className="admin-table">
+        <thead>
+          <tr>
+            <th>case</th>
+            <th>status</th>
+            <th>contact</th>
+            <th>created</th>
           </tr>
-        ))}
-        {rows.length === 0 && <tr><td colSpan={4}>発動サポート依頼はまだありません。</td></tr>}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {rows.map((item) => (
+            <tr key={item.id}>
+              <td>{item.caseId ? <Link className="admin-link" href={`/admin/cases/${item.caseId}`}>{item.caseId.slice(0, 8)}</Link> : "-"}</td>
+              <td><span className="admin-chip success">{item.status}</span></td>
+              <td>{item.contactName || "-"} {item.contactEmail || ""}</td>
+              <td>{new Date(item.createdAt).toLocaleString("ja-JP")}</td>
+            </tr>
+          ))}
+          {rows.length === 0 && <tr><td colSpan={4}>発動サポート依頼はまだありません。</td></tr>}
+        </tbody>
+      </table>
+    </div>
   );
 }
