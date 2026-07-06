@@ -8,6 +8,7 @@
   ],
   "scripts": {
     "dev:web": "pnpm --filter web run dev",
+    "dev:web:lan": "pnpm --dir apps/web exec next dev -H 0.0.0.0 -p 3000",
     "dev:mobile": "pnpm --filter mobile run start",
     "doctor:local": "node scripts/local-doctor.mjs",
     "lint": "pnpm --filter web run lint",

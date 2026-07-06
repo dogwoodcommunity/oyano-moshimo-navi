@@ -32,6 +32,30 @@ pnpm run dev:web
 Supabase未設定でもWeb診断はブラウザlocalStorageに保存される。
 `/admin` の「デモcaseを作成」から、診断フォーム入力なしで確認用caseも作成できる。
 
+携帯から同じWi-Fiで見る場合:
+
+```bash
+pnpm run dev:web:lan
+```
+
+MacのIPを確認:
+
+```bash
+ifconfig | grep 'inet '
+```
+
+例:
+
+```text
+http://192.168.11.63:3000
+```
+
+3000番で古いサーバーが残っている場合は、どのプロセスが使っているか確認する。
+
+```bash
+lsof -nP -iTCP:3000 -sTCP:LISTEN
+```
+
 ## 3. Expoだけ起動
 
 ```bash

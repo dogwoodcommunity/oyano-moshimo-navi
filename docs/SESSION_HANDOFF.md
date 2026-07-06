@@ -164,6 +164,7 @@ GitHubが必要な理由:
 - Expo tasks/status/home画面もテーマ適用。タスクは未完了・重要の集計、状態別カウント、期限/優先度チップ、空状態表示を追加。
 - Web `/support-pack` と `/providers` を再設計。商品範囲、除外事項、申し込みステップ、相談先カテゴリの比較軸を見やすくした。
 - Dev serverで `/` だけ404になる環境差を避けるため、トップを `/home` でも提供し、`next.config.mjs` で `/ -> /home` の一時redirectを追加。smokeも `/home` を確認する。
+- 携帯確認用script `pnpm run dev:web:lan` を追加。`pnpm --dir apps/web exec next dev -H 0.0.0.0 -p 3000` で起動する。3000番に古いNextプロセスが残ると `localhost` が別サーバーへ当たるので、`lsof -nP -iTCP:3000 -sTCP:LISTEN` で確認する。
 
 その後に Step 2: Supabase本番準備。
 
