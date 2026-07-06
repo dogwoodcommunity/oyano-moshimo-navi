@@ -6,10 +6,12 @@ import { colors, radius, shadow } from "@/lib/theme";
 export default function NotificationsScreen() {
   const [enabled, setEnabled] = useState(true);
   const [token, setToken] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
   async function register() {
     const nextToken = await registerPushToken("00000000-0000-4000-8000-000000000001");
     setToken(nextToken);
+    setMessage(nextToken ? "Push tokenを保存しました。" : "Push tokenを取得できませんでした。通知権限またはEAS projectIdを確認してください。");
   }
 
   return (
@@ -26,6 +28,7 @@ export default function NotificationsScreen() {
         </View>
         <Text style={styles.body}>push tokenは `push_tokens`、期限通知予定は `scheduled_notifications` に保存します。</Text>
         <Pressable style={styles.button} onPress={register}><Text style={styles.buttonText}>Push tokenを保存</Text></Pressable>
+        {message ? <Text style={styles.noticeText}>{message}</Text> : null}
         {token ? <Text style={styles.body}>{token}</Text> : null}
       </View>
     </View>
@@ -41,6 +44,7 @@ const styles = StyleSheet.create({
   row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
   body: { color: colors.muted, lineHeight: 22 },
+  noticeText: { color: colors.green, fontWeight: "900", lineHeight: 22 },
   button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 48 },
   buttonText: { color: "#fff", fontWeight: "900" }
 });

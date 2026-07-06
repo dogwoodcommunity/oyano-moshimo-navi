@@ -3,10 +3,24 @@ import { Platform } from "react-native";
 import { getSupabase } from "./supabase";
 
 export async function registerPushToken(userId: string) {
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
+      importance: Notifications.AndroidImportance.DEFAULT
+    });
+  }
+
   const permission = await Notifications.requestPermissionsAsync();
   if (!permission.granted) return null;
-  const token = await Notifications.getExpoPushTokenAsync();
-  const expoPushToken = token.data;
+
+  let expoPushToken: string;
+  try {
+    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
+    const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
+    expoPushToken = token.data;
+  } catch {
+    return null;
+  }
 
   const client = getSupabase();
   if (client) {

@@ -49,6 +49,7 @@
 - [ ] EAS project作成
 - [ ] `EXPO_PUBLIC_SUPABASE_URL` 設定
 - [ ] `EXPO_PUBLIC_SUPABASE_ANON_KEY` 設定
+- [ ] Push通知を使う場合は `EXPO_PUBLIC_EAS_PROJECT_ID` 設定
 - [ ] Magic Linkログイン確認
 - [ ] dashboard/person/tasksがSupabaseデータを読むことを確認
 - [ ] Push token保存確認

@@ -23,6 +23,7 @@
 | `EXPO_PUBLIC_SUPABASE_ANON_KEY` | yes | yes | Supabase anon key |
 | `EXPO_PUBLIC_APP_SCHEME` | yes | yes | deep link scheme |
 | `EXPO_PUBLIC_WEB_BASE_URL` | yes | yes | handoff API呼び出し元Web URL |
+| `EXPO_PUBLIC_EAS_PROJECT_ID` | push通知時 | yes | Expo Push Token取得用のEAS projectId |
 
 ## Supabase Auth Redirect URLs
 
