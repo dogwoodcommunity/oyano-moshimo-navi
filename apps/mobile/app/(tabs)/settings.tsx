@@ -34,10 +34,8 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>アカウントと削除</Text>
-        <Text style={styles.body}>登録情報、家族共有、写真、通知設定の削除について確認できます。</Text>
-        <View style={styles.notice}>
-          <Text style={styles.noticeText}>テスト中に削除を希望する場合は、運営担当者へ「データ削除希望」と伝えてください。</Text>
-        </View>
+        <Text style={styles.body}>登録情報、家族共有、写真、通知設定の削除をアプリ内から依頼できます。</Text>
+        <Link href="/account/delete" style={styles.primaryLink}>削除依頼を開く</Link>
       </View>
 
       <View style={styles.card}>
@@ -59,7 +57,5 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
   primaryLink: { backgroundColor: colors.green, borderRadius: radius.control, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12, textAlign: "center" },
   secondaryButton: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, justifyContent: "center", minHeight: 48 },
-  secondaryButtonText: { color: colors.ink, fontWeight: "900", textAlign: "center" },
-  notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, padding: 12 },
-  noticeText: { color: colors.greenDark, fontWeight: "800", lineHeight: 21 }
+  secondaryButtonText: { color: colors.ink, fontWeight: "900", textAlign: "center" }
 });

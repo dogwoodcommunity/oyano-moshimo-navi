@@ -26,6 +26,7 @@ export default function RootLayout() {
       <Stack.Screen name="people/[id]/family" options={{ title: "家族共有" }} />
       <Stack.Screen name="notifications" options={{ title: "通知設定" }} />
       <Stack.Screen name="account/plan" options={{ title: "プラン" }} />
+      <Stack.Screen name="account/delete" options={{ title: "削除依頼" }} />
     </Stack>
   );
 }

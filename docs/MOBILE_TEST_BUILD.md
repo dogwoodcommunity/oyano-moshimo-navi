@@ -10,6 +10,26 @@
 - iOS bundle identifier: `jp.beech.oyanomoshimo`
 - Android package: `jp.beech.oyanomoshimo`
 - Version: `0.3.0`
+- iOS build number: `1`
+- Android version code: `1`
+- App icon / splash: 設定済み
+
+## ブランド資産
+
+生成元:
+
+```bash
+node scripts/generate-brand-assets.mjs
+```
+
+使用中のファイル:
+
+- `apps/mobile/assets/icon.png`
+- `apps/mobile/assets/adaptive-icon.png`
+- `apps/mobile/assets/splash.png`
+- `apps/mobile/assets/notification-icon.png`
+
+詳細は `docs/BRAND_ASSETS.md` を参照。
 
 ## EAS Build前に必要な環境変数
 
@@ -21,9 +41,21 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app
 EXPO_PUBLIC_APP_SCHEME=oyanomoshimo
 EXPO_PUBLIC_EAS_PROJECT_ID=
+EXPO_OWNER=
 ```
 
 `EXPO_PUBLIC_EAS_PROJECT_ID` はExpo Push通知で使う。Expo Project作成後に入れる。
+`EXPO_OWNER` はExpoアカウントまたはTeamが確定した後だけ設定する。未確定なら空でよい。
+
+EASへ登録する時は、Supabase URL/Anon keyも含めてExpo側の環境変数に入れる。`SUPABASE_SERVICE_ROLE_KEY` はアプリに入れない。
+
+```bash
+pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value "<Supabase URL>" --visibility plaintext
+pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<Supabase anon key>" --visibility plaintext
+pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_EAS_PROJECT_ID --value "<Expo project id>" --visibility plaintext
+```
+
+productionも同じ値を `--environment production` で登録する。
 
 ## テストビルドで見ること
 
@@ -38,10 +70,9 @@ EXPO_PUBLIC_EAS_PROJECT_ID=
 
 ## まだ本番前に詰めること
 
-- App icon / splash image
 - Apple Developer / Google Play Consoleの登録
 - TestFlightまたはinternal distributionの配布経路
-- アカウント削除導線の正式文言と問い合わせ窓口
+- 問い合わせ窓口と削除依頼後の運用SLA
 - プライバシーポリシーURL、特商法表記、事業者情報の正式化
 
 ## コマンド
@@ -50,7 +81,22 @@ EXPO_PUBLIC_EAS_PROJECT_ID=
 
 ```bash
 pnpm --filter mobile run typecheck
+pnpm run doctor:mobile-build
 ```
+
+Expo config確認:
+
+```bash
+pnpm --dir apps/mobile exec expo config --type public
+```
+
+EAS Project初期化:
+
+```bash
+pnpm --dir apps/mobile exec eas init
+```
+
+表示されたProject IDを `EXPO_PUBLIC_EAS_PROJECT_ID` に入れる。
 
 EAS preview build:
 

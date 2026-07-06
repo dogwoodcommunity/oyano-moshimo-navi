@@ -11,6 +11,7 @@
     "dev:web:lan": "pnpm --dir apps/web exec next dev -H 0.0.0.0 -p 3000",
     "dev:mobile": "pnpm --filter mobile run start",
     "doctor:local": "node scripts/local-doctor.mjs",
+    "doctor:mobile-build": "node scripts/mobile-build-doctor.mjs",
     "lint": "pnpm --filter web run lint",
     "smoke:web": "node scripts/smoke-web.mjs",
     "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"

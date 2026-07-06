@@ -22,6 +22,7 @@ const checks = [
   { path: "/admin/cases", label: "admin cases" },
   { path: "/admin/support-packs", label: "admin support packs" },
   { path: "/api/health", label: "health api" },
+  { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatus: 401 },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
 ];
 
@@ -29,8 +30,8 @@ let failed = false;
 
 for (const check of checks) {
   const headers = check.admin && adminToken ? { "x-admin-token": adminToken } : {};
-  const response = await fetch(`${baseUrl}${check.path}`, { headers });
-  const ok = response.status >= 200 && response.status < 400;
+  const response = await fetch(`${baseUrl}${check.path}`, { headers, method: check.method ?? "GET" });
+  const ok = check.expectStatus ? response.status === check.expectStatus : response.status >= 200 && response.status < 400;
 
   if (!ok && check.admin && response.status === 401) {
     console.log(`SKIP ${check.label}: ${response.status} (set ADMIN_ACCESS_TOKEN to verify)`);
@@ -39,7 +40,8 @@ for (const check of checks) {
 
   if (!ok) {
     failed = true;
-    console.error(`FAIL ${check.label}: ${response.status} ${check.path}`);
+    const expected = check.expectStatus ? ` expected ${check.expectStatus}` : "";
+    console.error(`FAIL ${check.label}: ${response.status}${expected} ${check.path}`);
     continue;
   }
 
