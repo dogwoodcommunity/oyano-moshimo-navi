@@ -19,14 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="nav">
             <Link className="brand" href="/">親のもしもナビ</Link>
             <nav className="navlinks" aria-label="main">
-              <Link href="/guides">準備ガイド</Link>
+              <Link href="/start">はじめる</Link>
+              <Link href="/guides">読む</Link>
               <Link href="/checklists">チェックリスト</Link>
-              <Link href="/start">整理チェック</Link>
-              <Link href="/safety">安心設計</Link>
+              <Link href="/safety">安心</Link>
               <Link href="/plans">料金</Link>
-              <Link href="/support-pack">発動サポート</Link>
-              <Link href="/providers">相談先</Link>
-              <Link href="/admin">Admin</Link>
             </nav>
           </header>
           {children}

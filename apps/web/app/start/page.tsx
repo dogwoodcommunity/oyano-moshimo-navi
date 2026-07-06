@@ -5,34 +5,47 @@ import { STATUSES, type ParentStatus } from "@oyano/shared";
 import { createCase } from "@/lib/store";
 
 const statusDescriptions: Record<ParentStatus, string> = {
-  preparing: "元気なうちに、連絡先・書類・希望を整理します。",
-  hospitalized: "退院見込み、支払い、保険請求の確認を急ぎます。",
-  facility: "契約、費用、緊急連絡先、実家の扱いを整理します。",
-  cognitive_decline: "本人確認、相談先、家族の役割分担を慎重に進めます。",
-  end_of_life: "緊急連絡、看取り方針、必要書類を家族で共有します。",
-  after_death: "死亡診断書、葬儀、親族連絡の初動を整理します。",
-  after_funeral: "公的手続き、年金、保険、名義変更の期限を確認します。",
-  inheritance: "相続人、財産、負債、不動産の存在を一覧化します。",
-  home_clearance: "鍵、ライフライン、家財量、写真、管理方針を記録します。",
+  preparing: "元気なうちに、連絡先や書類の場所をまとめます。",
+  hospitalized: "病院で聞くこと、支払い、退院後のことを整理します。",
+  facility: "介護や施設のこと、家族の役割を整理します。",
+  cognitive_decline: "もの忘れや判断が心配な時に、相談先を整理します。",
+  end_of_life: "看取りや緊急連絡について、家族で確認します。",
+  after_death: "葬儀、親族連絡、役所手続きの初動を整理します。",
+  after_funeral: "年金、保険、名義変更などを確認します。",
+  inheritance: "相続前に、書類や相談先を整理します。",
+  home_clearance: "実家の写真、鍵、書類、片付けを整理します。",
   completed: "完了した情報を保管し、家族で見返せる状態にします。"
+};
+
+const statusDisplayLabels: Record<ParentStatus, string> = {
+  preparing: "元気なうちに準備したい",
+  hospitalized: "入院した",
+  facility: "介護・施設のこと",
+  cognitive_decline: "もの忘れが心配",
+  end_of_life: "看取り・終末期のこと",
+  after_death: "亡くなった直後",
+  after_funeral: "葬儀が終わった後",
+  inheritance: "相続前に整理したい",
+  home_clearance: "実家を片付けたい",
+  completed: "整理が終わった"
 };
 
 const priorityStatuses: ParentStatus[] = ["hospitalized", "facility", "after_death"];
 
 const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
   {
-    title: "いま起きている",
-    lead: "急ぎで家族の役割と期限を整理したい時",
+    title: "急いで確認したい",
+    lead: "入院、介護、亡くなった直後など",
     keys: ["hospitalized", "facility", "cognitive_decline", "end_of_life", "after_death"]
   },
   {
-    title: "これから備える",
-    lead: "元気なうちに、連絡先・書類・希望をまとめたい時",
+    title: "前もって準備したい",
+    lead: "元気なうちの準備、相続前、実家の整理など",
     keys: ["preparing", "inheritance", "home_clearance"]
   },
   {
-    title: "葬儀後・手続き中",
-    lead: "役所、年金、保険、名義変更などを抜け漏れなく進めたい時",
+    title: "葬儀の後の手続き",
+    lead: "役所、年金、保険、名義変更など",
     keys: ["after_funeral"]
   }
 ];
@@ -51,28 +64,28 @@ export default function StartPage() {
     <main className="container start-page">
       <section className="start-hero">
         <div>
-          <p className="eyebrow">最初にやること</p>
-          <h1 className="page-title">親の状況を1つ選ぶだけで、家族のやることリストを作ります。</h1>
+          <p className="eyebrow">はじめに</p>
+          <h1 className="page-title">親はいま、どの状況に近いですか？</h1>
           <p className="lead">
-            診断名を決めるページではありません。いま近い状況を選ぶと、期限、家族に聞くこと、相談先カテゴリをログインなしで整理します。
+            ぴったり合わなくても大丈夫です。近いものを選ぶと、次に確認することを分かりやすく整理します。
           </p>
           <div className="start-steps" aria-label="利用の流れ">
-            <span>1. 状況を選ぶ</span>
-            <span>2. 5分で入力</span>
-            <span>3. 結果を保存・共有</span>
+            <span>1. 選ぶ</span>
+            <span>2. 少し入力</span>
+            <span>3. リストを見る</span>
           </div>
         </div>
         <aside className="start-help panel">
           <p className="pill">迷ったら</p>
-          <h2>いちばん近いものを選んで大丈夫です。</h2>
-          <p>後から結果画面で、確認事項やタスクを見ながら家族で直せます。</p>
+          <h2>まずは近いものを選んでください。</h2>
+          <p>あとから家族で見ながら直せます。</p>
         </aside>
       </section>
 
       <section className="quick-start panel elevated" aria-label="よく選ばれる入口">
         <div>
-          <p className="eyebrow">Quick start</p>
-          <h2>急いでいる人はここから</h2>
+          <p className="eyebrow">よく選ばれます</p>
+          <h2>急いでいる時はこちら</h2>
         </div>
         <div className="quick-status-row">
           {priorityStatuses.map((key) => {
@@ -80,7 +93,7 @@ export default function StartPage() {
             if (!item) return null;
             return (
               <button className="quick-status-button" key={key} onClick={() => choose(key)}>
-                <strong>{item.label}</strong>
+                <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                 <span>{statusDescriptions[key]}</span>
               </button>
             );
@@ -101,7 +114,7 @@ export default function StartPage() {
                 if (!item) return null;
                 return (
                   <button className="status-button" key={key} onClick={() => choose(key)}>
-                    <strong>{item.label}</strong>
+                    <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
                   </button>
                 );

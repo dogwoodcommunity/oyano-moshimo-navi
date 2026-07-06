@@ -8,55 +8,85 @@ export const metadata: Metadata = {
 
 const portalTopics = [
   {
-    title: "入院・退院の前後",
-    body: "支払い、保険、退院後の生活場所、家族の連絡役を早めに整理します。",
+    title: "親が入院した",
+    body: "病院で聞くこと、支払い、退院後のことを整理します。",
     href: "/guides/hospitalized"
   },
   {
-    title: "介護・認知症の備え",
-    body: "本人確認、緊急連絡先、通院・薬・お金の管理範囲を家族で分けます。",
+    title: "介護が始まりそう",
+    body: "家族の役割、通院、薬、相談先を整理します。",
     href: "/guides/care"
   },
   {
-    title: "実家じまいと家の管理",
-    body: "鍵、ライフライン、写真、家財量、売る・貸す・残す判断材料を集めます。",
-    href: "/guides/home-clearance"
+    title: "親が亡くなった",
+    body: "葬儀、親族連絡、役所手続きの初動を整理します。",
+    href: "/guides/after-death"
   },
   {
-    title: "相続前の情報整理",
-    body: "財産の断定ではなく、書類の所在、相談先、期限のある手続きを見える化します。",
-    href: "/guides/inheritance"
+    title: "実家を片付けたい",
+    body: "写真、鍵、書類、家財の確認順を整理します。",
+    href: "/guides/home-clearance"
   }
 ];
 
 const entryCards = [
   {
-    label: "Step 1",
-    title: "まず読む",
-    body: "入院、介護、死亡直後、実家じまい。いま起きていることに近いガイドを見ます。",
-    href: "/guides",
-    cta: "準備ガイドへ"
-  },
-  {
-    label: "Step 2",
-    title: "状況を整理する",
-    body: "ログインなしで、家族が確認すること・期限のあるタスク・相談先カテゴリを出します。",
+    label: "1",
+    title: "状況を選ぶ",
+    body: "親のいまの状態に近いものを1つ選びます。正確でなくても大丈夫です。",
     href: "/start",
-    cta: "無料で整理する"
+    cta: "はじめる"
   },
   {
-    label: "Step 3",
-    title: "家族で管理する",
-    body: "必要になったらアプリへ引き継ぎ、家族ボード、通知、写真、タイムラインで続けます。",
+    label: "2",
+    title: "5分で整理する",
+    body: "家族に聞くこと、期限があること、相談先をわかりやすく出します。",
+    href: "/start",
+    cta: "無料で整理"
+  },
+  {
+    label: "3",
+    title: "必要なら保存する",
+    body: "結果を家族で共有したい時だけ、アプリに引き継いで管理できます。",
     href: "/plans",
     cta: "使い方を見る"
   }
 ];
 
-const promiseItems = [
-  "会員登録前に、必要なやることリストを表示",
-  "暗証番号・パスワード・マイナンバー画像は保存しない",
-  "法律・税務・医療判断は断定せず、相談前の整理に徹する"
+const reasonCards = [
+  {
+    title: "ログインなしで始められます",
+    body: "まず結果を見るところまで、会員登録は必要ありません。"
+  },
+  {
+    title: "大事な番号は預かりません",
+    body: "暗証番号、パスワード、マイナンバー画像は保存しません。"
+  },
+  {
+    title: "専門判断は断定しません",
+    body: "法律・税務・医療の結論ではなく、相談前の整理を助けます。"
+  }
+];
+
+const guideLinks = [
+  {
+    title: "まず読む",
+    body: "状況別のやさしいガイドを読む",
+    href: "/guides",
+    cta: "ガイドへ"
+  },
+  {
+    title: "紙のように確認する",
+    body: "家族会議で使えるチェックリストを見る",
+    href: "/checklists",
+    cta: "チェックリストへ"
+  },
+  {
+    title: "安心して使う",
+    body: "保存しない情報やサービスの線引きを見る",
+    href: "/safety",
+    cta: "安心設計へ"
+  }
 ];
 
 export default function HomePage() {
@@ -66,41 +96,39 @@ export default function HomePage() {
         <div className="hero-inner portal-hero-inner">
           <div>
             <p className="eyebrow">親のもしもナビ</p>
-            <h1>親が入院した。介護が始まる。亡くなった。次に何をするか、家族で迷わないためのサイト。</h1>
+            <h1>親のことで困ったら、まずここで整理できます。</h1>
             <p className="lead">
-              手続き、期限、家族の役割、実家の写真、相談先。バラバラになりがちな情報を、まず無料で「今日やること」に整理します。
+              入院、介護、亡くなった後の手続き、実家の片付け。いま何をすればいいかを、家族で見られるリストにします。
             </p>
             <div className="actions">
-              <Link className="button primary-cta" href="/start">いまの状況から始める</Link>
-              <Link className="secondary" href="/guides">準備ガイドを読む</Link>
+              <Link className="button primary-cta" href="/start">まず状況を選ぶ</Link>
+              <Link className="secondary" href="/guides">先に読む</Link>
             </div>
-            <p className="hint portal-trust">ログイン不要。結果を保存・共有したい時だけ、Expoアプリへ引き継げます。</p>
+            <p className="hint portal-trust">無料・ログインなしで始められます。保存したい時だけアプリへ引き継ぎます。</p>
           </div>
           <div className="portal-side elevated">
-            <p className="pill">このサイトでできること</p>
-            <h2>親のもしもを、3つに分けて整理します。</h2>
+            <p className="pill">使い方</p>
+            <h2>むずかしい準備を、3つに分けます。</h2>
             <div className="hero-flow">
-              <span>読む</span>
-              <span>整理する</span>
-              <span>家族で管理</span>
+              <span>1. 選ぶ</span>
+              <span>2. 整理</span>
+              <span>3. 共有</span>
             </div>
-            <ul className="list">
-              {promiseItems.map((item) => <li key={item}>{item}</li>)}
-            </ul>
+            <p className="simple-copy">いちばん近い状況を選ぶだけで、家族に聞くことと期限のあることが見えてきます。</p>
           </div>
         </div>
         <div className="hero-proof portal-proof" aria-label="サービス概要">
           <div className="proof-item">
-            <span className="proof-number">読む</span>
-            <span className="proof-label">状況別ガイドとチェックリスト</span>
+            <span className="proof-number">無料</span>
+            <span className="proof-label">まずは登録なしで使えます</span>
           </div>
           <div className="proof-item">
-            <span className="proof-number">整理</span>
-            <span className="proof-label">期限タスクと家族への確認事項</span>
+            <span className="proof-number">簡単</span>
+            <span className="proof-label">近い状況を選ぶだけです</span>
           </div>
           <div className="proof-item">
-            <span className="proof-number">継続</span>
-            <span className="proof-label">アプリで通知・写真・家族ボード</span>
+            <span className="proof-number">安心</span>
+            <span className="proof-label">大事な番号は保存しません</span>
           </div>
         </div>
       </section>
@@ -108,8 +136,8 @@ export default function HomePage() {
       <section className="container entry-section">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Start here</p>
-            <h2>入口は3つだけ。迷ったら「状況を整理する」へ。</h2>
+            <p className="eyebrow">How it works</p>
+            <h2>やることは、この3つだけです。</h2>
           </div>
         </div>
         <div className="entry-grid">
@@ -127,15 +155,14 @@ export default function HomePage() {
       <section className="container portal-section" id="portal-topics">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Common situations</p>
-            <h2>よくある「親のもしも」から探す</h2>
+            <p className="eyebrow">Choose a situation</p>
+            <h2>いま近いものを選んでください。</h2>
           </div>
-          <Link className="secondary" href="/guides">すべてのガイド</Link>
+          <Link className="secondary" href="/start">選んで始める</Link>
         </div>
         <div className="grid portal-topic-grid">
           {portalTopics.map((topic) => (
-            <Link className="panel portal-topic" href={topic.href} key={topic.title}>
-              <span className="meta-chip">準備ガイド</span>
+            <Link className="panel portal-topic simple-topic" href="/start" key={topic.title}>
               <strong>{topic.title}</strong>
               <p>{topic.body}</p>
             </Link>
@@ -146,36 +173,48 @@ export default function HomePage() {
       <section className="container portal-section">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Free tools</p>
-            <h2>登録前に使えるチェックリスト</h2>
+            <p className="eyebrow">安心して使うために</p>
+            <h2>無理に登録させたり、大事な番号を預かったりしません。</h2>
           </div>
-          <Link className="secondary" href="/checklists">すべて見る</Link>
         </div>
         <div className="columns">
-          <div className="panel checklist-preview">
-            <span className="meta-chip">入院・介護</span>
-            <strong>病院で聞くこと、家族で分けること</strong>
-            <p>入院初日、退院前、介護が始まりそうな時に、聞き漏らしや抱え込みを減らします。</p>
+          {reasonCards.map((item) => (
+            <div className="panel checklist-preview" key={item.title}>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="container portal-section">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">More</p>
+            <h2>読むだけ、確認するだけでも使えます。</h2>
           </div>
-          <div className="panel checklist-preview">
-            <span className="meta-chip">死亡直後・実家じまい</span>
-            <strong>慌てて捨てない、期限を忘れない</strong>
-            <p>重要書類、親族連絡、家の写真、支払い確認を、家族で共有しやすい順番にします。</p>
-          </div>
+        </div>
+        <div className="entry-grid light-entry-grid">
+          {guideLinks.map((item) => (
+            <Link className="entry-card panel" href={item.href} key={item.title}>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+              <span className="entry-link">{item.cta}</span>
+            </Link>
+          ))}
         </div>
       </section>
 
       <section className="portal-band">
         <div className="container portal-band-inner">
           <div>
-            <p className="eyebrow">Next step</p>
-            <h2>まず1つ選ぶだけ。家族に聞くことと期限タスクに変換します。</h2>
+            <p className="eyebrow">Start</p>
+            <h2>迷ったら、まず状況を1つ選んでください。</h2>
             <p>
-              状況を選ぶと、期限のあるタスク、家族に確認すること、相談先カテゴリを先に表示します。
-              保存・共有・通知が必要になった時だけアプリへ引き継げます。
+              くわしく分からなくても大丈夫です。近いものを選ぶと、次に確認することが見えてきます。
             </p>
           </div>
-          <Link className="button" href="/start">状況整理チェックへ</Link>
+          <Link className="button" href="/start">はじめる</Link>
         </div>
       </section>
     </main>
