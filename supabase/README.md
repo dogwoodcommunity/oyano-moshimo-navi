@@ -7,15 +7,16 @@ SQL Editorで以下の順に実行する。
 3. `task_generation.sql`
 4. `notification_delivery_hardening.sql`
 5. `task_notification_generation.sql`
-6. `product_seed.sql`
-7. `indexes.sql`
-8. `production_rls.sql`
-9. `family_invite_rpc.sql`
-10. `storage_setup.sql`
+6. `monthly_checkin_notifications.sql`
+7. `product_seed.sql`
+8. `indexes.sql`
+9. `production_rls.sql`
+10. `family_invite_rpc.sql`
+11. `storage_setup.sql`
 
 任意確認:
 
-11. `verify_setup.sql`
+12. `verify_setup.sql`
 
 ## 重要
 

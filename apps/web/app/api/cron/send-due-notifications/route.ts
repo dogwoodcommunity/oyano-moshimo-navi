@@ -80,8 +80,31 @@ function assigneeLabel(row: ScheduledNotificationRow, members: Map<string, strin
   return members.get(memberId) ?? "担当者";
 }
 
+function isMonthlyCheckin(row: ScheduledNotificationRow) {
+  return row.notification_type === "monthly_checkin";
+}
+
+function digestTitle(rows: ScheduledNotificationRow[]) {
+  const dueCount = rows.filter((row) => !isMonthlyCheckin(row)).length;
+  const checkinCount = rows.length - dueCount;
+
+  if (dueCount === 0 && checkinCount > 0) return "月1回の状況確認です";
+  if (dueCount === 1 && checkinCount === 0) return "期限が近いタスクがあります";
+  if (checkinCount > 0) return `今日の確認: ${rows.length}件`;
+  return `今日の期限: ${rows.length}件`;
+}
+
+function digestLine(row: ScheduledNotificationRow, members: Map<string, string>) {
+  if (isMonthlyCheckin(row)) {
+    return "・親御さんの状況に変わりがないか確認しましょう";
+  }
+
+  return `・${taskTitle(row)}(担当: ${assigneeLabel(row, members)})`;
+}
+
 function buildDigestBody(rows: ScheduledNotificationRow[], members: Map<string, string>) {
-  const lines = rows.slice(0, 2).map((row) => `・${taskTitle(row)}(担当: ${assigneeLabel(row, members)})`);
+  const sortedRows = [...rows].sort((a, b) => Number(isMonthlyCheckin(a)) - Number(isMonthlyCheckin(b)));
+  const lines = sortedRows.slice(0, 2).map((row) => digestLine(row, members));
   const rest = rows.length - lines.length;
   return rest > 0 ? `${lines.join("\n")}\n他${rest}件` : lines.join("\n");
 }
@@ -108,6 +131,8 @@ export async function GET(request: Request) {
   if (!supabase) {
     return NextResponse.json({ sent: 0, skipped: true, reason: "Supabase is not configured" });
   }
+
+  await supabase.rpc("ensure_monthly_checkin_notifications");
 
   const now = new Date().toISOString();
   const { data: schedules, error } = await supabase
@@ -156,9 +181,7 @@ export async function GET(request: Request) {
 
   const digests = buildDigestGroups(rows);
   const messages = digests.flatMap((digest) => {
-    const title = digest.rows.length === 1
-      ? "期限が近いタスクがあります"
-      : `今日の期限: ${digest.rows.length}件`;
+    const title = digestTitle(digest.rows);
     const body = buildDigestBody(digest.rows, assigneeMap);
     const scheduledNotificationIds = digest.rows.map((row) => row.id);
 

@@ -137,6 +137,20 @@ select
   'home-photos' as target,
   exists(select 1 from storage.buckets where id = 'home-photos') as ok;
 
+with required_functions(name) as (
+  values
+    ('schedule_notifications_for_task'),
+    ('ensure_monthly_checkin_notifications'),
+    ('create_family_invite'),
+    ('accept_family_invite')
+)
+select
+  'function_exists' as check_type,
+  name as target,
+  (to_regproc('public.' || name) is not null) as ok
+from required_functions
+order by name;
+
 select
   'seed_count' as check_type,
   'task_templates' as target,
