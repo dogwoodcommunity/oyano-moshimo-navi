@@ -166,6 +166,7 @@ GitHubが必要な理由:
 - Dev serverで `/` だけ404になる環境差を避けるため、トップを `/home` でも提供し、`next.config.mjs` で `/ -> /home` の一時redirectを追加。smokeも `/home` を確認する。
 - 携帯確認用script `pnpm run dev:web:lan` を追加。`pnpm --dir apps/web exec next dev -H 0.0.0.0 -p 3000` で起動する。3000番に古いNextプロセスが残ると `localhost` が別サーバーへ当たるので、`lsof -nP -iTCP:3000 -sTCP:LISTEN` で確認する。
 - Expo assets/timeline/family/notifications画面もテーマ適用。旧色を置き換え、見出し・カード・通知表示をWeb寄りのトーンに統一。
+- Web法務ページを整備。privacy/terms/disclaimer/tokushohoに共通legal hero/panelを適用し、本番前に確定すべき事業者情報・問い合わせ先が分かる表現へ調整。
 
 その後に Step 2: Supabase本番準備。
 

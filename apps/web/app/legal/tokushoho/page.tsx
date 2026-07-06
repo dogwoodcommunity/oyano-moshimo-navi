@@ -1,8 +1,12 @@
 export default function TokushohoPage() {
   return (
     <main className="container">
-      <h1 className="page-title">特定商取引法に基づく表記</h1>
-      <section className="panel">
+      <section className="legal-hero">
+        <p className="pill">Legal</p>
+        <h1 className="page-title">特定商取引法に基づく表記</h1>
+        <p className="lead">発動サポートパックをWebで販売する前に、事業者情報と返金条件を確定します。</p>
+      </section>
+      <section className="panel legal-panel">
         <table className="admin-table">
           <tbody>
             <tr><th>販売事業者</th><td>本番公開前に確定</td></tr>

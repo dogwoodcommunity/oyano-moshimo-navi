@@ -1,8 +1,12 @@
 export default function PrivacyPage() {
   return (
     <main className="container">
-      <h1 className="page-title">プライバシーポリシー</h1>
-      <section className="panel">
+      <section className="legal-hero">
+        <p className="pill">Legal</p>
+        <h1 className="page-title">プライバシーポリシー</h1>
+        <p className="lead">家族の情報を扱うサービスとして、保存する情報と保存しない情報を明確にします。</p>
+      </section>
+      <section className="panel legal-panel">
         <p>
           親のもしもナビは、家族が親の状況、手続き、実家情報、相談先候補を整理するために必要な情報を取り扱います。
           銀行暗証番号、パスワード、マイナンバー画像など、保存禁止の情報は預かりません。
@@ -25,7 +29,7 @@ export default function PrivacyPage() {
           相談先や専門家へ情報を共有する場合は、ユーザーの同意を前提にします。法令に基づく場合を除き、同意なく個人情報を第三者へ提供しません。
         </p>
         <h2>問い合わせ</h2>
-        <p>正式な問い合わせ先は本番公開前に設定します。</p>
+        <p>正式な問い合わせ先、事業者情報、個人情報管理責任者は本番公開前に確定します。</p>
       </section>
     </main>
   );

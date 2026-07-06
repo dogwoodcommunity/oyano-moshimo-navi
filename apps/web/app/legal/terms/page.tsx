@@ -1,8 +1,12 @@
 export default function TermsPage() {
   return (
     <main className="container">
-      <h1 className="page-title">利用規約</h1>
-      <section className="panel">
+      <section className="legal-hero">
+        <p className="pill">Legal</p>
+        <h1 className="page-title">利用規約</h1>
+        <p className="lead">親のもしもナビの利用条件と、専門判断を断定しない方針を定めます。</p>
+      </section>
+      <section className="panel legal-panel">
         <h2>サービスの位置づけ</h2>
         <p>
           親のもしもナビは、家族が親の状況変化に応じて情報やタスクを整理するための支援サービスです。

@@ -1,8 +1,12 @@
 export default function DisclaimerPage() {
   return (
     <main className="container">
-      <h1 className="page-title">免責事項</h1>
-      <section className="panel">
+      <section className="legal-hero">
+        <p className="pill">Legal</p>
+        <h1 className="page-title">免責事項</h1>
+        <p className="lead">表示される診断結果やタスクは、家族の情報整理を助けるための一般的な案内です。</p>
+      </section>
+      <section className="panel legal-panel">
         <p>
           親のもしもナビで表示される診断結果、期限タスク、相談先カテゴリ、家じまいに関する整理内容は、一般的な情報整理を目的としたものです。
         </p>

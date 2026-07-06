@@ -522,6 +522,32 @@ textarea {
   margin: 0;
 }
 
+.legal-hero {
+  background: linear-gradient(135deg, #ffffff 0%, #eef4ed 100%);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  margin-bottom: 18px;
+  padding: 24px;
+}
+
+.legal-panel {
+  display: grid;
+  gap: 14px;
+  max-width: 860px;
+}
+
+.legal-panel h2 {
+  border-top: 1px solid var(--line);
+  margin: 6px 0 0;
+  padding-top: 16px;
+}
+
+.legal-panel h2:first-of-type {
+  border-top: 0;
+  padding-top: 0;
+}
+
 .admin-table {
   border-collapse: collapse;
   width: 100%;
