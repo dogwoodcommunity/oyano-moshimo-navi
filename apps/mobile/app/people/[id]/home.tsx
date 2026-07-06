@@ -1,4 +1,5 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { colors, radius, shadow } from "@/lib/theme";
 
 const rows = [
   ["物件種別", "戸建て"],
@@ -12,7 +13,11 @@ const rows = [
 export default function HomeChartScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>実家カルテ</Text>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>Home chart</Text>
+        <Text style={styles.title}>実家カルテ</Text>
+        <Text style={styles.body}>鍵、ライフライン、家財量、方針を家族で見える化します。</Text>
+      </View>
       <View style={styles.card}>
         {rows.map(([label, value]) => (
           <View style={styles.row} key={label}>
@@ -30,11 +35,13 @@ export default function HomeChartScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#fbfcf7", gap: 14, padding: 18 },
-  title: { color: "#17211b", fontSize: 30, fontWeight: "900" },
-  card: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, gap: 12, padding: 16 },
-  cardTitle: { color: "#17211b", fontSize: 20, fontWeight: "900" },
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
+  header: { gap: 6, paddingTop: 8 },
+  kicker: { color: colors.green, fontWeight: "900" },
+  title: { color: colors.ink, fontSize: 32, fontWeight: "900" },
+  card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
+  cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
   row: { borderBottomColor: "#edf1ed", borderBottomWidth: 1, gap: 4, paddingBottom: 10 },
-  label: { color: "#2f6f4e", fontWeight: "800" },
-  body: { color: "#344039", lineHeight: 22 }
+  label: { color: colors.green, fontWeight: "900" },
+  body: { color: colors.muted, lineHeight: 22 }
 });
