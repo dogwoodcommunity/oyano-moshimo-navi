@@ -4,22 +4,22 @@ const portalTopics = [
   {
     title: "入院・退院の前後",
     body: "支払い、保険、退院後の生活場所、家族の連絡役を早めに整理します。",
-    href: "/start"
+    href: "/guides/hospitalized"
   },
   {
     title: "介護・認知症の備え",
     body: "本人確認、緊急連絡先、通院・薬・お金の管理範囲を家族で分けます。",
-    href: "/providers"
+    href: "/guides/care"
   },
   {
     title: "実家じまいと家の管理",
     body: "鍵、ライフライン、写真、家財量、売る・貸す・残す判断材料を集めます。",
-    href: "/start"
+    href: "/guides/home-clearance"
   },
   {
     title: "相続前の情報整理",
     body: "財産の断定ではなく、書類の所在、相談先、期限のある手続きを見える化します。",
-    href: "/providers"
+    href: "/guides/inheritance"
   }
 ];
 
@@ -42,7 +42,7 @@ export default function HomePage() {
             </p>
             <div className="actions">
               <Link className="button" href="/start">無料で状況を整理する</Link>
-              <Link className="secondary" href="#portal-topics">準備テーマを見る</Link>
+              <Link className="secondary" href="/guides">準備ガイドを読む</Link>
             </div>
             <p className="hint portal-trust">会員登録は結果を家族で保存・共有したい時だけ。診断名より、やることリストを先に出します。</p>
           </div>
@@ -76,7 +76,7 @@ export default function HomePage() {
             <p className="eyebrow">Preparation topics</p>
             <h2>まず読める、親のもしも準備</h2>
           </div>
-          <Link className="secondary" href="/providers">相談先カテゴリ</Link>
+          <Link className="secondary" href="/guides">すべてのガイド</Link>
         </div>
         <div className="grid portal-topic-grid">
           {portalTopics.map((topic) => (

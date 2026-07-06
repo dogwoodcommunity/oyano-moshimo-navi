@@ -5,6 +5,8 @@ const checks = [
   { path: "/", label: "root redirect" },
   { path: "/home", label: "home" },
   { path: "/start", label: "start" },
+  { path: "/guides", label: "guides" },
+  { path: "/guides/hospitalized", label: "guide detail" },
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/result/smoke-case", label: "result fallback" },
   { path: "/result/smoke-case/share", label: "result share fallback" },
