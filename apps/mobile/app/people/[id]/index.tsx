@@ -23,7 +23,7 @@ export default function PersonScreen() {
       <View style={[styles.card, styles.statusCard]}>
         <Text style={styles.kickerLight}>現在ステータス</Text>
         <Text style={styles.statusTitle}>{statusLabel(person.currentStatus)}</Text>
-        <Text style={styles.bodyLight}>person id: {params.id}</Text>
+        <Text style={styles.bodyLight}>状況が変わったら、ここからステータスを更新できます。</Text>
       </View>
       <View style={styles.grid}>
         <Link href={`/people/${params.id}/status`} style={styles.tile}>状態変更</Link>

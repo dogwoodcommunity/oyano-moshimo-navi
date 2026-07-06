@@ -29,6 +29,7 @@ const requiredFiles = [
   "apps/mobile/app/(auth)/welcome.tsx",
   "apps/mobile/app/(tabs)/dashboard.tsx",
   "apps/mobile/app/(tabs)/plan.tsx",
+  "apps/mobile/app/(tabs)/settings.tsx",
   "apps/mobile/app/people/[id]/tasks.tsx",
   "apps/mobile/app/people/[id]/assets.tsx",
   "apps/mobile/app/notifications.tsx",

@@ -15,6 +15,7 @@ export default function TabsLayout() {
     >
       <Tabs.Screen name="dashboard" options={{ title: "家族ボード" }} />
       <Tabs.Screen name="plan" options={{ title: "プラン" }} />
+      <Tabs.Screen name="settings" options={{ title: "設定" }} />
     </Tabs>
   );
 }

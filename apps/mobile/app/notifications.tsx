@@ -19,17 +19,25 @@ export default function NotificationsScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>Notifications</Text>
         <Text style={styles.title}>通知設定</Text>
-        <Text style={styles.body}>期限が近いタスクを、家族が見落とさないようにします。</Text>
+        <Text style={styles.body}>毎日開くためではなく、必要な時に戻れるように通知します。</Text>
       </View>
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.cardTitle}>期限リマインド</Text>
           <Switch value={enabled} onValueChange={setEnabled} />
         </View>
-        <Text style={styles.body}>push tokenは `push_tokens`、期限通知予定は `scheduled_notifications` に保存します。</Text>
-        <Pressable style={styles.button} onPress={register}><Text style={styles.buttonText}>Push tokenを保存</Text></Pressable>
+        <Text style={styles.body}>法定期限や重要な手続きは、近づいた時だけまとめて通知します。同じ日の通知は1通にまとめます。</Text>
+        <Pressable style={styles.button} onPress={register}><Text style={styles.buttonText}>この端末で通知を受け取る</Text></Pressable>
         {message ? <Text style={styles.noticeText}>{message}</Text> : null}
-        {token ? <Text style={styles.body}>{token}</Text> : null}
+        {token ? <Text style={styles.body}>この端末の通知登録が完了しています。</Text> : null}
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>月1回の確認</Text>
+        <Text style={styles.body}>親御さんの状況に変化がないか、月1回だけ確認します。変化がなければ何もしなくて大丈夫です。</Text>
+      </View>
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>通知を切る前に</Text>
+        <Text style={styles.body}>通知を切ると、期限が近い手続きや家族の更新に気づきにくくなります。不要な通知を増やさない設計にしています。</Text>
       </View>
     </View>
   );

@@ -12,8 +12,38 @@ import {
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
+function dateOnly(value?: string) {
+  if (!value) return null;
+  const date = new Date(`${value}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function daysUntil(value?: string) {
+  const due = dateOnly(value);
+  if (!due) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.ceil((due.getTime() - today.getTime()) / 86400000);
+}
+
+function filterLabel(filter?: string) {
+  if (filter === "due") return "今日・期限超過";
+  if (filter === "soon") return "7日以内";
+  if (filter === "unassigned") return "担当未定";
+  return "すべて";
+}
+
+function matchesFilter(task: MobileTask, filter?: string) {
+  if (!filter) return true;
+  const days = daysUntil(task.dueDate);
+  if (filter === "due") return days !== null && days <= 0 && task.status !== "done" && task.status !== "skipped";
+  if (filter === "soon") return days !== null && days > 0 && days <= 7 && task.status !== "done" && task.status !== "skipped";
+  if (filter === "unassigned") return !task.assignedMemberId && task.status !== "done" && task.status !== "skipped";
+  return true;
+}
+
 export default function TasksScreen() {
-  const params = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id: string; filter?: string }>();
   const [tasks, setTasks] = useState<MobileTask[]>(demoDashboardData().tasks);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [message, setMessage] = useState("");
@@ -60,10 +90,11 @@ export default function TasksScreen() {
   }
 
   const selfMember = members.find((member) => member.isCurrentUser) ?? members[0] ?? null;
+  const filteredTasks = tasks.filter((task) => matchesFilter(task, params.filter));
   const columns = [
-    ["未着手", tasks.filter((task) => task.status === "todo")],
-    ["進行中", tasks.filter((task) => task.status === "doing")],
-    ["完了", tasks.filter((task) => task.status === "done")]
+    ["未着手", filteredTasks.filter((task) => task.status === "todo")],
+    ["進行中", filteredTasks.filter((task) => task.status === "doing")],
+    ["完了", filteredTasks.filter((task) => task.status === "done")]
   ] as const;
 
   return (
@@ -72,18 +103,26 @@ export default function TasksScreen() {
         <Text style={styles.kicker}>Family tasks</Text>
         <Text style={styles.title}>家族タスクボード</Text>
         <Text style={styles.lead}>期限と状態を見ながら、家族で動くことを分けていきます。</Text>
+        <View style={styles.filterPill}>
+          <Text style={styles.filterPillText}>表示: {filterLabel(params.filter)}</Text>
+        </View>
       </View>
       {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
       <View style={styles.summaryRow}>
         <View style={styles.summaryBox}>
-          <Text style={styles.summaryNumber}>{tasks.filter((task) => task.status !== "done").length}</Text>
+          <Text style={styles.summaryNumber}>{filteredTasks.filter((task) => task.status !== "done").length}</Text>
           <Text style={styles.summaryLabel}>未完了</Text>
         </View>
         <View style={styles.summaryBox}>
-          <Text style={styles.summaryNumber}>{tasks.filter((task) => task.status !== "done" && !task.assignedMemberId).length}</Text>
+          <Text style={styles.summaryNumber}>{filteredTasks.filter((task) => task.status !== "done" && !task.assignedMemberId).length}</Text>
           <Text style={styles.summaryLabel}>担当未定</Text>
         </View>
       </View>
+      {filteredTasks.length === 0 ? (
+        <View style={styles.notice}>
+          <Text style={styles.noticeText}>この条件に当てはまるタスクはありません。</Text>
+        </View>
+      ) : null}
       {columns.map(([label, columnTasks]) => (
         <View style={styles.card} key={label}>
           <View style={styles.cardHeader}>
@@ -159,6 +198,8 @@ const styles = StyleSheet.create({
   kicker: { color: colors.green, fontWeight: "900" },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", lineHeight: 36 },
   lead: { color: colors.muted, lineHeight: 22 },
+  filterPill: { alignSelf: "flex-start", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
+  filterPillText: { color: colors.green, fontSize: 12, fontWeight: "900" },
   notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, padding: 12 },
   noticeText: { color: colors.green, fontWeight: "900" },
   summaryRow: { flexDirection: "row", gap: 10 },
