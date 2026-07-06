@@ -168,6 +168,7 @@ GitHubが必要な理由:
 - Expo assets/timeline/family/notifications画面もテーマ適用。旧色を置き換え、見出し・カード・通知表示をWeb寄りのトーンに統一。
 - Web法務ページを整備。privacy/terms/disclaimer/tokushohoに共通legal hero/panelを適用し、本番前に確定すべき事業者情報・問い合わせ先が分かる表現へ調整。
 - Web Adminを運用画面として整備。overview/cases/support-packs/env/case詳細にadmin hero、stat、chip、横スクロールtable、JSON表示を追加し、case確認・support pack確認が見やすい状態にした。
+- 2026-07-06時点のローカル確認: `next build apps/web` OK、Web tsc OK、`scripts/smoke-web.mjs http://localhost:3000` OK。ブラウザ確認で `/admin`、`/admin/cases`、`/admin/support-packs`、`/admin/env`、ローカルデモcase詳細の主要DOMと横幅崩れなしを確認。LAN確認URLは `http://192.168.11.63:3000/home`。
 
 その後に Step 2: Supabase本番準備。
 
