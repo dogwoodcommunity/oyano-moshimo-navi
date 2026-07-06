@@ -12,6 +12,21 @@ alter table scheduled_notifications
 
 do $$
 begin
+  if exists (
+    select 1
+    from pg_constraint
+    where conname = 'scheduled_notifications_task_id_fkey'
+  ) then
+    alter table scheduled_notifications
+      drop constraint scheduled_notifications_task_id_fkey;
+  end if;
+
+  alter table scheduled_notifications
+    add constraint scheduled_notifications_task_id_fkey
+    foreign key (task_id)
+    references tasks(id)
+    on delete cascade;
+
   if not exists (
     select 1
     from pg_constraint

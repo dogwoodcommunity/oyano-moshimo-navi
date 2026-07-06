@@ -10,10 +10,27 @@ function uniq(ids: string[]) {
   return [...new Set(ids.filter(Boolean))];
 }
 
+function bearerToken(request: Request) {
+  const auth = request.headers.get("authorization");
+  return auth?.startsWith("Bearer ") ? auth.slice("Bearer ".length) : null;
+}
+
 export async function POST(request: Request) {
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ updated: 0, skipped: true, reason: "Supabase is not configured" });
+  }
+
+  const token = bearerToken(request);
+  if (!token) {
+    return NextResponse.json({ error: "Authorization bearer token is required" }, { status: 401 });
+  }
+
+  const { data: userResult, error: userError } = await supabase.auth.getUser(token);
+  const userId = userResult.user?.id;
+
+  if (userError || !userId) {
+    return NextResponse.json({ error: "Invalid authorization token" }, { status: 401 });
   }
 
   const body = await request.json().catch(() => ({})) as OpenedBody;
@@ -29,7 +46,9 @@ export async function POST(request: Request) {
   const { error } = await supabase
     .from("scheduled_notifications")
     .update({ opened_at: new Date().toISOString() })
-    .in("id", ids);
+    .in("id", ids)
+    .eq("user_id", userId)
+    .is("opened_at", null);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

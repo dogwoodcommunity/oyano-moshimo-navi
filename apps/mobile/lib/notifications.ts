@@ -77,9 +77,16 @@ export async function markNotificationsOpened(data: Record<string, unknown>) {
   const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
   if (webBaseUrl) {
     try {
+      const session = await getSupabase()?.auth.getSession();
+      const accessToken = session?.data.session?.access_token;
+      if (!accessToken) throw new Error("Missing Supabase access token");
+
       await fetch(`${webBaseUrl}/api/notifications/opened`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({ scheduled_notification_ids: ids })
       });
       return { updated: ids.length, source: "web" as const };
