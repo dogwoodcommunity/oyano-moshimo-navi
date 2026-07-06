@@ -8,7 +8,7 @@ export default function SupportPackPage() {
         <p className="pill">Web / Stripe Checkout</p>
         <h1 className="page-title">発動サポートパック</h1>
         <p className="lead">
-          診断結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。
+          整理結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。
         </p>
         <div className="meta-row">
           <span className="meta-chip">アプリ内決済CTAなし</span>
@@ -21,7 +21,7 @@ export default function SupportPackPage() {
         <div className="panel elevated">
           <h2>含まれるもの</h2>
           <ul className="list">
-            <li>診断回答と期限タスクの人力レビュー</li>
+            <li>入力内容と期限タスクの人力レビュー</li>
             <li>家族会議で確認する論点の整理</li>
             <li>相談先カテゴリと候補比較軸の整理</li>
           </ul>
@@ -42,7 +42,7 @@ export default function SupportPackPage() {
           <span className="hint">MVPでは管理画面でsupport pack確認まで行います。</span>
         </div>
         <div className="timeline-row">
-          <div className="timeline-step"><strong>1</strong><span>診断結果を作成</span></div>
+          <div className="timeline-step"><strong>1</strong><span>整理結果を作成</span></div>
           <div className="timeline-step"><strong>2</strong><span>Webで申し込み</span></div>
           <div className="timeline-step"><strong>3</strong><span>人力レビュー</span></div>
           <div className="timeline-step"><strong>4</strong><span>家族会議メモへ</span></div>

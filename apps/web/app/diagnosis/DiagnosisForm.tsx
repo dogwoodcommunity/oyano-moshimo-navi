@@ -48,7 +48,7 @@ export function DiagnosisForm() {
           <p className="pill">現在の状態: {statusLabel}</p>
           <p className="lead">分かる範囲だけで大丈夫です。結果画面では、期限のあるタスクと家族で確認することを分けて表示します。</p>
         </div>
-        <div className="progress-rail" aria-label="診断の流れ">
+        <div className="progress-rail" aria-label="整理チェックの流れ">
           <span className="progress-step active">状態</span>
           <span className="progress-step active">確認</span>
           <span className="progress-step">結果</span>
@@ -164,7 +164,7 @@ export function DiagnosisForm() {
             <p className="hint">まずは現時点の情報で結果を作成します。</p>
           </div>
           <button className="button" disabled={submitting} type="submit">
-            {submitting ? "結果を作成中" : "診断結果を見る"}
+            {submitting ? "整理結果を作成中" : "整理結果を見る"}
           </button>
         </div>
       </form>

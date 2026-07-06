@@ -26,7 +26,7 @@ export default function ResultPage() {
     <main className="container">
       <section className="result-summary">
         <p className="pill">{result.diagnosisType}</p>
-        <h1 className="page-title">診断結果</h1>
+        <h1 className="page-title">整理結果</h1>
         <p className="lead">{result.summary}</p>
         <div className="meta-row">
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
@@ -99,7 +99,7 @@ export default function ResultPage() {
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>発動サポートパック</h2>
         <p>
-          人力レビュー、家族会議用レポート、専門家・業者候補整理をWebで申し込む商品です。
+          入力内容の人力レビュー、家族会議用レポート、専門家・業者候補整理をWebで申し込む商品です。
           アプリ内では外部決済CTAを置かず、購入済みやレビュー中の状態表示に留めます。
         </p>
         <div className="actions">

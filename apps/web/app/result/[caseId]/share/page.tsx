@@ -19,13 +19,13 @@ export default function SharePage() {
   return (
     <main className="container">
       <h1 className="page-title">家族共有・アプリ招待</h1>
-      <p className="lead">診断結果と、アプリ引き継ぎ用のcase情報を家族に共有します。</p>
+      <p className="lead">整理結果と、アプリ引き継ぎ用のcase情報を家族に共有します。</p>
       <section className="panel">
         <label className="label" htmlFor="share">共有リンク</label>
         <input className="input" id="share" readOnly value={shareUrl} />
         <div className="actions">
           <button className="button" onClick={() => navigator.clipboard.writeText(shareUrl)}>コピー</button>
-          <a className="secondary" href={`mailto:?subject=親のもしもナビ診断結果&body=${encodeURIComponent(shareUrl)}`}>メールで共有</a>
+          <a className="secondary" href={`mailto:?subject=親のもしもナビ整理結果&body=${encodeURIComponent(shareUrl)}`}>メールで共有</a>
         </div>
       </section>
       <section className="panel" style={{ marginTop: 18 }}>
