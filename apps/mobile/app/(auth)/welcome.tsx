@@ -5,6 +5,7 @@ import { registerPushToken, saveTaskDueDates } from "@/lib/notifications";
 import { demoResult } from "@/lib/demoData";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
+import { colors, radius, shadow } from "@/lib/theme";
 
 const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 
@@ -34,9 +35,11 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.kicker}>Web診断引き継ぎ</Text>
-      <Text style={styles.title}>親のもしもナビ</Text>
-      <Text style={styles.lead}>Magic Linkログイン後、Webの診断結果を家族ボードへ引き継ぎます。</Text>
+      <View style={styles.hero}>
+        <Text style={styles.kicker}>Web診断引き継ぎ</Text>
+        <Text style={styles.title}>親のもしもナビ</Text>
+        <Text style={styles.lead}>Magic Linkログイン後、Webの診断結果を家族ボードへ引き継ぎます。</Text>
+      </View>
       <View style={styles.panel}>
         <Text style={styles.label}>メール</Text>
         <TextInput autoCapitalize="none" inputMode="email" onChangeText={setEmail} placeholder="mail@example.com" style={styles.input} value={email} />
@@ -47,21 +50,28 @@ export default function WelcomeScreen() {
         {message ? <Text style={styles.hint}>{message}</Text> : null}
         {pushToken ? <Text style={styles.hint}>push token saved: {pushToken}</Text> : null}
       </View>
-      <Link href="/(tabs)/dashboard" style={styles.link}>デモでdashboardへ</Link>
+      <View style={styles.demoCard}>
+        <Text style={styles.demoTitle}>ローカル確認</Text>
+        <Text style={styles.hint}>Supabase未設定でもデモデータで継続アプリの導線を確認できます。</Text>
+        <Link href="/(tabs)/dashboard" style={styles.link}>デモでdashboardへ</Link>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#fbfcf7", flex: 1, gap: 16, padding: 22, paddingTop: 72 },
-  kicker: { color: "#2f6f4e", fontWeight: "800" },
-  title: { color: "#17211b", fontSize: 38, fontWeight: "900" },
-  lead: { color: "#647067", fontSize: 16, lineHeight: 24 },
-  panel: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, gap: 12, padding: 16 },
-  label: { color: "#17211b", fontWeight: "800" },
-  input: { borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, minHeight: 46, padding: 12 },
-  button: { alignItems: "center", backgroundColor: "#2f6f4e", borderRadius: 8, minHeight: 48, justifyContent: "center" },
-  buttonText: { color: "#fff", fontWeight: "800" },
-  hint: { color: "#647067", fontSize: 12, lineHeight: 18 },
-  link: { color: "#315f8f", fontWeight: "800" }
+  screen: { backgroundColor: colors.paper, flex: 1, gap: 16, padding: 22, paddingTop: 72 },
+  hero: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 18 },
+  kicker: { color: colors.green, fontWeight: "900" },
+  title: { color: colors.ink, fontSize: 38, fontWeight: "900", lineHeight: 42 },
+  lead: { color: colors.muted, fontSize: 16, lineHeight: 24 },
+  panel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
+  label: { color: colors.ink, fontWeight: "900" },
+  input: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.ink, minHeight: 46, padding: 12 },
+  button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, minHeight: 48, justifyContent: "center" },
+  buttonText: { color: "#fff", fontWeight: "900" },
+  demoCard: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 14 },
+  demoTitle: { color: colors.ink, fontSize: 18, fontWeight: "900" },
+  hint: { color: colors.muted, fontSize: 12, lineHeight: 18 },
+  link: { color: colors.blue, fontWeight: "900" }
 });

@@ -1,8 +1,9 @@
 import { Stack } from "expo-router";
+import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
   return (
-    <Stack screenOptions={{ headerStyle: { backgroundColor: "#fbfcf7" }, headerTintColor: "#17211b" }}>
+    <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
       <Stack.Screen name="(auth)/welcome" options={{ title: "ログイン" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="people/[id]/index" options={{ title: "対象者" }} />
