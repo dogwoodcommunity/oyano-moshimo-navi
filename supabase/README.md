@@ -10,11 +10,12 @@ SQL Editorで以下の順に実行する。
 6. `product_seed.sql`
 7. `indexes.sql`
 8. `production_rls.sql`
-9. `storage_setup.sql`
+9. `family_invite_rpc.sql`
+10. `storage_setup.sql`
 
 任意確認:
 
-10. `verify_setup.sql`
+11. `verify_setup.sql`
 
 ## 重要
 

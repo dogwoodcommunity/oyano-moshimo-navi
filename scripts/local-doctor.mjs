@@ -8,6 +8,7 @@ const requiredFiles = [
   "apps/web/app/diagnosis/page.tsx",
   "apps/web/app/result/[caseId]/page.tsx",
   "apps/web/app/result/[caseId]/share/page.tsx",
+  "apps/web/app/invite/[token]/page.tsx",
   "apps/web/app/guides/page.tsx",
   "apps/web/app/guides/[slug]/page.tsx",
   "apps/web/lib/guides.ts",
@@ -39,6 +40,7 @@ const requiredFiles = [
   "supabase/product_seed.sql",
   "supabase/indexes.sql",
   "supabase/production_rls.sql",
+  "supabase/family_invite_rpc.sql",
   "supabase/storage_setup.sql",
   "supabase/verify_setup.sql",
   "vercel.json",
@@ -80,6 +82,7 @@ const sqlOrder = [
   "product_seed.sql",
   "indexes.sql",
   "production_rls.sql",
+  "family_invite_rpc.sql",
   "storage_setup.sql",
   "verify_setup.sql"
 ];

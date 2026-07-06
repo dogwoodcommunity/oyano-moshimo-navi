@@ -3,6 +3,8 @@
 
 create index if not exists idx_family_members_user_id on family_members(user_id);
 create index if not exists idx_family_members_family_id on family_members(family_id);
+create index if not exists idx_family_invites_family_status on family_invites(family_id, status, created_at);
+create unique index if not exists idx_family_invites_token_unique on family_invites(token);
 create index if not exists idx_people_family_id on people(family_id);
 create index if not exists idx_people_current_status on people(current_status);
 create index if not exists idx_person_status_events_person_id on person_status_events(person_id);

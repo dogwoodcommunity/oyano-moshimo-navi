@@ -13,6 +13,7 @@ const checks = [
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/result/smoke-case", label: "result fallback" },
   { path: "/result/smoke-case/share", label: "result share fallback" },
+  { path: "/invite/smoke-token", label: "invite fallback" },
   { path: "/support-pack", label: "support pack" },
   { path: "/sitemap.xml", label: "sitemap" },
   { path: "/robots.txt", label: "robots" },

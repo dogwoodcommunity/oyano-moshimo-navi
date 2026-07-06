@@ -2,6 +2,7 @@
 -- This is a draft for Codex implementation. Enable RLS in production.
 
 create extension if not exists "uuid-ossp";
+create extension if not exists "pgcrypto";
 
 create table if not exists profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -211,9 +212,12 @@ create table if not exists family_invites (
   invited_email text,
   invited_phone text,
   role text not null default 'member',
+  relationship text,
   token text unique not null,
   status text not null default 'pending',
   expires_at timestamptz,
+  created_by uuid references profiles(id) on delete set null,
+  accepted_at timestamptz,
   created_at timestamptz default now()
 );
 

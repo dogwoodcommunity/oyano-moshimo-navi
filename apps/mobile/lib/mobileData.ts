@@ -30,6 +30,15 @@ export type FamilyMember = {
   isCurrentUser: boolean;
 };
 
+export type FamilyInviteResult = {
+  source: "supabase" | "demo";
+  token?: string;
+  inviteUrl?: string;
+  fallbackUrl?: string;
+  limitReached?: boolean;
+  error?: string;
+};
+
 export type DashboardData = {
   person: MobilePerson;
   tasks: MobileTask[];
@@ -192,13 +201,7 @@ export async function fetchFamilyMembers(personId: string): Promise<FamilyMember
   const supabase = getSupabase();
   if (!supabase) return demoFamilyMembers;
 
-  const { data: person } = await supabase
-    .from("people")
-    .select("family_id")
-    .eq("id", personId)
-    .single();
-
-  const familyId = (person as PersonFamilyRow | null)?.family_id;
+  const familyId = await fetchFamilyId(personId);
   if (!familyId) return demoFamilyMembers;
 
   const { data: userResult } = await supabase.auth.getUser();
@@ -224,6 +227,71 @@ export async function fetchFamilyMembers(personId: string): Promise<FamilyMember
       isCurrentUser: Boolean(currentUserId && row.user_id === currentUserId)
     };
   });
+}
+
+async function fetchFamilyId(personId: string) {
+  const supabase = getSupabase();
+  if (!supabase) return null;
+
+  const { data: person } = await supabase
+    .from("people")
+    .select("family_id")
+    .eq("id", personId)
+    .single();
+
+  return (person as PersonFamilyRow | null)?.family_id ?? null;
+}
+
+export async function createFamilyInvite(
+  personId: string,
+  invitedEmail: string,
+  relationship?: string
+): Promise<FamilyInviteResult> {
+  const normalizedEmail = invitedEmail.trim().toLowerCase();
+  if (!normalizedEmail) return { source: "demo", error: "メールアドレスを入力してください。" };
+
+  const appScheme = process.env.EXPO_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
+  const supabase = getSupabase();
+
+  if (!supabase) {
+    const token = "demo-invite-token";
+    return {
+      source: "demo",
+      token,
+      inviteUrl: `${appScheme}://invite?token=${token}`,
+      fallbackUrl: webBaseUrl ? `${webBaseUrl}/invite/${token}` : undefined
+    };
+  }
+
+  const familyId = await fetchFamilyId(personId);
+  if (!familyId) return { source: "supabase", error: "家族情報が見つかりませんでした。" };
+
+  const { data, error } = await supabase.rpc("create_family_invite", {
+    p_family_id: familyId,
+    p_invited_email: normalizedEmail,
+    p_role: "member",
+    p_relationship: relationship?.trim() || null
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+    return {
+      source: "supabase",
+      limitReached: message.includes("free_plan_limit_reached"),
+      error: message
+    };
+  }
+
+  const token = (data as { token?: string } | null)?.token;
+  if (!token) return { source: "supabase", error: "招待リンクを作成できませんでした。" };
+
+  return {
+    source: "supabase",
+    token,
+    inviteUrl: `${appScheme}://invite?token=${token}`,
+    fallbackUrl: webBaseUrl ? `${webBaseUrl}/invite/${token}` : undefined
+  };
 }
 
 export async function updatePersonStatus(

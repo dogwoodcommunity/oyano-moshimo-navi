@@ -106,10 +106,16 @@ create policy "family_members read family"
 on family_members for select
 using (is_family_member(family_id));
 
-create policy "family_members manage admins"
-on family_members for all
+drop policy if exists "family_members manage admins" on family_members;
+
+create policy "family_members update admins"
+on family_members for update
 using (is_family_admin(family_id))
 with check (is_family_admin(family_id));
+
+create policy "family_members delete admins"
+on family_members for delete
+using (is_family_admin(family_id));
 
 create policy "people read family"
 on people for select
