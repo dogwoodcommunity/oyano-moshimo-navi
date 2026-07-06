@@ -267,6 +267,8 @@ GitHubが必要な理由:
 - `/start` は写真背景を外し、受付票のような白い面と左線の構成へ変更。「ここからです」「急いでいる時は、ここから選んでください。」を明示し、各選択肢に「この状況で始める」「選ぶ」を追加。
 - スマホ幅ではナビを `ここから始める / 読む / 安心` に絞り、開始画面の重複説明を隠して選択ボタンが早く見えるようにした。
 - 確認: Web typecheck OK、Next build OK、ローカルdev再起動後に `node scripts/smoke-web.mjs http://localhost:3000` OK。アプリ内ブラウザで `/home` と `/start` をdesktop/390px幅で確認。
+- GitHubへcommit `3dc2806 Make web entry design more grounded` をpush済み。
+- Vercel本番へdeploy済み。Production URLは引き続き `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。`/api/admin/env-check` は本番Admin tokenなしのため401 skipで想定通り。
 - `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
 - 本番確認:
   - `https://oyano-moshimo-navi.vercel.app/api/health` OK。
