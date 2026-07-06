@@ -28,12 +28,14 @@ export function SupportPackClient() {
   }
 
   return (
-    <section className="panel" style={{ marginTop: 18 }}>
-      <h2>Stripe Checkout開始</h2>
+    <section className="panel handoff-band" style={{ marginTop: 18 }}>
+      <h2>申し込み</h2>
       <p className="hint">Stripe Checkout Sessionを作成し、決済完了後はWebhookでsupport_packsを更新します。</p>
-      <button className="button" disabled={!caseId} onClick={startCheckout}>
-        {caseId ? "Checkout準備レコードを作成" : "結果画面からcase付きで開始"}
-      </button>
+      <div className="actions">
+        <button className="button" disabled={!caseId} onClick={startCheckout}>
+          {caseId ? "Stripe Checkoutへ進む" : "結果画面からcase付きで開始"}
+        </button>
+      </div>
       {message ? <p className="hint">{message}</p> : null}
     </section>
   );

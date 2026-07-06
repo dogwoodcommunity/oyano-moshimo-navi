@@ -486,6 +486,42 @@ textarea {
   color: white;
 }
 
+.timeline-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.timeline-step {
+  background: #fbfdf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+}
+
+.timeline-step strong {
+  align-items: center;
+  background: var(--green-dark);
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  height: 30px;
+  justify-content: center;
+  width: 30px;
+}
+
+.provider-card {
+  display: grid;
+  gap: 8px;
+}
+
+.provider-card h2,
+.provider-card p {
+  margin: 0;
+}
+
 .admin-table {
   border-collapse: collapse;
   width: 100%;

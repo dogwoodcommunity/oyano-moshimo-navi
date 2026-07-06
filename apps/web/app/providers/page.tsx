@@ -12,13 +12,17 @@ const categories = [
 export default function ProvidersPage() {
   return (
     <main className="container">
-      <h1 className="page-title">相談先カテゴリ</h1>
-      <p className="lead">候補提示に留め、法律・税務判断の断定や成約課金は扱いません。</p>
+      <section className="result-summary">
+        <p className="pill">相談先カテゴリ</p>
+        <h1 className="page-title">状況に応じて、相談先の種類を整理する。</h1>
+        <p className="lead">候補提示に留め、法律・税務判断の断定や成約課金は扱いません。家族が比較前に見るべき軸を揃えます。</p>
+      </section>
       <section className="grid status-grid">
         {categories.map(([title, body]) => (
-          <article className="panel" key={title}>
+          <article className="panel provider-card" key={title}>
             <h2>{title}</h2>
             <p>{body}</p>
+            <span className="hint">確認軸を整理してから個別相談へ進みます。</span>
           </article>
         ))}
       </section>
