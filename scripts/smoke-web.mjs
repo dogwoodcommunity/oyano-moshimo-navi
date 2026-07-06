@@ -6,8 +6,13 @@ const checks = [
   { path: "/home", label: "home" },
   { path: "/start", label: "start" },
   { path: "/diagnosis", label: "diagnosis" },
+  { path: "/result/smoke-case", label: "result fallback" },
+  { path: "/result/smoke-case/share", label: "result share fallback" },
   { path: "/support-pack", label: "support pack" },
   { path: "/legal/privacy", label: "privacy" },
+  { path: "/admin", label: "admin overview" },
+  { path: "/admin/cases", label: "admin cases" },
+  { path: "/admin/support-packs", label: "admin support packs" },
   { path: "/api/health", label: "health api" },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
 ];
