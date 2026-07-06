@@ -2,7 +2,8 @@ const baseUrl = (process.argv[2] ?? process.env.WEB_BASE_URL ?? "http://localhos
 const adminToken = process.env.ADMIN_ACCESS_TOKEN ?? "";
 
 const checks = [
-  { path: "/", label: "home" },
+  { path: "/", label: "root redirect" },
+  { path: "/home", label: "home" },
   { path: "/start", label: "start" },
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/support-pack", label: "support pack" },
@@ -35,4 +36,3 @@ for (const check of checks) {
 if (failed) {
   process.exit(1);
 }
-

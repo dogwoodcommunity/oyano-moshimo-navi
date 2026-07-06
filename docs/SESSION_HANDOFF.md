@@ -163,6 +163,7 @@ GitHubが必要な理由:
 - Expoデザインの基礎を追加。`apps/mobile/lib/theme.ts` を作成し、dashboard/person/tabsへWebと近い色・カード・影・タイポグラフィを適用。
 - Expo tasks/status/home画面もテーマ適用。タスクは未完了・重要の集計、状態別カウント、期限/優先度チップ、空状態表示を追加。
 - Web `/support-pack` と `/providers` を再設計。商品範囲、除外事項、申し込みステップ、相談先カテゴリの比較軸を見やすくした。
+- Dev serverで `/` だけ404になる環境差を避けるため、トップを `/home` でも提供し、`next.config.mjs` で `/ -> /home` の一時redirectを追加。smokeも `/home` を確認する。
 
 その後に Step 2: Supabase本番準備。
 
