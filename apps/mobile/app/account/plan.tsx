@@ -8,14 +8,14 @@ export default function AccountPlanScreen() {
       <Text style={styles.title}>プラン確認</Text>
       <View style={[styles.card, styles.primaryCard]}>
         <Text style={styles.cardTitleLight}>Family Plus</Text>
-        <Text style={styles.bodyLight}>家族共有、無制限登録、期限リマインド、写真容量拡張などのアプリ内デジタル機能はIAP前提で設計余地を残します。</Text>
+        <Text style={styles.bodyLight}>家族共有、複数登録、期限リマインド、写真容量拡張などの利用状態を確認できます。</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>発動サポートパック</Text>
-        <Text style={styles.body}>Webで申し込み済みの場合、ここでは requested / paid / reviewing / report_ready などの状態表示のみ行います。</Text>
+        <Text style={styles.body}>申込済みの場合、ここでは requested / paid / reviewing / report_ready などの状態表示のみ行います。</Text>
       </View>
       <View style={styles.notice}>
-        <Text style={styles.noticeText}>アプリ内には外部決済CTAを置きません。Web/Stripeの商品導線とは明確に分離します。</Text>
+        <Text style={styles.noticeText}>この画面では購入や外部サービスへの誘導は行いません。</Text>
       </View>
     </View>
   );

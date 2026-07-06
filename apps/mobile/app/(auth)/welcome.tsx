@@ -43,9 +43,13 @@ export default function WelcomeScreen() {
       <View style={styles.panel}>
         <Text style={styles.label}>メール</Text>
         <TextInput autoCapitalize="none" inputMode="email" onChangeText={setEmail} placeholder="mail@example.com" style={styles.input} value={email} />
+        <Text style={styles.privacyNote}>
+          親の入院、認知症、死亡などの情報は慎重に扱う必要があります。本人に説明できる場合は説明したうえで、家族の支援に必要な範囲だけ保存してください。
+        </Text>
         <Pressable onPress={continueToApp} style={styles.button}>
           <Text style={styles.buttonText}>ログインして引き継ぐ</Text>
         </Pressable>
+        <Text style={styles.hint}>暗証番号、パスワード、マイナンバー画像は保存しないでください。</Text>
         <Text style={styles.hint}>caseId: {params.caseId ?? "demo"} / token: {params.token ?? "demo"}</Text>
         {message ? <Text style={styles.hint}>{message}</Text> : null}
         {pushToken ? <Text style={styles.hint}>push token saved: {pushToken}</Text> : null}
@@ -68,6 +72,7 @@ const styles = StyleSheet.create({
   panel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   label: { color: colors.ink, fontWeight: "900" },
   input: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.ink, minHeight: 46, padding: 12 },
+  privacyNote: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "800", lineHeight: 19, padding: 10 },
   button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, minHeight: 48, justifyContent: "center" },
   buttonText: { color: "#fff", fontWeight: "900" },
   demoCard: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 14 },

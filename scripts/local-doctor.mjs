@@ -49,6 +49,7 @@ const requiredFiles = [
   "docs/PRODUCTION_CHECKLIST.md",
   "docs/DEPLOYMENT.md",
   "docs/ENVIRONMENT_MATRIX.md",
+  "docs/PRIVACY_AND_REVIEW_GUARDRAILS.md",
   "docs/SESSION_HANDOFF.md"
 ];
 

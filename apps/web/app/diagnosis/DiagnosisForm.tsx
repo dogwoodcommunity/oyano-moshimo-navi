@@ -156,6 +156,15 @@ export function DiagnosisForm() {
             <input name="consentToContact" type="checkbox" />
             発動サポートや相談先整理のため、必要時に連絡を受けることに同意する
           </label>
+          <label className="check consent-check">
+            <input name="sensitiveInfoConsent" required type="checkbox" />
+            親の入院・認知症・死亡などの情報が要配慮情報に該当し得ることを理解し、本人に説明できる場合は説明したうえで、家族の支援に必要な範囲で入力します
+          </label>
+          <p className="hint">
+            暗証番号、パスワード、マイナンバー画像は入力しないでください。詳しくは
+            <a href="/legal/privacy">プライバシーポリシー</a>
+            を確認してください。
+          </p>
         </section>
 
         <div className="submit-bar">

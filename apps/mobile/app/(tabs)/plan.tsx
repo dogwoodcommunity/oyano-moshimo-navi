@@ -15,10 +15,10 @@ export default function PlanTab() {
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>継続課金の扱い</Text>
-        <Text style={styles.body}>Family Plusなどアプリ内デジタル機能の継続課金はIAP対応余地を残しています。</Text>
+        <Text style={styles.body}>この画面では現在の利用状態だけを表示します。購入や変更が必要な機能は、リリース時の審査方針に合わせて案内します。</Text>
       </View>
       <View style={styles.notice}>
-        <Text style={styles.noticeText}>発動サポートパックは購入済み・レビュー中などの状態表示のみ。アプリ内にWeb決済CTAは置きません。</Text>
+        <Text style={styles.noticeText}>発動サポートパックは申込済み・確認中・完了などの状態表示のみ行います。</Text>
       </View>
     </View>
   );
