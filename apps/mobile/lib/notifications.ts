@@ -101,7 +101,8 @@ export async function markNotificationsOpened(data: Record<string, unknown>) {
   await client
     .from("scheduled_notifications")
     .update({ opened_at: new Date().toISOString() })
-    .in("id", ids);
+    .in("id", ids)
+    .is("opened_at", null);
 
   return { updated: ids.length, source: "supabase" as const };
 }

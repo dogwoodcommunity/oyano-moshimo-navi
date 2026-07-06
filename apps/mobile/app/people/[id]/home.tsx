@@ -1,3 +1,4 @@
+import { Link, useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadow } from "@/lib/theme";
 
@@ -11,6 +12,8 @@ const rows = [
 ];
 
 export default function HomeChartScreen() {
+  const params = useLocalSearchParams<{ id: string }>();
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
@@ -28,7 +31,12 @@ export default function HomeChartScreen() {
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>写真管理</Text>
-        <Text style={styles.body}>`home_photos` と Supabase Storage へ接続する枠です。MVPでは撮影・アップロード導線の入口をここに集約します。</Text>
+        <Text style={styles.body}>玄関、各部屋、重要書類の棚、メーター周りなどを撮っておくと、離れて暮らす家族も状況を確認しやすくなります。</Text>
+        <Link href={`/people/${params.id}/assets`} style={styles.link}>保管場所メモを追加する</Link>
+      </View>
+      <View style={styles.notice}>
+        <Text style={styles.noticeTitle}>保存しないもの</Text>
+        <Text style={styles.body}>銀行暗証番号、各種パスワード、マイナンバー画像は登録しないでください。ここでは「存在」と「場所」だけを残します。</Text>
       </View>
     </ScrollView>
   );
@@ -41,6 +49,9 @@ const styles = StyleSheet.create({
   title: { color: colors.ink, fontSize: 32, fontWeight: "900" },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
+  link: { color: colors.blue, fontWeight: "900" },
+  notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 16 },
+  noticeTitle: { color: colors.greenDark, fontSize: 18, fontWeight: "900" },
   row: { borderBottomColor: "#edf1ed", borderBottomWidth: 1, gap: 4, paddingBottom: 10 },
   label: { color: colors.green, fontWeight: "900" },
   body: { color: colors.muted, lineHeight: 22 }

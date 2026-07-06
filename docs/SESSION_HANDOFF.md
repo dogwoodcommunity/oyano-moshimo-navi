@@ -239,3 +239,13 @@ GitHubが必要な理由:
 - `main` branchをGitHubへpush済み。最新push時点の先頭commitは `28a299e Add Supabase API grants verification`。
 - `apps/web/.env.local` と `apps/mobile/.env.local` はローカルだけにあり、gitignore対象。Supabaseのservice role keyなどの秘密情報はGitHubへ保存していない。
 - 本番Supabase初期構築とローカル接続確認は完了済み。次の大きな作業はVercelへWebを本番デプロイし、同じ環境変数をVercel側へ安全に設定すること。
+
+## 2026-07-06 14:20 JST 追記
+
+- Expoアプリ内を家族3組テスト向けに追加調整。
+- `apps/mobile/lib/supabase.ts` はSupabase clientをシングルトン化し、毎回clientを作り直さないようにした。
+- ログイン画面 `apps/mobile/app/(auth)/welcome.tsx` から `caseId/token` とpush tokenの開発者向け表示を削除。メール未入力時は明示エラー、デモ導線は「確認用デモ」として分離。
+- 通知開封処理 `apps/mobile/lib/notifications.ts` のSupabase fallbackでも `opened_at is null` 条件を追加し、初回開封時刻を上書きしないようにした。
+- 情報登録画面 `apps/mobile/app/people/[id]/assets.tsx` は `demoPerson.id` 固定を廃止し、URLのperson idへ保存するよう修正。保存中表示と保存失敗メッセージも追加。
+- 実家カルテ `apps/mobile/app/people/[id]/home.tsx` から開発者向けの `home_photos` / Supabase Storage文言を削除し、写真管理と「保存しないもの」を家族向け説明に変更。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:local` OK。

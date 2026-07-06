@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { registerPushToken, saveTaskDueDates } from "@/lib/notifications";
+import { registerPushToken } from "@/lib/notifications";
 import { demoResult } from "@/lib/demoData";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
@@ -12,12 +12,18 @@ const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [email, setEmail] = useState("");
-  const [pushToken, setPushToken] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const hasHandoff = Boolean(params.caseId && params.token && params.caseId !== "demo" && params.token !== "demo");
 
   async function continueToApp() {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail) {
+      setMessage("メールアドレスを入力してください。");
+      return;
+    }
+
     if (email.trim()) {
-      const result = await sendMagicLink(email.trim());
+      const result = await sendMagicLink(trimmedEmail);
       setMessage(result.message);
       if (result.sent) return;
     }
@@ -27,18 +33,22 @@ export default function WelcomeScreen() {
     if (handoff) {
       setMessage(`Web診断を引き継ぎました。タスク ${handoff.tasksCreated}件`);
     }
-    const token = await registerPushToken(userId);
-    setPushToken(token);
-    await saveTaskDueDates(userId, demoResult.tasks.map((task, index) => ({ id: `demo-task-${index}`, title: task.title, dueDate: task.dueDate })));
+    await registerPushToken(userId);
+    router.replace("/(tabs)/dashboard");
+  }
+
+  async function continueDemo() {
+    await registerPushToken(DEMO_USER_ID);
+    setMessage(`デモで開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
     router.replace("/(tabs)/dashboard");
   }
 
   return (
     <View style={styles.screen}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>Web診断引き継ぎ</Text>
+        <Text style={styles.kicker}>{hasHandoff ? "Webの整理結果を引き継ぎ" : "家族ボードへログイン"}</Text>
         <Text style={styles.title}>親のもしもナビ</Text>
-        <Text style={styles.lead}>Magic Linkログイン後、Webの診断結果を家族ボードへ引き継ぎます。</Text>
+        <Text style={styles.lead}>メールで本人確認をして、家族で見るタスク・期限・写真を安全に引き継ぎます。</Text>
       </View>
       <View style={styles.panel}>
         <Text style={styles.label}>メール</Text>
@@ -47,17 +57,17 @@ export default function WelcomeScreen() {
           親の入院、認知症、死亡などの情報は慎重に扱う必要があります。本人に説明できる場合は説明したうえで、家族の支援に必要な範囲だけ保存してください。
         </Text>
         <Pressable onPress={continueToApp} style={styles.button}>
-          <Text style={styles.buttonText}>ログインして引き継ぐ</Text>
+          <Text style={styles.buttonText}>{hasHandoff ? "ログインして引き継ぐ" : "ログインする"}</Text>
         </Pressable>
         <Text style={styles.hint}>暗証番号、パスワード、マイナンバー画像は保存しないでください。</Text>
-        <Text style={styles.hint}>caseId: {params.caseId ?? "demo"} / token: {params.token ?? "demo"}</Text>
         {message ? <Text style={styles.hint}>{message}</Text> : null}
-        {pushToken ? <Text style={styles.hint}>push token saved: {pushToken}</Text> : null}
       </View>
       <View style={styles.demoCard}>
-        <Text style={styles.demoTitle}>ローカル確認</Text>
-        <Text style={styles.hint}>Supabase未設定でもデモデータで継続アプリの導線を確認できます。</Text>
-        <Link href="/(tabs)/dashboard" style={styles.link}>デモでdashboardへ</Link>
+        <Text style={styles.demoTitle}>確認用デモ</Text>
+        <Text style={styles.hint}>開発・説明用に、保存なしで家族ボードの見え方を確認できます。</Text>
+        <Pressable onPress={continueDemo}>
+          <Text style={styles.link}>デモで開く</Text>
+        </Pressable>
       </View>
     </View>
   );
