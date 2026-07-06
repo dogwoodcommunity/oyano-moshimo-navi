@@ -4,7 +4,7 @@ import { getSupabase } from "./supabase";
 export async function sendMagicLink(email: string) {
   const supabase = getSupabase();
   if (!supabase) {
-    return { sent: false, demo: true, message: "Supabase未設定のためデモログインします。" };
+    return { sent: false, demo: true, message: "ログイン準備中です。見本画面で確認できます。" };
   }
 
   const redirectTo = Linking.createURL("/(tabs)/dashboard");

@@ -6,6 +6,19 @@
     "version": "0.3.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
+    "ios": {
+      "bundleIdentifier": "jp.beech.oyanomoshimo",
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "実家や書類の保管場所を家族で確認するために写真を登録します。",
+        "NSPhotoLibraryUsageDescription": "実家や書類の保管場所を家族で確認するために写真を選択します。",
+        "NSUserNotificationsUsageDescription": "期限が近い手続きや月1回の状況確認をお知らせします。"
+      }
+    },
+    "android": {
+      "package": "jp.beech.oyanomoshimo",
+      "permissions": ["POST_NOTIFICATIONS"]
+    },
     "plugins": ["expo-router", "expo-notifications"],
     "extra": {
       "router": {

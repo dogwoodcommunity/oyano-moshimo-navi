@@ -65,7 +65,7 @@ export default function TasksScreen() {
       return;
     }
 
-    setMessage(result.source === "supabase" ? "タスクを更新しました。" : "デモ表示で更新しました。");
+    setMessage(result.source === "supabase" ? "タスクを更新しました。" : "見本の表示を更新しました。");
   }
 
   async function assignTask(task: MobileTask, member: FamilyMember | null) {

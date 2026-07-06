@@ -10,7 +10,7 @@ export type HomePhotoUploadRequest = {
 export async function uploadHomePhoto({ storagePath, bytes, contentType }: HomePhotoUploadRequest) {
   const supabase = getSupabase();
   if (!supabase) {
-    return { uploaded: false, message: "Supabase未設定のため写真アップロードはスキップしました。" };
+    return { uploaded: false, message: "写真の保存準備ができていません。設定後にもう一度お試しください。" };
   }
 
   const { error } = await supabase.storage

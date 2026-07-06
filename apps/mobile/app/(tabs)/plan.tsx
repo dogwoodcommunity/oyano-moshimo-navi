@@ -10,7 +10,7 @@ export default function PlanTab() {
       <View style={[styles.card, styles.primaryCard]}>
         <Text style={styles.kickerLight}>現在の状態</Text>
         <Text style={styles.cardTitleLight}>Free</Text>
-        <Text style={styles.bodyLight}>家族ボード、期限通知、写真管理、タイムライン、実家カルテをデモ状態で確認できます。</Text>
+        <Text style={styles.bodyLight}>親1名、家族招待2名まで、基本の期限通知と家族ボードを使えます。</Text>
         <Link href="/account/plan" style={styles.linkLight}>詳細</Link>
       </View>
       <View style={styles.card}>

@@ -281,6 +281,17 @@ GitHubが必要な理由:
 - GitHubへcommit `a4a82e7 Prepare Stripe support pack flow` をpush済み。
 - Vercel本番へdeploy済み。Production URLは引き続き `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。`/api/admin/env-check` は本番Admin tokenなしのため401 skipで想定通り。
 - まだ未実施: Stripe Dashboardで商品作成、Vercel env `STRIPE_SECRET_KEY` / `STRIPE_SUPPORT_PACK_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` 設定、Production redeploy、テスト決済。
+
+## 2026-07-06 19:57 JST 追記
+
+- Stripe外部設定は後回しになったため、先にExpoアプリを家族3組テスト向けに整備。
+- `apps/mobile/app.json` に iOS bundle identifier `jp.beech.oyanomoshimo`、Android package `jp.beech.oyanomoshimo`、通知/カメラ/写真ライブラリ用途説明を追加。EAS build前の詰まりを減らす。
+- モバイル画面から `Push token`、`EAS projectId`、`Supabase未設定`、`Stripe Checkout`、`MVP`、`デモ表示` などの開発者向け文言が出ないように調整。
+- Welcomeの「確認用デモ」は「まず見本を見る」へ変更。登録前に保存なしで確認できる表現にした。
+- Plan/Account Planは、外部決済CTAを出さず、Freeの利用範囲と発動サポートパックの状態表示だけを説明する表現に整理。
+- Notificationsは「この端末で通知を受け取れるようにしました」など利用者向け文言に変更し、通知OFF時は登録ボタンを無効化。
+- `docs/MOBILE_TEST_BUILD.md` を追加。EAS preview build前の環境変数、家族3組テストで見る項目、未確定事項を整理。
+- 確認: `pnpm --filter mobile run typecheck` OK、`node scripts/local-doctor.mjs` OK。
 - `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
 - 本番確認:
   - `https://oyano-moshimo-navi.vercel.app/api/health` OK。

@@ -28,13 +28,13 @@ export default function SettingsScreen() {
         <Text style={styles.cardTitle}>大事な情報の扱い</Text>
         <Text style={styles.body}>入院、認知症、死亡などの情報は慎重に扱います。暗証番号、パスワード、マイナンバー画像は保存しないでください。</Text>
         <Pressable style={styles.secondaryButton} onPress={openPrivacyPolicy} disabled={!webBaseUrl}>
-          <Text style={styles.secondaryButtonText}>{webBaseUrl ? "プライバシーポリシーを見る" : "プライバシーポリシーURLは本番設定後に表示"}</Text>
+          <Text style={styles.secondaryButtonText}>{webBaseUrl ? "プライバシーポリシーを見る" : "プライバシーポリシーは準備中です"}</Text>
         </Pressable>
       </View>
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>アカウントと削除</Text>
-        <Text style={styles.body}>登録情報、家族共有、写真、通知設定の削除依頼を受け付ける導線です。本番公開時に問い合わせ窓口とアプリ内削除導線を確定します。</Text>
+        <Text style={styles.body}>登録情報、家族共有、写真、通知設定の削除について確認できます。</Text>
         <View style={styles.notice}>
           <Text style={styles.noticeText}>テスト中に削除を希望する場合は、運営担当者へ「データ削除希望」と伝えてください。</Text>
         </View>

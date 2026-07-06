@@ -36,7 +36,7 @@ export default function FamilyScreen() {
 
     setInviteUrl(result.inviteUrl);
     setFallbackUrl(result.fallbackUrl ?? "");
-    setMessage(result.source === "supabase" ? "招待リンクを作成しました。" : "デモ招待リンクを作成しました。");
+    setMessage(result.source === "supabase" ? "招待リンクを作成しました。" : "見本用の招待リンクを作成しました。");
   }
 
   async function shareInvite() {
@@ -77,7 +77,7 @@ export default function FamilyScreen() {
         </Pressable>
         {message ? <Text style={limitReached ? styles.upgradeText : styles.noticeText}>{message}</Text> : null}
         {limitReached ? (
-          <Link href="/account/plan" style={styles.planLink}>Family Plusを見る</Link>
+          <Link href="/account/plan" style={styles.planLink}>利用状態を確認する</Link>
         ) : null}
         {inviteUrl ? (
           <>

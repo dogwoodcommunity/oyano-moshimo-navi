@@ -11,7 +11,7 @@ export default function NotificationsScreen() {
   async function register() {
     const nextToken = await registerPushToken("00000000-0000-4000-8000-000000000001");
     setToken(nextToken);
-    setMessage(nextToken ? "Push tokenを保存しました。" : "Push tokenを取得できませんでした。通知権限またはEAS projectIdを確認してください。");
+    setMessage(nextToken ? "この端末で通知を受け取れるようにしました。" : "通知を有効にできませんでした。端末の通知設定を確認してください。");
   }
 
   return (
@@ -27,7 +27,7 @@ export default function NotificationsScreen() {
           <Switch value={enabled} onValueChange={setEnabled} />
         </View>
         <Text style={styles.body}>法定期限や重要な手続きは、近づいた時だけまとめて通知します。同じ日の通知は1通にまとめます。</Text>
-        <Pressable style={styles.button} onPress={register}><Text style={styles.buttonText}>この端末で通知を受け取る</Text></Pressable>
+        <Pressable disabled={!enabled} style={[styles.button, !enabled ? styles.buttonDisabled : null]} onPress={register}><Text style={styles.buttonText}>この端末で通知を受け取る</Text></Pressable>
         {message ? <Text style={styles.noticeText}>{message}</Text> : null}
         {token ? <Text style={styles.body}>この端末の通知登録が完了しています。</Text> : null}
       </View>
@@ -54,5 +54,6 @@ const styles = StyleSheet.create({
   body: { color: colors.muted, lineHeight: 22 },
   noticeText: { color: colors.green, fontWeight: "900", lineHeight: 22 },
   button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 48 },
+  buttonDisabled: { opacity: 0.48 },
   buttonText: { color: "#fff", fontWeight: "900" }
 });

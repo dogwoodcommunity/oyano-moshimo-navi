@@ -39,7 +39,7 @@ export default function WelcomeScreen() {
 
   async function continueDemo() {
     await registerPushToken(DEMO_USER_ID);
-    setMessage(`デモで開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
+    setMessage(`見本で開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
     router.replace("/(tabs)/dashboard");
   }
 
@@ -63,10 +63,10 @@ export default function WelcomeScreen() {
         {message ? <Text style={styles.hint}>{message}</Text> : null}
       </View>
       <View style={styles.demoCard}>
-        <Text style={styles.demoTitle}>確認用デモ</Text>
-        <Text style={styles.hint}>開発・説明用に、保存なしで家族ボードの見え方を確認できます。</Text>
+        <Text style={styles.demoTitle}>まず見本を見る</Text>
+        <Text style={styles.hint}>登録前に、家族ボードの見え方だけ確認できます。入力内容は保存されません。</Text>
         <Pressable onPress={continueDemo}>
-          <Text style={styles.link}>デモで開く</Text>
+          <Text style={styles.link}>見本で開く</Text>
         </Pressable>
       </View>
     </View>

@@ -25,7 +25,7 @@ export default function StatusScreen() {
       return;
     }
 
-    const suffix = result.source === "supabase" ? "tasksも自動生成されます。" : "デモ表示で変更しました。";
+    const suffix = result.source === "supabase" ? "必要なタスクも更新されます。" : "見本の表示を更新しました。";
     setMessage(`${statusLabel(nextStatus)}に変更しました。${suffix}`);
   }
 

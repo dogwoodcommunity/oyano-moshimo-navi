@@ -12,7 +12,7 @@ export default function AccountPlanScreen() {
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>発動サポートパック</Text>
-        <Text style={styles.body}>申込済みの場合、ここでは requested / paid / reviewing / report_ready などの状態表示のみ行います。</Text>
+        <Text style={styles.body}>申込済みの場合、ここでは「受付済み」「確認中」「レポート準備中」などの状態だけを表示します。</Text>
       </View>
       <View style={styles.notice}>
         <Text style={styles.noticeText}>この画面では購入や外部サービスへの誘導は行いません。</Text>
