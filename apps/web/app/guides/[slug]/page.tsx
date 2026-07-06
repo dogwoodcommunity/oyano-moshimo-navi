@@ -1,9 +1,20 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getGuide, guides } from "@/lib/guides";
 
 export function generateStaticParams() {
   return guides.map((guide) => ({ slug: guide.slug }));
+}
+
+export function generateMetadata({ params }: { params: { slug: string } }): Metadata {
+  const guide = getGuide(params.slug);
+  if (!guide) return {};
+
+  return {
+    title: guide.title,
+    description: guide.summary
+  };
 }
 
 export default function GuideDetailPage({ params }: { params: { slug: string } }) {

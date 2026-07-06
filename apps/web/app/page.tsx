@@ -1,4 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "親のもしも準備ポータル",
+  description: "入院、介護、認知症、相続前整理、実家じまい。親のもしもに備えて家族で確認することを整理します。"
+};
 
 const portalTopics = [
   {

@@ -1,5 +1,11 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { guides } from "@/lib/guides";
+
+export const metadata: Metadata = {
+  title: "親のもしも準備ガイド",
+  description: "入院、介護、認知症、死亡直後、相続前整理、実家じまいの状況別ガイド。家族が最初に整理することをまとめています。"
+};
 
 export default function GuidesPage() {
   return (

@@ -1,4 +1,10 @@
 import Link from "next/link";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "料金と使い方",
+  description: "無料ポータル、家族共有アプリ、困った時の整理サポート。親のもしもナビの使い方と課金方針をまとめています。"
+};
 
 const plans = [
   {

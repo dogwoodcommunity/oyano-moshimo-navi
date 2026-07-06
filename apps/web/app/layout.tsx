@@ -3,8 +3,12 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "親のもしもナビ v0.3",
-  description: "親の状況が変わったら、家族が次にやることが分かる。"
+  title: {
+    default: "親のもしもナビ",
+    template: "%s | 親のもしもナビ"
+  },
+  description: "入院、介護、実家じまい、相続前の情報整理まで。親のもしもに備える家族向け準備ポータル。",
+  metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000")
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

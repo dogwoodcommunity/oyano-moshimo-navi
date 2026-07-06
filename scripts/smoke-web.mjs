@@ -12,6 +12,8 @@ const checks = [
   { path: "/result/smoke-case", label: "result fallback" },
   { path: "/result/smoke-case/share", label: "result share fallback" },
   { path: "/support-pack", label: "support pack" },
+  { path: "/sitemap.xml", label: "sitemap" },
+  { path: "/robots.txt", label: "robots" },
   { path: "/legal/privacy", label: "privacy" },
   { path: "/admin", label: "admin overview" },
   { path: "/admin/cases", label: "admin cases" },
