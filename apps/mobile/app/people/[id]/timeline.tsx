@@ -1,10 +1,15 @@
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { demoTimeline } from "@/lib/demoData";
+import { colors, radius, shadow } from "@/lib/theme";
 
 export default function TimelineScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <Text style={styles.title}>タイムライン</Text>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>Timeline</Text>
+        <Text style={styles.title}>タイムライン</Text>
+        <Text style={styles.body}>家族が確認したこと、状態変更、相談メモを時系列で残します。</Text>
+      </View>
       {demoTimeline.map((item) => (
         <View style={styles.card} key={item.id}>
           <Text style={styles.kicker}>{item.date}</Text>
@@ -17,10 +22,11 @@ export default function TimelineScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#fbfcf7", gap: 14, padding: 18 },
-  title: { color: "#17211b", fontSize: 30, fontWeight: "900" },
-  card: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, gap: 8, padding: 16 },
-  kicker: { color: "#2f6f4e", fontWeight: "800" },
-  cardTitle: { color: "#17211b", fontSize: 20, fontWeight: "900" },
-  body: { color: "#344039", lineHeight: 22 }
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
+  header: { gap: 6, paddingTop: 8 },
+  title: { color: colors.ink, fontSize: 32, fontWeight: "900" },
+  card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 16, ...shadow },
+  kicker: { color: colors.green, fontWeight: "900" },
+  cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
+  body: { color: colors.muted, lineHeight: 22 }
 });

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
 import { registerPushToken } from "@/lib/notifications";
+import { colors, radius, shadow } from "@/lib/theme";
 
 export default function NotificationsScreen() {
   const [enabled, setEnabled] = useState(true);
@@ -13,7 +14,11 @@ export default function NotificationsScreen() {
 
   return (
     <View style={styles.screen}>
-      <Text style={styles.title}>通知設定</Text>
+      <View style={styles.header}>
+        <Text style={styles.kicker}>Notifications</Text>
+        <Text style={styles.title}>通知設定</Text>
+        <Text style={styles.body}>期限が近いタスクを、家族が見落とさないようにします。</Text>
+      </View>
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.cardTitle}>期限リマインド</Text>
@@ -28,12 +33,14 @@ export default function NotificationsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: "#fbfcf7", flex: 1, gap: 14, padding: 18 },
-  title: { color: "#17211b", fontSize: 30, fontWeight: "900" },
-  card: { backgroundColor: "#fff", borderColor: "#d8e0d8", borderRadius: 8, borderWidth: 1, gap: 12, padding: 16 },
+  screen: { backgroundColor: colors.paper, flex: 1, gap: 14, padding: 18 },
+  header: { gap: 6, paddingTop: 8 },
+  kicker: { color: colors.green, fontWeight: "900" },
+  title: { color: colors.ink, fontSize: 32, fontWeight: "900" },
+  card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  cardTitle: { color: "#17211b", fontSize: 20, fontWeight: "900" },
-  body: { color: "#344039", lineHeight: 22 },
-  button: { alignItems: "center", backgroundColor: "#2f6f4e", borderRadius: 8, minHeight: 48, justifyContent: "center" },
-  buttonText: { color: "#fff", fontWeight: "800" }
+  cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
+  body: { color: colors.muted, lineHeight: 22 },
+  button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 48 },
+  buttonText: { color: "#fff", fontWeight: "900" }
 });
