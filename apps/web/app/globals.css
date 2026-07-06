@@ -120,9 +120,12 @@ textarea {
 
 .portal-side {
   align-self: center;
-  background: rgba(255, 255, 255, 0.86);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.76);
+  border-radius: 8px;
   display: grid;
-  gap: 12px;
+  gap: 16px;
+  padding: 22px;
 }
 
 .portal-side h2 {
@@ -133,6 +136,24 @@ textarea {
 
 .portal-trust {
   margin-top: 14px;
+}
+
+.hero-flow {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.hero-flow span {
+  background: #f5f7f3;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 900;
+  min-height: 46px;
+  padding: 10px;
+  text-align: center;
 }
 
 .hero-proof {
@@ -247,6 +268,12 @@ textarea {
   color: white;
 }
 
+.primary-cta {
+  font-size: 17px;
+  min-height: 56px;
+  padding-inline: 22px;
+}
+
 .secondary,
 .status-button {
   background: white;
@@ -275,6 +302,37 @@ textarea {
   line-height: 1.45;
 }
 
+.quick-status-button {
+  align-items: flex-start;
+  background: #173f2e;
+  border: 1px solid #173f2e;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 130px;
+  padding: 16px;
+  text-align: left;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.quick-status-button:hover {
+  box-shadow: 0 12px 30px rgba(28, 48, 39, 0.14);
+  transform: translateY(-1px);
+}
+
+.quick-status-button strong {
+  font-size: 19px;
+}
+
+.quick-status-button span {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
 .status-button:hover,
 .secondary:hover,
 .button:hover {
@@ -294,7 +352,7 @@ textarea {
 }
 
 .diagnosis-intro {
-  align-items: end;
+  align-items: flex-end;
   display: grid;
   gap: 20px;
   grid-template-columns: minmax(0, 1fr) minmax(260px, 0.42fr);
@@ -555,6 +613,64 @@ textarea {
   margin: 0;
 }
 
+.entry-section {
+  padding-top: 58px;
+}
+
+.entry-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.entry-card {
+  display: grid;
+  gap: 12px;
+  min-height: 250px;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.entry-card.featured {
+  background: #173f2e;
+  border-color: #173f2e;
+  box-shadow: var(--shadow);
+  color: white;
+}
+
+.entry-card:hover {
+  border-color: rgba(39, 100, 71, 0.45);
+  box-shadow: 0 12px 30px rgba(28, 48, 39, 0.08);
+  transform: translateY(-1px);
+}
+
+.entry-card strong {
+  font-size: 28px;
+  line-height: 1.18;
+}
+
+.entry-card p {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.entry-card.featured p,
+.entry-card.featured .entry-link {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.entry-card.featured .meta-chip {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #cfe2d7;
+}
+
+.entry-link {
+  color: var(--blue);
+  font-weight: 900;
+  margin-top: auto;
+}
+
 .portal-section {
   padding-top: 54px;
 }
@@ -813,6 +929,104 @@ textarea {
   font-size: clamp(26px, 4vw, 42px);
   line-height: 1.15;
   margin: 0 0 12px;
+}
+
+.start-page {
+  max-width: 1160px;
+}
+
+.start-hero {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(238, 244, 237, 0.96)),
+    url("/images/family-documents-hero.png");
+  background-position: center;
+  background-size: cover;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: var(--shadow);
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.38fr);
+  margin-bottom: 18px;
+  padding: clamp(24px, 5vw, 42px);
+}
+
+.start-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.start-steps span {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 8px 11px;
+}
+
+.start-help {
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.start-help h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 12px 0 8px;
+}
+
+.start-help p:last-child,
+.start-group-head p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.quick-start {
+  align-items: center;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(210px, 0.28fr) minmax(0, 1fr);
+  margin-bottom: 18px;
+}
+
+.quick-start h2 {
+  font-size: 26px;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.quick-status-row {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.start-groups {
+  display: grid;
+  gap: 18px;
+}
+
+.start-group {
+  display: grid;
+  gap: 18px;
+}
+
+.start-group-head {
+  align-items: flex-end;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.start-group-head h2 {
+  font-size: 28px;
+  line-height: 1.2;
+  margin: 0;
 }
 
 .pricing-grid {
@@ -1106,11 +1320,23 @@ textarea {
   .portal-hero-inner,
   .portal-band-inner,
   .guide-cta,
+  .entry-grid,
   .checklist-grid,
   .safety-grid,
   .safety-boundary,
+  .start-hero,
+  .quick-start,
+  .quick-status-row,
   .pricing-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-flow {
+    grid-template-columns: 1fr;
+  }
+
+  .entry-card {
+    min-height: auto;
   }
 
   .section-head {
@@ -1126,6 +1352,11 @@ textarea {
   .admin-stat-grid,
   .admin-detail-grid {
     grid-template-columns: 1fr;
+  }
+
+  .start-group-head {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .submit-bar {

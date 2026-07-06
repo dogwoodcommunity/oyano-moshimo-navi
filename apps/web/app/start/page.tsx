@@ -17,6 +17,28 @@ const statusDescriptions: Record<ParentStatus, string> = {
   completed: "完了した情報を保管し、家族で見返せる状態にします。"
 };
 
+const priorityStatuses: ParentStatus[] = ["hospitalized", "facility", "after_death"];
+
+const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
+  {
+    title: "いま起きている",
+    lead: "急ぎで家族の役割と期限を整理したい時",
+    keys: ["hospitalized", "facility", "cognitive_decline", "end_of_life", "after_death"]
+  },
+  {
+    title: "これから備える",
+    lead: "元気なうちに、連絡先・書類・希望をまとめたい時",
+    keys: ["preparing", "inheritance", "home_clearance"]
+  },
+  {
+    title: "葬儀後・手続き中",
+    lead: "役所、年金、保険、名義変更などを抜け漏れなく進めたい時",
+    keys: ["after_funeral"]
+  }
+];
+
+const statusByKey = new Map(STATUSES.map((item) => [item.key, item]));
+
 export default function StartPage() {
   const router = useRouter();
 
@@ -26,16 +48,66 @@ export default function StartPage() {
   }
 
   return (
-    <main className="container">
-      <p className="eyebrow">状況整理チェック</p>
-      <h1 className="page-title">いま近い状況を選ぶ</h1>
-      <p className="lead">ログイン不要です。いちばん近い状態を選ぶと、家族で確認することと期限のあるタスクを整理します。</p>
-      <section className="grid status-grid" aria-label="親の状態">
-        {STATUSES.filter((item) => item.key !== "completed").map((item) => (
-          <button className="status-button" key={item.key} onClick={() => choose(item.key)}>
-            <strong>{item.label}</strong>
-            <span>{statusDescriptions[item.key]}</span>
-          </button>
+    <main className="container start-page">
+      <section className="start-hero">
+        <div>
+          <p className="eyebrow">最初にやること</p>
+          <h1 className="page-title">親の状況を1つ選ぶだけで、家族のやることリストを作ります。</h1>
+          <p className="lead">
+            診断名を決めるページではありません。いま近い状況を選ぶと、期限、家族に聞くこと、相談先カテゴリをログインなしで整理します。
+          </p>
+          <div className="start-steps" aria-label="利用の流れ">
+            <span>1. 状況を選ぶ</span>
+            <span>2. 5分で入力</span>
+            <span>3. 結果を保存・共有</span>
+          </div>
+        </div>
+        <aside className="start-help panel">
+          <p className="pill">迷ったら</p>
+          <h2>いちばん近いものを選んで大丈夫です。</h2>
+          <p>後から結果画面で、確認事項やタスクを見ながら家族で直せます。</p>
+        </aside>
+      </section>
+
+      <section className="quick-start panel elevated" aria-label="よく選ばれる入口">
+        <div>
+          <p className="eyebrow">Quick start</p>
+          <h2>急いでいる人はここから</h2>
+        </div>
+        <div className="quick-status-row">
+          {priorityStatuses.map((key) => {
+            const item = statusByKey.get(key);
+            if (!item) return null;
+            return (
+              <button className="quick-status-button" key={key} onClick={() => choose(key)}>
+                <strong>{item.label}</strong>
+                <span>{statusDescriptions[key]}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <section className="start-groups" aria-label="親の状態">
+        {statusGroups.map((group) => (
+          <div className="start-group panel" key={group.title}>
+            <div className="start-group-head">
+              <h2>{group.title}</h2>
+              <p>{group.lead}</p>
+            </div>
+            <div className="grid status-grid">
+              {group.keys.map((key) => {
+                const item = statusByKey.get(key);
+                if (!item) return null;
+                return (
+                  <button className="status-button" key={key} onClick={() => choose(key)}>
+                    <strong>{item.label}</strong>
+                    <span>{statusDescriptions[key]}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </section>
     </main>
