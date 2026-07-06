@@ -20,6 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link className="brand" href="/">親のもしもナビ</Link>
             <nav className="navlinks" aria-label="main">
               <Link href="/guides">準備ガイド</Link>
+              <Link href="/checklists">チェックリスト</Link>
               <Link href="/start">整理チェック</Link>
               <Link href="/plans">料金</Link>
               <Link href="/support-pack">発動サポート</Link>

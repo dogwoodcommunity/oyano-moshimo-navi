@@ -49,6 +49,7 @@ export default function HomePage() {
             <div className="actions">
               <Link className="button" href="/start">無料で状況を整理する</Link>
               <Link className="secondary" href="/guides">準備ガイドを読む</Link>
+              <Link className="secondary" href="/checklists">チェックリスト</Link>
               <Link className="secondary" href="/plans">料金と使い方</Link>
             </div>
             <p className="hint portal-trust">会員登録は結果を家族で保存・共有したい時だけ。診断名より、やることリストを先に出します。</p>
@@ -93,6 +94,28 @@ export default function HomePage() {
               <p>{topic.body}</p>
             </Link>
           ))}
+        </div>
+      </section>
+
+      <section className="container portal-section">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Free tools</p>
+            <h2>登録前に使えるチェックリスト</h2>
+          </div>
+          <Link className="secondary" href="/checklists">すべて見る</Link>
+        </div>
+        <div className="columns">
+          <div className="panel checklist-preview">
+            <span className="meta-chip">入院・介護</span>
+            <strong>病院で聞くこと、家族で分けること</strong>
+            <p>入院初日、退院前、介護が始まりそうな時に、聞き漏らしや抱え込みを減らします。</p>
+          </div>
+          <div className="panel checklist-preview">
+            <span className="meta-chip">死亡直後・実家じまい</span>
+            <strong>慌てて捨てない、期限を忘れない</strong>
+            <p>重要書類、親族連絡、家の写真、支払い確認を、家族で共有しやすい順番にします。</p>
+          </div>
         </div>
       </section>
 

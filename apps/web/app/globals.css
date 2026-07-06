@@ -685,6 +685,84 @@ textarea {
   margin: 0;
 }
 
+.checklist-hero {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(238, 244, 237, 0.94)),
+    radial-gradient(circle at 88% 14%, rgba(40, 79, 121, 0.13), transparent 34%);
+}
+
+.checklist-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.checklist-card {
+  display: grid;
+  gap: 18px;
+}
+
+.checklist-card h2 {
+  font-size: 24px;
+  line-height: 1.22;
+  margin: 12px 0 8px;
+}
+
+.checklist-card p,
+.checklist-preview p,
+.checklist-note p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.checklist-items {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.checklist-items li {
+  align-items: flex-start;
+  background: #fbfdf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  padding: 11px;
+}
+
+.checklist-items span {
+  background: white;
+  border: 2px solid rgba(39, 100, 71, 0.42);
+  border-radius: 5px;
+  display: block;
+  height: 22px;
+  width: 22px;
+}
+
+.checklist-note {
+  background: #f5f7f3;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.checklist-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.checklist-preview strong {
+  font-size: 21px;
+  line-height: 1.25;
+}
+
 .pricing-grid {
   display: grid;
   gap: 14px;
@@ -976,6 +1054,7 @@ textarea {
   .portal-hero-inner,
   .portal-band-inner,
   .guide-cta,
+  .checklist-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
   }

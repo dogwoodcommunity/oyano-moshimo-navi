@@ -184,6 +184,7 @@ GitHubが必要な理由:
 - 収益導線として `/plans` を追加。無料ポータル、家族共有アプリ(IAP想定)、困った時の整理サポート(Web決済)の3段階を明示し、信頼を失わず課金する線引きも表示。トップ/ナビ/doctor/smokeへ反映。Web build、Mobile tsc、doctor、料金込みsmoke OK。
 - ユーザー向けの「診断」表現をさらに弱め、`/diagnosis` は「家族で確認することを整理する」、結果画面は「整理結果」へ変更。サポートパック/共有/プラン文言も入力内容・整理結果ベースに調整。Web build、Mobile tsc、doctor、smoke OK。
 - SEO/検索流入の土台としてNext.js Metadata、`/sitemap.xml`、`/robots.txt` を追加。トップ、ガイド一覧、ガイド詳細、料金ページに個別metadataを設定し、`NEXT_PUBLIC_WEB_BASE_URL` をsitemap/robotsのbase URLに使う構成にした。`scripts/local-doctor.mjs` と `scripts/smoke-web.mjs` もsitemap/robots確認に対応。2026-07-06にdev停止 -> `.next`削除 -> `next build apps/web` OK、Mobile tsc OK、doctor OK、dev再起動後の拡張smoke OK。
+- 登録前に使える無料ツールとして `/checklists` を追加。入院初日、介護開始、死亡後1週間、実家じまい前写真の4チェックリストを `apps/web/lib/checklists.ts` に定義し、トップ/ナビ/sitemap/doctor/smokeへ接続。2026-07-06にdev停止 -> `.next`削除 -> `next build apps/web` OK、Mobile tsc OK、doctor OK、dev再起動後の拡張smoke OK。アプリ内ブラウザで `/checklists` を確認し、スマホ幅375pxでも横はみ出しなし。
 
 その後に Step 2: Supabase本番準備。
 
