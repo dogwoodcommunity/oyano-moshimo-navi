@@ -8,7 +8,11 @@ export const metadata: Metadata = {
     template: "%s | 親のもしもナビ"
   },
   description: "入院、介護、実家じまい、相続前の情報整理まで。親のもしもに備える家族向け準備ポータル。",
-  metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000")
+  metadataBase: new URL(process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000"),
+  icons: {
+    icon: "/brand/logo-mark.png",
+    apple: "/brand/apple-touch-icon.png"
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

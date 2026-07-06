@@ -65,12 +65,14 @@ textarea {
 }
 
 .brand::before {
-  background: var(--green);
-  border-radius: 3px;
+  background-image: url("/brand/logo-mark.png");
+  background-position: center;
+  background-size: cover;
+  border-radius: 7px;
   content: "";
   display: inline-block;
-  height: 24px;
-  width: 24px;
+  height: 30px;
+  width: 30px;
 }
 
 .navlinks {

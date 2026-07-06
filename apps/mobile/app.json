@@ -5,7 +5,13 @@
     "scheme": "oyanomoshimo",
     "version": "0.3.0",
     "orientation": "portrait",
+    "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#f6f7f1"
+    },
     "ios": {
       "bundleIdentifier": "jp.beech.oyanomoshimo",
       "supportsTablet": false,
@@ -17,7 +23,15 @@
     },
     "android": {
       "package": "jp.beech.oyanomoshimo",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#276447"
+      },
       "permissions": ["POST_NOTIFICATIONS"]
+    },
+    "notification": {
+      "icon": "./assets/notification-icon.png",
+      "color": "#276447"
     },
     "plugins": ["expo-router", "expo-notifications"],
     "extra": {
