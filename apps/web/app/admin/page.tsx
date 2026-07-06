@@ -13,6 +13,7 @@ export default function AdminPage() {
         <div className="actions">
           <Link className="secondary" href="/admin/cases">cases</Link>
           <Link className="secondary" href="/admin/support-packs">support packs</Link>
+          <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
           <Link className="secondary" href="/admin/providers">providers</Link>
           <Link className="secondary" href="/admin/env">env</Link>
         </div>
@@ -32,6 +33,11 @@ export default function AdminPage() {
           <span>03</span>
           <strong>Environment</strong>
           <p>Supabase、Stripe、通知Cronなどの本番設定漏れを確認します。</p>
+        </article>
+        <article className="admin-stat">
+          <span>04</span>
+          <strong>削除依頼</strong>
+          <p>アプリ内から届いたアカウント削除依頼を確認します。</p>
         </article>
       </section>
       <AdminTokenControl />

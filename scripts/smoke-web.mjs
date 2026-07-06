@@ -21,6 +21,7 @@ const checks = [
   { path: "/admin", label: "admin overview" },
   { path: "/admin/cases", label: "admin cases" },
   { path: "/admin/support-packs", label: "admin support packs" },
+  { path: "/admin/delete-requests", label: "admin delete requests" },
   { path: "/api/health", label: "health api" },
   { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatus: 401 },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
