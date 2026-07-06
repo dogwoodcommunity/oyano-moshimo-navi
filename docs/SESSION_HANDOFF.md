@@ -278,6 +278,8 @@ GitHubが必要な理由:
 - `POST /api/stripe/webhook` は、同じStripe checkout session idのpurchaseが既にある場合は再利用し、Webhook再送でpurchaseが重複しにくいようにした。
 - `docs/STRIPE_SETUP.md` を追加。Stripe商品/Price ID/Secret key/Webhook endpoint/Vercel env/テスト確認手順を1枚に整理。
 - 確認: Web typecheck OK、Next build OK。
+- GitHubへcommit `a4a82e7 Prepare Stripe support pack flow` をpush済み。
+- Vercel本番へdeploy済み。Production URLは引き続き `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。`/api/admin/env-check` は本番Admin tokenなしのため401 skipで想定通り。
 - まだ未実施: Stripe Dashboardで商品作成、Vercel env `STRIPE_SECRET_KEY` / `STRIPE_SUPPORT_PACK_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` 設定、Production redeploy、テスト決済。
 - `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
 - 本番確認:
