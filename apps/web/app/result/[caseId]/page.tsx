@@ -19,7 +19,8 @@ export default function ResultPage() {
   } satisfies DiagnosisAnswers;
   const result = record?.result ?? buildDiagnosisResult((record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers);
   const token = record?.handoffToken ?? `handoff_${params.caseId}`;
-  const appUrl = `oyanomoshimo://handoff?caseId=${params.caseId}&token=${encodeURIComponent(token)}`;
+  const appScheme = process.env.NEXT_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
+  const appUrl = `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token }).toString()}`;
 
   return (
     <main className="container">

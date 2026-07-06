@@ -172,6 +172,7 @@ GitHubが必要な理由:
 - Expoのwelcome、plan tab、account plan、root layoutもテーマ適用。ログイン引き継ぎ画面からプラン確認まで、IAP余地とWeb/Stripe発動サポート分離方針を画面文言で保持。
 - `docs/PRODUCTION_ROADMAP.md` を現状実装に合わせて更新。Web Supabase保存、Mobile Auth/実データfallback、Admin API、RLS、Stripe、通知、Storageの土台が実装済みであることを反映し、次ステップをSupabase本番Project接続中心に整理。
 - `scripts/local-doctor.mjs` を本番準備向けに拡張。Web/App主要導線、Supabase SQL一式、Vercel/EAS設定、env example必須key、deploy docs、Vercel Cron routeを確認する。2026-07-06に実行してOK。
+- Web結果/共有画面のアプリ引き継ぎURLを `NEXT_PUBLIC_APP_SCHEME` 対応へ変更。共有画面でもhandoff tokenがある場合はアプリリンク表示・コピー・起動ができる。
 
 その後に Step 2: Supabase本番準備。
 
