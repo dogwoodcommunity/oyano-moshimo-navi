@@ -78,9 +78,10 @@
 7. SQL Editorで `supabase/indexes.sql` を実行
 8. SQL Editorで `supabase/production_rls.sql` を実行
 9. SQL Editorで `supabase/storage_setup.sql` を実行
-10. AuthのEmail Magic Linkを有効化
-11. WebとMobile用の環境変数を控える
-12. ローカルWebからSupabaseへcaseが作成されるか確認
+10. SQL Editorで `supabase/verify_setup.sql` を実行し、`ok=false` がないことを確認
+11. AuthのEmail Magic Linkを有効化
+12. WebとMobile用の環境変数を控える
+13. ローカルWebからSupabaseへcaseが作成されるか確認
 
 ### このStepの完了条件
 

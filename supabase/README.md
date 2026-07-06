@@ -11,6 +11,10 @@ SQL Editorで以下の順に実行する。
 7. `production_rls.sql`
 8. `storage_setup.sql`
 
+任意確認:
+
+9. `verify_setup.sql`
+
 ## 重要
 
 - Webの匿名診断作成は、Next.js API routeから `SUPABASE_SERVICE_ROLE_KEY` を使って保存する。
@@ -47,3 +51,5 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 - `tasks`
 - `support_packs`
 - `storage.buckets` の `home-photos`
+
+SQL投入後の構成確認には `verify_setup.sql` を実行する。`ok` が `false` の行があれば、該当SQLの投入漏れまたは権限設定漏れを確認する。

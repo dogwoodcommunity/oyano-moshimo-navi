@@ -29,6 +29,7 @@ const requiredFiles = [
   "supabase/indexes.sql",
   "supabase/production_rls.sql",
   "supabase/storage_setup.sql",
+  "supabase/verify_setup.sql",
   "vercel.json",
   "apps/mobile/eas.json",
   "docs/PRODUCTION_CHECKLIST.md",
@@ -66,7 +67,8 @@ const sqlOrder = [
   "product_seed.sql",
   "indexes.sql",
   "production_rls.sql",
-  "storage_setup.sql"
+  "storage_setup.sql",
+  "verify_setup.sql"
 ];
 
 let failed = false;

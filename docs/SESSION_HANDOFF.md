@@ -175,6 +175,7 @@ GitHubが必要な理由:
 - Web結果/共有画面のアプリ引き継ぎURLを `NEXT_PUBLIC_APP_SCHEME` 対応へ変更。共有画面でもhandoff tokenがある場合はアプリリンク表示・コピー・起動ができる。
 - Next dev中に `.next` キャッシュ破損で `Cannot find module './352.js'` が出て `/home` や `/start` が500になった。`rm -rf apps/web/.next` 後にLAN dev serverを再起動し、`scripts/smoke-web.mjs http://localhost:3000` は再度OK。
 - `scripts/smoke-web.mjs` を拡張。`/result/smoke-case`、`/result/smoke-case/share`、`/admin`、`/admin/cases`、`/admin/support-packs` も確認対象に追加。ローカルで実行してOK。
+- `supabase/verify_setup.sql` を追加。SQL投入後にtable/RLS/policy/storage bucket/seed件数を確認し、`ok=false` がないか見る。README、production checklist、roadmap、doctorにも反映。
 
 その後に Step 2: Supabase本番準備。
 

@@ -17,6 +17,7 @@
 - [ ] `supabase/indexes.sql` を実行
 - [ ] `supabase/production_rls.sql` を実行
 - [ ] `supabase/storage_setup.sql` を実行
+- [ ] `supabase/verify_setup.sql` で `ok=false` がないことを確認
 - [ ] Auth Email Magic Linkを有効化
 - [ ] Site URL / Redirect URLにWeb/ExpoのURLを追加
 - [ ] `docs/ENVIRONMENT_MATRIX.md` に沿って環境変数を設定
