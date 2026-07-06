@@ -64,9 +64,10 @@ productionも同じ値を `--environment production` で登録する。
 3. Dashboardに「今日・期限超過」「7日以内」「担当未定」が出る。
 4. Tasksで担当者を変更できる。
 5. Familyで2名まで招待リンクを作れる。
-6. Notificationsで端末通知を有効化できる。
-7. Settingsからプライバシーポリシーを開ける。
-8. アプリ内に外部決済CTAや「Webで申し込む」文言が出ていない。
+6. 招待リンク `oyanomoshimo://invite?token=...` を開き、ログイン後に家族ボードへ参加できる。
+7. Notificationsで端末通知を有効化できる。
+8. Settingsからプライバシーポリシーと削除依頼を開ける。
+9. アプリ内に外部決済CTAや「Webで申し込む」文言が出ていない。
 
 ## まだ本番前に詰めること
 

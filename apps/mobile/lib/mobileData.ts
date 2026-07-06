@@ -39,6 +39,12 @@ export type FamilyInviteResult = {
   error?: string;
 };
 
+export type AcceptFamilyInviteResult = {
+  source: "supabase" | "demo";
+  accepted: boolean;
+  error?: string;
+};
+
 export type DashboardData = {
   person: MobilePerson;
   tasks: MobileTask[];
@@ -292,6 +298,35 @@ export async function createFamilyInvite(
     inviteUrl: `${appScheme}://invite?token=${token}`,
     fallbackUrl: webBaseUrl ? `${webBaseUrl}/invite/${token}` : undefined
   };
+}
+
+export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInviteResult> {
+  const normalizedToken = token.trim();
+  if (!normalizedToken) return { source: "demo", accepted: false, error: "招待リンクが正しくありません。" };
+
+  const supabase = getSupabase();
+  if (!supabase) return { source: "demo", accepted: true };
+
+  const { data: userResult } = await supabase.auth.getUser();
+  if (!userResult.user) {
+    return { source: "supabase", accepted: false, error: "ログインが必要です。" };
+  }
+
+  const { error } = await supabase.rpc("accept_family_invite", {
+    p_token: normalizedToken
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+    const friendlyMessage = message.includes("invite_invalid_or_expired")
+      ? "招待リンクの期限が切れているか、すでに使われています。"
+      : message.includes("family_limit_reached")
+        ? "無料枠の上限に達しているため参加できません。"
+        : "招待を受け取れませんでした。時間をおいてもう一度お試しください。";
+    return { source: "supabase", accepted: false, error: friendlyMessage };
+  }
+
+  return { source: "supabase", accepted: true };
 }
 
 export async function updatePersonStatus(

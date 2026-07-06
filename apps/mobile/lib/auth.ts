@@ -1,13 +1,13 @@
 import * as Linking from "expo-linking";
 import { getSupabase } from "./supabase";
 
-export async function sendMagicLink(email: string) {
+export async function sendMagicLink(email: string, redirectPath = "/(tabs)/dashboard") {
   const supabase = getSupabase();
   if (!supabase) {
     return { sent: false, demo: true, message: "ログイン準備中です。見本画面で確認できます。" };
   }
 
-  const redirectTo = Linking.createURL("/(tabs)/dashboard");
+  const redirectTo = Linking.createURL(redirectPath);
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
