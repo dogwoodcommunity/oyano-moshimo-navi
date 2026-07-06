@@ -18,8 +18,8 @@ export default function SharePage() {
 
   return (
     <main className="container">
-      <h1 className="page-title">家族共有・アプリ招待</h1>
-      <p className="lead">整理結果と、アプリ引き継ぎ用のcase情報を家族に共有します。</p>
+      <h1 className="page-title">家族に共有する</h1>
+      <p className="lead">まずはWebの結果リンクを共有できます。家族で継続して管理したい時だけ、アプリに保存します。</p>
       <section className="panel">
         <label className="label" htmlFor="share">共有リンク</label>
         <input className="input" id="share" readOnly value={shareUrl} />
@@ -29,20 +29,19 @@ export default function SharePage() {
         </div>
       </section>
       <section className="panel" style={{ marginTop: 18 }}>
-        <h2>アプリ引き継ぎ情報</h2>
-        <p className="hint">caseId: {params.caseId}</p>
-        <p className="hint">handoffToken: {record?.handoffToken ?? "result画面で生成"}</p>
+        <h2>アプリに保存する場合</h2>
+        <p className="hint">期限通知、写真管理、家族ボードを使いたい時は、このリンクからアプリに保存します。</p>
         {appUrl ? (
           <>
-            <label className="label" htmlFor="app-share">アプリ引き継ぎリンク</label>
+            <label className="label" htmlFor="app-share">アプリ保存リンク</label>
             <input className="input" id="app-share" readOnly value={appUrl} />
             <div className="actions">
-              <button className="secondary" onClick={() => navigator.clipboard.writeText(appUrl)}>アプリリンクをコピー</button>
-              <a className="secondary" href={appUrl}>アプリで開く</a>
+              <button className="secondary" onClick={() => navigator.clipboard.writeText(appUrl)}>アプリ保存リンクをコピー</button>
+              <a className="secondary" href={appUrl}>アプリに保存する</a>
             </div>
           </>
         ) : (
-          <p className="hint">このブラウザにhandoff tokenがないため、結果画面から引き継ぎリンクを確認してください。</p>
+          <p className="hint">このブラウザではアプリ保存リンクを確認できません。結果画面からもう一度開いてください。</p>
         )}
       </section>
     </main>

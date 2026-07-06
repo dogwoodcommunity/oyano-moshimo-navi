@@ -30,7 +30,7 @@ export default function ResultPage() {
         <p className="lead">{result.summary}</p>
         <div className="meta-row">
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
-          <span className="meta-chip">アプリ引き継ぎ可</span>
+          <span className="meta-chip">保存すると家族で見られます</span>
           <span className="meta-chip">専門判断は断定しません</span>
         </div>
       </section>
@@ -53,7 +53,7 @@ export default function ResultPage() {
       <section className="panel" style={{ marginTop: 18 }}>
         <div className="section-head">
           <h2>期限のあるタスク</h2>
-          <span className="hint">Expoアプリへ引き継ぐと家族ボードで管理できます。</span>
+          <span className="hint">この画面で確認できます。あとで見返す場合はアプリに保存します。</span>
         </div>
         <div className="task-list">
           {result.tasks.map((task) => (
@@ -87,13 +87,26 @@ export default function ResultPage() {
       </section>
 
       <section className="panel handoff-band" style={{ marginTop: 18 }}>
-        <h2>アプリ引き継ぎ</h2>
-        <p className="hint">Expoアプリでは家族ボード、期限通知、写真管理、タイムライン、実家カルテを継続管理します。</p>
-        <div className="actions">
-          <a className="button" href={appUrl}>アプリへ引き継ぐ</a>
-          <Link className="secondary" href={`/result/${params.caseId}/share`}>家族共有リンクを作る</Link>
+        <p className="pill">次にすること</p>
+        <h2>この結果を残して、家族で見るならアプリへ。</h2>
+        <p>
+          最初はアプリを入れなくても大丈夫です。まずWebで整理し、あとで見返したい時、家族と共有したい時、期限通知や写真管理が必要な時だけアプリに保存します。
+        </p>
+        <div className="handoff-choice-grid" aria-label="Webとアプリの役割">
+          <div>
+            <strong>Webでできること</strong>
+            <span>状況を選ぶ、5分で整理する、結果を見る</span>
+          </div>
+          <div>
+            <strong>アプリで続けること</strong>
+            <span>家族ボード、期限通知、写真、タイムライン</span>
+          </div>
         </div>
-        <p className="hint">handoff token: {token}</p>
+        <div className="actions">
+          <a className="button" href={appUrl}>アプリに保存する</a>
+          <Link className="secondary" href={`/result/${params.caseId}/share`}>家族に共有する</Link>
+        </div>
+        <p className="hint">アプリを使わない場合も、この画面で結果を確認できます。</p>
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>

@@ -586,6 +586,44 @@ textarea {
   color: white;
 }
 
+.handoff-band .pill {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #cfe2d7;
+}
+
+.handoff-band h2 {
+  font-size: clamp(28px, 4vw, 42px);
+  line-height: 1.15;
+  margin: 10px 0 8px;
+}
+
+.handoff-choice-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.handoff-choice-grid div {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+}
+
+.handoff-choice-grid strong {
+  color: white;
+  font-size: 17px;
+}
+
+.handoff-choice-grid span {
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.55;
+}
+
 .timeline-row {
   display: grid;
   gap: 12px;
@@ -1342,6 +1380,7 @@ textarea {
   .start-hero,
   .quick-start,
   .quick-status-row,
+  .handoff-choice-grid,
   .pricing-grid {
     grid-template-columns: 1fr;
   }
