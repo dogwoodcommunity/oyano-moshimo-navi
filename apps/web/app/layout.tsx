@@ -22,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/guides">準備ガイド</Link>
               <Link href="/checklists">チェックリスト</Link>
               <Link href="/start">整理チェック</Link>
+              <Link href="/safety">安心設計</Link>
               <Link href="/plans">料金</Link>
               <Link href="/support-pack">発動サポート</Link>
               <Link href="/providers">相談先</Link>
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </header>
           {children}
           <footer className="footer">
+            <Link href="/safety">安心設計</Link>
             <Link href="/legal/privacy">プライバシー</Link>
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>

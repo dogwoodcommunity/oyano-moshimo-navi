@@ -8,6 +8,7 @@ const checks = [
   { path: "/guides", label: "guides" },
   { path: "/guides/hospitalized", label: "guide detail" },
   { path: "/checklists", label: "checklists" },
+  { path: "/safety", label: "safety" },
   { path: "/plans", label: "plans" },
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/result/smoke-case", label: "result fallback" },

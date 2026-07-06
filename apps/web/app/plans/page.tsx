@@ -91,6 +91,7 @@ export default function PlansPage() {
         <ul className="list">
           {revenueRules.map((item) => <li key={item}>{item}</li>)}
         </ul>
+        <Link className="secondary" href="/safety">安心設計を詳しく見る</Link>
       </section>
     </main>
   );

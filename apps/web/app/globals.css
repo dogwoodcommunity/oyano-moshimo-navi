@@ -763,6 +763,58 @@ textarea {
   line-height: 1.25;
 }
 
+.safety-hero {
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.97), rgba(238, 244, 237, 0.95)),
+    radial-gradient(circle at 88% 18%, rgba(154, 63, 86, 0.12), transparent 34%);
+}
+
+.safety-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.safety-card {
+  display: grid;
+  gap: 12px;
+}
+
+.safety-mark {
+  background: linear-gradient(135deg, var(--green), var(--blue));
+  border-radius: 8px;
+  display: block;
+  height: 34px;
+  width: 34px;
+}
+
+.safety-card h2 {
+  font-size: 21px;
+  line-height: 1.24;
+  margin: 0;
+}
+
+.safety-card p,
+.safety-boundary p {
+  color: var(--muted);
+  line-height: 1.68;
+  margin: 0;
+}
+
+.safety-boundary {
+  align-items: start;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(260px, 0.55fr);
+  margin-top: 18px;
+}
+
+.safety-boundary h2 {
+  font-size: clamp(26px, 4vw, 42px);
+  line-height: 1.15;
+  margin: 0 0 12px;
+}
+
 .pricing-grid {
   display: grid;
   gap: 14px;
@@ -1055,6 +1107,8 @@ textarea {
   .portal-band-inner,
   .guide-cta,
   .checklist-grid,
+  .safety-grid,
+  .safety-boundary,
   .pricing-grid {
     grid-template-columns: 1fr;
   }

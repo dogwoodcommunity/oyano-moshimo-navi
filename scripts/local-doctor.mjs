@@ -13,6 +13,7 @@ const requiredFiles = [
   "apps/web/lib/guides.ts",
   "apps/web/app/checklists/page.tsx",
   "apps/web/lib/checklists.ts",
+  "apps/web/app/safety/page.tsx",
   "apps/web/app/plans/page.tsx",
   "apps/web/app/sitemap.ts",
   "apps/web/app/robots.ts",
