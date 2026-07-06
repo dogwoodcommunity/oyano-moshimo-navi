@@ -177,6 +177,8 @@ GitHubが必要な理由:
 - `scripts/smoke-web.mjs` を拡張。`/result/smoke-case`、`/result/smoke-case/share`、`/admin`、`/admin/cases`、`/admin/support-packs` も確認対象に追加。ローカルで実行してOK。
 - `supabase/verify_setup.sql` を追加。SQL投入後にtable/RLS/policy/storage bucket/seed件数を確認し、`ok=false` がないか見る。README、production checklist、roadmap、doctorにも反映。
 - Expo通知登録を堅牢化。Android notification channel、`EXPO_PUBLIC_EAS_PROJECT_ID`、権限拒否/取得失敗時のnull返却と画面メッセージを追加。Mobile tscとdoctor OK。
+- 注意: `next dev` 起動中に `next build` を走らせると同じ `.next` を触って `Cannot find module './xxx.js'` が出ることがある。build検証前はdev serverを止め、必要なら `rm -rf apps/web/.next` してからbuildする。
+- 2026-07-06再検証: dev停止 -> `.next`削除 -> `next build apps/web` OK、Mobile tsc OK、`node scripts/local-doctor.mjs` OK。その後LAN dev server再起動 -> 拡張 `scripts/smoke-web.mjs http://localhost:3000` OK。
 
 その後に Step 2: Supabase本番準備。
 
