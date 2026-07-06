@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/send-due-notifications",
-      "schedule": "*/30 * * * *"
+      "schedule": "0 9 * * *"
     }
   ]
 }

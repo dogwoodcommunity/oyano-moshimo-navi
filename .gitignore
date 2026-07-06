@@ -9,3 +9,7 @@ build/
 .env.local
 .env.production
 .env*.local
+.vercel
+.env*
+.pnpm-store/
+work/

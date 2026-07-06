@@ -28,7 +28,7 @@ NEXT_PUBLIC_WEB_BASE_URL=
 
 詳細は `docs/ENVIRONMENT_MATRIX.md` を参照。
 
-Vercel Cronから `/api/cron/send-due-notifications` を30分ごとに実行する。`CRON_SECRET` を設定する場合、手動確認では以下のように叩く。
+Vercel Cronから `/api/cron/send-due-notifications` を実行する。HobbyプランではCron頻度に制限があるため、初期は1日1回で公開し、通知運用を始める段階でPro化または外部cronを検討する。`CRON_SECRET` を設定する場合、手動確認では以下のように叩く。
 
 ```bash
 curl "https://<web-domain>/api/cron/send-due-notifications?cronToken=<CRON_SECRET>"

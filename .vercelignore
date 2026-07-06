@@ -1,0 +1,10 @@
+.git
+.vercel
+.env*
+apps/*/.env*
+node_modules
+.pnpm-store
+.next
+.expo
+work
+outputs

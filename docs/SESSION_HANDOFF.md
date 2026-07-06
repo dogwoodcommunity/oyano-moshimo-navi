@@ -249,3 +249,18 @@ GitHubが必要な理由:
 - 情報登録画面 `apps/mobile/app/people/[id]/assets.tsx` は `demoPerson.id` 固定を廃止し、URLのperson idへ保存するよう修正。保存中表示と保存失敗メッセージも追加。
 - 実家カルテ `apps/mobile/app/people/[id]/home.tsx` から開発者向けの `home_photos` / Supabase Storage文言を削除し、写真管理と「保存しないもの」を家族向け説明に変更。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:local` OK。
+
+## 2026-07-06 15:25 JST 追記
+
+- Vercel本番公開完了。
+- Production URL: https://oyano-moshimo-navi.vercel.app
+- Vercel Project: `dogwoodcommunity1/oyano-moshimo-navi`
+- Hobbyプランでは30分ごとのCronが使えないため、`vercel.json` の `/api/cron/send-due-notifications` は初期公開用に1日1回 `0 9 * * *` へ変更。通知運用を本格化する段階でPro化または外部cronを検討する。
+- Vercel Production環境変数は設定済み: `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`NEXT_PUBLIC_APP_SCHEME`、`NEXT_PUBLIC_WEB_BASE_URL`、`ADMIN_ACCESS_TOKEN`、`CRON_SECRET`。
+- `STRIPE_SECRET_KEY`、`STRIPE_SUPPORT_PACK_PRICE_ID`、`STRIPE_WEBHOOK_SECRET` は未設定。発動サポートパック決済を実装・テストする段階で入れる。
+- `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
+- 本番確認:
+  - `https://oyano-moshimo-navi.vercel.app/api/health` OK。
+  - `scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。Admin env APIのみtoken必須のため通常smokeではskip。
+  - `POST /api/cases` でSupabase保存 `persisted:true` を確認。テストcase id: `9e4f9718-b882-4508-9c89-64ac975f8d36`。
+  - クリップボードのAdmin tokenで `/api/admin/env-check` OK。Stripe 3項目だけ未設定、それ以外configured true。
