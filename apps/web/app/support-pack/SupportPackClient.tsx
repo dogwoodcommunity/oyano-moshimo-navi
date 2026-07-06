@@ -10,7 +10,7 @@ export function SupportPackClient() {
 
   async function startCheckout() {
     if (!caseId) return;
-    setMessage("Checkoutを準備しています");
+    setMessage("申し込み画面を準備しています。");
 
     const response = await fetch("/api/stripe/checkout", {
       method: "POST",
@@ -20,7 +20,12 @@ export function SupportPackClient() {
     const body = await response.json() as { checkoutUrl?: string; error?: string };
 
     if (!response.ok || !body.checkoutUrl) {
-      setMessage(body.error ?? "Stripe Checkoutを開始できませんでした。環境変数を確認してください。");
+      if (response.status === 409) {
+        setMessage("この整理結果では、すでにサポートパックが申し込み済みです。");
+        return;
+      }
+
+      setMessage("申し込み画面を開けませんでした。時間をおいてもう一度お試しください。");
       return;
     }
 
@@ -30,10 +35,10 @@ export function SupportPackClient() {
   return (
     <section className="panel handoff-band" style={{ marginTop: 18 }}>
       <h2>申し込み</h2>
-      <p className="hint">Stripe Checkout Sessionを作成し、決済完了後はWebhookでsupport_packsを更新します。</p>
+      <p className="hint">決済はStripeの安全な画面で行います。申し込み後、管理画面で確認できます。</p>
       <div className="actions">
         <button className="button" disabled={!caseId} onClick={startCheckout}>
-          {caseId ? "Stripe Checkoutへ進む" : "結果画面からcase付きで開始"}
+          {caseId ? "申し込み画面へ進む" : "整理結果の画面から申し込む"}
         </button>
       </div>
       {message ? <p className="hint">{message}</p> : null}

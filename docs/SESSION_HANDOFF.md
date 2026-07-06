@@ -269,6 +269,16 @@ GitHubが必要な理由:
 - 確認: Web typecheck OK、Next build OK、ローカルdev再起動後に `node scripts/smoke-web.mjs http://localhost:3000` OK。アプリ内ブラウザで `/home` と `/start` をdesktop/390px幅で確認。
 - GitHubへcommit `3dc2806 Make web entry design more grounded` をpush済み。
 - Vercel本番へdeploy済み。Production URLは引き続き `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。`/api/admin/env-check` は本番Admin tokenなしのため401 skipで想定通り。
+
+## 2026-07-06 19:14 JST 追記
+
+- 次工程としてStripe発動サポートパック決済のコード側を本番向けに整理。
+- `/support-pack` と結果画面の開発者向け文言を削除し、「申し込み画面へ進む」「内容を確認して申し込む」などユーザー向け文言へ変更。
+- `POST /api/stripe/checkout` は、同じcaseですでに `paid/reviewing/report_ready/delivered/closed` のsupport packがあれば409を返し、`requested` がある場合は既存行の `requested_scope` を更新するようにした。ボタン連打で同一caseのrequested行が増えにくい。
+- `POST /api/stripe/webhook` は、同じStripe checkout session idのpurchaseが既にある場合は再利用し、Webhook再送でpurchaseが重複しにくいようにした。
+- `docs/STRIPE_SETUP.md` を追加。Stripe商品/Price ID/Secret key/Webhook endpoint/Vercel env/テスト確認手順を1枚に整理。
+- 確認: Web typecheck OK、Next build OK。
+- まだ未実施: Stripe Dashboardで商品作成、Vercel env `STRIPE_SECRET_KEY` / `STRIPE_SUPPORT_PACK_PRICE_ID` / `STRIPE_WEBHOOK_SECRET` 設定、Production redeploy、テスト決済。
 - `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
 - 本番確認:
   - `https://oyano-moshimo-navi.vercel.app/api/health` OK。

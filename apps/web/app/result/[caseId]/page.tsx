@@ -117,7 +117,7 @@ export default function ResultPage() {
         </p>
         <div className="actions">
           <button className="button" onClick={() => requestSupportPack(params.caseId)}>サポート依頼を作成</button>
-          <Link className="secondary" href={`/support-pack?caseId=${params.caseId}`}>Stripe Checkout想定へ</Link>
+          <Link className="secondary" href={`/support-pack?caseId=${params.caseId}`}>内容を確認して申し込む</Link>
         </div>
         <p className="hint">現在の状態: {record?.supportPackStatus ?? "none"}</p>
       </section>

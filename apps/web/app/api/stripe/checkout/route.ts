@@ -23,7 +23,26 @@ export async function POST(request: Request) {
     }, { status: 501 });
   }
 
-  const origin = request.headers.get("origin") ?? process.env.NEXT_PUBLIC_WEB_BASE_URL ?? "http://localhost:3000";
+  const supabase = getServerSupabase();
+
+  if (supabase) {
+    const { data: existingPaid } = await supabase
+      .from("support_packs")
+      .select("id, status")
+      .eq("case_id", body.caseId)
+      .in("status", ["paid", "reviewing", "report_ready", "delivered", "closed"])
+      .limit(1)
+      .maybeSingle();
+
+    if (existingPaid) {
+      return NextResponse.json({
+        error: "Support pack is already active for this case",
+        supportPackStatus: existingPaid.status
+      }, { status: 409 });
+    }
+  }
+
+  const origin = process.env.NEXT_PUBLIC_WEB_BASE_URL ?? request.headers.get("origin") ?? "http://localhost:3000";
   const params = new URLSearchParams({
     mode: "payment",
     "line_items[0][price]": priceId,
@@ -49,17 +68,33 @@ export async function POST(request: Request) {
   }
 
   const session = await response.json() as StripeCheckoutResponse;
-  const supabase = getServerSupabase();
 
   if (supabase) {
-    await supabase.from("support_packs").insert({
-      case_id: body.caseId,
-      status: "requested",
-      requested_scope: {
-        source: "stripe_checkout",
-        stripe_checkout_session_id: session.id
-      }
-    });
+    const requestedScope = {
+      source: "stripe_checkout",
+      stripe_checkout_session_id: session.id
+    };
+
+    const { data: existingRequested } = await supabase
+      .from("support_packs")
+      .select("id")
+      .eq("case_id", body.caseId)
+      .eq("status", "requested")
+      .limit(1)
+      .maybeSingle();
+
+    if (existingRequested) {
+      await supabase
+        .from("support_packs")
+        .update({ requested_scope: requestedScope, updated_at: new Date().toISOString() })
+        .eq("id", existingRequested.id);
+    } else {
+      await supabase.from("support_packs").insert({
+        case_id: body.caseId,
+        status: "requested",
+        requested_scope: requestedScope
+      });
+    }
   }
 
   return NextResponse.json({ checkoutUrl: session.url, checkoutSessionId: session.id });

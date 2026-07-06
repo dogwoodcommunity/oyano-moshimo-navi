@@ -57,13 +57,25 @@ export async function POST(request: Request) {
     const supabase = getServerSupabase();
 
     if (caseId && supabase) {
-      const { data: purchase } = await supabase.from("purchases").insert({
+      const purchasePayload = {
         provider: "stripe",
         provider_checkout_id: session.id,
         amount_yen: session.amount_total ?? null,
         status: session.payment_status === "paid" ? "paid" : "pending",
         purchased_at: session.payment_status === "paid" ? new Date().toISOString() : null
-      }).select("id").single();
+      };
+
+      const { data: existingPurchase } = await supabase
+        .from("purchases")
+        .select("id")
+        .eq("provider", "stripe")
+        .eq("provider_checkout_id", session.id)
+        .limit(1)
+        .maybeSingle();
+
+      const purchase = existingPurchase
+        ? existingPurchase
+        : (await supabase.from("purchases").insert(purchasePayload).select("id").single()).data;
 
       await supabase.from("support_packs")
         .update({

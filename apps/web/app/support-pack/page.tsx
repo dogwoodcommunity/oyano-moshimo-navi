@@ -5,7 +5,7 @@ export default function SupportPackPage() {
   return (
     <main className="container">
       <section className="result-summary">
-        <p className="pill">Web / Stripe Checkout</p>
+        <p className="pill">Web申し込み</p>
         <h1 className="page-title">発動サポートパック</h1>
         <p className="lead">
           整理結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。
@@ -39,7 +39,7 @@ export default function SupportPackPage() {
       <section className="panel" style={{ marginTop: 18 }}>
         <div className="section-head">
           <h2>進み方</h2>
-          <span className="hint">MVPでは管理画面でsupport pack確認まで行います。</span>
+          <span className="hint">申し込み後、運営側で内容を確認します。</span>
         </div>
         <div className="timeline-row">
           <div className="timeline-step"><strong>1</strong><span>整理結果を作成</span></div>
