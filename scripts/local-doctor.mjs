@@ -41,10 +41,12 @@ const requiredFiles = [
   "supabase/monthly_checkin_notifications.sql",
   "supabase/product_seed.sql",
   "supabase/indexes.sql",
+  "supabase/api_grants.sql",
   "supabase/production_rls.sql",
   "supabase/family_invite_rpc.sql",
   "supabase/storage_setup.sql",
   "supabase/verify_setup.sql",
+  "supabase/verify_compact.sql",
   "vercel.json",
   "apps/mobile/eas.json",
   "docs/PRODUCTION_CHECKLIST.md",
@@ -86,10 +88,12 @@ const sqlOrder = [
   "monthly_checkin_notifications.sql",
   "product_seed.sql",
   "indexes.sql",
+  "api_grants.sql",
   "production_rls.sql",
   "family_invite_rpc.sql",
   "storage_setup.sql",
-  "verify_setup.sql"
+  "verify_setup.sql",
+  "verify_compact.sql"
 ];
 
 let failed = false;

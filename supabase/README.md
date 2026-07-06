@@ -10,13 +10,15 @@ SQL Editorで以下の順に実行する。
 6. `monthly_checkin_notifications.sql`
 7. `product_seed.sql`
 8. `indexes.sql`
-9. `production_rls.sql`
-10. `family_invite_rpc.sql`
-11. `storage_setup.sql`
+9. `api_grants.sql`
+10. `production_rls.sql`
+11. `family_invite_rpc.sql`
+12. `storage_setup.sql`
 
 任意確認:
 
-12. `verify_setup.sql`
+13. `verify_setup.sql`
+14. `verify_compact.sql`
 
 ## 重要
 
