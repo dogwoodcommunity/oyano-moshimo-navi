@@ -27,9 +27,9 @@ export default function StartPage() {
 
   return (
     <main className="container">
-      <p className="eyebrow">Step 1</p>
-      <h1 className="page-title">親の現在ステータスを選択</h1>
-      <p className="lead">ログイン不要です。いちばん近い状態を選ぶだけで、匿名caseを作成して5分診断へ進みます。</p>
+      <p className="eyebrow">状況整理チェック</p>
+      <h1 className="page-title">いま近い状況を選ぶ</h1>
+      <p className="lead">ログイン不要です。いちばん近い状態を選ぶと、家族で確認することと期限のあるタスクを整理します。</p>
       <section className="grid status-grid" aria-label="親の状態">
         {STATUSES.filter((item) => item.key !== "completed").map((item) => (
           <button className="status-button" key={item.key} onClick={() => choose(item.key)}>

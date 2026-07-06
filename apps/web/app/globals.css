@@ -107,6 +107,33 @@ textarea {
   place-content: center;
 }
 
+.portal-hero {
+  padding-bottom: 22px;
+}
+
+.portal-hero-inner {
+  align-items: center;
+  grid-template-columns: minmax(0, 0.74fr) minmax(280px, 0.36fr);
+  max-width: 1160px;
+}
+
+.portal-side {
+  align-self: center;
+  background: rgba(255, 255, 255, 0.86);
+  display: grid;
+  gap: 12px;
+}
+
+.portal-side h2 {
+  font-size: 24px;
+  line-height: 1.25;
+  margin: 0;
+}
+
+.portal-trust {
+  margin-top: 14px;
+}
+
 .hero-proof {
   align-items: stretch;
   display: grid;
@@ -114,6 +141,11 @@ textarea {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   margin-top: 16px;
   max-width: 680px;
+}
+
+.portal-proof {
+  margin-top: 24px;
+  max-width: 760px;
 }
 
 .proof-item {
@@ -522,6 +554,66 @@ textarea {
   margin: 0;
 }
 
+.portal-section {
+  padding-top: 54px;
+}
+
+.portal-topic-grid {
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+}
+
+.portal-topic {
+  display: grid;
+  gap: 10px;
+  min-height: 190px;
+  transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+
+.portal-topic:hover {
+  border-color: rgba(39, 100, 71, 0.45);
+  box-shadow: 0 12px 30px rgba(28, 48, 39, 0.08);
+  transform: translateY(-1px);
+}
+
+.portal-topic strong {
+  font-size: 21px;
+}
+
+.portal-topic p {
+  color: var(--muted);
+  line-height: 1.65;
+  margin: 0;
+}
+
+.portal-band {
+  background: #173f2e;
+  color: white;
+}
+
+.portal-band-inner {
+  align-items: center;
+  display: grid;
+  gap: 24px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.portal-band h2 {
+  font-size: clamp(28px, 4vw, 44px);
+  line-height: 1.14;
+  margin: 0;
+}
+
+.portal-band p {
+  color: rgba(255, 255, 255, 0.76);
+  line-height: 1.75;
+  margin: 12px 0 0;
+  max-width: 760px;
+}
+
+.portal-band .eyebrow {
+  color: #cfe2d7;
+}
+
 .legal-hero {
   background: linear-gradient(135deg, #ffffff 0%, #eef4ed 100%);
   border: 1px solid var(--line);
@@ -754,6 +846,11 @@ textarea {
   }
 
   .hero-proof {
+    grid-template-columns: 1fr;
+  }
+
+  .portal-hero-inner,
+  .portal-band-inner {
     grid-template-columns: 1fr;
   }
 
