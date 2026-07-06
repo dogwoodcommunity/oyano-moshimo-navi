@@ -258,6 +258,15 @@ GitHubが必要な理由:
 - Hobbyプランでは30分ごとのCronが使えないため、`vercel.json` の `/api/cron/send-due-notifications` は初期公開用に1日1回 `0 9 * * *` へ変更。通知運用を本格化する段階でPro化または外部cronを検討する。
 - Vercel Production環境変数は設定済み: `NEXT_PUBLIC_SUPABASE_URL`、`NEXT_PUBLIC_SUPABASE_ANON_KEY`、`SUPABASE_SERVICE_ROLE_KEY`、`NEXT_PUBLIC_APP_SCHEME`、`NEXT_PUBLIC_WEB_BASE_URL`、`ADMIN_ACCESS_TOKEN`、`CRON_SECRET`。
 - `STRIPE_SECRET_KEY`、`STRIPE_SUPPORT_PACK_PRICE_ID`、`STRIPE_WEBHOOK_SECRET` は未設定。発動サポートパック決済を実装・テストする段階で入れる。
+
+## 2026-07-06 17:27 JST 追記
+
+- ユーザー指摘「デザインがAIっぽい」「入口がわかりにくい」を受け、Webトップと `/start` を再調整。
+- トップは生成画像ヒーローを外し、紙の案内・整理メモ風の見た目へ変更。背景グラデーションや強いSaaS風カードを減らし、「入口はこちら」「状況を選んで始める」をファーストビュー中央に配置。
+- トップに「親が入院した」「介護が始まりそう」「亡くなった直後」「実家を片付けたい」の短い入口リンクを追加。
+- `/start` は写真背景を外し、受付票のような白い面と左線の構成へ変更。「ここからです」「急いでいる時は、ここから選んでください。」を明示し、各選択肢に「この状況で始める」「選ぶ」を追加。
+- スマホ幅ではナビを `ここから始める / 読む / 安心` に絞り、開始画面の重複説明を隠して選択ボタンが早く見えるようにした。
+- 確認: Web typecheck OK、Next build OK、ローカルdev再起動後に `node scripts/smoke-web.mjs http://localhost:3000` OK。アプリ内ブラウザで `/home` と `/start` をdesktop/390px幅で確認。
 - `ADMIN_ACCESS_TOKEN` は新しいランダム値に更新し、Macのクリップボードへコピー済み。チャットやGitHubには保存していない。
 - 本番確認:
   - `https://oyano-moshimo-navi.vercel.app/api/health` OK。

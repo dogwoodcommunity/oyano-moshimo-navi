@@ -53,6 +53,13 @@ const entryCards = [
   }
 ];
 
+const urgentEntries = [
+  "親が入院した",
+  "介護が始まりそう",
+  "亡くなった直後",
+  "実家を片付けたい"
+];
+
 const reasonCards = [
   {
     title: "ログインなしで始められます",
@@ -92,43 +99,36 @@ const guideLinks = [
 export default function HomePage() {
   return (
     <main>
-      <section className="hero portal-hero">
-        <div className="hero-inner portal-hero-inner">
-          <div>
+      <section className="plain-hero">
+        <div className="plain-hero-inner">
+          <div className="hero-copy">
             <p className="eyebrow">親のもしもナビ</p>
-            <h1>親のことで困ったら、まずここで整理できます。</h1>
-            <p className="lead">
-              入院、介護、亡くなった後の手続き、実家の片付け。いま何をすればいいかを、家族で見られるリストにします。
-            </p>
-            <div className="actions">
-              <Link className="button primary-cta" href="/start">まず状況を選ぶ</Link>
-              <Link className="secondary" href="/guides">先に読む</Link>
+            <h1>親のことで困った時に、最初に見る場所です。</h1>
+            <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族で何から確認するかを、短いリストに整理します。</p>
+            <div className="start-gateway" aria-label="入口">
+              <p className="gateway-label">入口はこちら</p>
+              <Link className="button gateway-button" href="/start">状況を選んで始める</Link>
+              <p className="gateway-note">無料・ログインなし。3分ほどで結果を見られます。</p>
             </div>
-            <p className="hint portal-trust">無料・ログインなしで始められます。保存したい時だけアプリへ引き継ぎます。</p>
-          </div>
-          <div className="portal-side elevated">
-            <p className="pill">使い方</p>
-            <h2>むずかしい準備を、3つに分けます。</h2>
-            <div className="hero-flow">
-              <span>1. 選ぶ</span>
-              <span>2. 整理</span>
-              <span>3. 共有</span>
+            <div className="urgent-strip" aria-label="よくある状況">
+              {urgentEntries.map((item) => (
+                <Link href="/start" key={item}>{item}</Link>
+              ))}
             </div>
-            <p className="simple-copy">いちばん近い状況を選ぶだけで、家族に聞くことと期限のあることが見えてきます。</p>
           </div>
-        </div>
-        <div className="hero-proof portal-proof" aria-label="サービス概要">
-          <div className="proof-item">
-            <span className="proof-number">無料</span>
-            <span className="proof-label">まずは登録なしで使えます</span>
-          </div>
-          <div className="proof-item">
-            <span className="proof-number">簡単</span>
-            <span className="proof-label">近い状況を選ぶだけです</span>
-          </div>
-          <div className="proof-item">
-            <span className="proof-number">安心</span>
-            <span className="proof-label">大事な番号は保存しません</span>
+          <div className="paper-visual" aria-label="整理結果の見本">
+            <div className="paper-head">
+              <span>家族で確認すること</span>
+              <strong>整理メモ</strong>
+            </div>
+            <div className="paper-row checked"><span />病院の相談窓口を確認</div>
+            <div className="paper-row checked"><span />保険証・支払い方法を確認</div>
+            <div className="paper-row"><span />退院後に誰が動くか決める</div>
+            <div className="paper-row"><span />実家の鍵と書類の場所を共有</div>
+            <div className="paper-footer">
+              <p>保存しないもの</p>
+              <strong>暗証番号・パスワード・マイナンバー画像</strong>
+            </div>
           </div>
         </div>
       </section>
@@ -136,8 +136,8 @@ export default function HomePage() {
       <section className="container entry-section">
         <div className="section-head">
           <div>
-            <p className="eyebrow">How it works</p>
-            <h2>やることは、この3つだけです。</h2>
+            <p className="eyebrow">使い方</p>
+            <h2>まずは「状況を選ぶ」だけで大丈夫です。</h2>
           </div>
         </div>
         <div className="entry-grid">
@@ -155,8 +155,8 @@ export default function HomePage() {
       <section className="container portal-section" id="portal-topics">
         <div className="section-head">
           <div>
-            <p className="eyebrow">Choose a situation</p>
-            <h2>いま近いものを選んでください。</h2>
+            <p className="eyebrow">入口</p>
+            <h2>当てはまるものがあれば、ここから始めてください。</h2>
           </div>
           <Link className="secondary" href="/start">選んで始める</Link>
         </div>

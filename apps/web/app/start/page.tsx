@@ -64,7 +64,7 @@ export default function StartPage() {
     <main className="container start-page">
       <section className="start-hero">
         <div>
-          <p className="eyebrow">はじめに</p>
+          <p className="eyebrow">入口</p>
           <h1 className="page-title">親はいま、どの状況に近いですか？</h1>
           <p className="lead">
             ぴったり合わなくても大丈夫です。近いものを選ぶと、次に確認することを分かりやすく整理します。
@@ -76,16 +76,16 @@ export default function StartPage() {
           </div>
         </div>
         <aside className="start-help panel">
-          <p className="pill">迷ったら</p>
-          <h2>まずは近いものを選んでください。</h2>
-          <p>あとから家族で見ながら直せます。</p>
+          <p className="pill">ここからです</p>
+          <h2>下のボタンから、今の状況を1つ選んでください。</h2>
+          <p>ログインなしで、次に確認することを見られます。</p>
         </aside>
       </section>
 
-      <section className="quick-start panel elevated" aria-label="よく選ばれる入口">
+      <section className="quick-start panel" aria-label="よく選ばれる入口">
         <div>
-          <p className="eyebrow">よく選ばれます</p>
-          <h2>急いでいる時はこちら</h2>
+          <p className="eyebrow">まずここから</p>
+          <h2>急いでいる時は、ここから選んでください。</h2>
         </div>
         <div className="quick-status-row">
           {priorityStatuses.map((key) => {
@@ -95,6 +95,7 @@ export default function StartPage() {
               <button className="quick-status-button" key={key} onClick={() => choose(key)}>
                 <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                 <span>{statusDescriptions[key]}</span>
+                <em>この状況で始める</em>
               </button>
             );
           })}
@@ -116,6 +117,7 @@ export default function StartPage() {
                   <button className="status-button" key={key} onClick={() => choose(key)}>
                     <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
+                    <em>選ぶ</em>
                   </button>
                 );
               })}
