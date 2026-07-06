@@ -17,6 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="navlinks" aria-label="main">
               <Link href="/guides">準備ガイド</Link>
               <Link href="/start">整理チェック</Link>
+              <Link href="/plans">料金</Link>
               <Link href="/support-pack">発動サポート</Link>
               <Link href="/providers">相談先</Link>
               <Link href="/admin">Admin</Link>

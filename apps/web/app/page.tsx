@@ -43,6 +43,7 @@ export default function HomePage() {
             <div className="actions">
               <Link className="button" href="/start">無料で状況を整理する</Link>
               <Link className="secondary" href="/guides">準備ガイドを読む</Link>
+              <Link className="secondary" href="/plans">料金と使い方</Link>
             </div>
             <p className="hint portal-trust">会員登録は結果を家族で保存・共有したい時だけ。診断名より、やることリストを先に出します。</p>
           </div>

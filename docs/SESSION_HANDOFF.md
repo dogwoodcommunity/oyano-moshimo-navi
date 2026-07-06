@@ -181,6 +181,7 @@ GitHubが必要な理由:
 - 2026-07-06再検証: dev停止 -> `.next`削除 -> `next build apps/web` OK、Mobile tsc OK、`node scripts/local-doctor.mjs` OK。その後LAN dev server再起動 -> 拡張 `scripts/smoke-web.mjs http://localhost:3000` OK。
 - Web入口を診断訴求から「親のもしも準備ポータル」へ変更。トップは無料読みもの/準備テーマ/柔らかい「状況整理チェック」CTAを前面化し、会員登録・アプリ引き継ぎは結果後の保存/共有理由として見せる方針。`/start` も「診断」ではなく「状況整理チェック」文言へ変更。Web build、Mobile tsc、doctor、拡張smoke OK。
 - 無料集客/信頼獲得用に `/guides` と `/guides/[slug]` を追加。入院・介護・認知症・死亡直後・相続前整理・実家じまいの6本を静的生成し、各記事から状況整理チェックへ接続。トップの準備テーマとナビもガイド導線へ変更。Web build、Mobile tsc、doctor、ガイド込みsmoke OK。
+- 収益導線として `/plans` を追加。無料ポータル、家族共有アプリ(IAP想定)、困った時の整理サポート(Web決済)の3段階を明示し、信頼を失わず課金する線引きも表示。トップ/ナビ/doctor/smokeへ反映。Web build、Mobile tsc、doctor、料金込みsmoke OK。
 
 その後に Step 2: Supabase本番準備。
 
