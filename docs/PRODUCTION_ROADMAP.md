@@ -10,7 +10,8 @@
   - `apps/web`: Next.js Web入口 + 管理画面
   - `apps/mobile`: Expo継続アプリ
   - `packages/shared`: 診断ロジック、ステータス、タスクテンプレート
-  - `supabase/schema.sql`: DBスキーマ草案
+  - `supabase/schema.sql`: Web/App共通DBスキーマ
+  - `supabase/production_rls.sql`: 本番向けRLS policy
 - Web導線
   - `/start`
   - `/diagnosis`
@@ -38,28 +39,29 @@
 ### 本番前に必ず直すもの
 
 - Web保存
-  - 現状は `localStorage` が主で、Supabaseは環境変数がある場合だけ書き込みます。
-  - 本番ではSupabase保存を主にし、localStorageは一時保存またはフォールバック扱いにします。
+  - Next.js API経由でSupabase保存する実装済みです。
+  - 本番環境変数未設定時だけlocalStorageフォールバックします。本番では `/admin/env` で未設定を潰します。
 - Mobileデータ
-  - 現状は `apps/mobile/lib/demoData.ts` のデモデータ表示です。
-  - 本番ではログインユーザーの `families`, `people`, `tasks`, `timeline_events`, `homes` をSupabaseから取得します。
+  - dashboard/person/tasks/statusはSupabaseがあれば実データを読み、未設定時はdemoDataへフォールバックします。
+  - timeline/home/family/assetsは画面土台あり。次はSupabase実データの読み書き範囲を増やします。
 - Auth
-  - Magic Link風の画面はありますが、実際のSupabase Authログイン処理は未接続です。
+  - Expo側はSupabase Auth `signInWithOtp` に接続済みです。
+  - 本番ではSupabase Auth Redirect URLとEAS環境変数を設定して実機確認します。
 - Admin
-  - 現状はブラウザlocalStorageのcase確認です。
-  - 本番ではSupabaseからcase/support_packを読み、管理者だけが閲覧できる制御が必要です。
+  - Admin APIはSupabaseのcase/support_packを読みます。`ADMIN_ACCESS_TOKEN` 設定時は `x-admin-token` が必要です。
+  - 未設定時はlocalStorageデモ表示へフォールバックします。本番では必ず管理トークンを設定します。
 - RLS
-  - `supabase/schema.sql` はテーブル定義中心で、RLS policyは未設定です。
-  - 本番では全テーブルでRLSを有効にし、家族単位・管理者単位のpolicyを追加します。
+  - `supabase/production_rls.sql` を追加済みです。
+  - 本番Project作成後にSQLを流し、主要テーブルで不要な公開読み取りができないことを確認します。
 - Stripe
-  - 現状はCheckout開始の接続点だけです。
-  - 本番ではCheckout Session作成API、Webhook、`purchases`/`support_packs`更新が必要です。
+  - Checkout Session作成API、Webhook、`purchases`/`support_packs`更新の土台は実装済みです。
+  - 本番ではStripe商品/Price/Webhook Secretを作り、テスト決済で `support_packs.status` が更新されることを確認します。
 - Push通知
-  - Expo push token保存と予定通知テーブルへの保存枠はあります。
-  - 本番では通知送信ジョブ、timezone、再送、配信停止が必要です。
+  - Expo push token保存、task due dates保存、通知送信Cron APIの土台は実装済みです。
+  - 本番ではVercel Cron、timezone、再送、配信停止を確認します。
 - Storage
-  - 写真管理画面の入口はあります。
-  - 本番ではSupabase Storage bucket、アップロード、署名URL、削除権限が必要です。
+  - Supabase Storage bucket作成SQL、アップロードURL API、Expo写真管理入口は実装済みです。
+  - 本番では `home-photos` bucket、署名URL、削除権限を実データで確認します。
 
 ## Step 2: Supabase本番準備
 
@@ -70,11 +72,15 @@
 1. Supabaseで新規Projectを作成
 2. SQL Editorで `supabase/schema.sql` を実行
 3. SQL Editorで `supabase/task_template_seed.sql` を実行
-4. SQL Editorで `supabase/production_rls.sql` を実行
-5. AuthのEmail Magic Linkを有効化
-6. WebとMobile用の環境変数を控える
-7. Storage bucketを作成
-8. ローカルWebからSupabaseへcaseが作成されるか確認
+4. SQL Editorで `supabase/task_generation.sql` を実行
+5. SQL Editorで `supabase/task_notification_generation.sql` を実行
+6. SQL Editorで `supabase/product_seed.sql` を実行
+7. SQL Editorで `supabase/indexes.sql` を実行
+8. SQL Editorで `supabase/production_rls.sql` を実行
+9. SQL Editorで `supabase/storage_setup.sql` を実行
+10. AuthのEmail Magic Linkを有効化
+11. WebとMobile用の環境変数を控える
+12. ローカルWebからSupabaseへcaseが作成されるか確認
 
 ### このStepの完了条件
 
@@ -86,11 +92,9 @@
 
 ## Step 3以降
 
-- Step 3: WebをSupabase主保存に変更
-- Step 4: AdminをSupabase読み取り + 管理者制限に変更
-- Step 4補足: Admin読み取りAPIの土台は追加済み。`ADMIN_ACCESS_TOKEN` 設定時はAPIに `x-admin-token` が必要。
-- Step 5: MobileをSupabase Auth + 実データ取得に変更
-- Step 6: Stripe Checkout/Webhook実装
-- Step 6補足: Checkout/Webhook APIの土台は追加済み。Stripeアカウント作成後に `STRIPE_SECRET_KEY`, `STRIPE_SUPPORT_PACK_PRICE_ID`, `STRIPE_WEBHOOK_SECRET` を入れる。
-- Step 7: Push通知ジョブ実装
-- Step 8: Vercel/EAS/Store公開準備
+- Step 3: Supabase本番ProjectへSQL投入、Auth/Storage設定、環境変数取得
+- Step 4: ローカルWeb/Appを本番Supabaseへ接続して `/start -> /diagnosis -> /result/[caseId]` とアプリ引き継ぎを確認
+- Step 5: Stripe商品/Price/Webhookを作成し、テスト決済で `support_packs` とAdmin表示を確認
+- Step 6: VercelへWeb deploy、`/admin/env` と `scripts/smoke-web.mjs <URL>` で本番疎通確認
+- Step 7: EAS preview buildでMagic Link、dashboard/person/tasks、push token保存を実機確認
+- Step 8: 法務表記、問い合わせ先、特商法表示、ストア提出情報を確定
