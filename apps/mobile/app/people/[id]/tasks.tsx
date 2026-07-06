@@ -1,16 +1,27 @@
 import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { demoDashboardData, fetchTasks, updateTaskStatus, type MobileTask } from "@/lib/mobileData";
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  demoDashboardData,
+  fetchFamilyMembers,
+  fetchTasks,
+  updateTaskAssignee,
+  updateTaskStatus,
+  type FamilyMember,
+  type MobileTask
+} from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function TasksScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const [tasks, setTasks] = useState<MobileTask[]>(demoDashboardData().tasks);
+  const [members, setMembers] = useState<FamilyMember[]>([]);
   const [message, setMessage] = useState("");
+  const [assigneeTask, setAssigneeTask] = useState<MobileTask | null>(null);
 
   useEffect(() => {
     fetchTasks(params.id).then(setTasks);
+    fetchFamilyMembers(params.id).then(setMembers);
   }, [params.id]);
 
   async function moveTask(task: MobileTask, status: MobileTask["status"]) {
@@ -27,6 +38,28 @@ export default function TasksScreen() {
     setMessage(result.source === "supabase" ? "タスクを更新しました。" : "デモ表示で更新しました。");
   }
 
+  async function assignTask(task: MobileTask, member: FamilyMember | null) {
+    const previousTasks = tasks;
+    const nextMemberId = member?.id ?? null;
+    setAssigneeTask(null);
+    setTasks((items) => items.map((item) => item.id === task.id ? {
+      ...item,
+      assignedMemberId: nextMemberId,
+      assigneeLabel: member?.displayName
+    } : item));
+
+    const result = await updateTaskAssignee(task.id, nextMemberId);
+
+    if (result.error) {
+      setTasks(previousTasks);
+      setMessage(`担当を保存できませんでした: ${result.error}`);
+      return;
+    }
+
+    setMessage(nextMemberId ? `${member?.displayName}を担当にしました。` : "担当未定に戻しました。");
+  }
+
+  const selfMember = members.find((member) => member.isCurrentUser) ?? members[0] ?? null;
   const columns = [
     ["未着手", tasks.filter((task) => task.status === "todo")],
     ["進行中", tasks.filter((task) => task.status === "doing")],
@@ -47,8 +80,8 @@ export default function TasksScreen() {
           <Text style={styles.summaryLabel}>未完了</Text>
         </View>
         <View style={styles.summaryBox}>
-          <Text style={styles.summaryNumber}>{tasks.filter((task) => task.priority === 1).length}</Text>
-          <Text style={styles.summaryLabel}>重要</Text>
+          <Text style={styles.summaryNumber}>{tasks.filter((task) => task.status !== "done" && !task.assignedMemberId).length}</Text>
+          <Text style={styles.summaryLabel}>担当未定</Text>
         </View>
       </View>
       {columns.map(([label, columnTasks]) => (
@@ -63,6 +96,14 @@ export default function TasksScreen() {
               <View style={styles.metaRow}>
                 <Text style={styles.metaChip}>期限 {task.dueDate ?? "未設定"}</Text>
                 <Text style={styles.metaChip}>優先度 {task.priority}</Text>
+                <Pressable
+                  style={[styles.assigneeChip, !task.assignedMemberId ? styles.unassignedChip : null]}
+                  onPress={() => setAssigneeTask(task)}
+                >
+                  <Text style={[styles.assigneeChipText, !task.assignedMemberId ? styles.unassignedChipText : null]}>
+                    {task.assigneeLabel ?? "担当未定"}
+                  </Text>
+                </Pressable>
               </View>
               <Text style={styles.body}>{task.description ?? ""}</Text>
               <View style={styles.actions}>
@@ -82,6 +123,32 @@ export default function TasksScreen() {
           {columnTasks.length === 0 ? <Text style={styles.emptyText}>ここにはまだタスクがありません。</Text> : null}
         </View>
       ))}
+      <Modal animationType="slide" onRequestClose={() => setAssigneeTask(null)} transparent visible={Boolean(assigneeTask)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.sheet}>
+            <Text style={styles.sheetTitle}>担当者を選ぶ</Text>
+            <Text style={styles.sheetBody}>{assigneeTask?.title}</Text>
+            {selfMember ? (
+              <Pressable style={styles.sheetPrimary} onPress={() => assigneeTask && assignTask(assigneeTask, selfMember)}>
+                <Text style={styles.sheetPrimaryText}>自分が担当する</Text>
+              </Pressable>
+            ) : null}
+            {members.map((member) => (
+              <Pressable style={styles.sheetOption} key={member.id} onPress={() => assigneeTask && assignTask(assigneeTask, member)}>
+                <Text style={styles.sheetOptionText}>{member.displayName}</Text>
+                <Text style={styles.sheetOptionHint}>{member.isCurrentUser ? "自分" : member.role}</Text>
+              </Pressable>
+            ))}
+            <Pressable style={styles.sheetOption} onPress={() => assigneeTask && assignTask(assigneeTask, null)}>
+              <Text style={styles.unassignedOptionText}>未割当に戻す</Text>
+              <Text style={styles.sheetOptionHint}>誰がやるか未定にします</Text>
+            </Pressable>
+            <Pressable style={styles.sheetCancel} onPress={() => setAssigneeTask(null)}>
+              <Text style={styles.sheetCancelText}>閉じる</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 }
@@ -106,11 +173,27 @@ const styles = StyleSheet.create({
   taskTitle: { color: colors.ink, fontWeight: "900", lineHeight: 21 },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   metaChip: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 12, fontWeight: "800", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
+  assigneeChip: { backgroundColor: colors.surfaceSoft, borderColor: "rgba(39,100,71,0.2)", borderRadius: 999, borderWidth: 1, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
+  assigneeChipText: { color: colors.green, fontSize: 12, fontWeight: "900" },
   body: { color: colors.muted, lineHeight: 22 },
   emptyText: { color: colors.muted, lineHeight: 22 },
   actions: { flexDirection: "row", gap: 8, marginTop: 4 },
   primaryButton: { backgroundColor: colors.green, borderRadius: radius.control, paddingHorizontal: 14, paddingVertical: 10 },
   primaryButtonText: { color: "#fff", fontWeight: "900" },
   secondaryButton: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, paddingHorizontal: 14, paddingVertical: 10 },
-  secondaryButtonText: { color: colors.ink, fontWeight: "900" }
+  secondaryButtonText: { color: colors.ink, fontWeight: "900" },
+  modalBackdrop: { backgroundColor: "rgba(24,35,31,0.32)", flex: 1, justifyContent: "flex-end" },
+  sheet: { backgroundColor: colors.surface, borderTopLeftRadius: 16, borderTopRightRadius: 16, gap: 10, padding: 18 },
+  sheetBody: { color: colors.muted, lineHeight: 22 },
+  sheetCancel: { alignItems: "center", minHeight: 48, justifyContent: "center" },
+  sheetCancelText: { color: colors.muted, fontWeight: "900" },
+  sheetOption: { alignItems: "center", backgroundColor: "#fbfdf9", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", justifyContent: "space-between", minHeight: 52, paddingHorizontal: 14 },
+  sheetOptionHint: { color: colors.muted, fontSize: 12, fontWeight: "800" },
+  sheetOptionText: { color: colors.ink, fontSize: 16, fontWeight: "900" },
+  sheetPrimary: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 52 },
+  sheetPrimaryText: { color: "#fff", fontSize: 16, fontWeight: "900" },
+  sheetTitle: { color: colors.ink, fontSize: 24, fontWeight: "900" },
+  unassignedChip: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)" },
+  unassignedChipText: { color: colors.gold },
+  unassignedOptionText: { color: colors.gold, fontSize: 16, fontWeight: "900" }
 });

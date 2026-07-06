@@ -17,6 +17,17 @@ export type MobileTask = {
   dueDate?: string;
   priority: number;
   category?: string;
+  assignedMemberId?: string | null;
+  assigneeLabel?: string;
+};
+
+export type FamilyMember = {
+  id: string;
+  userId?: string;
+  role: string;
+  relationship?: string;
+  displayName: string;
+  isCurrentUser: boolean;
 };
 
 export type DashboardData = {
@@ -42,7 +53,38 @@ type TaskRow = {
   due_date: string | null;
   priority: number | null;
   category: string | null;
+  assigned_member_id: string | null;
 };
+
+type FamilyMemberRow = {
+  id: string;
+  user_id: string | null;
+  role: string;
+  relationship: string | null;
+};
+
+type PersonFamilyRow = {
+  family_id: string | null;
+};
+
+const demoFamilyMembers: FamilyMember[] = [
+  {
+    id: "demo-member-self",
+    userId: "demo-user-self",
+    role: "owner",
+    relationship: "長男",
+    displayName: "長男",
+    isCurrentUser: true
+  },
+  {
+    id: "demo-member-sister",
+    userId: "demo-user-sister",
+    role: "member",
+    relationship: "長女",
+    displayName: "長女",
+    isCurrentUser: false
+  }
+];
 
 function demoTasksFromResult(result: DiagnosisResult): MobileTask[] {
   return result.tasks.map((task, index) => ({
@@ -52,7 +94,9 @@ function demoTasksFromResult(result: DiagnosisResult): MobileTask[] {
     status: index % 3 === 0 ? "todo" : index % 3 === 1 ? "doing" : "done",
     dueDate: task.dueDate,
     priority: task.priority,
-    category: task.category
+    category: task.category,
+    assignedMemberId: index === 0 ? null : index % 2 === 0 ? "demo-member-sister" : "demo-member-self",
+    assigneeLabel: index === 0 ? undefined : index % 2 === 0 ? "長女" : "長男"
   }));
 }
 
@@ -119,9 +163,12 @@ export async function fetchTasks(personId: string): Promise<MobileTask[]> {
   const supabase = getSupabase();
   if (!supabase) return demoTasksFromResult(demoResult);
 
+  const members = await fetchFamilyMembers(personId);
+  const memberLabels = new Map(members.map((member) => [member.id, member.displayName]));
+
   const { data } = await supabase
     .from("tasks")
-    .select("id, title, description, status, due_date, priority, category")
+    .select("id, title, description, status, due_date, priority, category, assigned_member_id")
     .eq("person_id", personId)
     .order("due_date", { ascending: true });
 
@@ -135,8 +182,48 @@ export async function fetchTasks(personId: string): Promise<MobileTask[]> {
     status: row.status,
     dueDate: row.due_date ?? undefined,
     priority: row.priority ?? 3,
-    category: row.category ?? undefined
+    category: row.category ?? undefined,
+    assignedMemberId: row.assigned_member_id,
+    assigneeLabel: row.assigned_member_id ? memberLabels.get(row.assigned_member_id) : undefined
   }));
+}
+
+export async function fetchFamilyMembers(personId: string): Promise<FamilyMember[]> {
+  const supabase = getSupabase();
+  if (!supabase) return demoFamilyMembers;
+
+  const { data: person } = await supabase
+    .from("people")
+    .select("family_id")
+    .eq("id", personId)
+    .single();
+
+  const familyId = (person as PersonFamilyRow | null)?.family_id;
+  if (!familyId) return demoFamilyMembers;
+
+  const { data: userResult } = await supabase.auth.getUser();
+  const currentUserId = userResult.user?.id;
+
+  const { data } = await supabase
+    .from("family_members")
+    .select("id, user_id, role, relationship")
+    .eq("family_id", familyId)
+    .order("created_at", { ascending: true });
+
+  const rows = (data ?? []) as FamilyMemberRow[];
+  if (rows.length === 0) return demoFamilyMembers;
+
+  return rows.map((row) => {
+    const displayName = row.relationship || (row.role === "owner" ? "家族代表" : row.role);
+    return {
+      id: row.id,
+      userId: row.user_id ?? undefined,
+      role: row.role,
+      relationship: row.relationship ?? undefined,
+      displayName,
+      isCurrentUser: Boolean(currentUserId && row.user_id === currentUserId)
+    };
+  });
 }
 
 export async function updatePersonStatus(
@@ -170,6 +257,25 @@ export async function updateTaskStatus(
     .update({
       status,
       completed_at: status === "done" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
+    })
+    .eq("id", taskId);
+
+  if (error) return { source: "demo", error: error.message };
+  return { source: "supabase" };
+}
+
+export async function updateTaskAssignee(
+  taskId: string,
+  memberId: string | null
+): Promise<{ source: "supabase" | "demo"; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { source: "demo" };
+
+  const { error } = await supabase
+    .from("tasks")
+    .update({
+      assigned_member_id: memberId,
       updated_at: new Date().toISOString()
     })
     .eq("id", taskId);

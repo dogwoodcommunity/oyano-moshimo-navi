@@ -7,7 +7,9 @@ export const colors = {
   surfaceSoft: "#eef4ed",
   green: "#276447",
   greenDark: "#183f2e",
-  blue: "#284f79"
+  blue: "#284f79",
+  gold: "#a56f24",
+  rose: "#9a3f56"
 };
 
 export const radius = {
@@ -22,4 +24,3 @@ export const shadow = {
   shadowOffset: { width: 0, height: 10 },
   elevation: 3
 };
-
