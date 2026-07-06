@@ -254,10 +254,13 @@ create table if not exists scheduled_notifications (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references profiles(id) on delete cascade,
   task_id uuid references tasks(id) on delete cascade,
+  notification_type text not null default 'due_1d',
   scheduled_for timestamptz not null,
   status text not null default 'scheduled',
   sent_at timestamptz,
-  created_at timestamptz default now()
+  opened_at timestamptz,
+  created_at timestamptz default now(),
+  unique(user_id, task_id, notification_type)
 );
 
 create table if not exists provider_categories (

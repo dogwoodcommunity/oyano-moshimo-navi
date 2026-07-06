@@ -5,6 +5,7 @@ type ScheduledNotificationRow = {
   id: string;
   user_id: string;
   task_id: string | null;
+  notification_type: string;
   scheduled_for: string;
   tasks?: {
     title: string;
@@ -18,6 +19,12 @@ type ScheduledNotificationRow = {
 type PushTokenRow = {
   user_id: string;
   expo_push_token: string;
+};
+
+type DigestGroup = {
+  userId: string;
+  localDate: string;
+  rows: ScheduledNotificationRow[];
 };
 
 function verifyCron(request: Request) {
@@ -35,6 +42,39 @@ function verifyCron(request: Request) {
   return null;
 }
 
+function tokyoDateKey(value: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(new Date(value));
+
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+  return `${year}-${month}-${day}`;
+}
+
+function taskTitle(row: ScheduledNotificationRow) {
+  const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
+  return task?.title ?? "確認が必要なタスク";
+}
+
+function buildDigestGroups(rows: ScheduledNotificationRow[]) {
+  const map = new Map<string, DigestGroup>();
+
+  for (const row of rows) {
+    const localDate = tokyoDateKey(row.scheduled_for);
+    const key = `${row.user_id}:${localDate}`;
+    const current = map.get(key) ?? { userId: row.user_id, localDate, rows: [] };
+    current.rows.push(row);
+    map.set(key, current);
+  }
+
+  return [...map.values()];
+}
+
 export async function GET(request: Request) {
   const unauthorized = verifyCron(request);
   if (unauthorized) return unauthorized;
@@ -47,7 +87,7 @@ export async function GET(request: Request) {
   const now = new Date().toISOString();
   const { data: schedules, error } = await supabase
     .from("scheduled_notifications")
-    .select("id, user_id, task_id, scheduled_for, tasks(title, due_date)")
+    .select("id, user_id, task_id, notification_type, scheduled_for, tasks(title, due_date)")
     .lte("scheduled_for", now)
     .eq("status", "scheduled")
     .limit(100);
@@ -73,18 +113,26 @@ export async function GET(request: Request) {
   }
 
   const tokenRows = (tokens ?? []) as PushTokenRow[];
-  const messages = rows.flatMap((row) => {
-    const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
+  const digests = buildDigestGroups(rows);
+  const messages = digests.flatMap((digest) => {
+    const title = digest.rows.length === 1
+      ? "期限が近いタスクがあります"
+      : `今日の期限: ${digest.rows.length}件`;
+    const body = digest.rows.length === 1
+      ? taskTitle(digest.rows[0])
+      : digest.rows.slice(0, 3).map(taskTitle).join(" / ");
+
     return tokenRows
-      .filter((token) => token.user_id === row.user_id)
+      .filter((token) => token.user_id === digest.userId)
       .map((token) => ({
         to: token.expo_push_token,
         sound: "default",
-        title: "親のもしもナビ",
-        body: task?.title ? `期限が近いタスク: ${task.title}` : "確認が必要なタスクがあります",
+        title,
+        body,
         data: {
-          taskId: row.task_id,
-          scheduledNotificationId: row.id
+          localDate: digest.localDate,
+          scheduledNotificationIds: digest.rows.map((row) => row.id),
+          taskIds: digest.rows.map((row) => row.task_id).filter(Boolean)
         }
       }));
   });

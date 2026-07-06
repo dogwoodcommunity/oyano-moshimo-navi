@@ -21,5 +21,7 @@ create index if not exists idx_support_packs_case_id on support_packs(case_id);
 create index if not exists idx_support_packs_status on support_packs(status);
 create index if not exists idx_push_tokens_user_id on push_tokens(user_id);
 create index if not exists idx_scheduled_notifications_status_for on scheduled_notifications(status, scheduled_for);
+create index if not exists idx_scheduled_notifications_user_day on scheduled_notifications(user_id, scheduled_for);
+create index if not exists idx_scheduled_notifications_task_type on scheduled_notifications(task_id, notification_type);
 create index if not exists idx_provider_recommendations_case_id on provider_recommendations(case_id);
 create index if not exists idx_purchases_provider_checkout_id on purchases(provider_checkout_id);
