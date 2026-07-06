@@ -48,3 +48,53 @@ export async function saveTaskDueDates(userId: string, tasks: Array<{ id?: strin
     status: "scheduled"
   })));
 }
+
+function normalizeNotificationIds(data: Record<string, unknown>) {
+  const ids = new Set<string>();
+  const snakeIds = data.scheduled_notification_ids;
+  const camelIds = data.scheduledNotificationIds;
+  const snakeId = data.scheduled_notification_id;
+  const camelId = data.scheduledNotificationId;
+
+  if (Array.isArray(snakeIds)) {
+    snakeIds.forEach((id) => typeof id === "string" && ids.add(id));
+  }
+
+  if (Array.isArray(camelIds)) {
+    camelIds.forEach((id) => typeof id === "string" && ids.add(id));
+  }
+
+  if (typeof snakeId === "string") ids.add(snakeId);
+  if (typeof camelId === "string") ids.add(camelId);
+
+  return [...ids];
+}
+
+export async function markNotificationsOpened(data: Record<string, unknown>) {
+  const ids = normalizeNotificationIds(data);
+  if (ids.length === 0) return { updated: 0, source: "none" as const };
+
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
+  if (webBaseUrl) {
+    try {
+      await fetch(`${webBaseUrl}/api/notifications/opened`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scheduled_notification_ids: ids })
+      });
+      return { updated: ids.length, source: "web" as const };
+    } catch {
+      // Fall back to Supabase below when local/dev Web is unavailable.
+    }
+  }
+
+  const client = getSupabase();
+  if (!client) return { updated: 0, source: "none" as const };
+
+  await client
+    .from("scheduled_notifications")
+    .update({ opened_at: new Date().toISOString() })
+    .in("id", ids);
+
+  return { updated: ids.length, source: "supabase" as const };
+}

@@ -1,7 +1,18 @@
+import { useEffect } from "react";
+import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
+import { markNotificationsOpened } from "@/lib/notifications";
 import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      void markNotificationsOpened(response.notification.request.content.data ?? {});
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
     <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
       <Stack.Screen name="(auth)/welcome" options={{ title: "ログイン" }} />

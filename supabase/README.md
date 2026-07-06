@@ -5,15 +5,16 @@ SQL Editorで以下の順に実行する。
 1. `schema.sql`
 2. `task_template_seed.sql`
 3. `task_generation.sql`
-4. `task_notification_generation.sql`
-5. `product_seed.sql`
-6. `indexes.sql`
-7. `production_rls.sql`
-8. `storage_setup.sql`
+4. `notification_delivery_hardening.sql`
+5. `task_notification_generation.sql`
+6. `product_seed.sql`
+7. `indexes.sql`
+8. `production_rls.sql`
+9. `storage_setup.sql`
 
 任意確認:
 
-9. `verify_setup.sql`
+10. `verify_setup.sql`
 
 ## 重要
 

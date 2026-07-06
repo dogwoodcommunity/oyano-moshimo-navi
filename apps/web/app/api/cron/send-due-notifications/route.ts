@@ -10,15 +10,23 @@ type ScheduledNotificationRow = {
   tasks?: {
     title: string;
     due_date: string | null;
+    assigned_member_id: string | null;
   } | Array<{
     title: string;
     due_date: string | null;
+    assigned_member_id: string | null;
   }> | null;
 };
 
 type PushTokenRow = {
   user_id: string;
   expo_push_token: string;
+};
+
+type FamilyMemberRow = {
+  id: string;
+  relationship: string | null;
+  role: string;
 };
 
 type DigestGroup = {
@@ -61,6 +69,23 @@ function taskTitle(row: ScheduledNotificationRow) {
   return task?.title ?? "確認が必要なタスク";
 }
 
+function assignedMemberId(row: ScheduledNotificationRow) {
+  const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
+  return task?.assigned_member_id ?? null;
+}
+
+function assigneeLabel(row: ScheduledNotificationRow, members: Map<string, string>) {
+  const memberId = assignedMemberId(row);
+  if (!memberId) return "未割当";
+  return members.get(memberId) ?? "担当者";
+}
+
+function buildDigestBody(rows: ScheduledNotificationRow[], members: Map<string, string>) {
+  const lines = rows.slice(0, 2).map((row) => `・${taskTitle(row)}(担当: ${assigneeLabel(row, members)})`);
+  const rest = rows.length - lines.length;
+  return rest > 0 ? `${lines.join("\n")}\n他${rest}件` : lines.join("\n");
+}
+
 function buildDigestGroups(rows: ScheduledNotificationRow[]) {
   const map = new Map<string, DigestGroup>();
 
@@ -87,7 +112,7 @@ export async function GET(request: Request) {
   const now = new Date().toISOString();
   const { data: schedules, error } = await supabase
     .from("scheduled_notifications")
-    .select("id, user_id, task_id, notification_type, scheduled_for, tasks(title, due_date)")
+    .select("id, user_id, task_id, notification_type, scheduled_for, tasks(title, due_date, assigned_member_id)")
     .lte("scheduled_for", now)
     .eq("status", "scheduled")
     .limit(100);
@@ -113,14 +138,29 @@ export async function GET(request: Request) {
   }
 
   const tokenRows = (tokens ?? []) as PushTokenRow[];
+  const assignedMemberIds = [
+    ...new Set(rows.map(assignedMemberId).filter((id): id is string => Boolean(id)))
+  ];
+  const assigneeMap = new Map<string, string>();
+
+  if (assignedMemberIds.length > 0) {
+    const { data: members } = await supabase
+      .from("family_members")
+      .select("id, relationship, role")
+      .in("id", assignedMemberIds);
+
+    for (const member of (members ?? []) as FamilyMemberRow[]) {
+      assigneeMap.set(member.id, member.relationship || member.role);
+    }
+  }
+
   const digests = buildDigestGroups(rows);
   const messages = digests.flatMap((digest) => {
     const title = digest.rows.length === 1
       ? "期限が近いタスクがあります"
       : `今日の期限: ${digest.rows.length}件`;
-    const body = digest.rows.length === 1
-      ? taskTitle(digest.rows[0])
-      : digest.rows.slice(0, 3).map(taskTitle).join(" / ");
+    const body = buildDigestBody(digest.rows, assigneeMap);
+    const scheduledNotificationIds = digest.rows.map((row) => row.id);
 
     return tokenRows
       .filter((token) => token.user_id === digest.userId)
@@ -131,7 +171,10 @@ export async function GET(request: Request) {
         body,
         data: {
           localDate: digest.localDate,
-          scheduledNotificationIds: digest.rows.map((row) => row.id),
+          scheduled_notification_id: scheduledNotificationIds[0],
+          scheduled_notification_ids: scheduledNotificationIds,
+          scheduledNotificationId: scheduledNotificationIds[0],
+          scheduledNotificationIds,
           taskIds: digest.rows.map((row) => row.task_id).filter(Boolean)
         }
       }));
