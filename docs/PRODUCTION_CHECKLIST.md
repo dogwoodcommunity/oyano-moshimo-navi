@@ -2,37 +2,43 @@
 
 ## 1. GitHub
 
-- [ ] GitHub private repoを作成
-- [ ] `git remote add origin <repo-url>`
-- [ ] `git push -u origin main`
+- [x] GitHub repoを作成
+- [x] `git remote add origin <repo-url>`
+- [x] `git push -u origin main`
+- [x] Repository: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
 
 ## 2. Supabase
 
-- [ ] Project `oyano-moshimo-prod` を作成
-- [ ] `supabase/schema.sql` を実行
-- [ ] `supabase/task_template_seed.sql` を実行
-- [ ] `supabase/task_generation.sql` を実行
-- [ ] `supabase/task_notification_generation.sql` を実行
-- [ ] `supabase/product_seed.sql` を実行
-- [ ] `supabase/indexes.sql` を実行
-- [ ] `supabase/production_rls.sql` を実行
-- [ ] `supabase/storage_setup.sql` を実行
-- [ ] `supabase/verify_setup.sql` で `ok=false` がないことを確認
-- [ ] Auth Email Magic Linkを有効化
-- [ ] Site URL / Redirect URLにWeb/ExpoのURLを追加
-- [ ] `docs/ENVIRONMENT_MATRIX.md` に沿って環境変数を設定
-- [ ] `home-photos` bucket確認
+- [x] Production Projectを作成
+- [x] Region: Northeast Asia (Tokyo)
+- [x] `supabase/schema.sql` を実行
+- [x] `supabase/task_template_seed.sql` を実行
+- [x] `supabase/task_generation.sql` を実行
+- [x] `supabase/notification_delivery_hardening.sql` を実行
+- [x] `supabase/task_notification_generation.sql` を実行
+- [x] `supabase/monthly_checkin_notifications.sql` を実行
+- [x] `supabase/product_seed.sql` を実行
+- [x] `supabase/indexes.sql` を実行
+- [x] `supabase/production_rls.sql` を実行
+- [x] `supabase/family_invite_rpc.sql` を実行
+- [x] `supabase/storage_setup.sql` を実行
+- [x] `supabase/verify_setup.sql` / `verify_compact.sql` で主要項目trueを確認
+- [x] `supabase/api_grants.sql` を実行
+- [x] Project URL / publishable key / service role keyをローカルenvに設定
+- [ ] Auth Email Magic Linkの本番Redirect URL最終確認
+- [x] `home-photos` bucket確認
 
 ## 3. Vercel
 
-- [ ] GitHub repoをimport
-- [ ] `vercel.json` の設定でbuildできることを確認
-- [ ] 環境変数を設定
-- [ ] `/admin/env` で設定漏れを確認
-- [ ] `node scripts/smoke-web.mjs <Vercel URL>` を実行
-- [ ] `/start -> /diagnosis -> /result/[caseId]` を確認
-- [ ] `/admin` を確認
-- [ ] `/api/cron/send-due-notifications` を確認
+- [x] GitHub repoをimport
+- [x] `vercel.json` の設定でbuildできることを確認
+- [x] 環境変数を設定
+- [x] `/admin/env` で設定漏れを確認
+- [x] `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` を実行
+- [x] `/start -> /diagnosis -> /result/[caseId]` を確認
+- [x] `/admin` を確認
+- [x] `/api/cron/send-due-notifications` をdeploy対象に含める
+- [ ] Stripe関連env 3項目を設定
 
 ## 4. Stripe
 
@@ -53,19 +59,24 @@
 - [ ] Magic Linkログイン確認
 - [ ] dashboard/person/tasksがSupabaseデータを読むことを確認
 - [ ] Push token保存確認
+- [ ] EASログイン情報が不明。Expoアカウント新規作成またはパスワード再設定が必要。
+- [ ] `pnpm run eas:mobile:init`
+- [ ] `pnpm run eas:mobile:set-project-id -- <Expo Project ID>`
+- [ ] preview buildを作成
 
 ## 6. セキュリティ
 
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` がブラウザ/Expoに出ていない
-- [ ] `ADMIN_ACCESS_TOKEN` を本番に設定
-- [ ] RLSが全主要テーブルで有効
-- [ ] 銀行暗証番号・パスワード・マイナンバー画像を保存しない表示が残っている
-- [ ] アプリ内に外部Web決済CTAがない
+- [x] `SUPABASE_SERVICE_ROLE_KEY` がブラウザ/Expoに出ていない
+- [x] `ADMIN_ACCESS_TOKEN` を本番に設定
+- [x] RLSが全主要テーブルで有効
+- [x] 銀行暗証番号・パスワード・マイナンバー画像を保存しない表示が残っている
+- [x] アプリ内に外部Web決済CTAがない
 
 ## 7. 公開前
 
-- [ ] 利用規約
-- [ ] プライバシーポリシー
-- [ ] 特定商取引法表示
-- [ ] 問い合わせ先
-- [ ] 法律/税務判断の免責
+- [x] 利用規約の叩き台
+- [x] プライバシーポリシーの叩き台
+- [x] 特定商取引法表示の叩き台
+- [ ] 事業者名、代表者、住所、電話番号、問い合わせ先の正式情報
+- [x] 法律/税務判断の免責
+- [ ] 弁護士による最終確認

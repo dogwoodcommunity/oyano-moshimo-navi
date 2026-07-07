@@ -366,3 +366,11 @@ GitHubが必要な理由:
 - `docs/MOBILE_TEST_BUILD.md` に `eas init` 後のProject ID反映コマンドを追記。
 - `scripts/mobile-build-doctor.mjs` は `app.config.js` のresolved configを読み、Project ID envがある場合に `extra.eas.projectId` と一致するか確認する。
 - 確認: `pnpm run doctor:mobile-build` OK、`pnpm --filter mobile run typecheck` OK。Web/API変更なしのためVercel deployは不要。
+
+## 2026-07-07 追記 7
+
+- ユーザーから「できるところまで全部進めて、許可する」と指示あり。
+- EASログインを試行したが、`pnpm dlx eas-cli whoami` は `Not logged in`。`pnpm dlx eas-cli login` はブラウザログイン待ちまで進んだが、ユーザーがExpoログイン情報不明とのこと。EASログイン待機プロセスはキャンセル済み。
+- Expo/EASは、Expoアカウント新規作成またはパスワード再設定後に再開する。復旧手順として `docs/EXPO_ACCOUNT_RECOVERY.md` を追加。
+- 家族3組テスト当日に使う短い進行表として `docs/FAMILY_TEST_SCRIPT.md` を追加。Web完走、アプリ保存、担当変更、通知設定、家族招待、7日後再訪、9,800円支払意思を確認する。
+- `docs/PRODUCTION_CHECKLIST.md` を現状に合わせて更新。GitHub/Supabase/Vercel/セキュリティは概ね完了、StripeとExpoログイン/preview build、法務正式情報が未完了。
