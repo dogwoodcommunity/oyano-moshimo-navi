@@ -328,3 +328,12 @@ GitHubが必要な理由:
 - GitHubへcommit `946e43f Connect web handoff to mobile app` をpush済み。
 - Vercel本番へdeploy済み。Production alias: `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。Admin env APIのみtoken必須のため401 skipで想定通り。
 - 作業中に `apps/web` 直下から一度deployを実行してしまい、Vercel側に `dogwoodcommunity1/web` という失敗プロジェクト/deploymentが作成された可能性あり。実運用の本番は `dogwoodcommunity1/oyano-moshimo-navi` で正しく稼働中。不要なら後でVercel dashboardから削除する。
+
+## 2026-07-07 追記 3
+
+- Expoアプリのpush token登録を本番ユーザー向けに修正。
+- `apps/mobile/lib/notifications.ts` は固定デモuser idを受け取らず、Supabase sessionのログイン本人を使う。未ログイン時は端末tokenを取得してもDB保存せず `login_required` を返す。
+- `apps/mobile/app/notifications.tsx` はログイン必要・通知拒否・保存失敗を利用者向けメッセージに分岐。
+- `apps/mobile/app/(auth)/welcome.tsx` からデモuser idでのpush token登録を削除。通知登録はログイン後の通知設定画面で行う。
+- `apps/web/app/api/push-tokens/register/route.ts` を追加。Bearer tokenでSupabase userを検証し、`profiles` をupsertしてから `push_tokens` をupsertする。ログインだけ済ませた新規ユーザーでも外部キーで落ちない。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。

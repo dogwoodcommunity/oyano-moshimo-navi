@@ -9,9 +9,20 @@ export default function NotificationsScreen() {
   const [message, setMessage] = useState("");
 
   async function register() {
-    const nextToken = await registerPushToken("00000000-0000-4000-8000-000000000001");
-    setToken(nextToken);
-    setMessage(nextToken ? "この端末で通知を受け取れるようにしました。" : "通知を有効にできませんでした。端末の通知設定を確認してください。");
+    const result = await registerPushToken();
+    setToken(result.token);
+    if (result.saved) {
+      setMessage("この端末で通知を受け取れるようにしました。");
+      return;
+    }
+
+    const nextMessage =
+      result.reason === "login_required"
+        ? "通知登録にはログインが必要です。メールで本人確認をしてからもう一度お試しください。"
+        : result.reason === "permission_denied"
+          ? "通知が許可されていません。端末の通知設定を確認してください。"
+          : "通知を有効にできませんでした。時間をおいてもう一度お試しください。";
+    setMessage(nextMessage);
   }
 
   return (

@@ -1,13 +1,10 @@
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
-import { registerPushToken } from "@/lib/notifications";
 import { demoResult } from "@/lib/demoData";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
 import { colors, radius, shadow } from "@/lib/theme";
-
-const DEMO_USER_ID = "00000000-0000-4000-8000-000000000001";
 
 export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
@@ -28,17 +25,14 @@ export default function WelcomeScreen() {
       if (result.sent) return;
     }
 
-    const userId = DEMO_USER_ID;
     const handoff = await consumeWebHandoff(params.caseId, params.token);
     if (handoff) {
       setMessage(`Web診断を引き継ぎました。タスク ${handoff.tasksCreated}件`);
     }
-    await registerPushToken(userId);
     router.replace("/(tabs)/dashboard");
   }
 
   async function continueDemo() {
-    await registerPushToken(DEMO_USER_ID);
     setMessage(`見本で開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
     router.replace("/(tabs)/dashboard");
   }

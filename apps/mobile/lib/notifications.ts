@@ -2,7 +2,13 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { getSupabase } from "./supabase";
 
-export async function registerPushToken(userId: string) {
+export type PushRegistrationResult = {
+  token: string | null;
+  saved: boolean;
+  reason?: "permission_denied" | "token_failed" | "login_required" | "save_failed";
+};
+
+export async function registerPushToken(): Promise<PushRegistrationResult> {
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "default",
@@ -11,7 +17,7 @@ export async function registerPushToken(userId: string) {
   }
 
   const permission = await Notifications.requestPermissionsAsync();
-  if (!permission.granted) return null;
+  if (!permission.granted) return { token: null, saved: false, reason: "permission_denied" };
 
   let expoPushToken: string;
   try {
@@ -19,21 +25,50 @@ export async function registerPushToken(userId: string) {
     const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
     expoPushToken = token.data;
   } catch {
-    return null;
+    return { token: null, saved: false, reason: "token_failed" };
   }
 
   const client = getSupabase();
-  if (client) {
-    await client.from("push_tokens").upsert({
+  const { data: sessionResult } = client ? await client.auth.getSession() : { data: { session: null } };
+  const userId = sessionResult.session?.user.id;
+  const accessToken = sessionResult.session?.access_token;
+  if (!client || !userId || !accessToken) {
+    return { token: expoPushToken, saved: false, reason: "login_required" };
+  }
+
+  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
+  if (webBaseUrl) {
+    try {
+      const response = await fetch(`${webBaseUrl}/api/push-tokens/register`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          expoPushToken,
+          platform: Platform.OS,
+          deviceName: Platform.OS
+        })
+      });
+
+      if (response.ok) return { token: expoPushToken, saved: true };
+    } catch {
+      // Fall back to direct Supabase upsert for local development.
+    }
+  }
+
+  const { error } = await client.from("push_tokens").upsert({
       user_id: userId,
       expo_push_token: expoPushToken,
       platform: Platform.OS,
       device_name: Platform.OS,
-      is_active: true
-    });
-  }
+      is_active: true,
+      updated_at: new Date().toISOString()
+    }, { onConflict: "user_id,expo_push_token" });
 
-  return expoPushToken;
+  if (error) return { token: expoPushToken, saved: false, reason: "save_failed" };
+  return { token: expoPushToken, saved: true };
 }
 
 export async function saveTaskDueDates(userId: string, tasks: Array<{ id?: string; dueDate: string; title: string }>) {
