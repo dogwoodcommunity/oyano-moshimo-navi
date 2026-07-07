@@ -62,10 +62,9 @@
 - [x] EASログイン確認
 - [x] `pnpm run eas:mobile:init`
 - [x] `pnpm run eas:mobile:set-project-id -- <Expo Project ID>`
-- [ ] preview buildを作成
-- [ ] Android preview build初回はGradle plugin解決で失敗。`@react-native/gradle-plugin` 明示依存追加済み。
-- [ ] Android preview build 2回目はJS bundleで `expo-asset` 不足により失敗。`expo-asset` と `@babel/runtime` 明示依存、`main: expo-router/entry` 追加後に再実行する。
-- [ ] Android preview build 3回目はJS bundleで `@react-native/assets-registry/registry.js` 解決失敗。`@react-native/assets-registry@0.74.87` 明示依存追加、ローカルAndroid export OK。4回目を実行する。
+- [x] Android preview buildを作成
+- [x] Android preview build 4回目 `c761577d-79b9-4740-ab98-fc664c106561` 成功。Install URL: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/c761577d-79b9-4740-ab98-fc664c106561`
+- [ ] iOS preview buildを作成
 
 ## 6. セキュリティ
 

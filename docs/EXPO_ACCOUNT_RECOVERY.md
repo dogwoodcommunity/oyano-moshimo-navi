@@ -70,4 +70,6 @@ pnpm run eas:mobile:build:android
 - Android preview build 3回目 `e2ea70af-9b0c-425d-b289-70459ffb16f0` はJS bundleで失敗。
 - 原因: pnpm/monorepo構成で `@react-native/assets-registry/registry.js` が直接解決できなかったこと。
 - 対応: `@react-native/assets-registry@0.74.87` をmobile dependenciesに追加。ローカルAndroid exportはOK。
+- Android preview build 4回目 `c761577d-79b9-4740-ab98-fc664c106561` は成功。
+- Install URL: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/c761577d-79b9-4740-ab98-fc664c106561`
 - ローカル確認: `expo export --platform android` OK。

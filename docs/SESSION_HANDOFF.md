@@ -415,3 +415,10 @@ GitHubが必要な理由:
 - pnpm monorepo + EAS remote buildでMetroがReact Native配下のassets registryを直接解決できないため、`apps/mobile/package.json` に `@react-native/assets-registry@0.74.87` をdependenciesとして明示追加。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export` OK。
 - 次: この修正をcommit/push後、Android preview buildを4回目実行する。成功したらEASのinstall URLを控えて家族3組テスト用に共有する。
+
+## 2026-07-07 追記 12
+
+- `@react-native/assets-registry@0.74.87` の明示依存修正をcommit `1b65a6d Fix React Native asset registry resolution` としてGitHubへpush済み。
+- Android preview build 4回目 `c761577d-79b9-4740-ab98-fc664c106561` は成功。
+- Android install URL: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/c761577d-79b9-4740-ab98-fc664c106561`
+- 次: Android実機でインストールし、Magic Linkログイン、Web結果からのhandoff、dashboard/person/tasks表示、push token保存を確認する。iOS TestFlight向けにはApple Developer/App Store Connect側の準備後にiOS preview buildを作る。
