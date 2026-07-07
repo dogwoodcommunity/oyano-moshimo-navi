@@ -14,11 +14,11 @@ export default function PlanTab() {
         <Link href="/account/plan" style={styles.linkLight}>詳細</Link>
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>継続課金の扱い</Text>
-        <Text style={styles.body}>この画面では現在の利用状態だけを表示します。購入や変更が必要な機能は、リリース時の審査方針に合わせて案内します。</Text>
+        <Text style={styles.cardTitle}>利用状態</Text>
+        <Text style={styles.body}>この画面では現在の利用状態だけを表示します。家族ボード、期限通知、写真管理の利用範囲を確認できます。</Text>
       </View>
       <View style={styles.notice}>
-        <Text style={styles.noticeText}>発動サポートパックは申込済み・確認中・完了などの状態表示のみ行います。</Text>
+        <Text style={styles.noticeText}>発動サポートパックは受付済み・確認中・完了などの状態表示のみ行います。</Text>
       </View>
     </View>
   );

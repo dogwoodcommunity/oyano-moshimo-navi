@@ -4,18 +4,18 @@ import { colors, radius, shadow } from "@/lib/theme";
 export default function AccountPlanScreen() {
   return (
     <View style={styles.screen}>
-      <Text style={styles.kicker}>Billing policy</Text>
+      <Text style={styles.kicker}>Plan status</Text>
       <Text style={styles.title}>プラン確認</Text>
       <View style={[styles.card, styles.primaryCard]}>
         <Text style={styles.cardTitleLight}>Family Plus</Text>
-        <Text style={styles.bodyLight}>家族共有、複数登録、期限リマインド、写真容量拡張などの利用状態を確認できます。</Text>
+        <Text style={styles.bodyLight}>家族共有、複数登録、期限リマインド、写真容量拡張などの状態を確認できます。</Text>
       </View>
       <View style={styles.card}>
         <Text style={styles.cardTitle}>発動サポートパック</Text>
-        <Text style={styles.body}>申込済みの場合、ここでは「受付済み」「確認中」「レポート準備中」などの状態だけを表示します。</Text>
+        <Text style={styles.body}>受付済みの場合、ここでは「受付済み」「確認中」「レポート準備中」などの状態だけを表示します。</Text>
       </View>
       <View style={styles.notice}>
-        <Text style={styles.noticeText}>この画面では購入や外部サービスへの誘導は行いません。</Text>
+        <Text style={styles.noticeText}>この画面は状態確認専用です。</Text>
       </View>
     </View>
   );

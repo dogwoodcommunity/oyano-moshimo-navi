@@ -40,7 +40,7 @@ export default function SettingsScreen() {
 
       <View style={styles.card}>
         <Text style={styles.cardTitle}>プラン状態</Text>
-        <Text style={styles.body}>現在の利用状態と発動サポートパックの状態を確認します。購入や外部サービスへの誘導はここでは行いません。</Text>
+        <Text style={styles.body}>現在の利用状態と発動サポートパックの状態を確認します。</Text>
         <Link href="/account/plan" style={styles.primaryLink}>プラン確認を開く</Link>
       </View>
     </ScrollView>

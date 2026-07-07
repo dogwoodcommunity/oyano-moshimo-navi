@@ -33,6 +33,18 @@ node scripts/generate-brand-assets.mjs
 
 ## EAS Build前に必要な環境変数
 
+2026-07-07時点では、EAS CLIは取得確認済みだがExpoには未ログイン。
+
+```bash
+pnpm run eas:whoami
+```
+
+が `Not logged in` の場合は、先にログインする。
+
+```bash
+pnpm run eas:login
+```
+
 Expo/EAS側に以下を設定する。
 
 ```txt
@@ -50,9 +62,10 @@ EXPO_OWNER=
 EASへ登録する時は、Supabase URL/Anon keyも含めてExpo側の環境変数に入れる。`SUPABASE_SERVICE_ROLE_KEY` はアプリに入れない。
 
 ```bash
-pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value "<Supabase URL>" --visibility plaintext
-pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<Supabase anon key>" --visibility plaintext
-pnpm --dir apps/mobile exec eas env:create --environment preview --name EXPO_PUBLIC_EAS_PROJECT_ID --value "<Expo project id>" --visibility plaintext
+cd apps/mobile
+pnpm dlx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value "<Supabase URL>" --visibility plaintext
+pnpm dlx eas-cli env:create --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "<Supabase anon key>" --visibility plaintext
+pnpm dlx eas-cli env:create --environment preview --name EXPO_PUBLIC_EAS_PROJECT_ID --value "<Expo project id>" --visibility plaintext
 ```
 
 productionも同じ値を `--environment production` で登録する。
@@ -94,7 +107,7 @@ pnpm --dir apps/mobile exec expo config --type public
 EAS Project初期化:
 
 ```bash
-pnpm --dir apps/mobile exec eas init
+pnpm run eas:mobile:init
 ```
 
 表示されたProject IDを `EXPO_PUBLIC_EAS_PROJECT_ID` に入れる。
@@ -102,8 +115,8 @@ pnpm --dir apps/mobile exec eas init
 EAS preview build:
 
 ```bash
-pnpm --dir apps/mobile exec eas build --profile preview --platform ios
-pnpm --dir apps/mobile exec eas build --profile preview --platform android
+pnpm run eas:mobile:build:ios
+pnpm run eas:mobile:build:android
 ```
 
 Apple/Googleのアカウント設定が必要になるため、実行は外部アカウント準備後に行う。

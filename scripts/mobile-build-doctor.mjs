@@ -1,4 +1,4 @@
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 
 const root = new URL("..", import.meta.url).pathname;
@@ -26,6 +26,18 @@ function requireFile(path) {
 
 function readJson(path) {
   return JSON.parse(readFileSync(join(root, path), "utf8"));
+}
+
+function listFiles(dir, files = []) {
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    if (statSync(fullPath).isDirectory()) {
+      listFiles(fullPath, files);
+    } else {
+      files.push(fullPath);
+    }
+  }
+  return files;
 }
 
 const appJson = readJson("apps/mobile/app.json").expo;
@@ -66,6 +78,30 @@ else fail("preview profile should use internal distribution");
 
 if (easJson.build?.preview?.env?.EXPO_PUBLIC_WEB_BASE_URL?.startsWith("https://")) ok("preview Web base URL");
 else fail("preview Web base URL missing");
+
+const forbiddenReviewTerms = [
+  "Stripe",
+  "Webで申し込",
+  "外部決済",
+  "外部サービスへの誘導",
+  "購入や"
+];
+const mobileSourceFiles = listFiles(join(root, "apps/mobile/app"))
+  .concat(listFiles(join(root, "apps/mobile/lib")))
+  .filter((file) => /\.(tsx|ts)$/.test(file));
+
+const forbiddenMatches = mobileSourceFiles.flatMap((file) => {
+  const body = readFileSync(file, "utf8");
+  return forbiddenReviewTerms
+    .filter((term) => body.includes(term))
+    .map((term) => `${file.replace(`${root}/`, "")}: ${term}`);
+});
+
+if (forbiddenMatches.length === 0) {
+  ok("mobile App Store payment wording guard");
+} else {
+  forbiddenMatches.forEach((match) => fail(`review-sensitive wording found ${match}`));
+}
 
 if (process.env.EXPO_PUBLIC_EAS_PROJECT_ID) ok("EXPO_PUBLIC_EAS_PROJECT_ID set");
 else warn("EXPO_PUBLIC_EAS_PROJECT_ID not set yet; run eas init and save the project id before push notification testing");
