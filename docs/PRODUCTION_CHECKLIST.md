@@ -63,7 +63,8 @@
 - [x] `pnpm run eas:mobile:init`
 - [x] `pnpm run eas:mobile:set-project-id -- <Expo Project ID>`
 - [ ] preview buildを作成
-- [ ] Android preview build初回はGradle plugin解決で失敗。`@react-native/gradle-plugin` 明示依存追加後に再実行する。
+- [ ] Android preview build初回はGradle plugin解決で失敗。`@react-native/gradle-plugin` 明示依存追加済み。
+- [ ] Android preview build 2回目はJS bundleで `expo-asset` 不足により失敗。`expo-asset` と `@babel/runtime` 明示依存、`main: expo-router/entry` 追加後に再実行する。
 
 ## 6. セキュリティ
 

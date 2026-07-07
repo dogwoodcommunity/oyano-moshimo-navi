@@ -64,3 +64,7 @@ pnpm run eas:mobile:build:android
 - Android preview build初回 `c0a85205-81bd-4a26-a8e8-98cf0541b9ea` はGradleで失敗。
 - 原因: `@react-native/gradle-plugin` がpnpm/monorepo構成でGradleから直接解決できず、`android/null` を参照した。
 - 対応: `apps/mobile/package.json` に `@react-native/gradle-plugin@0.74.87` を明示依存として追加。
+- Android preview build 2回目 `29f6229b-cce3-40bb-8e00-00b9972ecd6f` はJS bundleで失敗。
+- 原因: Expo Router entry未設定と、pnpm/monorepo構成で `expo-asset` / `@babel/runtime` が直接解決できなかったこと。
+- 対応: `main: "expo-router/entry"`、`expo-asset@10.0.10`、`@babel/runtime` を追加。
+- ローカル確認: `expo export --platform android` OK。

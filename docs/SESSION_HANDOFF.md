@@ -397,3 +397,14 @@ GitHubが必要な理由:
 - `scripts/mobile-build-doctor.mjs` は環境変数だけでなくresolved Expo configのProject ID/ownerを見るように更新。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm run doctor:local` OK。
 - 次: この修正をcommit/push後、Android preview buildを再実行する。成功したらインストールURLを家族テスト用に控える。
+
+## 2026-07-07 追記 10
+
+- Android preview build 2回目 `29f6229b-cce3-40bb-8e00-00b9972ecd6f` は、Gradle plugin問題を越えてJS bundleまで進んだが、`:app:createBundleReleaseJsAndAssets` で失敗。
+- EAS log上の主因は `Error: The required package expo-asset cannot be found`。ローカル `expo export --platform android` ではさらにExpo Router entry未設定と `@babel/runtime` 解決不足も確認。
+- 対応:
+  - `apps/mobile/package.json` に `main: "expo-router/entry"` を追加。
+  - `expo-asset@10.0.10` をdependenciesに追加。
+  - `@babel/runtime` をdependenciesに追加。
+- 確認: `expo export --platform android --output-dir /tmp/oyano-mobile-export` OK、`pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm run doctor:local` OK。
+- 次: commit/push後にAndroid preview buildを3回目実行する。

@@ -2,6 +2,7 @@
   "name": "mobile",
   "version": "0.3.0",
   "private": true,
+  "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "ios": "expo start --ios",
@@ -9,10 +10,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@babel/runtime": "^7.29.7",
     "@oyano/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@supabase/supabase-js": "^2.45.0",
     "expo": "^51.0.0",
+    "expo-asset": "10.0.10",
     "expo-linking": "~6.3.1",
     "expo-notifications": "~0.28.9",
     "expo-router": "~3.5.18",
