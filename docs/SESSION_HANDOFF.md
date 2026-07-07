@@ -444,4 +444,8 @@ GitHubが必要な理由:
 - 実機確認で、ログイン画面下部の「まず見本を見る」カードがAndroid実機の初期表示範囲外に隠れ、固定Viewのため到達できないことを発見。
 - 対応: `apps/mobile/app/(auth)/welcome.tsx` を `ScrollView` 化し、小さい画面でもメールログイン下の見本導線までスクロールできるようにした。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-scrollfix` OK。
-- 次: この修正をcommit/push後、Android preview build 6回目を作り、実機へ再インストールして「見本で開く」からdashboard/person/tasks表示を確認する。その後、メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。
+- Android preview build 6回目 `04ab728c-379a-4da0-8044-31cdaac41654` は成功。APK URL: `https://expo.dev/artifacts/eas/aZsSrK5zMpjWqoIASSZrGvF46OMQXVCCo6zzSiF2Sfk.apk`
+- APKを `/tmp/oyano-moshimo-preview-scrollfix.apk` にdownloadし、Android実機へ `adb install -r` で再インストール成功。
+- 起動後、空Dashboardが表示され「Webで5分整理を始める」導線を確認。下タブのアイコンが四角表示になっていたため、`@expo/vector-icons` をmobile依存に明示追加し、`(tabs)/_layout.tsx` に `MaterialCommunityIcons` の `account-group-outline` / `calendar-check-outline` / `cog-outline` を設定。
+- 確認: `pnpm install --no-frozen-lockfile` OK、`pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-icons` OK。
+- 次: タブアイコン修正をcommit/push後、Android preview build 7回目を作り、実機へ再インストールしてDashboard表示とタブアイコンを確認する。その後、「見本で開く」/メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。

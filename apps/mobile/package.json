@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@babel/runtime": "^7.29.7",
+    "@expo/vector-icons": "14.1.0",
     "@oyano/shared": "workspace:*",
     "@react-native-async-storage/async-storage": "1.23.1",
     "@react-native/assets-registry": "0.74.87",
