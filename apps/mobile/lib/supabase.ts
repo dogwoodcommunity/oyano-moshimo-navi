@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type MobileSupabaseClient = SupabaseClient<any, "public", any>;
 
@@ -18,7 +19,8 @@ export function getSupabase() {
     auth: {
       autoRefreshToken: true,
       detectSessionInUrl: false,
-      persistSession: true
+      persistSession: true,
+      storage: AsyncStorage
     }
   });
 

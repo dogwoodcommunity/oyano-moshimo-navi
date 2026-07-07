@@ -1,10 +1,24 @@
 import { useEffect } from "react";
 import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
+import { Linking } from "react-native";
+import { handleAuthRedirectUrl } from "@/lib/auth";
 import { markNotificationsOpened } from "@/lib/notifications";
 import { colors } from "@/lib/theme";
 
 export default function RootLayout() {
+  useEffect(() => {
+    void Linking.getInitialURL().then((url) => {
+      if (url) void handleAuthRedirectUrl(url);
+    });
+
+    const subscription = Linking.addEventListener("url", ({ url }) => {
+      void handleAuthRedirectUrl(url);
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   useEffect(() => {
     const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
       void markNotificationsOpened(response.notification.request.content.data ?? {});

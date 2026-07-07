@@ -306,3 +306,13 @@ GitHubが必要な理由:
   - `scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。Admin env APIのみtoken必須のため通常smokeではskip。
   - `POST /api/cases` でSupabase保存 `persisted:true` を確認。テストcase id: `9e4f9718-b882-4508-9c89-64ac975f8d36`。
   - クリップボードのAdmin tokenで `/api/admin/env-check` OK。Stripe 3項目だけ未設定、それ以外configured true。
+
+## 2026-07-07 追記
+
+- ExpoアプリのMagic Link復帰を強化。
+- `apps/mobile/lib/auth.ts` に `handleAuthRedirectUrl` を追加し、Supabase Magic Linkで戻ってきたURLの `code` を `exchangeCodeForSession` へ渡す。古いimplicit flow向けに `access_token` / `refresh_token` がURL fragmentに来た場合は `setSession` で復帰する。
+- `apps/mobile/app/_layout.tsx` でアプリ初期URLとディープリンクイベントを監視し、ログインリンク・招待リンクから戻ったときにSupabase sessionへ変換するようにした。
+- `apps/mobile/lib/supabase.ts` に `@react-native-async-storage/async-storage` を接続し、Expo/React Nativeでもログインセッションが端末内に残るようにした。
+- 追加依存: `@react-native-async-storage/async-storage@1.23.1`。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。
+- 残: EASアカウント/プロジェクト確定後に `EXPO_PUBLIC_EAS_PROJECT_ID` と `EXPO_OWNER` を設定する。
