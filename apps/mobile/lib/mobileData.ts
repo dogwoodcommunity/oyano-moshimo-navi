@@ -50,7 +50,7 @@ export type DashboardData = {
   tasks: MobileTask[];
   registryItems: string[];
   firstSteps: string[];
-  source: "supabase" | "demo";
+  source: "supabase" | "demo" | "empty";
 };
 
 type PersonRow = {
@@ -125,6 +125,20 @@ export function demoDashboardData(): DashboardData {
   };
 }
 
+export function emptyDashboardData(): DashboardData {
+  return {
+    person: {
+      id: "",
+      displayName: "未登録",
+      currentStatus: "preparing"
+    },
+    tasks: [],
+    registryItems: [],
+    firstSteps: [],
+    source: "empty"
+  };
+}
+
 export async function fetchDashboardData(): Promise<DashboardData> {
   const supabase = getSupabase();
   if (!supabase) return demoDashboardData();
@@ -136,7 +150,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     .limit(1);
 
   const personRow = (people?.[0] ?? null) as PersonRow | null;
-  if (!personRow) return demoDashboardData();
+  if (!personRow) return emptyDashboardData();
 
   const tasks = await fetchTasks(personRow.id);
   return {

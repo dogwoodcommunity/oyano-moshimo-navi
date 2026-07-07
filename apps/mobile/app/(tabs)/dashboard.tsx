@@ -36,6 +36,37 @@ export default function DashboardScreen() {
     fetchDashboardData().then(setData);
   }, []);
 
+  if (data.source === "empty") {
+    return (
+      <ScrollView contentContainerStyle={styles.screen}>
+        <View style={styles.hero}>
+          <Text style={styles.kicker}>親のもしもナビ</Text>
+          <Text style={styles.title}>家族ボード</Text>
+          <Text style={styles.heroBody}>まだ対象者が登録されていません。</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Webの整理結果を引き継ぐ</Text>
+          <Text style={styles.body}>Webで状況整理を完了したあと、結果画面のアプリ引き継ぎリンクを開くと、家族ボードに対象者とタスクが表示されます。</Text>
+        </View>
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>家族3組テストで確認すること</Text>
+          <View style={styles.stepRow}>
+            <Text style={styles.stepNumber}>1</Text>
+            <Text style={styles.body}>Webで状況を整理する</Text>
+          </View>
+          <View style={styles.stepRow}>
+            <Text style={styles.stepNumber}>2</Text>
+            <Text style={styles.body}>結果画面からアプリへ引き継ぐ</Text>
+          </View>
+          <View style={styles.stepRow}>
+            <Text style={styles.stepNumber}>3</Text>
+            <Text style={styles.body}>担当未定と期限通知を家族で確認する</Text>
+          </View>
+        </View>
+      </ScrollView>
+    );
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.hero}>

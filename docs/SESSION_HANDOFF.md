@@ -207,6 +207,7 @@ GitHubが必要な理由:
 - Adminに削除依頼確認画面を追加。`apps/web/app/api/admin/delete-requests/route.ts` が `audit_logs.action = account_delete_requested` を取得し、`apps/web/components/AdminDeleteRequests.tsx` と `/admin/delete-requests` で確認できる。Admin overviewにも導線を追加。削除依頼を記録するだけでなく運営が拾える状態にした。
 - 2026-07-07にEAS実機配布準備を継続。`pnpm dlx eas-cli --version` は `eas-cli/20.5.1` で取得OK。`pnpm dlx eas-cli whoami` は `Not logged in` のため、EAS project初期化とpreview buildはExpoログイン待ち。root `package.json` に `eas:whoami`、`eas:login`、`eas:mobile:init`、`eas:mobile:build:ios`、`eas:mobile:build:android` を追加し、`docs/MOBILE_TEST_BUILD.md` も `pnpm dlx eas-cli` 前提の手順に更新。
 - App Store審査向けにExpoアプリ内の課金連想文言をさらに削減。`apps/mobile/app/(tabs)/plan.tsx`、`apps/mobile/app/account/plan.tsx`、`apps/mobile/app/(tabs)/settings.tsx` から「購入」「外部サービスへの誘導」などを削り、状態確認専用の表現へ変更。`scripts/mobile-build-doctor.mjs` に `Stripe`、`Webで申し込`、`外部決済`、`外部サービスへの誘導`、`購入や` の混入チェックを追加し、doctorで再発検知できるようにした。
+- Expo dashboardの空状態を追加。Supabase接続済みで `people` が0件の場合、これまでは見本データへ戻る可能性があったため、`apps/mobile/lib/mobileData.ts` に `source: "empty"` と `emptyDashboardData()` を追加し、`apps/mobile/app/(tabs)/dashboard.tsx` で「まだ対象者が登録されていません」「Webの整理結果を引き継ぐ」案内を表示するように変更。これにより本番/家族テストで見本データと実データが混ざるリスクを下げた。Mobile typecheck、local doctor、mobile-build doctor OK。
 
 その後に Step 2: Supabase本番準備。
 
