@@ -422,3 +422,12 @@ GitHubが必要な理由:
 - Android preview build 4回目 `c761577d-79b9-4740-ab98-fc664c106561` は成功。
 - Android install URL: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/c761577d-79b9-4740-ab98-fc664c106561`
 - 次: Android実機でインストールし、Magic Linkログイン、Web結果からのhandoff、dashboard/person/tasks表示、push token保存を確認する。iOS TestFlight向けにはApple Developer/App Store Connect側の準備後にiOS preview buildを作る。
+
+## 2026-07-07 追記 13
+
+- Android実機 `3917JR` をADBで認識し、preview APK `/tmp/oyano-moshimo-preview.apk` を `adb install -r` でインストール成功。
+- 起動直後にホームへ戻ったためlogcatを確認。原因は `ReactNativeJS: TypeError: Cannot read property 'useMemo' of null`、`ContextNavigator` / `ExpoRoot` 起点のクラッシュ。
+- root/webのReactが18.3.1、mobileのReactがExpo SDK 51指定の18.2.0でズレており、pnpm monorepo + EAS bundleでReactが二重解決された可能性が高い。
+- 対応: root `package.json` と `apps/web/package.json` の `react` / `react-dom` を `18.2.0` に統一。Next.js 14はReact 18.2.0でbuild OK。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm --filter web run build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export` OK。
+- 次: この修正をcommit/push後、Android preview buildを5回目実行し、実機に再インストールして起動確認する。
