@@ -316,3 +316,12 @@ GitHubが必要な理由:
 - 追加依存: `@react-native-async-storage/async-storage@1.23.1`。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。
 - 残: EASアカウント/プロジェクト確定後に `EXPO_PUBLIC_EAS_PROJECT_ID` と `EXPO_OWNER` を設定する。
+
+## 2026-07-07 追記 2
+
+- Web結果画面からExpoアプリへ保存する `/handoff` 導線を実装。
+- `apps/mobile/app/handoff.tsx` を追加。`oyanomoshimo://handoff?caseId=...&token=...` で開き、ログイン済みならWeb整理結果を保存、未ログインならMagic Linkを送って同じhandoff画面へ戻す。
+- `apps/mobile/lib/handoff.ts` はSupabase sessionのaccess tokenを `Authorization: Bearer ...` に入れて `/api/handoff/consume` を呼ぶように変更。
+- `apps/web/app/api/handoff/consume/route.ts` はBearer token必須に変更し、Supabase userを検証してから `profiles`、`families.owner_user_id`、`family_members(role=owner)`、`people`、`tasks` を作るように修正。既に同じcaseが変換済みなら既存family/personを返し、重複作成を避ける。
+- これで「アプリに保存する」から作られた対象者とタスクが、RLS越しにログイン本人の家族ボードで見える設計になった。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
