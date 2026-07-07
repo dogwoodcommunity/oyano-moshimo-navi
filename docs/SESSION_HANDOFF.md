@@ -374,3 +374,13 @@ GitHubが必要な理由:
 - Expo/EASは、Expoアカウント新規作成またはパスワード再設定後に再開する。復旧手順として `docs/EXPO_ACCOUNT_RECOVERY.md` を追加。
 - 家族3組テスト当日に使う短い進行表として `docs/FAMILY_TEST_SCRIPT.md` を追加。Web完走、アプリ保存、担当変更、通知設定、家族招待、7日後再訪、9,800円支払意思を確認する。
 - `docs/PRODUCTION_CHECKLIST.md` を現状に合わせて更新。GitHub/Supabase/Vercel/セキュリティは概ね完了、StripeとExpoログイン/preview build、法務正式情報が未完了。
+
+## 2026-07-07 追記 8
+
+- Expoログイン情報が不明なため、EAS preview buildは引き続き保留。Web/Supabase/Vercel側の作業は継続可能。
+- `docs/DEPLOYMENT.md` のEAS手順を、root script経由の `pnpm run eas:*` に更新。ログイン不明時は `docs/EXPO_ACCOUNT_RECOVERY.md` を確認する導線を追加し、`SUPABASE_SERVICE_ROLE_KEY` をEAS/Expoへ入れない注意も追記。
+- `scripts/smoke-web.mjs` に未認証API確認を追加。`/api/notification-preferences` と `/api/push-tokens/register` が本番で401を返すことをsmoke対象にした。
+- `scripts/local-doctor.mjs` のEAS文言チェックを現行ドキュメントに合わせて更新。
+- 確認: `pnpm run doctor:local` OK。
+- 確認: `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。`/api/notification-preferences` と `/api/push-tokens/register` は401で想定通り。Admin env APIはtoken未指定のため401 skip。
+- Web実装のランタイム変更はないため、この追記分ではVercel再deploy不要。

@@ -24,14 +24,29 @@ const checks = [
   { path: "/admin/delete-requests", label: "admin delete requests" },
   { path: "/api/health", label: "health api" },
   { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatus: 401 },
+  { path: "/api/notification-preferences", label: "notification preferences api requires auth", expectStatus: 401 },
+  {
+    path: "/api/push-tokens/register",
+    label: "push token api requires auth",
+    method: "POST",
+    body: { expoPushToken: "ExponentPushToken[smoke]" },
+    expectStatus: 401
+  },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
 ];
 
 let failed = false;
 
 for (const check of checks) {
-  const headers = check.admin && adminToken ? { "x-admin-token": adminToken } : {};
-  const response = await fetch(`${baseUrl}${check.path}`, { headers, method: check.method ?? "GET" });
+  const headers = {
+    ...(check.admin && adminToken ? { "x-admin-token": adminToken } : {}),
+    ...(check.body ? { "Content-Type": "application/json" } : {})
+  };
+  const response = await fetch(`${baseUrl}${check.path}`, {
+    body: check.body ? JSON.stringify(check.body) : undefined,
+    headers,
+    method: check.method ?? "GET"
+  });
   const ok = check.expectStatus ? response.status === check.expectStatus : response.status >= 200 && response.status < 400;
 
   if (!ok && check.admin && response.status === 401) {

@@ -53,12 +53,15 @@ Admin env確認:
 
 ## Mobile: EAS
 
-Expoアカウント接続後に以下を使う。
+Expoアカウント接続後に以下を使う。ログイン情報が不明な場合は `docs/EXPO_ACCOUNT_RECOVERY.md` を先に確認する。
 
 ```bash
-cd apps/mobile
-eas build --profile preview --platform ios
-eas build --profile preview --platform android
+pnpm run eas:whoami
+pnpm run eas:mobile:init
+pnpm run eas:mobile:set-project-id -- <Expo Project ID>
+pnpm run doctor:mobile-build
+pnpm run eas:mobile:build:ios
+pnpm run eas:mobile:build:android
 ```
 
 必要な環境変数:
@@ -68,9 +71,12 @@ EXPO_PUBLIC_SUPABASE_URL=
 EXPO_PUBLIC_SUPABASE_ANON_KEY=
 EXPO_PUBLIC_APP_SCHEME=oyanomoshimo
 EXPO_PUBLIC_WEB_BASE_URL=
+EXPO_PUBLIC_EAS_PROJECT_ID=
 ```
 
 詳細は `docs/ENVIRONMENT_MATRIX.md` を参照。
+
+`SUPABASE_SERVICE_ROLE_KEY` はEAS/Expoには入れない。
 
 ## GitHub後回し時の注意
 

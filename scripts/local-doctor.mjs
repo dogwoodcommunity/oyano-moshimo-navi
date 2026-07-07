@@ -137,7 +137,10 @@ for (const sqlFile of sqlOrder) {
 
 const deploymentDoc = readFileSync(join(root, "docs/DEPLOYMENT.md"), "utf8");
 check("deployment mentions smoke", deploymentDoc.includes("scripts/smoke-web.mjs"));
-check("deployment mentions EAS", deploymentDoc.includes("eas build"));
+check(
+  "deployment mentions EAS",
+  deploymentDoc.includes("eas build") || deploymentDoc.includes("eas:mobile:build"),
+);
 check("deployment warns service role", deploymentDoc.includes("SUPABASE_SERVICE_ROLE_KEY"));
 
 const vercelConfig = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
