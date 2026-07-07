@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { Link } from "expo-router";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+
+const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 function dateOnly(value?: string) {
   if (!value) return null;
@@ -36,31 +38,41 @@ export default function DashboardScreen() {
     fetchDashboardData().then(setData);
   }, []);
 
+  function openWebStart() {
+    if (!webBaseUrl) return;
+    void Linking.openURL(`${webBaseUrl}/start`);
+  }
+
   if (data.source === "empty") {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
-        <View style={styles.hero}>
-          <Text style={styles.kicker}>親のもしもナビ</Text>
-          <Text style={styles.title}>家族ボード</Text>
-          <Text style={styles.heroBody}>まだ対象者が登録されていません。</Text>
+        <View style={[styles.card, styles.emptyHero]}>
+          <Text style={styles.kickerLight}>はじめに</Text>
+          <Text style={styles.emptyTitle}>まずWebで状況を整理します</Text>
+          <Text style={styles.emptyLead}>
+            親御さんの状況を選ぶと、期限のある手続きと家族で分けることがまとまります。保存すると、この家族ボードに表示されます。
+          </Text>
+          <Pressable disabled={!webBaseUrl} onPress={openWebStart} style={[styles.emptyButton, !webBaseUrl && styles.buttonDisabled]}>
+            <Text style={styles.emptyButtonText}>Webで5分整理を始める</Text>
+          </Pressable>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Webの整理結果を引き継ぐ</Text>
-          <Text style={styles.body}>Webで状況整理を完了したあと、結果画面のアプリ引き継ぎリンクを開くと、家族ボードに対象者とタスクが表示されます。</Text>
+          <Text style={styles.cardTitle}>すでにWebで整理した場合</Text>
+          <Text style={styles.body}>結果画面の「アプリに保存する」を開いてください。本人確認のあと、対象者とタスクがこの画面に入ります。</Text>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>家族3組テストで確認すること</Text>
+          <Text style={styles.cardTitle}>このアプリで続けること</Text>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>1</Text>
-            <Text style={styles.body}>Webで状況を整理する</Text>
+            <Text style={styles.body}>期限が近い手続きを確認する</Text>
           </View>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>2</Text>
-            <Text style={styles.body}>結果画面からアプリへ引き継ぐ</Text>
+            <Text style={styles.body}>担当未定のタスクを家族で分ける</Text>
           </View>
           <View style={styles.stepRow}>
             <Text style={styles.stepNumber}>3</Text>
-            <Text style={styles.body}>担当未定と期限通知を家族で確認する</Text>
+            <Text style={styles.body}>通知、写真、メモを必要な時だけ見返す</Text>
           </View>
         </View>
       </ScrollView>
@@ -173,6 +185,12 @@ const styles = StyleSheet.create({
   metricLabel: { color: "rgba(255,255,255,0.74)", fontWeight: "800" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   button: { backgroundColor: colors.green, borderRadius: radius.control, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
+  buttonDisabled: { opacity: 0.5 },
+  emptyButton: { alignItems: "center", backgroundColor: "#fff", borderRadius: radius.control, justifyContent: "center", minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
+  emptyButtonText: { color: colors.greenDark, fontWeight: "900" },
+  emptyHero: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
+  emptyLead: { color: "rgba(255,255,255,0.82)", fontSize: 16, lineHeight: 24 },
+  emptyTitle: { color: "#fff", fontSize: 31, fontWeight: "900", lineHeight: 36 },
   secondaryOnDark: { borderColor: "rgba(255,255,255,0.26)", borderRadius: radius.control, borderWidth: 1, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
   sectionHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   stepRow: { alignItems: "center", flexDirection: "row", gap: 10 },

@@ -349,3 +349,11 @@ GitHubが必要な理由:
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
 - GitHubへcommit `9489866 Persist mobile notification preferences` をpush済み。
 - Vercel本番へdeploy済み。Production alias: `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。Admin env APIのみtoken必須のため401 skipで想定通り。
+
+## 2026-07-07 追記 5
+
+- Expoアプリの空Dashboardを初回体験向けに改善。
+- `apps/mobile/app/(tabs)/dashboard.tsx` の対象者未登録状態で、「Webで5分整理を始める」ボタンを表示し、`EXPO_PUBLIC_WEB_BASE_URL/start` を開くようにした。
+- すでにWeb整理済みの人向けに、結果画面の「アプリに保存する」から戻る説明を明示。
+- アプリで続ける価値を「期限確認」「担当未定を家族で分ける」「通知・写真・メモを見返す」の3点に整理。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。Web/API変更なしのためVercel deployは不要。
