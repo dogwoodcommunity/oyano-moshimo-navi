@@ -431,3 +431,14 @@ GitHubが必要な理由:
 - 対応: root `package.json` と `apps/web/package.json` の `react` / `react-dom` を `18.2.0` に統一。Next.js 14はReact 18.2.0でbuild OK。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm --filter web run build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export` OK。
 - 次: この修正をcommit/push後、Android preview buildを5回目実行し、実機に再インストールして起動確認する。
+
+## 2026-07-07 追記 14
+
+- React 18.2.0統一修正をcommit `9587ff3 Align React version for Expo runtime` としてGitHubへpush済み。
+- Android preview build 5回目 `800e5b14-e4a8-45d5-9361-2a1f1bb96702` は成功。
+- APK URL: `https://expo.dev/artifacts/eas/wWmmMm-wAF76scliNvmDlcVfsCwapgtJYiAjLzmdeXI.apk`
+- APKを `/tmp/oyano-moshimo-preview-reactfix.apk` にdownloadし、Android実機 `3917JR` へ `adb install -r` で再インストール成功。
+- 起動後のlogcatで `ReactNativeJS TypeError` / `AndroidRuntime FATAL` は再発なし。`pidof jp.beech.oyanomoshimo` でプロセス生存を確認。
+- 起動直後スクリーンショットが真っ黒に見えたが、原因は端末の `screen_brightness` が0/暗転状態だったこと。`settings put system screen_brightness_mode 0` と `settings put system screen_brightness 180`、`screen_off_timeout 600000`、`KEYCODE_WAKEUP`、`wm dismiss-keyguard` で復旧。
+- 復旧後、Android実機スクリーンショットでログイン画面を確認済み。表示内容は「ログイン」「家族ボードへログイン」「親のもしもナビ」「メール」「ログインする」。
+- 次: 実機でメールログイン/Magic Link、Web診断結果からのhandoff、dashboard/person/tasks、push token保存を順に確認する。
