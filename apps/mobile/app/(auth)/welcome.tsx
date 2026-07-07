@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { demoResult } from "@/lib/demoData";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
@@ -38,7 +38,7 @@ export default function WelcomeScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.screen} style={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={styles.hero}>
         <Text style={styles.kicker}>{hasHandoff ? "Webの整理結果を引き継ぎ" : "家族ボードへログイン"}</Text>
         <Text style={styles.title}>親のもしもナビ</Text>
@@ -63,12 +63,13 @@ export default function WelcomeScreen() {
           <Text style={styles.link}>見本で開く</Text>
         </Pressable>
       </View>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper, flex: 1, gap: 16, padding: 22, paddingTop: 72 },
+  scroll: { backgroundColor: colors.paper, flex: 1 },
+  screen: { gap: 16, padding: 22, paddingBottom: 36, paddingTop: 72 },
   hero: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 18 },
   kicker: { color: colors.green, fontWeight: "900" },
   title: { color: colors.ink, fontSize: 38, fontWeight: "900", lineHeight: 42 },

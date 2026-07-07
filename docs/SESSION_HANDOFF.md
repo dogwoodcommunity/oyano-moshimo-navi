@@ -441,4 +441,7 @@ GitHubが必要な理由:
 - 起動後のlogcatで `ReactNativeJS TypeError` / `AndroidRuntime FATAL` は再発なし。`pidof jp.beech.oyanomoshimo` でプロセス生存を確認。
 - 起動直後スクリーンショットが真っ黒に見えたが、原因は端末の `screen_brightness` が0/暗転状態だったこと。`settings put system screen_brightness_mode 0` と `settings put system screen_brightness 180`、`screen_off_timeout 600000`、`KEYCODE_WAKEUP`、`wm dismiss-keyguard` で復旧。
 - 復旧後、Android実機スクリーンショットでログイン画面を確認済み。表示内容は「ログイン」「家族ボードへログイン」「親のもしもナビ」「メール」「ログインする」。
-- 次: 実機でメールログイン/Magic Link、Web診断結果からのhandoff、dashboard/person/tasks、push token保存を順に確認する。
+- 実機確認で、ログイン画面下部の「まず見本を見る」カードがAndroid実機の初期表示範囲外に隠れ、固定Viewのため到達できないことを発見。
+- 対応: `apps/mobile/app/(auth)/welcome.tsx` を `ScrollView` 化し、小さい画面でもメールログイン下の見本導線までスクロールできるようにした。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-scrollfix` OK。
+- 次: この修正をcommit/push後、Android preview build 6回目を作り、実機へ再インストールして「見本で開く」からdashboard/person/tasks表示を確認する。その後、メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。
