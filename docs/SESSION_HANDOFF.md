@@ -337,3 +337,5 @@ GitHubが必要な理由:
 - `apps/mobile/app/(auth)/welcome.tsx` からデモuser idでのpush token登録を削除。通知登録はログイン後の通知設定画面で行う。
 - `apps/web/app/api/push-tokens/register/route.ts` を追加。Bearer tokenでSupabase userを検証し、`profiles` をupsertしてから `push_tokens` をupsertする。ログインだけ済ませた新規ユーザーでも外部キーで落ちない。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
+- GitHubへcommit `9032b3e Register push tokens for signed-in users` をpush済み。
+- Vercel本番へdeploy済み。Production alias: `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。Admin env APIのみtoken必須のため401 skipで想定通り。
