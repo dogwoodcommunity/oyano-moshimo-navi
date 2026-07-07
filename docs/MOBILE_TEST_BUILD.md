@@ -112,6 +112,12 @@ pnpm run eas:mobile:init
 
 表示されたProject IDを `EXPO_PUBLIC_EAS_PROJECT_ID` に入れる。
 
+ローカルの `apps/mobile/.env.local` へ反映する時は、手入力ではなく次のコマンドを使う。
+
+```bash
+pnpm run eas:mobile:set-project-id -- <Expo Project ID>
+```
+
 EAS preview build:
 
 ```bash

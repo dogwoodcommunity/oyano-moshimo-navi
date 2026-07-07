@@ -41,6 +41,8 @@ function listFiles(dir, files = []) {
 }
 
 const appJson = readJson("apps/mobile/app.json").expo;
+const appConfig = await import(join(root, "apps/mobile/app.config.js"));
+const resolvedExpo = appConfig.default?.expo ?? appConfig.default ?? appConfig.expo;
 const easJson = readJson("apps/mobile/eas.json");
 
 [
@@ -105,6 +107,10 @@ if (forbiddenMatches.length === 0) {
 
 if (process.env.EXPO_PUBLIC_EAS_PROJECT_ID) ok("EXPO_PUBLIC_EAS_PROJECT_ID set");
 else warn("EXPO_PUBLIC_EAS_PROJECT_ID not set yet; run eas init and save the project id before push notification testing");
+
+if (process.env.EXPO_PUBLIC_EAS_PROJECT_ID && resolvedExpo?.extra?.eas?.projectId === process.env.EXPO_PUBLIC_EAS_PROJECT_ID) {
+  ok("Expo config projectId matches EXPO_PUBLIC_EAS_PROJECT_ID");
+}
 
 if (process.env.EXPO_OWNER) ok("EXPO_OWNER set");
 else warn("EXPO_OWNER not set; set it only after the Expo account/team is confirmed");

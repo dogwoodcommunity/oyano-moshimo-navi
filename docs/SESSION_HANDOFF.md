@@ -357,3 +357,12 @@ GitHubが必要な理由:
 - すでにWeb整理済みの人向けに、結果画面の「アプリに保存する」から戻る説明を明示。
 - アプリで続ける価値を「期限確認」「担当未定を家族で分ける」「通知・写真・メモを見返す」の3点に整理。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。Web/API変更なしのためVercel deployは不要。
+
+## 2026-07-07 追記 6
+
+- EAS preview build前のProject ID反映手順を整備。
+- `scripts/set-mobile-eas-project-id.mjs` を追加。`pnpm run eas:mobile:set-project-id -- <Expo Project ID>` で `apps/mobile/.env.local` の `EXPO_PUBLIC_EAS_PROJECT_ID` を安全に更新できる。
+- root `package.json` に `eas:mobile:set-project-id` scriptを追加。
+- `docs/MOBILE_TEST_BUILD.md` に `eas init` 後のProject ID反映コマンドを追記。
+- `scripts/mobile-build-doctor.mjs` は `app.config.js` のresolved configを読み、Project ID envがある場合に `extra.eas.projectId` と一致するか確認する。
+- 確認: `pnpm run doctor:mobile-build` OK、`pnpm --filter mobile run typecheck` OK。Web/API変更なしのためVercel deployは不要。
