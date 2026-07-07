@@ -448,4 +448,8 @@ GitHubが必要な理由:
 - APKを `/tmp/oyano-moshimo-preview-scrollfix.apk` にdownloadし、Android実機へ `adb install -r` で再インストール成功。
 - 起動後、空Dashboardが表示され「Webで5分整理を始める」導線を確認。下タブのアイコンが四角表示になっていたため、`@expo/vector-icons` をmobile依存に明示追加し、`(tabs)/_layout.tsx` に `MaterialCommunityIcons` の `account-group-outline` / `calendar-check-outline` / `cog-outline` を設定。
 - 確認: `pnpm install --no-frozen-lockfile` OK、`pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-icons` OK。
-- 次: タブアイコン修正をcommit/push後、Android preview build 7回目を作り、実機へ再インストールしてDashboard表示とタブアイコンを確認する。その後、「見本で開く」/メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。
+- タブアイコン修正はcommit `a14c4fa Add mobile tab icons` としてGitHubへpush済み。
+- Android preview build 7回目 `6980d13f-de13-40b0-be2f-194eb998797d` は成功。APK URL: `https://expo.dev/artifacts/eas/wzdTPZL_QS2Ydr95e0EWTlgMY_nOFuSMWSeGrZd-2Fo.apk`
+- APKを `/tmp/oyano-moshimo-preview-icons.apk` にdownloadし、Android実機へ `adb install -r` で再インストール成功。
+- インストール後の起動確認直前にADBが `no devices/emulators found` となり、実機接続が外れた。端末を再接続できたら、Dashboard表示とタブアイコンの実機確認から再開する。
+- 次: Android実機をADB再接続し、Dashboard表示とタブアイコンを確認する。その後、「見本で開く」/メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。
