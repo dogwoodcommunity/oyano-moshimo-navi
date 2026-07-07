@@ -325,3 +325,6 @@ GitHubが必要な理由:
 - `apps/web/app/api/handoff/consume/route.ts` はBearer token必須に変更し、Supabase userを検証してから `profiles`、`families.owner_user_id`、`family_members(role=owner)`、`people`、`tasks` を作るように修正。既に同じcaseが変換済みなら既存family/personを返し、重複作成を避ける。
 - これで「アプリに保存する」から作られた対象者とタスクが、RLS越しにログイン本人の家族ボードで見える設計になった。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
+- GitHubへcommit `946e43f Connect web handoff to mobile app` をpush済み。
+- Vercel本番へdeploy済み。Production alias: `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。Admin env APIのみtoken必須のため401 skipで想定通り。
+- 作業中に `apps/web` 直下から一度deployを実行してしまい、Vercel側に `dogwoodcommunity1/web` という失敗プロジェクト/deploymentが作成された可能性あり。実運用の本番は `dogwoodcommunity1/oyano-moshimo-navi` で正しく稼働中。不要なら後でVercel dashboardから削除する。
