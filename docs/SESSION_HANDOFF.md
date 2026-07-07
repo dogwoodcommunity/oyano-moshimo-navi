@@ -466,4 +466,8 @@ GitHubが必要な理由:
   - Web診断からのhandoff時は「新規会員登録して保存する」文言に切り替わる。
 - 新規画像アセット `apps/mobile/assets/onboarding-family-home.png` を追加。生成画像は `$HOME/.codex/generated_images/...` からworkspaceへコピー済み。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-onboarding-redesign` OK。画像込みでAndroid bundle export成功。
-- 次: commit/push後、必要ならAndroid preview buildを作り直して実機で新オンボーディングを確認する。
+- 変更はcommit `eca2dac Redesign mobile onboarding entry` としてGitHubへpush済み。
+- Android preview build 8回目 `88992d8f-696f-412b-ba57-82c4530ac2a3` は成功。
+- APK URL: `https://expo.dev/artifacts/eas/sxcQtUuqioui1sjfYsQxIK1ya3jtF7vODLRa9TTq_uw.apk`
+- Install page: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/88992d8f-696f-412b-ba57-82c4530ac2a3`
+- `adb devices` は空で、Android実機がMacに接続されていない状態。端末を再接続できたら、このAPKを入れて新オンボーディングを実機確認する。
