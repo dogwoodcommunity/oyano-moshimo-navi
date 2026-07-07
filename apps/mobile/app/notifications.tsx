@@ -1,12 +1,53 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
-import { registerPushToken } from "@/lib/notifications";
+import { fetchNotificationPreferences, registerPushToken, saveNotificationPreferences } from "@/lib/notifications";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function NotificationsScreen() {
   const [enabled, setEnabled] = useState(true);
+  const [monthlyEnabled, setMonthlyEnabled] = useState(true);
+  const [urgentEnabled, setUrgentEnabled] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
   const [token, setToken] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+
+  useEffect(() => {
+    fetchNotificationPreferences().then((preferences) => {
+      setEnabled(preferences.remindersEnabled);
+      setMonthlyEnabled(preferences.dailyDigestEnabled);
+      setUrgentEnabled(preferences.urgentEnabled);
+    });
+  }, []);
+
+  async function updatePreferences(next: {
+    remindersEnabled?: boolean;
+    dailyDigestEnabled?: boolean;
+    urgentEnabled?: boolean;
+  }) {
+    const nextPreferences = {
+      remindersEnabled: next.remindersEnabled ?? enabled,
+      dailyDigestEnabled: next.dailyDigestEnabled ?? monthlyEnabled,
+      urgentEnabled: next.urgentEnabled ?? urgentEnabled
+    };
+
+    setEnabled(nextPreferences.remindersEnabled);
+    setMonthlyEnabled(nextPreferences.dailyDigestEnabled);
+    setUrgentEnabled(nextPreferences.urgentEnabled);
+    setIsSaving(true);
+
+    const result = await saveNotificationPreferences(nextPreferences);
+    setIsSaving(false);
+    if (result.saved) {
+      setMessage("通知設定を保存しました。");
+      return;
+    }
+
+    setMessage(
+      result.reason === "login_required"
+        ? "通知設定の保存にはログインが必要です。"
+        : "通知設定を保存できませんでした。時間をおいてもう一度お試しください。"
+    );
+  }
 
   async function register() {
     const result = await registerPushToken();
@@ -35,7 +76,7 @@ export default function NotificationsScreen() {
       <View style={styles.card}>
         <View style={styles.row}>
           <Text style={styles.cardTitle}>期限リマインド</Text>
-          <Switch value={enabled} onValueChange={setEnabled} />
+          <Switch disabled={isSaving} value={enabled} onValueChange={(value) => void updatePreferences({ remindersEnabled: value })} />
         </View>
         <Text style={styles.body}>法定期限や重要な手続きは、近づいた時だけまとめて通知します。同じ日の通知は1通にまとめます。</Text>
         <Pressable disabled={!enabled} style={[styles.button, !enabled ? styles.buttonDisabled : null]} onPress={register}><Text style={styles.buttonText}>この端末で通知を受け取る</Text></Pressable>
@@ -43,12 +84,18 @@ export default function NotificationsScreen() {
         {token ? <Text style={styles.body}>この端末の通知登録が完了しています。</Text> : null}
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>月1回の確認</Text>
+        <View style={styles.row}>
+          <Text style={styles.cardTitle}>月1回の確認</Text>
+          <Switch disabled={isSaving} value={monthlyEnabled} onValueChange={(value) => void updatePreferences({ dailyDigestEnabled: value })} />
+        </View>
         <Text style={styles.body}>親御さんの状況に変化がないか、月1回だけ確認します。変化がなければ何もしなくて大丈夫です。</Text>
       </View>
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>通知を切る前に</Text>
-        <Text style={styles.body}>通知を切ると、期限が近い手続きや家族の更新に気づきにくくなります。不要な通知を増やさない設計にしています。</Text>
+        <View style={styles.row}>
+          <Text style={styles.cardTitle}>重要な連絡</Text>
+          <Switch disabled={isSaving} value={urgentEnabled} onValueChange={(value) => void updatePreferences({ urgentEnabled: value })} />
+        </View>
+        <Text style={styles.body}>法定期限に関わるものや、家族で早めに確認したい更新だけを残します。不要な通知を増やさない設計にしています。</Text>
       </View>
     </View>
   );

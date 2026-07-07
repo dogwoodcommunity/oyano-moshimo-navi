@@ -339,3 +339,11 @@ GitHubが必要な理由:
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
 - GitHubへcommit `9032b3e Register push tokens for signed-in users` をpush済み。
 - Vercel本番へdeploy済み。Production alias: `https://oyano-moshimo-navi.vercel.app`。本番smoke OK。Admin env APIのみtoken必須のため401 skipで想定通り。
+
+## 2026-07-07 追記 4
+
+- Expoアプリの通知設定スイッチをDB保存・復元対応。
+- `apps/web/app/api/notification-preferences/route.ts` を追加。Bearer tokenでSupabase userを検証し、`profiles` をupsertしてから `notification_preferences` をGET/POSTする。
+- `apps/mobile/lib/notifications.ts` に `fetchNotificationPreferences` / `saveNotificationPreferences` を追加。Web API優先、ローカル開発ではSupabase直読み書きへfallback。
+- `apps/mobile/app/notifications.tsx` は起動時に通知設定を読み込み、期限リマインド・月1回確認・重要な連絡の各Switch変更時に保存する。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK、`pnpm run doctor:mobile-build` OK。
