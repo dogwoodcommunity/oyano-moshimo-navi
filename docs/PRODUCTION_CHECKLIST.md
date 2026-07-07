@@ -51,18 +51,19 @@
 
 ## 5. Expo
 
-- [ ] Expoアカウント作成
-- [ ] EAS project作成
-- [ ] `EXPO_PUBLIC_SUPABASE_URL` 設定
-- [ ] `EXPO_PUBLIC_SUPABASE_ANON_KEY` 設定
-- [ ] Push通知を使う場合は `EXPO_PUBLIC_EAS_PROJECT_ID` 設定
+- [x] Expoアカウント作成
+- [x] EAS project作成
+- [x] `EXPO_PUBLIC_SUPABASE_URL` 設定
+- [x] `EXPO_PUBLIC_SUPABASE_ANON_KEY` 設定
+- [x] Push通知を使う場合は `EXPO_PUBLIC_EAS_PROJECT_ID` 設定
 - [ ] Magic Linkログイン確認
 - [ ] dashboard/person/tasksがSupabaseデータを読むことを確認
 - [ ] Push token保存確認
-- [ ] EASログイン情報が不明。Expoアカウント新規作成またはパスワード再設定が必要。
-- [ ] `pnpm run eas:mobile:init`
-- [ ] `pnpm run eas:mobile:set-project-id -- <Expo Project ID>`
+- [x] EASログイン確認
+- [x] `pnpm run eas:mobile:init`
+- [x] `pnpm run eas:mobile:set-project-id -- <Expo Project ID>`
 - [ ] preview buildを作成
+- [ ] Android preview build初回はGradle plugin解決で失敗。`@react-native/gradle-plugin` 明示依存追加後に再実行する。
 
 ## 6. セキュリティ
 

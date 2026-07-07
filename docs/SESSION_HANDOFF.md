@@ -384,3 +384,16 @@ GitHubが必要な理由:
 - 確認: `pnpm run doctor:local` OK。
 - 確認: `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。`/api/notification-preferences` と `/api/push-tokens/register` は401で想定通り。Admin env APIはtoken未指定のため401 skip。
 - Web実装のランタイム変更はないため、この追記分ではVercel再deploy不要。
+
+## 2026-07-07 追記 9
+
+- Expoアカウント作成とEAS CLIログインが完了。`pnpm run eas:whoami` は `oyanomosimonavi` / `info@bee-ch.co.jp`。
+- EAS project `@oyanomosimonavi/oyano-moshimo-navi` を作成。Project IDは `8ed038b0-28d1-42e1-8ef6-e7e2098c11d3`。
+- 動的Expo configのため `eas init --force` はProject作成後に自動書き込みだけ失敗したが、`pnpm run eas:mobile:set-project-id 8ed038b0-28d1-42e1-8ef6-e7e2098c11d3` で `apps/mobile/.env.local` に反映。
+- `apps/mobile/app.config.js` はProject IDとownerを公開デフォルト値として持つように変更。EAS remote buildでも `extra.eas.projectId` と `owner` が落ちない。
+- EAS preview environmentに `EXPO_PUBLIC_SUPABASE_URL`、`EXPO_PUBLIC_SUPABASE_ANON_KEY`、`EXPO_PUBLIC_APP_SCHEME`、`EXPO_PUBLIC_WEB_BASE_URL`、`EXPO_PUBLIC_EAS_PROJECT_ID` を設定済み。`SUPABASE_SERVICE_ROLE_KEY` は入れていない。
+- Android preview build `c0a85205-81bd-4a26-a8e8-98cf0541b9ea` を開始したがGradleで失敗。ログ上の原因は `settings.gradle` が `android/null` を参照し、`@react-native/gradle-plugin` を解決できないこと。
+- 対応として `apps/mobile/package.json` に `@react-native/gradle-plugin@0.74.87` をdevDependencyとして明示追加。`node --print "require.resolve('@react-native/gradle-plugin/package.json')"` が `apps/mobile` から成功することを確認。
+- `scripts/mobile-build-doctor.mjs` は環境変数だけでなくresolved Expo configのProject ID/ownerを見るように更新。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm run doctor:local` OK。
+- 次: この修正をcommit/push後、Android preview buildを再実行する。成功したらインストールURLを家族テスト用に控える。

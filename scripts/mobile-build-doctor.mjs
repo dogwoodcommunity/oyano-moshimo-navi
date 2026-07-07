@@ -105,15 +105,15 @@ if (forbiddenMatches.length === 0) {
   forbiddenMatches.forEach((match) => fail(`review-sensitive wording found ${match}`));
 }
 
-if (process.env.EXPO_PUBLIC_EAS_PROJECT_ID) ok("EXPO_PUBLIC_EAS_PROJECT_ID set");
-else warn("EXPO_PUBLIC_EAS_PROJECT_ID not set yet; run eas init and save the project id before push notification testing");
+if (resolvedExpo?.extra?.eas?.projectId) ok("Expo config projectId set");
+else warn("Expo config projectId not set yet; run eas init and save the project id before push notification testing");
 
 if (process.env.EXPO_PUBLIC_EAS_PROJECT_ID && resolvedExpo?.extra?.eas?.projectId === process.env.EXPO_PUBLIC_EAS_PROJECT_ID) {
   ok("Expo config projectId matches EXPO_PUBLIC_EAS_PROJECT_ID");
 }
 
-if (process.env.EXPO_OWNER) ok("EXPO_OWNER set");
-else warn("EXPO_OWNER not set; set it only after the Expo account/team is confirmed");
+if (resolvedExpo?.owner) ok("Expo owner set");
+else warn("Expo owner not set; set it only after the Expo account/team is confirmed");
 
 console.log(`Mobile root: ${mobileRoot}`);
 

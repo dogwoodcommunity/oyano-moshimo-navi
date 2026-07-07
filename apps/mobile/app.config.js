@@ -1,7 +1,7 @@
 const base = require("./app.json");
 
-const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
-const owner = process.env.EXPO_OWNER;
+const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID ?? "8ed038b0-28d1-42e1-8ef6-e7e2098c11d3";
+const owner = process.env.EXPO_OWNER ?? "oyanomosimonavi";
 const extra = {
   ...base.expo.extra
 };

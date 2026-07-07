@@ -1,6 +1,6 @@
 # Expo/EASログイン復旧メモ
 
-2026-07-07時点で、EAS CLIは利用可能だがExpoには未ログイン。
+2026-07-07時点で、Expoアカウント作成とEAS CLIログインは完了。
 
 ```bash
 pnpm dlx eas-cli whoami
@@ -9,32 +9,29 @@ pnpm dlx eas-cli whoami
 結果:
 
 ```txt
-Not logged in
+oyanomosimonavi
+info@bee-ch.co.jp
 ```
 
-## まず確認すること
+## アカウント
 
 - Expo公式: `https://expo.dev`
-- 既存アカウントがある場合は、メールアドレスでログインまたはパスワード再設定。
-- 分からない場合は、`dogwoodcommunity` または `BEECH` 管理用の新規Expoアカウントを作成する。
+- Username: `oyanomosimonavi`
+- Email: `info@bee-ch.co.jp`
+- Project: `@oyanomosimonavi/oyano-moshimo-navi`
+- Project ID: `8ed038b0-28d1-42e1-8ef6-e7e2098c11d3`
 
-## 新規作成する場合のおすすめ
-
-- 個人メールではなく、事業で継続管理できるメールを使う。
-- 例: `info@...`、`admin@...`、または組織管理のGoogleアカウント。
-- Apple Developer / Google Play Console と同じ管理者がアクセスできる状態にする。
-
-## ログイン後にやること
+## ログアウトしていた場合
 
 ```bash
+pnpm run eas:login
 pnpm run eas:whoami
-pnpm run eas:mobile:init
 ```
 
-`eas init` 後に表示されるExpo Project IDを、次のコマンドでローカルenvへ反映する。
+## Project IDを入れ直す場合
 
 ```bash
-pnpm run eas:mobile:set-project-id -- <Expo Project ID>
+pnpm run eas:mobile:set-project-id 8ed038b0-28d1-42e1-8ef6-e7e2098c11d3
 ```
 
 その後、確認する。
@@ -60,3 +57,10 @@ pnpm run eas:mobile:build:android
   - `EXPO_PUBLIC_APP_SCHEME`
   - `EXPO_PUBLIC_EAS_PROJECT_ID`
 - アプリ内にはWeb決済やStripeへの誘導文言を入れない。
+
+## 2026-07-07のbuild状況
+
+- EAS preview environmentに公開envを設定済み。
+- Android preview build初回 `c0a85205-81bd-4a26-a8e8-98cf0541b9ea` はGradleで失敗。
+- 原因: `@react-native/gradle-plugin` がpnpm/monorepo構成でGradleから直接解決できず、`android/null` を参照した。
+- 対応: `apps/mobile/package.json` に `@react-native/gradle-plugin@0.74.87` を明示依存として追加。
