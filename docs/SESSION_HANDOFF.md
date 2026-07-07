@@ -453,3 +453,17 @@ GitHubが必要な理由:
 - APKを `/tmp/oyano-moshimo-preview-icons.apk` にdownloadし、Android実機へ `adb install -r` で再インストール成功。
 - インストール後の起動確認直前にADBが `no devices/emulators found` となり、実機接続が外れた。端末を再接続できたら、Dashboard表示とタブアイコンの実機確認から再開する。
 - 次: Android実機をADB再接続し、Dashboard表示とタブアイコンを確認する。その後、「見本で開く」/メールログイン/Magic Link、Web診断結果からのhandoff、push token保存を順に確認する。
+
+## 2026-07-07 追記 15
+
+- ユーザーから「アプリ起動直後にメールアドレス入力・ログインを求めるのは抵抗がある」「内容を見て興味を持ってから会員登録へ誘導したい」「AIっぽく安っぽいデザインを直し、画像も使って高齢者にも分かりやすくしたい」と指示あり。
+- `apps/mobile/app/(auth)/welcome.tsx` を初回体験向けに再設計。
+  - 起動直後はメール入力を出さず、まず「親のもしもナビ」の価値説明を表示。
+  - 上部に家の書類・スマホ・湯のみの実写風ヒーロー画像を配置し、AIっぽいカードだけの印象を軽減。
+  - 「期限を忘れない」「家族で担当を分ける」「写真とメモを保管する」の3点でアプリの使い道を説明。
+  - 主CTAを「新規会員登録はこちら」に変更。登録済みユーザーは「登録済みの方はログイン」から進む。
+  - メール入力欄は会員登録/ログインCTAを押した後だけ表示。ボタン文言は「確認メールを送る」にし、いきなりログイン感を弱めた。
+  - Web診断からのhandoff時は「新規会員登録して保存する」文言に切り替わる。
+- 新規画像アセット `apps/mobile/assets/onboarding-family-home.png` を追加。生成画像は `$HOME/.codex/generated_images/...` からworkspaceへコピー済み。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-onboarding-redesign` OK。画像込みでAndroid bundle export成功。
+- 次: commit/push後、必要ならAndroid preview buildを作り直して実機で新オンボーディングを確認する。
