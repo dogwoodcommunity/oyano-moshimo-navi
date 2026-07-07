@@ -408,3 +408,10 @@ GitHubが必要な理由:
   - `@babel/runtime` をdependenciesに追加。
 - 確認: `expo export --platform android --output-dir /tmp/oyano-mobile-export` OK、`pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`pnpm run doctor:local` OK。
 - 次: commit/push後にAndroid preview buildを3回目実行する。
+
+## 2026-07-07 追記 11
+
+- Android preview build 3回目 `e2ea70af-9b0c-425d-b289-70459ffb16f0` は、JS bundleまで進んだが `Error: Cannot find module '@react-native/assets-registry/registry.js'` で失敗。
+- pnpm monorepo + EAS remote buildでMetroがReact Native配下のassets registryを直接解決できないため、`apps/mobile/package.json` に `@react-native/assets-registry@0.74.87` をdependenciesとして明示追加。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export` OK。
+- 次: この修正をcommit/push後、Android preview buildを4回目実行する。成功したらEASのinstall URLを控えて家族3組テスト用に共有する。

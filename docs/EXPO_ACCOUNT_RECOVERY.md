@@ -67,4 +67,7 @@ pnpm run eas:mobile:build:android
 - Android preview build 2回目 `29f6229b-cce3-40bb-8e00-00b9972ecd6f` はJS bundleで失敗。
 - 原因: Expo Router entry未設定と、pnpm/monorepo構成で `expo-asset` / `@babel/runtime` が直接解決できなかったこと。
 - 対応: `main: "expo-router/entry"`、`expo-asset@10.0.10`、`@babel/runtime` を追加。
+- Android preview build 3回目 `e2ea70af-9b0c-425d-b289-70459ffb16f0` はJS bundleで失敗。
+- 原因: pnpm/monorepo構成で `@react-native/assets-registry/registry.js` が直接解決できなかったこと。
+- 対応: `@react-native/assets-registry@0.74.87` をmobile dependenciesに追加。ローカルAndroid exportはOK。
 - ローカル確認: `expo export --platform android` OK。

@@ -65,6 +65,7 @@
 - [ ] preview buildを作成
 - [ ] Android preview build初回はGradle plugin解決で失敗。`@react-native/gradle-plugin` 明示依存追加済み。
 - [ ] Android preview build 2回目はJS bundleで `expo-asset` 不足により失敗。`expo-asset` と `@babel/runtime` 明示依存、`main: expo-router/entry` 追加後に再実行する。
+- [ ] Android preview build 3回目はJS bundleで `@react-native/assets-registry/registry.js` 解決失敗。`@react-native/assets-registry@0.74.87` 明示依存追加、ローカルAndroid export OK。4回目を実行する。
 
 ## 6. セキュリティ
 
