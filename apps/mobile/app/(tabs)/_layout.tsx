@@ -1,8 +1,41 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
+import { Redirect, Tabs } from "expo-router";
+import { useEffect, useState } from "react";
+import { isDemoSessionActive } from "@/lib/demoSession";
+import { getSupabase } from "@/lib/supabase";
 import { colors } from "@/lib/theme";
 
 export default function TabsLayout() {
+  const [canEnter, setCanEnter] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkEntry() {
+      if (isDemoSessionActive()) {
+        if (mounted) setCanEnter(true);
+        return;
+      }
+
+      const supabase = getSupabase();
+      if (!supabase) {
+        if (mounted) setCanEnter(true);
+        return;
+      }
+
+      const { data } = await supabase.auth.getSession();
+      if (mounted) setCanEnter(Boolean(data.session));
+    }
+
+    void checkEntry();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  if (canEnter === null) return null;
+  if (!canEnter) return <Redirect href="/(auth)/welcome" />;
+
   return (
     <Tabs
       screenOptions={{

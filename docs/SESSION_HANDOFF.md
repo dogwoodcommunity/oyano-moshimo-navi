@@ -486,3 +486,12 @@ GitHubが必要な理由:
 - APKを `/tmp/oyano-moshimo-preview-onboarding-header.apk` にdownloadし、Android実機 `42545251` へ `adb install -r` で上書きインストール成功。
 - 起動後スクリーンショット `/tmp/oyano_onboarding_header_check.png` を取得し、ヘッダーが「はじめに」、上部に写真ヒーロー、本文に「このアプリでできること」が表示されることを確認。初回表示でメール入力やログイン要求は出ない。
 - 次: ユーザー確認後、会員登録CTA押下時のメール入力表示、見本で開く、Magic Link送信、Web診断handoffを実機で順番に確認する。
+
+## 2026-07-08 追記 2
+
+- ユーザーから「アプリ立ち上げたら家族ボードにいく」と報告あり。Androidが前回のDashboardルートを復元している可能性が高く、未ログイン初回導線として不適切。
+- `apps/mobile/lib/demoSession.ts` を追加。`activateDemoSession()` / `isDemoSessionActive()` で、その起動中にユーザーが「まず見本を見る」を押した場合だけDashboard表示を許可する。
+- `apps/mobile/app/(auth)/welcome.tsx` の `continueDemo()` で `activateDemoSession()` を呼ぶように変更。
+- `apps/mobile/app/(tabs)/_layout.tsx` に入口ガードを追加。Supabaseログイン済み、または同一起動中の見本セッションだけTabsを表示し、未ログインで前回Dashboardが復元された場合は `/(auth)/welcome` へ戻す。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-entry-guard` OK。
+- 次: commit/push後、Android preview buildを作成し、実機へ再インストールして「普通に起動すると入口」「見本を見るを押すと家族ボード」を確認する。

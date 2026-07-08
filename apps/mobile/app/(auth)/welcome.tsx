@@ -2,6 +2,7 @@ import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { demoResult } from "@/lib/demoData";
+import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
 import { colors, radius, shadow } from "@/lib/theme";
@@ -37,6 +38,7 @@ export default function WelcomeScreen() {
   }
 
   async function continueDemo() {
+    activateDemoSession();
     setMessage(`見本で開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
     router.replace("/(tabs)/dashboard");
   }
