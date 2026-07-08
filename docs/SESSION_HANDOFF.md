@@ -981,3 +981,19 @@ GitHubが必要な理由:
   - メンバー一覧に頭文字アバターを追加し、共同管理者ボタンを短くして小画面でも収まりやすくした。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-08 追記 27
+
+- 情報登録と実家カルテを整理。
+- `apps/mobile/app/people/[id]/assets.tsx`:
+  - 既存の `asset_items` スキーマに合わせ、カテゴリ、有無、項目名、保管場所、分かる人メモを登録できるようにした。
+  - `asset_categories` をSupabaseから取得し、未接続時はフォールバックカテゴリを表示。
+  - 保存済み項目の一覧を追加。保存後に再読込して画面上で確認できる。
+  - 暗証番号、パスワード、マイナンバー画像、本人確認書類画像を保存しない注意を画面上に明示。
+- `apps/mobile/app/people/[id]/home.tsx`:
+  - 英語見出しを廃止し、実家カルテの目的を「離れていても状況が分かるように」に変更。
+  - 写真で残す場所のチェックリストを追加。
+  - 空き家特定リスクを避けるため、表札・住所・郵便物・車のナンバー・位置情報への注意を明示。
+  - 保管場所メモ追加への導線を主ボタン化。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
