@@ -888,3 +888,18 @@ GitHubが必要な理由:
     - `git diff --check`
     - `pnpm --filter web run build`
   - 問題なければcommit/push。
+
+## 2026-07-08 追記 21
+
+- ユーザー要望: 「アプリの中身を見てみたい」。
+- 現状:
+  - Expo Metroを `apps/mobile` で起動中。
+  - 起動URL: `http://localhost:8082`
+  - ADBでAndroid端末 `42545251` / model `3917JR` が認識された。
+  - `adb reverse tcp:8082 tcp:8082` 済み。
+  - 端末にExpo Go (`host.exp.exponent`) は未インストールだった。
+  - ADBでAndroid端末側にPlay StoreのExpo Goページ `market://details?id=host.exp.exponent` を開いた。
+- 次:
+  - ユーザーが端末でExpo Goをインストールする。
+  - インストール後、`adb shell am start -a android.intent.action.VIEW -d 'exp://127.0.0.1:8082'` でアプリを開く。
+  - まず「見本で開く」からDashboard/家族ボード/タスク/写真/設定を確認する。
