@@ -545,3 +545,18 @@ GitHubが必要な理由:
   - 本番Supabaseに `supabase/handoff_security_hardening.sql` と `supabase/sensitive_info_consent_hardening.sql` を投入する。
   - Vercelへdeploy後、本番Web診断で `cases.consent_to_sensitive_info = true` と `consent_logs` 作成を実弾確認する。
   - 親本人が同意できない場合の法的整理は弁護士レビューで最終確認する。
+
+## 2026-07-08 追記 6
+
+- 同意実装に合わせて、Webの法務ページを本番寄りに更新。
+- `apps/web/app/legal/privacy/page.tsx`:
+  - `SENSITIVE_INFO_CONSENT_VERSION` / `SENSITIVE_INFO_CONSENT_TEXT` を表示し、診断画面で保存する同意ログとプライバシーポリシーの文言を揃えた。
+  - Supabase本番リージョンを `Northeast Asia (Tokyo)` と明記。
+  - アカウント削除依頼について、原則30日以内に削除処理または継続確認の連絡を行う旨を追加。
+- `apps/web/app/legal/terms/page.tsx`:
+  - 親本人の情報を入力する場合、本人に説明できる状態なら利用目的・家族内共有範囲を説明し、難しい場合は必要最小限に限る旨を追加。
+- 確認:
+  - `pnpm --filter web run build` OK。
+  - 並列実行した初回 `pnpm --filter web run typecheck` は、Next buildが `.next/types` を再生成したタイミングと衝突してTS6053。build完了後に単独再実行しOK。
+- 次:
+  - 本番SupabaseのSQL投入を済ませたら、本番Web診断で同意ログが作られるか確認する。
