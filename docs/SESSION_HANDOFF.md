@@ -574,3 +574,15 @@ GitHubが必要な理由:
 - 次:
   - ユーザーがSupabase SQL Editorで `supabase/production_pending_hardening.sql` を投入。
   - Vercelの自動deploy完了後、本番 `/diagnosis` から診断送信し、`cases` と `consent_logs` を確認する。
+
+## 2026-07-08 追記 8
+
+- Supabase確認SQLを更新。
+- `supabase/verify_setup.sql` と `supabase/verify_compact.sql` に以下の確認を追加:
+  - `case_results.app_handoff_consumed_at`
+  - `cases.consent_to_sensitive_info`
+  - `cases.sensitive_info_consent_version`
+  - `cases.sensitive_info_consented_at`
+  - `idx_case_results_handoff_valid`
+  - `idx_consent_logs_case_type`
+- これにより、`production_pending_hardening.sql` 投入後にSQL Editorで `ok=true` を確認できる。

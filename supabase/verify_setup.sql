@@ -137,6 +137,38 @@ select
   'home-photos' as target,
   exists(select 1 from storage.buckets where id = 'home-photos') as ok;
 
+with required_columns(table_name, column_name) as (
+  values
+    ('case_results', 'app_handoff_consumed_at'),
+    ('cases', 'consent_to_sensitive_info'),
+    ('cases', 'sensitive_info_consent_version'),
+    ('cases', 'sensitive_info_consented_at')
+)
+select
+  'column_exists' as check_type,
+  table_name || '.' || column_name as target,
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = required_columns.table_name
+      and column_name = required_columns.column_name
+  ) as ok
+from required_columns
+order by target;
+
+with required_indexes(name) as (
+  values
+    ('idx_case_results_handoff_valid'),
+    ('idx_consent_logs_case_type')
+)
+select
+  'index_exists' as check_type,
+  name as target,
+  (to_regclass('public.' || name) is not null) as ok
+from required_indexes
+order by name;
+
 with required_functions(name) as (
   values
     ('schedule_notifications_for_task'),
