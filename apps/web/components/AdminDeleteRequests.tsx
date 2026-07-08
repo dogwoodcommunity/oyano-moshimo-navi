@@ -11,8 +11,9 @@ function adminHeaders(): HeadersInit {
 export function AdminDeleteRequests() {
   const [deleteRequests, setDeleteRequests] = useState<AdminDeleteRequestRow[] | null>(null);
   const [error, setError] = useState("");
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadDeleteRequests() {
     fetch("/api/admin/delete-requests", { headers: adminHeaders() })
       .then((response) => {
         if (!response.ok) throw new Error(response.status === 401 ? "Admin tokenを設定してください。" : "削除依頼を取得できませんでした。");
@@ -25,9 +26,34 @@ export function AdminDeleteRequests() {
         setError(err.message);
         setDeleteRequests([]);
       });
+  }
+
+  useEffect(() => {
+    loadDeleteRequests();
   }, []);
 
   const rows = deleteRequests ?? [];
+
+  async function updateStatus(id: string, status: AdminDeleteRequestRow["status"]) {
+    setUpdatingId(id);
+    setError("");
+    const response = await fetch("/api/admin/delete-requests", {
+      method: "PATCH",
+      headers: {
+        ...adminHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ id, status })
+    });
+    setUpdatingId(null);
+
+    if (!response.ok) {
+      setError(response.status === 401 ? "Admin tokenを設定してください。" : "削除依頼の状態を更新できませんでした。");
+      return;
+    }
+
+    loadDeleteRequests();
+  }
 
   return (
     <div className="admin-table-wrap">
@@ -39,6 +65,8 @@ export function AdminDeleteRequests() {
             <th>contact</th>
             <th>user</th>
             <th>reason</th>
+            <th>status</th>
+            <th>ops</th>
           </tr>
         </thead>
         <tbody>
@@ -48,9 +76,28 @@ export function AdminDeleteRequests() {
               <td>{item.contactEmail || "-"}</td>
               <td>{item.userId ? item.userId.slice(0, 8) : "-"}</td>
               <td>{item.reason || "-"}</td>
+              <td>
+                <span className={`admin-chip ${item.status === "completed" ? "success" : ""}`}>
+                  {item.status}
+                </span>
+                {item.handledAt ? <p className="hint">{new Date(item.handledAt).toLocaleString("ja-JP")}</p> : null}
+              </td>
+              <td>
+                <div className="admin-row-actions">
+                  <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "reviewing")} type="button">
+                    確認中
+                  </button>
+                  <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "needs_followup")} type="button">
+                    要確認
+                  </button>
+                  <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "completed")} type="button">
+                    完了
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
-          {rows.length === 0 && !error ? <tr><td colSpan={4}>削除依頼はまだありません。</td></tr> : null}
+          {rows.length === 0 && !error ? <tr><td colSpan={6}>削除依頼はまだありません。</td></tr> : null}
         </tbody>
       </table>
     </div>

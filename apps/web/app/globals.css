@@ -1527,6 +1527,18 @@ textarea {
   white-space: pre-wrap;
 }
 
+.admin-row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 220px;
+}
+
+.secondary.compact {
+  min-height: 34px;
+  padding: 7px 10px;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

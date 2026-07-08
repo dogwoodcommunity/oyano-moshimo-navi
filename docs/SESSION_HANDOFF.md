@@ -615,3 +615,19 @@ GitHubが必要な理由:
 - 確認:
   - `pnpm --filter web run typecheck` OK。
   - `pnpm --filter web run build` OK。
+
+## 2026-07-08 追記 11
+
+- アカウント削除依頼の運用状態をAdminで管理できるようにした。
+- `apps/web/app/api/admin/delete-requests/route.ts`:
+  - GETで `metadata.status`、`metadata.handled_at`、`metadata.handled_note` を返す。
+  - PATCHを追加し、Admin token付きで `requested` / `reviewing` / `needs_followup` / `completed` へ更新可能にした。
+  - 実データ削除そのものは行わず、依頼対応ステータスだけを `audit_logs.metadata` に保存する。
+- `apps/web/components/AdminDeleteRequests.tsx`:
+  - 削除依頼一覧にstatus列と操作ボタン「確認中」「要確認」「完了」を追加。
+  - 更新後に一覧を再読み込みする。
+- `apps/web/app/globals.css`:
+  - Admin表内の小さい操作ボタン用CSSを追加。
+- 確認:
+  - 初回typecheckはNext buildとの `.next/types` 再生成競合でTS6053。build完了後に単独再実行しOK。
+  - `pnpm --filter web run build` OK。
