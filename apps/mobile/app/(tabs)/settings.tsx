@@ -26,6 +26,13 @@ export default function SettingsScreen() {
         title="通知設定"
       />
 
+      <MenuCard
+        body="アプリで何ができるか、登録前の説明画面をもう一度確認します。"
+        href="/(auth)/welcome"
+        icon="information-outline"
+        title="最初の説明を見る"
+      />
+
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color={colors.green} name="shield-lock-outline" size={23} />

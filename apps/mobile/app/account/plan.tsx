@@ -17,7 +17,7 @@ export default function AccountPlanScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>プラン確認</Text>
         <Text style={styles.title}>利用状態の詳細</Text>
-        <Text style={styles.body}>アプリ内では現在の状態だけを確認します。外部決済への案内は表示しません。</Text>
+        <Text style={styles.body}>現在使える範囲と、サポートの進行状況を確認します。</Text>
       </View>
 
       <View style={styles.card}>
@@ -45,8 +45,8 @@ export default function AccountPlanScreen() {
       </View>
 
       <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>審査方針</Text>
-        <Text style={styles.noticeText}>アプリ内にWeb申込や外部決済へのリンク、案内文言は置きません。デジタル機能の継続課金は将来IAPで扱う余地を残します。</Text>
+        <Text style={styles.noticeTitle}>表示方針</Text>
+        <Text style={styles.noticeText}>ここでは受付済みの内容や利用状態だけを表示します。家族が混乱しないよう、操作は状態確認に絞っています。</Text>
       </View>
     </ScrollView>
   );

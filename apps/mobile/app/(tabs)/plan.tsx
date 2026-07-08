@@ -9,7 +9,7 @@ export default function PlanTab() {
       <View style={styles.header}>
         <Text style={styles.kicker}>プラン</Text>
         <Text style={styles.title}>現在の利用状態</Text>
-        <Text style={styles.body}>この画面は状態確認用です。アプリ内に外部決済への案内は置きません。</Text>
+        <Text style={styles.body}>この画面は、現在使える範囲とサポート状態の確認用です。</Text>
       </View>
 
       <View style={styles.currentCard}>

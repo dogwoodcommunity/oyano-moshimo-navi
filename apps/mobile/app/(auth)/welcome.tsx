@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { demoResult } from "@/lib/demoData";
 import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
@@ -9,6 +9,8 @@ import { consumeWebHandoff } from "@/lib/handoff";
 import { colors, radius, shadow } from "@/lib/theme";
 
 type AuthMode = "signup" | "login";
+
+const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function WelcomeScreen() {
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
@@ -53,6 +55,11 @@ export default function WelcomeScreen() {
     setMessage("");
   }
 
+  function openWebStart() {
+    if (!webBaseUrl) return;
+    void Linking.openURL(`${webBaseUrl}/start`);
+  }
+
   return (
     <ScrollView contentContainerStyle={styles.screen} style={styles.scroll} keyboardShouldPersistTaps="handled">
       <View style={styles.photoWrap}>
@@ -85,10 +92,15 @@ export default function WelcomeScreen() {
       ) : null}
 
       <View style={styles.startPanel}>
-        <Text style={styles.startTitle}>詳しく使いたい方はこちらから</Text>
+        <Text style={styles.startTitle}>もっと詳しく使いたい方へ</Text>
+        <Text style={styles.body}>まず内容を見て、家族で続けて管理したいと思った時に会員登録できます。</Text>
         <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
+        </Pressable>
+        <Pressable disabled={!webBaseUrl} onPress={openWebStart} style={[styles.webButton, !webBaseUrl && styles.disabledButton]}>
+          <MaterialCommunityIcons color={colors.greenDark} name="web" size={20} />
+          <Text style={styles.webButtonText}>登録せずにWebで状況を整理する</Text>
         </Pressable>
         <Pressable onPress={continueDemo} style={styles.previewButton}>
           <MaterialCommunityIcons color={colors.greenDark} name="eye-outline" size={20} />
@@ -105,7 +117,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.storyPanel}>
-        <Text style={styles.sectionTitle}>家族ボードに残すもの</Text>
+        <Text style={styles.sectionTitle}>会員登録するとできること</Text>
         <FeatureRow
           icon="calendar-clock"
           text="法定期限や手続きの期日"
@@ -121,6 +133,14 @@ export default function WelcomeScreen() {
           text="書類の場所、写真、実家のメモ"
           title="あとで必要になる記録"
         />
+      </View>
+
+      <View style={styles.safePanel}>
+        <View style={styles.safeHeader}>
+          <MaterialCommunityIcons color={colors.greenDark} name="shield-check-outline" size={24} />
+          <Text style={styles.safeTitle}>保存しないものも明確にします</Text>
+        </View>
+        <Text style={styles.body}>銀行暗証番号、各種パスワード、マイナンバー画像は保存しません。残すのは「存在」と「保管場所」と「家族で確認すること」です。</Text>
       </View>
 
       {authMode ? (
@@ -191,8 +211,11 @@ const styles = StyleSheet.create({
   handoffTitle: { color: colors.greenDark, fontSize: 16, fontWeight: "900", lineHeight: 22 },
   startPanel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 16, ...shadow },
   startTitle: { color: colors.ink, fontSize: 20, fontWeight: "900", lineHeight: 26 },
+  disabledButton: { opacity: 0.55 },
   primaryButton: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 54, paddingHorizontal: 14 },
   primaryButtonText: { color: "#fff", fontSize: 16, fontWeight: "900" },
+  webButton: { alignItems: "center", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 50, paddingHorizontal: 14 },
+  webButtonText: { color: colors.greenDark, fontSize: 15, fontWeight: "900" },
   previewButton: { alignItems: "center", backgroundColor: "#f7f3e9", borderColor: "#e4d8bd", borderRadius: radius.control, borderWidth: 1, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 50, paddingHorizontal: 14 },
   previewButtonText: { color: colors.greenDark, fontSize: 15, fontWeight: "900" },
   loginButton: { alignItems: "center", minHeight: 36, justifyContent: "center" },
@@ -201,6 +224,9 @@ const styles = StyleSheet.create({
   noteBandText: { color: "#6f532b", flex: 1, fontSize: 13, fontWeight: "800", lineHeight: 20 },
   storyPanel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16 },
   sectionTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },
+  safePanel: { backgroundColor: "#f7f3e9", borderColor: "#e4d8bd", borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 16 },
+  safeHeader: { alignItems: "center", flexDirection: "row", gap: 8 },
+  safeTitle: { color: colors.greenDark, flex: 1, fontSize: 18, fontWeight: "900", lineHeight: 24 },
   featureRow: { alignItems: "center", flexDirection: "row", gap: 12 },
   iconWrap: { alignItems: "center", backgroundColor: colors.surfaceSoft, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
   featureText: { flex: 1, gap: 3 },

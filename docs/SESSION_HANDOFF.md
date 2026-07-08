@@ -209,6 +209,7 @@ GitHubが必要な理由:
 - App Store審査向けにExpoアプリ内の課金連想文言をさらに削減。`apps/mobile/app/(tabs)/plan.tsx`、`apps/mobile/app/account/plan.tsx`、`apps/mobile/app/(tabs)/settings.tsx` から「購入」「外部サービスへの誘導」などを削り、状態確認専用の表現へ変更。`scripts/mobile-build-doctor.mjs` に `Stripe`、`Webで申し込`、`外部決済`、`外部サービスへの誘導`、`購入や` の混入チェックを追加し、doctorで再発検知できるようにした。
 - Expo dashboardの空状態を追加。Supabase接続済みで `people` が0件の場合、これまでは見本データへ戻る可能性があったため、`apps/mobile/lib/mobileData.ts` に `source: "empty"` と `emptyDashboardData()` を追加し、`apps/mobile/app/(tabs)/dashboard.tsx` で「まだ対象者が登録されていません」「Webの整理結果を引き継ぐ」案内を表示するように変更。これにより本番/家族テストで見本データと実データが混ざるリスクを下げた。Mobile typecheck、local doctor、mobile-build doctor OK。
 - 2026-07-08にWeb入口LPを再調整。ユーザー指摘「AIっぽい」「入口がわかりにくい」を受け、`apps/web/app/page.tsx` のトップヒーローを実写系の `family-documents-hero.png` 背景に変更し、「ここからです」「状況を選んで整理する」を主導線として明示。4つの状況カードも `/start` へ直接つなぎ、「この状況で整理する」を追加。`apps/web/app/globals.css` に写真ヒーロー、白パネル、スマホ向け背景/余白調整を追加。検証: Web typecheck OK、Next build OK、`git diff --check` OK。
+- 2026-07-08にExpo初回導線を再調整。`apps/mobile/app/(auth)/welcome.tsx` は、起動直後にメール入力を迫るのではなく「もっと詳しく使いたい方へ」から新規会員登録、登録せずWebで状況整理、登録前の見本確認を選べる構成に変更。会員登録後にできること、保存しない情報(暗証番号/パスワード/マイナンバー画像)も明示。`apps/mobile/app/(tabs)/settings.tsx` に「最初の説明を見る」を追加し、家族ボードへ直接入った場合でも初回説明へ戻れるようにした。App Store審査向けに `apps/mobile/app/(tabs)/plan.tsx` と `apps/mobile/app/account/plan.tsx` から「外部決済」などのユーザー画面文言を削除。検証: Mobile typecheck OK、mobile-build doctor OK、local doctor OK、`git diff --check` OK。
 
 その後に Step 2: Supabase本番準備。
 
