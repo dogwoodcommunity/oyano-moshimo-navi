@@ -1,4 +1,3 @@
-import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { getSupabase } from "./supabase";
 
@@ -20,6 +19,10 @@ const defaultNotificationPreferences: NotificationPreferences = {
   urgentEnabled: true
 };
 
+async function loadNotifications() {
+  return import("expo-notifications");
+}
+
 async function getAccessToken() {
   const client = getSupabase();
   const { data: sessionResult } = client ? await client.auth.getSession() : { data: { session: null } };
@@ -31,6 +34,8 @@ async function getAccessToken() {
 }
 
 export async function registerPushToken(): Promise<PushRegistrationResult> {
+  const Notifications = await loadNotifications();
+
   if (Platform.OS === "android") {
     await Notifications.setNotificationChannelAsync("default", {
       name: "default",

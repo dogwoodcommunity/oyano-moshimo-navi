@@ -903,3 +903,44 @@ GitHubが必要な理由:
   - ユーザーが端末でExpo Goをインストールする。
   - インストール後、`adb shell am start -a android.intent.action.VIEW -d 'exp://127.0.0.1:8082'` でアプリを開く。
   - まず「見本で開く」からDashboard/家族ボード/タスク/写真/設定を確認する。
+
+## 2026-07-08 追記 22
+
+- Android実機プレビューの続き。
+- 実施したこと:
+  - SDK51互換のExpo Go 2.31.2をADBで端末にインストール。
+  - Metroを8082番で起動し、`adb reverse tcp:8082 tcp:8082` で端末から接続できるようにした。
+  - pnpm workspace環境でMetroが `node_modules/.pnpm/.../expo-router/entry` をlaunchAssetに出してAndroid側で解決できない問題を確認。
+  - `apps/mobile/index.js` を追加し、`apps/mobile/package.json` の `main` を `index.js` に変更。
+  - `apps/mobile/metro.config.js` を追加し、workspace rootとnodeModulesPathsを明示。
+  - `expo-notifications` のトップレベルimportを遅延読み込みに変更し、起動直後のネイティブモジュール初期化リスクを下げた。
+- 現状:
+  - Android向けmanifestは `index.bundle?platform=android` を返すところまで改善済み。
+  - ただしExpo Go上では `UIManager` / `NativeModule` 周りのクラッシュが残り、端末プレビューは一旦深追い停止。
+  - 次に実機で確実に見る場合はExpo Goではなく、`expo run:android` の専用dev buildに切り替える。
+  - その前段で `spawn npm ENOENT` が出たため、`/private/tmp/npm` にpnpmへ委譲するnpm shimを作成済み。次に試すなら `chmod 755 /private/tmp/npm` してからPATHに入れて再実行する。
+- 次:
+  - ユーザーから「もう遅いからええわ次進んでくれ」と指示あり。
+  - 実機プレビューは保留し、次はアプリ起動直後の入口を「いきなりログイン」ではなく、説明→新規会員登録/見本体験へ進む設計に作り替える。
+
+## 2026-07-08 追記 23
+
+- アプリ起動直後の入口を作り直し。
+- 背景:
+  - ユーザー指摘: 「いきなりメールアドレス入力・ログインは抵抗がある」「会員登録はこちら、という誘導にしたい」「AIっぽく安っぽいデザインを避けたい」。
+- 実装:
+  - `apps/mobile/app/(auth)/welcome.tsx` を写真中心の落ち着いた入口に再構成。
+  - 既存素材 `onboarding-family-home.png` を冒頭に大きく表示。
+  - 初期表示ではメール入力を出さず、まず趣旨説明、`ここから新規会員登録`、`登録前に見本を見る`、`登録済みの方はログイン` を明確化。
+  - 会員登録/ログインを押した後だけメール入力パネルを表示。
+  - Web診断からアプリへ来た場合、Magic Linkのredirectに `/handoff?caseId=...&token=...` を載せるよう修正。登録後に診断結果を失わない。
+  - Expo Go調査で入れた起動安定化差分:
+    - `apps/mobile/index.js` 追加。
+    - `apps/mobile/package.json` の `main` を `index.js` に変更。
+    - `apps/mobile/metro.config.js` 追加。
+    - `expo-notifications` を遅延importへ変更。
+    - 動的importを通すため `apps/mobile/tsconfig.json` に `module: esnext` を明示。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+- 注意:
+  - `review_exports/oyano-moshimo-navi-code-review-97a19bd.zip` は未追跡の監査用zip。今回のアプリ入口改善コミットには混ぜない。

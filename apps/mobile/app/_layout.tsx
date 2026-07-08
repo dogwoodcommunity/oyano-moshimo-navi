@@ -1,10 +1,12 @@
 import { useEffect } from "react";
-import * as Notifications from "expo-notifications";
 import { Stack } from "expo-router";
 import { Linking } from "react-native";
+import { enableScreens } from "react-native-screens";
 import { handleAuthRedirectUrl } from "@/lib/auth";
 import { markNotificationsOpened } from "@/lib/notifications";
 import { colors } from "@/lib/theme";
+
+enableScreens(false);
 
 export default function RootLayout() {
   useEffect(() => {
@@ -20,11 +22,23 @@ export default function RootLayout() {
   }, []);
 
   useEffect(() => {
-    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-      void markNotificationsOpened(response.notification.request.content.data ?? {});
-    });
+    let subscription: { remove: () => void } | null = null;
+    let mounted = true;
 
-    return () => subscription.remove();
+    const timeout = setTimeout(() => {
+      void import("expo-notifications").then((Notifications) => {
+        if (!mounted) return;
+        subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+          void markNotificationsOpened(response.notification.request.content.data ?? {});
+        });
+      });
+    }, 500);
+
+    return () => {
+      mounted = false;
+      clearTimeout(timeout);
+      subscription?.remove();
+    };
   }, []);
 
   return (

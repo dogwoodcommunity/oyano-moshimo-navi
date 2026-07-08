@@ -2,7 +2,7 @@
   "name": "mobile",
   "version": "0.3.0",
   "private": true,
-  "main": "expo-router/entry",
+  "main": "index.js",
   "scripts": {
     "start": "expo start",
     "ios": "expo start --ios",
