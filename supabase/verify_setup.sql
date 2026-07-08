@@ -174,7 +174,8 @@ with required_functions(name) as (
     ('schedule_notifications_for_task'),
     ('ensure_monthly_checkin_notifications'),
     ('create_family_invite'),
-    ('accept_family_invite')
+    ('accept_family_invite'),
+    ('promote_family_member_to_owner')
 )
 select
   'function_exists' as check_type,

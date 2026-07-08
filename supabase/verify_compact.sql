@@ -31,6 +31,7 @@ with checks as (
   union all select 'function_exists', 'ensure_monthly_checkin_notifications', to_regproc('public.ensure_monthly_checkin_notifications') is not null
   union all select 'function_exists', 'create_family_invite', to_regproc('public.create_family_invite') is not null
   union all select 'function_exists', 'accept_family_invite', to_regproc('public.accept_family_invite') is not null
+  union all select 'function_exists', 'promote_family_member_to_owner', to_regproc('public.promote_family_member_to_owner') is not null
   union all select 'seed_count', 'task_templates', (select count(*) > 0 from public.task_templates)
   union all select 'seed_count', 'products', (select count(*) > 0 from public.products)
 )

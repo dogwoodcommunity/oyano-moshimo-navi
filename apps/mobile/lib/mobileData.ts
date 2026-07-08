@@ -314,6 +314,29 @@ export async function createFamilyInvite(
   };
 }
 
+export async function promoteFamilyMemberToOwner(
+  memberId: string
+): Promise<{ source: "supabase" | "demo"; error?: string }> {
+  const supabase = getSupabase();
+  if (!supabase) return { source: "demo" };
+
+  const { error } = await supabase.rpc("promote_family_member_to_owner", {
+    p_family_member_id: memberId
+  });
+
+  if (error) {
+    const message = error.message ?? "";
+    const friendlyMessage = message.includes("not_family_admin")
+      ? "共同管理者にできるのは家族代表または管理者だけです。"
+      : message.includes("member_not_found")
+        ? "メンバーが見つかりませんでした。"
+        : "共同管理者に変更できませんでした。時間をおいてもう一度お試しください。";
+    return { source: "supabase", error: friendlyMessage };
+  }
+
+  return { source: "supabase" };
+}
+
 export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInviteResult> {
   const normalizedToken = token.trim();
   if (!normalizedToken) return { source: "demo", accepted: false, error: "招待リンクが正しくありません。" };

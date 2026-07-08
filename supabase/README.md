@@ -17,7 +17,8 @@ SQL Editorで以下の順に実行する。
 11. `api_grants.sql`
 12. `production_rls.sql`
 13. `family_invite_rpc.sql`
-14. `storage_setup.sql`
+14. `family_owner_succession.sql`
+15. `storage_setup.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -25,8 +26,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-15. `verify_setup.sql`
-16. `verify_compact.sql`
+16. `verify_setup.sql`
+17. `verify_compact.sql`
 
 ## 重要
 

@@ -657,3 +657,38 @@ GitHubが必要な理由:
   - 初回Web typecheckはNext buildとの `.next/types` 再生成競合でTS6053。build完了後に単独再実行しOK。
 - 注意:
   - 写真のEXIF/GPS除去をサーバー側で実際に処理する機能は未実装。現時点では注意表示とアップロード権限強化まで。
+
+## 2026-07-08 追記 13
+
+- 家族代表が亡くなった/使えなくなった場合の承継MVPを実装中。
+- 方針:
+  - 既存の家族メンバーを後から共同管理者にできる。
+  - 直接owner招待は作らない。まず通常メンバーとして招待し、信頼できる人だけ昇格する。
+  - 代表者の降格/自動交代はMVPでは作らない。誤操作で管理者不在になるリスクを避ける。
+  - `families.owner_user_id` はprimary ownerとして残す。
+  - Free招待枠は `role <> owner` ではなく、primary owner以外の人数で数える。共同管理者昇格で無料枠をすり抜けないため。
+- 追加/更新:
+  - `supabase/family_owner_succession.sql` を追加。
+    - `promote_family_member_to_owner(p_family_member_id uuid)` RPCを作成。
+    - 呼び出し元は同familyの `owner/admin` のみ。
+    - 対象memberを `role='owner'` に更新。
+    - `families.owner_user_id` がnullなら補完する。
+  - `supabase/family_invite_rpc.sql` を更新。
+    - Free上限の人数計算を `families.owner_user_id` 以外のfamily_members + 7日以内pending invites に変更。
+  - `apps/mobile/lib/mobileData.ts` に `promoteFamilyMemberToOwner` を追加。
+  - `apps/mobile/app/people/[id]/family.tsx` に共同管理者ボタンを追加。
+    - 現在ログイン中のmemberが `owner/admin` の時だけ表示。
+    - 変更は楽観更新し、失敗時rollback。
+  - `docs/FAMILY_SUCCESSION_POLICY.md` を追加。
+  - `supabase/README.md`、`docs/PRODUCTION_CHECKLIST.md`、`scripts/local-doctor.mjs`、`supabase/verify_setup.sql`、`supabase/verify_compact.sql` を更新。
+- 次に必要:
+  - TypeScript/build/doctorを実行済み。
+  - 問題なければcommit/push。
+  - 本番Supabaseには `family_invite_rpc.sql` の再実行と `family_owner_succession.sql` の実行が必要。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run build` OK。
+  - `pnpm --filter web run typecheck` OK。
+  - `pnpm run doctor:local` OK。
+  - `pnpm run doctor:mobile-build` OK。
+  - `git diff --check` OK。

@@ -78,9 +78,10 @@ begin
     select
       (
         select count(*)
-        from family_members
-        where family_id = p_family_id
-          and role <> 'owner'
+        from family_members fm
+        join families f on f.id = fm.family_id
+        where fm.family_id = p_family_id
+          and fm.user_id is distinct from f.owner_user_id
       )
       +
       (
@@ -156,9 +157,9 @@ begin
       f.plan = 'plus'
       or (
         select count(*)
-        from family_members
-        where family_id = f.id
-          and role <> 'owner'
+        from family_members fm
+        where fm.family_id = f.id
+          and fm.user_id is distinct from f.owner_user_id
       ) < 2
     );
 

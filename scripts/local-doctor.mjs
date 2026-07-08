@@ -49,6 +49,7 @@ const requiredFiles = [
   "supabase/api_grants.sql",
   "supabase/production_rls.sql",
   "supabase/family_invite_rpc.sql",
+  "supabase/family_owner_succession.sql",
   "supabase/storage_setup.sql",
   "supabase/verify_setup.sql",
   "supabase/verify_compact.sql",
@@ -58,6 +59,7 @@ const requiredFiles = [
   "docs/DEPLOYMENT.md",
   "docs/ENVIRONMENT_MATRIX.md",
   "docs/PRIVACY_AND_REVIEW_GUARDRAILS.md",
+  "docs/FAMILY_SUCCESSION_POLICY.md",
   "docs/FAMILY_TEST_COOPERATION_REQUEST.md",
   "docs/SESSION_HANDOFF.md"
 ];
@@ -96,6 +98,7 @@ const sqlOrder = [
   "api_grants.sql",
   "production_rls.sql",
   "family_invite_rpc.sql",
+  "family_owner_succession.sql",
   "storage_setup.sql",
   "verify_setup.sql",
   "verify_compact.sql"

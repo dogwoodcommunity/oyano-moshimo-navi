@@ -26,6 +26,7 @@
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行
 - [x] `supabase/family_invite_rpc.sql` を実行
+- [ ] `supabase/family_owner_succession.sql` を実行
 - [x] `supabase/storage_setup.sql` を実行
 - [x] `supabase/verify_setup.sql` / `verify_compact.sql` で主要項目trueを確認
 - [x] `supabase/api_grants.sql` を実行
