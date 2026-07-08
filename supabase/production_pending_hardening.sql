@@ -18,3 +18,7 @@ alter table cases
 
 create index if not exists idx_consent_logs_case_type
 on consent_logs(case_id, consent_type, created_at desc);
+
+-- 3. Home photo direct client uploads are disabled. Uploads should go through
+-- the Web API that verifies family membership before issuing a signed URL.
+drop policy if exists "home photos upload authenticated" on storage.objects;

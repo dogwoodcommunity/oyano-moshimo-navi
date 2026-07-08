@@ -29,13 +29,6 @@ using (
   )
 );
 
-create policy "home photos upload authenticated"
-on storage.objects for insert
-with check (
-  bucket_id = 'home-photos'
-  and auth.uid() is not null
-);
-
 create policy "home photos update own family"
 on storage.objects for update
 using (

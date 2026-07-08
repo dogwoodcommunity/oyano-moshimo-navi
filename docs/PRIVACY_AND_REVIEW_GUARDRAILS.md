@@ -26,6 +26,13 @@
 - `consent_logs` に同意種別、同意文言、User-Agent、IPを保存する。
 - 本番既存DBには `supabase/sensitive_info_consent_hardening.sql` を投入する。
 
+## 実家写真の安全管理
+
+- 実家写真アップロードURLは、Bearer認証と家族メンバー確認後に発行する。
+- 直接Storageへ広くアップロードできるpolicyは使わず、既存DBでは `supabase/home_photo_security_hardening.sql` で広いinsert policyを削除する。
+- アプリ内では、表札、住所、鍵番号、郵便物、車のナンバー、空き家と分かる外観写真を避けるよう表示する。
+- 位置情報つき写真は、端末側で位置情報を削除してから保存するよう案内する。
+
 ## App Store審査方針
 
 - アプリ内では発動サポートパックの購入導線を出さない。

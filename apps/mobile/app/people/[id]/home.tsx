@@ -32,6 +32,11 @@ export default function HomeChartScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>写真管理</Text>
         <Text style={styles.body}>玄関、各部屋、重要書類の棚、メーター周りなどを撮っておくと、離れて暮らす家族も状況を確認しやすくなります。</Text>
+        <View style={styles.safetyBox}>
+          <Text style={styles.safetyTitle}>写真を残す前に</Text>
+          <Text style={styles.body}>表札、住所、鍵番号、郵便物、車のナンバーが写らないようにしてください。外観写真は空き家だと分かる形では残さず、必要な部分だけ撮るのがおすすめです。</Text>
+          <Text style={styles.body}>位置情報つきの写真は、端末側で位置情報を削除してから保存してください。</Text>
+        </View>
         <Link href={`/people/${params.id}/assets`} style={styles.link}>保管場所メモを追加する</Link>
       </View>
       <View style={styles.notice}>
@@ -50,6 +55,8 @@ const styles = StyleSheet.create({
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
   link: { color: colors.blue, fontWeight: "900" },
+  safetyBox: { backgroundColor: "#fffaf0", borderColor: "#ead8b8", borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 12 },
+  safetyTitle: { color: colors.ink, fontSize: 16, fontWeight: "900" },
   notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 16 },
   noticeTitle: { color: colors.greenDark, fontSize: 18, fontWeight: "900" },
   row: { borderBottomColor: "#edf1ed", borderBottomWidth: 1, gap: 4, paddingBottom: 10 },

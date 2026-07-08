@@ -20,6 +20,7 @@
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
+- [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
 - [ ] `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` で同意ログ保存を確認
 - [x] `supabase/product_seed.sql` を実行
 - [x] `supabase/indexes.sql` を実行
@@ -77,6 +78,7 @@
 - [x] RLSが全主要テーブルで有効
 - [x] 銀行暗証番号・パスワード・マイナンバー画像を保存しない表示が残っている
 - [x] Web診断で要配慮情報の理解・最小限入力への同意を必須化
+- [x] 実家写真のアップロードURL発行を認証・家族権限チェック付きに変更
 - [ ] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認
 - [x] アプリ内に外部Web決済CTAがない
 

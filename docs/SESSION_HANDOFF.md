@@ -631,3 +631,29 @@ GitHubが必要な理由:
 - 確認:
   - 初回typecheckはNext buildとの `.next/types` 再生成競合でTS6053。build完了後に単独再実行しOK。
   - `pnpm --filter web run build` OK。
+
+## 2026-07-08 追記 12
+
+- 外部レビューの「実家写真 + 空き家特定リスク」対応を実装。
+- `apps/web/app/api/storage/home-photo-upload-url/route.ts`:
+  - Bearer token必須化。
+  - Supabase Auth tokenからユーザーを確認。
+  - `homeId -> homes -> people.family_id -> family_members.user_id` を確認し、同じfamily memberだけsigned upload URLを発行。
+  - 許可MIMEは `image/jpeg` / `image/png` / `image/webp` のみ。
+  - `fileSizeBytes` がある場合は10MB超を拒否。
+  - レスポンスに「外観、表札、住所、鍵番号を避ける」「位置情報を削除する」警告を含める。
+- `supabase/storage_setup.sql`:
+  - 新規DBでは `home photos upload authenticated` の広いinsert policyを作らないよう削除。
+- `supabase/home_photo_security_hardening.sql`:
+  - 既存DB向けに `home photos upload authenticated` policyをdropするSQLを追加。
+- `supabase/production_pending_hardening.sql`:
+  - 上記Storage policy dropも一括hardeningに追加。
+- `apps/mobile/app/people/[id]/home.tsx`:
+  - 写真管理カードに、表札、住所、鍵番号、郵便物、車のナンバー、空き家と分かる外観写真、位置情報への注意を追加。
+- `docs/PRIVACY_AND_REVIEW_GUARDRAILS.md`、`docs/PRODUCTION_CHECKLIST.md`、`supabase/README.md` を更新。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run build` OK。
+  - 初回Web typecheckはNext buildとの `.next/types` 再生成競合でTS6053。build完了後に単独再実行しOK。
+- 注意:
+  - 写真のEXIF/GPS除去をサーバー側で実際に処理する機能は未実装。現時点では注意表示とアップロード権限強化まで。

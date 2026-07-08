@@ -19,6 +19,10 @@ SQL Editorで以下の順に実行する。
 13. `family_invite_rpc.sql`
 14. `storage_setup.sql`
 
+既存DBで個別hardeningする場合のみ:
+
+- `home_photo_security_hardening.sql`
+
 任意確認:
 
 15. `verify_setup.sql`
