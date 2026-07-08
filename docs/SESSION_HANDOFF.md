@@ -586,3 +586,16 @@ GitHubが必要な理由:
   - `idx_case_results_handoff_valid`
   - `idx_consent_logs_case_type`
 - これにより、`production_pending_hardening.sql` 投入後にSQL Editorで `ok=true` を確認できる。
+
+## 2026-07-08 追記 9
+
+- 本番Web診断とSupabase同意ログ保存を確認する専用スモークを追加。
+- 追加ファイル: `scripts/smoke-production-consent.mjs`
+  - `POST /api/cases/:caseId/diagnosis` に `consentToSensitiveInfo=true` のテスト診断を送信。
+  - `NEXT_PUBLIC_SUPABASE_URL` と `SUPABASE_SERVICE_ROLE_KEY` が環境変数にある場合、Supabase RESTで `cases.consent_to_sensitive_info`、`sensitive_info_consent_version`、`sensitive_info_consented_at`、`consent_logs` を確認。
+  - Supabase keyがない環境ではWeb API送信確認だけ行い、DB直確認はskipする。
+- `package.json` に `smoke:production-consent` を追加。
+- `docs/PRODUCTION_CHECKLIST.md` に `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` を追加。
+- 注意:
+  - このスモークは本番DBにテストcaseを1件作成する。
+  - 本番Supabaseに `production_pending_hardening.sql` を投入してから実行する。

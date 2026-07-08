@@ -20,6 +20,7 @@
     "eas:mobile:build:android": "cd apps/mobile && pnpm dlx eas-cli build --profile preview --platform android",
     "lint": "pnpm --filter web run lint",
     "smoke:web": "node scripts/smoke-web.mjs",
+    "smoke:production-consent": "node scripts/smoke-production-consent.mjs",
     "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"
   },
   "devDependencies": {
