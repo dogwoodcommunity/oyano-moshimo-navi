@@ -968,3 +968,16 @@ GitHubが必要な理由:
   - 優先度を数字ではなく `重要`、`高め`、`通常` の表示へ変更。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-08 追記 26
+
+- 家族共有画面を整理。
+- 実装:
+  - `apps/mobile/app/people/[id]/family.tsx` をスクロール可能に変更。小さいAndroid端末でも招待フォームとメンバー一覧が切れないようにした。
+  - `Family` の英語見出しを廃止し、`家族で同じボードを見る` に変更。
+  - 無料招待枠の説明カードを追加。オーナー以外2名まで無料、3人目以降/複数親管理はFamily Plusという線引きを画面上でも明確化。
+  - 招待前にメール形式の簡易チェックを追加。
+  - 招待リンク作成後は送信用リンクを枠内に表示し、`LINEやメールで送る` ボタンをアイコン付きで明示。
+  - メンバー一覧に頭文字アバターを追加し、共同管理者ボタンを短くして小画面でも収まりやすくした。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
