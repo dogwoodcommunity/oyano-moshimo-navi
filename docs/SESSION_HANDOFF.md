@@ -692,3 +692,33 @@ GitHubが必要な理由:
   - `pnpm run doctor:local` OK。
   - `pnpm run doctor:mobile-build` OK。
   - `git diff --check` OK。
+
+## 2026-07-08 追記 14
+
+- 外部レビューで指摘された handoff token / Magic Link redirect の安全性をさらに強化中。
+- 変更:
+  - `packages/shared/src/index.ts`:
+    - 新規 `createHandoffToken` からcaseId断片を削除。
+    - 以後のtokenは `handoff_` + 48桁hexランダム値。
+    - 既存tokenはサーバー側正規表現で引き続き受け付ける。
+  - `apps/web/app/api/handoff/consume/route.ts`:
+    - DB照会前にcaseId UUID形式とhandoff token形式を検証。
+    - 不正形式は404で返す。
+  - `apps/mobile/lib/auth.ts`:
+    - Magic Linkの `emailRedirectTo` をアプリ内許可パスへ制限。
+    - 許可: `/(tabs)/dashboard`、`/invite?token=...`、`/handoff?caseId=...&token=...`
+    - 許可外はdashboardへfallback。
+  - `apps/web/app/result/[caseId]/page.tsx`:
+    - local recordにhandoff tokenがない場合、予測可能なダミーtokenリンクを出さない。
+  - `docs/PRIVACY_AND_REVIEW_GUARDRAILS.md`:
+    - Webからアプリへの引き継ぎガードレールを追記。
+- 次:
+  - TypeScript/build/doctorを実行済み。
+  - 問題なければcommit/push。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run build` OK。
+  - `pnpm --filter web run typecheck` OK。
+  - `pnpm run doctor:local` OK。
+  - `pnpm run doctor:mobile-build` OK。
+  - `git diff --check` OK。

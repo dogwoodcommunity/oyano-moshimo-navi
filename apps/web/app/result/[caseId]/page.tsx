@@ -18,9 +18,10 @@ export default function ResultPage() {
     homeClearance: ""
   } satisfies DiagnosisAnswers;
   const result = record?.result ?? buildDiagnosisResult((record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers);
-  const token = record?.handoffToken ?? `handoff_${params.caseId}`;
   const appScheme = process.env.NEXT_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
-  const appUrl = `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token }).toString()}`;
+  const appUrl = record?.handoffToken
+    ? `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token: record.handoffToken }).toString()}`
+    : "";
 
   return (
     <main className="container">
@@ -103,7 +104,11 @@ export default function ResultPage() {
           </div>
         </div>
         <div className="actions">
-          <a className="button" href={appUrl}>アプリに保存する</a>
+          {appUrl ? (
+            <a className="button" href={appUrl}>アプリに保存する</a>
+          ) : (
+            <Link className="button" href="/start">もう一度整理して保存する</Link>
+          )}
           <Link className="secondary" href={`/result/${params.caseId}/share`}>家族に共有する</Link>
         </div>
         <p className="hint">アプリを使わない場合も、この画面で結果を確認できます。</p>

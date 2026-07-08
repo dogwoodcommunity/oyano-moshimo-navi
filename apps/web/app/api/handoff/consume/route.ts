@@ -27,6 +27,9 @@ type CaseResultRow = {
   }> | null;
 };
 
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const HANDOFF_TOKEN_PATTERN = /^handoff_(?:[a-f0-9]{48}|[a-f0-9]{12}_[a-f0-9]{48})$/i;
+
 export async function POST(request: Request) {
   const body = await request.json() as {
     caseId?: string;
@@ -36,6 +39,10 @@ export async function POST(request: Request) {
 
   if (!body.caseId || !body.token) {
     return NextResponse.json({ error: "caseId and token are required" }, { status: 400 });
+  }
+
+  if (!UUID_PATTERN.test(body.caseId) || !HANDOFF_TOKEN_PATTERN.test(body.token)) {
+    return NextResponse.json({ error: "Invalid handoff token" }, { status: 404 });
   }
 
   const bearerToken = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
