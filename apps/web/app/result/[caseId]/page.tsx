@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { buildDiagnosisResult, type DiagnosisAnswers } from "@oyano/shared";
-import { getLocalCase, requestSupportPack } from "@/lib/store";
+import { getLocalCase } from "@/lib/store";
 
 export default function ResultPage() {
   const params = useParams<{ caseId: string }>();
+  const searchParams = useSearchParams();
+  const supportPackResult = searchParams.get("support_pack");
   const record = getLocalCase(params.caseId);
   const fallbackAnswers = {
     selectedStatus: record?.selectedStatus ?? "preparing",
@@ -116,13 +118,18 @@ export default function ResultPage() {
 
       <section className="panel" style={{ marginTop: 18 }}>
         <h2>発動サポートパック</h2>
+        {supportPackResult === "success" ? (
+          <p className="notice success">申し込みを受け付けました。運営側で内容を確認します。</p>
+        ) : null}
+        {supportPackResult === "cancel" ? (
+          <p className="notice">申し込みは完了していません。必要になった時に、もう一度この画面から進めます。</p>
+        ) : null}
         <p>
           入力内容の人力レビュー、家族会議用レポート、専門家・業者候補整理をWebで申し込む商品です。
-          アプリ内では外部決済CTAを置かず、購入済みやレビュー中の状態表示に留めます。
+          判断を代行するものではなく、家族で次に確認する順番を整理します。
         </p>
         <div className="actions">
-          <button className="button" onClick={() => requestSupportPack(params.caseId)}>サポート依頼を作成</button>
-          <Link className="secondary" href={`/support-pack?caseId=${params.caseId}`}>内容を確認して申し込む</Link>
+          <Link className="button" href={`/support-pack?caseId=${params.caseId}`}>内容を確認して申し込む</Link>
         </div>
         <p className="hint">現在の状態: {record?.supportPackStatus ?? "none"}</p>
       </section>

@@ -618,6 +618,21 @@ textarea {
   line-height: 1.5;
 }
 
+.notice {
+  background: var(--surface-soft);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--green-dark);
+  font-weight: 800;
+  line-height: 1.6;
+  padding: 12px 14px;
+}
+
+.notice.success {
+  background: #eef7f0;
+  border-color: rgba(39, 100, 71, 0.28);
+}
+
 .input,
 .textarea,
 .select {

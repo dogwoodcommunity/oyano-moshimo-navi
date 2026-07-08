@@ -11,9 +11,9 @@ export default function SupportPackPage() {
           整理結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。
         </p>
         <div className="meta-row">
-          <span className="meta-chip">アプリ内決済CTAなし</span>
+          <span className="meta-chip">Webで申し込み</span>
           <span className="meta-chip">専門判断は断定しません</span>
-          <span className="meta-chip">成約課金なし</span>
+          <span className="meta-chip">家族会議用メモ</span>
         </div>
       </section>
 

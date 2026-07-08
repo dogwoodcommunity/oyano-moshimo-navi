@@ -53,16 +53,19 @@ STRIPE_WEBHOOK_SECRET=
 ## 5. 確認すること
 
 1. `/result/{caseId}` から「内容を確認して申し込む」へ進む。
-2. `/support-pack?caseId={caseId}` で「申し込み画面へ進む」を押す。
-3. Stripe Checkoutが開く。
-4. テストカードで支払う。
-5. Supabase `purchases` にStripe購入が保存される。
-6. Supabase `support_packs.status` が `paid` になる。
-7. `/admin/support-packs` で支払い済みを確認できる。
+2. `/support-pack?caseId={caseId}` で連絡先メールを入力し、連絡同意にチェックする。
+3. 「Stripeの申し込み画面へ進む」を押す。
+4. Stripe Checkoutが開く。
+5. テストカードで支払う。
+6. `/result/{caseId}?support_pack=success` に戻り、受付メッセージが出る。
+7. Supabase `purchases` にStripe購入が保存される。
+8. Supabase `support_packs.status` が `paid` になる。
+9. `/admin/support-packs` で支払い済みを確認できる。
 
 ## 注意
 
 - Expoアプリ内には外部決済CTAを置かない。
 - アプリ内では発動サポートパックの購入導線を匂わせず、申込済み/レビュー中などの状態表示に留める。
+- `POST /api/support-packs` は無料の依頼作成には使わず、Stripe Checkoutへ誘導する。
 - 法律、税務、医療判断の断定は商品範囲に含めない。
 - 正式販売前に特商法表記、プライバシーポリシー、税込表示を最終確認する。

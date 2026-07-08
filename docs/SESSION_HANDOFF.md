@@ -840,3 +840,38 @@ GitHubが必要な理由:
     - `git diff --check`
   - 問題なければcommit/push。
   - 本番Supabaseには `account_deletion_pipeline.sql` を投入する必要あり。
+
+## 2026-07-08 追記 19
+
+- 次工程として、発動サポートパックのWeb/Stripe導線を事業検証向けに整理中。
+- 背景:
+  - 監査では「9,800円の支払意思を測ること」が重要と指摘あり。
+  - 結果画面に「サポート依頼を作成」と「内容を確認して申し込む」が並ぶと、無料依頼と決済申込が混ざって転換率が濁る。
+- 実装した変更:
+  - 結果画面の発動サポートCTAを「内容を確認して申し込む」1本に統一。
+  - `/support-pack` で連絡先メールと連絡同意を入力できるようにし、診断時に連絡先未入力でもStripeへ進める形にした。
+  - `POST /api/stripe/checkout` はSupabase必須に変更し、存在する `case`、`result_ready/converted`、連絡先メール、連絡同意を確認してからCheckoutを作成。
+  - Checkoutには `customer_email` とmetadataを入れ、caseの連絡先も更新する。
+  - 旧 `POST /api/support-packs` は無料のrequested作成をやめ、Stripe Checkout誘導の410応答に変更。
+  - Stripe success/cancelで戻った結果画面に受付/未完了メッセージを表示。
+  - `/support-pack` の内部方針っぽい文言をユーザー向け文言へ修正。
+  - `docs/STRIPE_SETUP.md` と `docs/PRODUCTION_ROADMAP.md` を現行導線に更新。
+- 変更ファイル:
+  - `apps/web/app/api/stripe/checkout/route.ts`
+  - `apps/web/app/api/support-packs/route.ts`
+  - `apps/web/app/result/[caseId]/page.tsx`
+  - `apps/web/app/support-pack/SupportPackClient.tsx`
+  - `apps/web/app/support-pack/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/lib/store.ts`
+  - `docs/STRIPE_SETUP.md`
+  - `docs/PRODUCTION_ROADMAP.md`
+- 次:
+  - 検証済み:
+    - `pnpm --filter web run typecheck`
+    - `pnpm run doctor:local`
+    - `git diff --check`
+    - `pnpm --filter web run build`
+    - `node scripts/smoke-web.mjs http://127.0.0.1:3010`
+  - 3000番は別Dockerプロセスが使っていたため、確認用にNext dev serverを `127.0.0.1:3010` で起動してsmokeした。
+  - 問題なければcommit/push。

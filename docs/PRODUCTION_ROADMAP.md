@@ -87,7 +87,7 @@
 
 - Web `/start` で選んだcaseが `cases` に保存される
 - Web `/diagnosis` の結果が `case_results` に保存される
-- `/support-pack` の依頼が `support_packs` に保存される
+- `/support-pack` からStripe Checkoutへ進み、決済前の `requested` と決済後の `paid` が `support_packs` に保存される
 - Supabase上で不要な公開読み取りができない
 - `SUPABASE_SERVICE_ROLE_KEY` はNext.jsサーバー側だけで使い、ブラウザやExpoに出さない
 

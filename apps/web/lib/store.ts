@@ -110,16 +110,6 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
   return record;
 }
 
-export async function requestSupportPack(caseId: string): Promise<void> {
-  const cases = readCases();
-  const record = cases.find((item) => item.id === caseId);
-  if (!record) return;
-  const nextRecord = { ...record, supportPackStatus: "requested" as const };
-  writeCases([nextRecord, ...cases.filter((item) => item.id !== caseId)]);
-
-  await postJson("/api/support-packs", { caseId });
-}
-
 export function createLocalDemoCase(): CaseRecord {
   const id = crypto.randomUUID();
   const answers: DiagnosisAnswers = {
