@@ -753,3 +753,16 @@ GitHubが必要な理由:
   - `pnpm run doctor:local` OK。
   - `pnpm run doctor:mobile-build` OK。
   - `git diff --check` OK。
+
+## 2026-07-08 追記 16
+
+- エンジニア監査用に、最新commit `97a19bd` のrepo zipを `git archive` で作成。
+- 作成先:
+  - `review_exports/oyano-moshimo-navi-code-review-97a19bd.zip`
+- 内容:
+  - Git管理されているソースコード、SQL、docsのみ。
+  - `.env.local`、`node_modules`、`.next`、Expo cacheなどは含まない。
+- 用途:
+  - RLS、handoff、admin認可、通知冪等性、Storage権限、App Store審査リスクのコード監査。
+- 注意:
+  - `review_exports` はGit管理外。一時共有用の成果物。
