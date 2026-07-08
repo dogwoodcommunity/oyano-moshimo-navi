@@ -27,7 +27,7 @@ export function AdminTokenControl() {
     <section className="panel admin-control-panel" style={{ marginTop: 18 }}>
       <div>
         <p className="eyebrow">Access</p>
-        <h2>Admin token</h2>
+        <h2>Admin access</h2>
       </div>
       <div className="field">
         <label htmlFor="admin-token">ADMIN_ACCESS_TOKEN</label>
@@ -38,7 +38,7 @@ export function AdminTokenControl() {
           autoComplete="off"
           value={token}
           onChange={(event) => setToken(event.target.value)}
-          placeholder="Vercelに設定した管理トークン"
+          placeholder="暫定運用の管理トークン"
         />
       </div>
       <div className="actions">
@@ -59,6 +59,7 @@ export function AdminTokenControl() {
         </button>
       </div>
       <p className="hint">
+        本番運用ではSupabase Authのapp_admin個別アカウントを優先します。このトークンは暫定fallbackです。
         保存後にAdmin一覧やenv確認を再読み込みすると、Supabase本番データを確認できます。
         {saved ? " 保存しました。" : ""}
       </p>

@@ -58,6 +58,7 @@ const requiredFiles = [
   "docs/PRODUCTION_CHECKLIST.md",
   "docs/DEPLOYMENT.md",
   "docs/ENVIRONMENT_MATRIX.md",
+  "docs/ADMIN_AUTH_POLICY.md",
   "docs/PRIVACY_AND_REVIEW_GUARDRAILS.md",
   "docs/FAMILY_SUCCESSION_POLICY.md",
   "docs/FAMILY_TEST_COOPERATION_REQUEST.md",

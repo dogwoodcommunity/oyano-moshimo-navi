@@ -722,3 +722,34 @@ GitHubが必要な理由:
   - `pnpm run doctor:local` OK。
   - `pnpm run doctor:mobile-build` OK。
   - `git diff --check` OK。
+
+## 2026-07-08 追記 15
+
+- 外部レビューで指摘された service role key / Admin API の認可を強化中。
+- 方針:
+  - Admin APIは `SUPABASE_SERVICE_ROLE_KEY` を使うため、RLSではなくAPI側で認可する。
+  - 正式ルートとしてSupabase Authの個別管理者を追加。
+  - `family_members.role='admin'` かつ `relationship='app_admin'` のユーザーだけAdmin APIを使える。
+  - 既存の `ADMIN_ACCESS_TOKEN` + `x-admin-token` は暫定fallbackとして残す。
+- 変更:
+  - `apps/web/lib/adminAuth.ts`:
+    - `Authorization: Bearer <Supabase session access token>` を受け取り、`supabase.auth.getUser` でユーザー確認。
+    - `family_members` に `role=admin` / `relationship=app_admin` があれば許可。
+    - fallbackで既存 `x-admin-token` も許可。
+  - Admin API routesを `await verifyAdminRequest` に更新。
+  - `apps/web/app/api/admin/delete-requests/route.ts`:
+    - PATCH時に `handled_by_user_id` / `handled_by_email` / `handled_by_method` をmetadataへ保存。
+  - `apps/web/components/AdminDeleteRequests.tsx`:
+    - 処理者列を追加。
+  - `docs/ADMIN_AUTH_POLICY.md`:
+    - app_admin作成SQLと運用方針を追加。
+- 次:
+  - TypeScript/build/doctorを実行済み。
+  - 問題なければcommit/push。
+- 確認:
+  - `pnpm --filter web run build` OK。
+  - 初回 `pnpm --filter web run typecheck` はNext build前の `.next/types` 競合でTS6053。build後に単独再実行しOK。
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm run doctor:local` OK。
+  - `pnpm run doctor:mobile-build` OK。
+  - `git diff --check` OK。

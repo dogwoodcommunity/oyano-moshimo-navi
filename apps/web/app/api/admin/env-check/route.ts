@@ -14,8 +14,8 @@ const requiredEnv = [
 ];
 
 export async function GET(request: Request) {
-  const unauthorized = verifyAdminRequest(request);
-  if (unauthorized) return unauthorized;
+  const auth = await verifyAdminRequest(request);
+  if (!auth.ok) return auth.response;
 
   return NextResponse.json({
     checkedAt: new Date().toISOString(),

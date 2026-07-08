@@ -10,6 +10,7 @@ export type AdminDeleteRequestRow = {
   status: "requested" | "reviewing" | "completed" | "needs_followup";
   handledAt?: string;
   handledNote?: string;
+  handledBy?: string;
   createdAt: string;
 };
 
@@ -22,6 +23,9 @@ type AuditLogRow = {
     status?: AdminDeleteRequestRow["status"] | null;
     handled_at?: string | null;
     handled_note?: string | null;
+    handled_by_email?: string | null;
+    handled_by_user_id?: string | null;
+    handled_by_method?: string | null;
   } | null;
   created_at: string;
 };
@@ -40,8 +44,8 @@ const allowedStatuses = new Set<AdminDeleteRequestRow["status"]>([
 ]);
 
 export async function GET(request: Request) {
-  const unauthorized = verifyAdminRequest(request);
-  if (unauthorized) return unauthorized;
+  const auth = await verifyAdminRequest(request);
+  if (!auth.ok) return auth.response;
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -67,6 +71,7 @@ export async function GET(request: Request) {
     status: item.metadata?.status ?? "requested",
     handledAt: item.metadata?.handled_at ?? undefined,
     handledNote: item.metadata?.handled_note ?? undefined,
+    handledBy: item.metadata?.handled_by_email ?? item.metadata?.handled_by_method ?? item.metadata?.handled_by_user_id ?? undefined,
     createdAt: item.created_at
   }));
 
@@ -74,8 +79,8 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const unauthorized = verifyAdminRequest(request);
-  if (unauthorized) return unauthorized;
+  const auth = await verifyAdminRequest(request);
+  if (!auth.ok) return auth.response;
 
   const supabase = getServerSupabase();
   if (!supabase) {
@@ -103,7 +108,10 @@ export async function PATCH(request: Request) {
     ...currentMetadata,
     status: body.status,
     handled_at: new Date().toISOString(),
-    handled_note: body.note?.trim() || null
+    handled_note: body.note?.trim() || null,
+    handled_by_user_id: auth.admin.userId ?? null,
+    handled_by_email: auth.admin.email ?? null,
+    handled_by_method: auth.admin.method
   };
 
   const { error } = await supabase

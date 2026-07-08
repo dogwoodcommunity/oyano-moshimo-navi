@@ -26,8 +26,8 @@ type SupportPackRow = {
 };
 
 export async function GET(request: Request) {
-  const unauthorized = verifyAdminRequest(request);
-  if (unauthorized) return unauthorized;
+  const auth = await verifyAdminRequest(request);
+  if (!auth.ok) return auth.response;
 
   const supabase = getServerSupabase();
   if (!supabase) {

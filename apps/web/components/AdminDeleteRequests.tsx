@@ -66,6 +66,7 @@ export function AdminDeleteRequests() {
             <th>user</th>
             <th>reason</th>
             <th>status</th>
+            <th>handled by</th>
             <th>ops</th>
           </tr>
         </thead>
@@ -82,6 +83,7 @@ export function AdminDeleteRequests() {
                 </span>
                 {item.handledAt ? <p className="hint">{new Date(item.handledAt).toLocaleString("ja-JP")}</p> : null}
               </td>
+              <td>{item.handledBy || "-"}</td>
               <td>
                 <div className="admin-row-actions">
                   <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "reviewing")} type="button">
@@ -97,7 +99,7 @@ export function AdminDeleteRequests() {
               </td>
             </tr>
           ))}
-          {rows.length === 0 && !error ? <tr><td colSpan={6}>削除依頼はまだありません。</td></tr> : null}
+          {rows.length === 0 && !error ? <tr><td colSpan={7}>削除依頼はまだありません。</td></tr> : null}
         </tbody>
       </table>
     </div>
