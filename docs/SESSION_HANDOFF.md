@@ -479,4 +479,10 @@ GitHubが必要な理由:
 - `adb shell monkey -p jp.beech.oyanomoshimo -c android.intent.category.LAUNCHER 1` で起動し、スクリーンショット `/tmp/oyano_onboarding_check.png` を取得。
 - 新オンボーディングは表示されたが、Stack headerがまだ「ログイン」と出ていたため、`apps/mobile/app/_layout.tsx` の `(auth)/welcome` titleを「はじめに」に変更。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。
-- 次: このheader修正をcommit/pushし、Android preview buildを作り直して実機に再インストールする。
+- Header修正はcommit `09184af Rename mobile onboarding header` としてGitHubへpush済み。
+- Android preview build 9回目 `5ba4867a-ccba-4158-97c7-22e9f9c7d2ef` は成功。
+- APK URL: `https://expo.dev/artifacts/eas/e9DQDqqgLDRCNTygKaaa77kaaErXABJkO4mxiURjKS8.apk`
+- Install page: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/5ba4867a-ccba-4158-97c7-22e9f9c7d2ef`
+- APKを `/tmp/oyano-moshimo-preview-onboarding-header.apk` にdownloadし、Android実機 `42545251` へ `adb install -r` で上書きインストール成功。
+- 起動後スクリーンショット `/tmp/oyano_onboarding_header_check.png` を取得し、ヘッダーが「はじめに」、上部に写真ヒーロー、本文に「このアプリでできること」が表示されることを確認。初回表示でメール入力やログイン要求は出ない。
+- 次: ユーザー確認後、会員登録CTA押下時のメール入力表示、見本で開く、Magic Link送信、Web診断handoffを実機で順番に確認する。
