@@ -997,3 +997,17 @@ GitHubが必要な理由:
   - 保管場所メモ追加への導線を主ボタン化。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-08 追記 28
+
+- 通知設定と設定タブを整理。
+- `apps/mobile/app/notifications.tsx`:
+  - 英語見出しを廃止し、`必要な時だけ知らせる` に変更。
+  - 「同じ日の通知はまとめる」「通知を増やしすぎない」方針を画面上に明示。
+  - 期限リマインド、端末通知登録、月1回確認、重要な連絡をカード化し、アイコン付きで整理。
+  - 小さい端末でも切れないようScrollView化。
+- `apps/mobile/app/(tabs)/settings.tsx`:
+  - 英語見出しを廃止し、通知、プライバシー、削除依頼、プラン状態をアイコン付きメニューに整理。
+  - 設定画面から迷わず各詳細画面へ入れるようにした。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。

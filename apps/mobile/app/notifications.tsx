@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Pressable, StyleSheet, Switch, Text, View } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { fetchNotificationPreferences, registerPushToken, saveNotificationPreferences } from "@/lib/notifications";
 import { colors, radius, shadow } from "@/lib/theme";
 
@@ -67,51 +68,111 @@ export default function NotificationsScreen() {
   }
 
   return (
-    <View style={styles.screen}>
+    <ScrollView contentContainerStyle={styles.screen} style={styles.scroll}>
       <View style={styles.header}>
-        <Text style={styles.kicker}>Notifications</Text>
-        <Text style={styles.title}>通知設定</Text>
-        <Text style={styles.body}>毎日開くためではなく、必要な時に戻れるように通知します。</Text>
+        <Text style={styles.kicker}>通知設定</Text>
+        <Text style={styles.title}>必要な時だけ知らせる</Text>
+        <Text style={styles.body}>毎日開かせるためではなく、期限や家族の更新を見落とさないための通知です。</Text>
       </View>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.cardTitle}>期限リマインド</Text>
-          <Switch disabled={isSaving} value={enabled} onValueChange={(value) => void updatePreferences({ remindersEnabled: value })} />
+
+      <View style={styles.digestBox}>
+        <MaterialCommunityIcons color={colors.greenDark} name="bell-check-outline" size={26} />
+        <View style={styles.digestText}>
+          <Text style={styles.digestTitle}>通知はまとめて送ります</Text>
+          <Text style={styles.body}>同じ日に複数の期限がある場合は、できるだけ1通にまとめます。通知を増やしすぎない方針です。</Text>
         </View>
-        <Text style={styles.body}>法定期限や重要な手続きは、近づいた時だけまとめて通知します。同じ日の通知は1通にまとめます。</Text>
-        <Pressable disabled={!enabled} style={[styles.button, !enabled ? styles.buttonDisabled : null]} onPress={register}><Text style={styles.buttonText}>この端末で通知を受け取る</Text></Pressable>
-        {message ? <Text style={styles.noticeText}>{message}</Text> : null}
+      </View>
+
+      <PreferenceCard
+        body="法定期限や重要な手続きは、近づいた時だけ通知します。"
+        disabled={isSaving}
+        icon="calendar-clock"
+        onChange={(value) => void updatePreferences({ remindersEnabled: value })}
+        title="期限リマインド"
+        value={enabled}
+      />
+
+      <View style={styles.card}>
+        <View style={styles.cardTitleRow}>
+          <MaterialCommunityIcons color={colors.green} name="cellphone-check" size={22} />
+          <Text style={styles.cardTitle}>この端末で受け取る</Text>
+        </View>
+        <Text style={styles.body}>端末の通知許可を確認し、push tokenを保存します。</Text>
+        <Pressable disabled={!enabled} style={[styles.button, !enabled ? styles.buttonDisabled : null]} onPress={register}>
+          <Text style={styles.buttonText}>この端末で通知を受け取る</Text>
+        </Pressable>
         {token ? <Text style={styles.body}>この端末の通知登録が完了しています。</Text> : null}
       </View>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.cardTitle}>月1回の確認</Text>
-          <Switch disabled={isSaving} value={monthlyEnabled} onValueChange={(value) => void updatePreferences({ dailyDigestEnabled: value })} />
+
+      <PreferenceCard
+        body="親御さんの状況に変化がないか、月1回だけ確認します。変化がなければ何もしなくて大丈夫です。"
+        disabled={isSaving}
+        icon="calendar-refresh-outline"
+        onChange={(value) => void updatePreferences({ dailyDigestEnabled: value })}
+        title="月1回の確認"
+        value={monthlyEnabled}
+      />
+
+      <PreferenceCard
+        body="法定期限に関わるものや、家族で早めに確認したい更新だけを残します。"
+        disabled={isSaving}
+        icon="alert-circle-outline"
+        onChange={(value) => void updatePreferences({ urgentEnabled: value })}
+        title="重要な連絡"
+        value={urgentEnabled}
+      />
+
+      {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
+    </ScrollView>
+  );
+}
+
+function PreferenceCard({
+  body,
+  disabled,
+  icon,
+  onChange,
+  title,
+  value
+}: {
+  body: string;
+  disabled: boolean;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+  onChange: (value: boolean) => void;
+  title: string;
+  value: boolean;
+}) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.row}>
+        <View style={styles.cardTitleRow}>
+          <MaterialCommunityIcons color={colors.green} name={icon} size={22} />
+          <Text style={styles.cardTitle}>{title}</Text>
         </View>
-        <Text style={styles.body}>親御さんの状況に変化がないか、月1回だけ確認します。変化がなければ何もしなくて大丈夫です。</Text>
+        <Switch disabled={disabled} value={value} onValueChange={onChange} />
       </View>
-      <View style={styles.card}>
-        <View style={styles.row}>
-          <Text style={styles.cardTitle}>重要な連絡</Text>
-          <Switch disabled={isSaving} value={urgentEnabled} onValueChange={(value) => void updatePreferences({ urgentEnabled: value })} />
-        </View>
-        <Text style={styles.body}>法定期限に関わるものや、家族で早めに確認したい更新だけを残します。不要な通知を増やさない設計にしています。</Text>
-      </View>
+      <Text style={styles.body}>{body}</Text>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper, flex: 1, gap: 14, padding: 18 },
+  scroll: { backgroundColor: colors.paper, flex: 1 },
+  screen: { gap: 14, padding: 18, paddingBottom: 32 },
   header: { gap: 6, paddingTop: 8 },
   kicker: { color: colors.green, fontWeight: "900" },
-  title: { color: colors.ink, fontSize: 32, fontWeight: "900" },
+  title: { color: colors.ink, fontSize: 32, fontWeight: "900", lineHeight: 37 },
+  digestBox: { alignItems: "flex-start", backgroundColor: "#fff9eb", borderColor: "#ead9b8", borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 14 },
+  digestText: { flex: 1, gap: 3 },
+  digestTitle: { color: colors.greenDark, fontSize: 17, fontWeight: "900", lineHeight: 23 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
-  row: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
-  cardTitle: { color: colors.ink, fontSize: 20, fontWeight: "900" },
+  row: { alignItems: "center", flexDirection: "row", gap: 10, justifyContent: "space-between" },
+  cardTitleRow: { alignItems: "center", flex: 1, flexDirection: "row", gap: 8 },
+  cardTitle: { color: colors.ink, flex: 1, fontSize: 20, fontWeight: "900", lineHeight: 25 },
   body: { color: colors.muted, lineHeight: 22 },
+  notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, padding: 12 },
   noticeText: { color: colors.green, fontWeight: "900", lineHeight: 22 },
-  button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 48 },
+  button: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, justifyContent: "center", minHeight: 50 },
   buttonDisabled: { opacity: 0.48 },
   buttonText: { color: "#fff", fontWeight: "900" }
 });
