@@ -29,7 +29,7 @@ export default function RootLayout() {
 
   return (
     <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
-      <Stack.Screen name="(auth)/welcome" options={{ title: "ログイン" }} />
+      <Stack.Screen name="(auth)/welcome" options={{ title: "はじめに" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="handoff" options={{ title: "アプリに保存" }} />
       <Stack.Screen name="people/[id]/index" options={{ title: "対象者" }} />

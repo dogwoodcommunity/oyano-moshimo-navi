@@ -471,3 +471,12 @@ GitHubが必要な理由:
 - APK URL: `https://expo.dev/artifacts/eas/sxcQtUuqioui1sjfYsQxIK1ya3jtF7vODLRa9TTq_uw.apk`
 - Install page: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/88992d8f-696f-412b-ba57-82c4530ac2a3`
 - `adb devices` は空で、Android実機がMacに接続されていない状態。端末を再接続できたら、このAPKを入れて新オンボーディングを実機確認する。
+
+## 2026-07-08 追記 1
+
+- ユーザーがAndroid実機を再接続。`adb devices` で端末 `42545251` を認識。
+- Android preview build 8回目のAPK `/tmp/oyano-moshimo-preview-onboarding.apk` をdownloadし、`adb install -r` で実機インストール成功。
+- `adb shell monkey -p jp.beech.oyanomoshimo -c android.intent.category.LAUNCHER 1` で起動し、スクリーンショット `/tmp/oyano_onboarding_check.png` を取得。
+- 新オンボーディングは表示されたが、Stack headerがまだ「ログイン」と出ていたため、`apps/mobile/app/_layout.tsx` の `(auth)/welcome` titleを「はじめに」に変更。
+- 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK。
+- 次: このheader修正をcommit/pushし、Android preview buildを作り直して実機に再インストールする。
