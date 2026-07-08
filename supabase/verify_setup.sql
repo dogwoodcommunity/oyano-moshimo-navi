@@ -177,6 +177,7 @@ with required_functions(name) as (
     ('schedule_notifications_for_task'),
     ('claim_due_scheduled_notifications'),
     ('ensure_monthly_checkin_notifications'),
+    ('consume_case_handoff'),
     ('create_family_invite'),
     ('accept_family_invite'),
     ('promote_family_member_to_owner')

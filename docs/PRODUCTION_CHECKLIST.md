@@ -20,6 +20,7 @@
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
+- [ ] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
 - [ ] `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` で同意ログ保存を確認

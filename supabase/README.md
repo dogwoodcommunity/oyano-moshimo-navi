@@ -11,15 +11,16 @@ SQL Editorで以下の順に実行する。
 5. `task_notification_generation.sql`
 6. `monthly_checkin_notifications.sql`
 7. `handoff_security_hardening.sql`
-8. `sensitive_info_consent_hardening.sql`
-9. `product_seed.sql`
-10. `indexes.sql`
-11. `api_grants.sql`
-12. `production_rls.sql`
-13. `family_invite_rpc.sql`
-14. `family_owner_succession.sql`
-15. `account_deletion_pipeline.sql`
-16. `storage_setup.sql`
+8. `handoff_consume_rpc.sql`
+9. `sensitive_info_consent_hardening.sql`
+10. `product_seed.sql`
+11. `indexes.sql`
+12. `api_grants.sql`
+13. `production_rls.sql`
+14. `family_invite_rpc.sql`
+15. `family_owner_succession.sql`
+16. `account_deletion_pipeline.sql`
+17. `storage_setup.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -27,8 +28,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-17. `verify_setup.sql`
-18. `verify_compact.sql`
+18. `verify_setup.sql`
+19. `verify_compact.sql`
 
 ## 重要
 

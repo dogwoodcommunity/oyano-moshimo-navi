@@ -32,6 +32,7 @@ with checks as (
   union all select 'function_exists', 'schedule_notifications_for_task', to_regproc('public.schedule_notifications_for_task') is not null
   union all select 'function_exists', 'claim_due_scheduled_notifications', to_regproc('public.claim_due_scheduled_notifications') is not null
   union all select 'function_exists', 'ensure_monthly_checkin_notifications', to_regproc('public.ensure_monthly_checkin_notifications') is not null
+  union all select 'function_exists', 'consume_case_handoff', to_regproc('public.consume_case_handoff') is not null
   union all select 'function_exists', 'create_family_invite', to_regproc('public.create_family_invite') is not null
   union all select 'function_exists', 'accept_family_invite', to_regproc('public.accept_family_invite') is not null
   union all select 'function_exists', 'promote_family_member_to_owner', to_regproc('public.promote_family_member_to_owner') is not null
