@@ -599,3 +599,19 @@ GitHubが必要な理由:
 - 注意:
   - このスモークは本番DBにテストcaseを1件作成する。
   - 本番Supabaseに `production_pending_hardening.sql` を投入してから実行する。
+
+## 2026-07-08 追記 10
+
+- Admin case詳細で要配慮情報の同意状態を確認できるようにした。
+- `apps/web/app/api/admin/cases/[caseId]/route.ts`:
+  - `cases.consent_to_sensitive_info`
+  - `cases.sensitive_info_consent_version`
+  - `cases.sensitive_info_consented_at`
+  - `consent_logs(id, consent_type, consent_text, created_at)`
+  を取得して `AdminCaseDetail` に含める。
+- `apps/web/app/admin/cases/[id]/page.tsx`:
+  - case上部に「要配慮情報の同意」「同意バージョン」「同意日時」を表示。
+  - `consent_logs` がある場合は「同意履歴」テーブルを表示。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。
+  - `pnpm --filter web run build` OK。

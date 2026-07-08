@@ -10,6 +10,15 @@ export type AdminCaseDetail = {
   answers: unknown;
   contactName?: string;
   contactEmail?: string;
+  consentToSensitiveInfo?: boolean;
+  sensitiveInfoConsentVersion?: string;
+  sensitiveInfoConsentedAt?: string;
+  consentLogs: Array<{
+    id: string;
+    consentType: string;
+    consentText: string;
+    createdAt: string;
+  }>;
   createdAt: string;
   result?: Partial<DiagnosisResult>;
   supportPacks: Array<{
@@ -26,7 +35,16 @@ type CaseDetailRow = {
   answers: unknown;
   contact_name: string | null;
   contact_email: string | null;
+  consent_to_sensitive_info: boolean | null;
+  sensitive_info_consent_version: string | null;
+  sensitive_info_consented_at: string | null;
   created_at: string;
+  consent_logs?: Array<{
+    id: string;
+    consent_type: string;
+    consent_text: string;
+    created_at: string;
+  }> | null;
   case_results?: Array<{
     diagnosis_type: string | null;
     summary: string | null;
@@ -59,7 +77,11 @@ export async function GET(request: Request, { params }: { params: { caseId: stri
       answers,
       contact_name,
       contact_email,
+      consent_to_sensitive_info,
+      sensitive_info_consent_version,
+      sensitive_info_consented_at,
       created_at,
+      consent_logs(id, consent_type, consent_text, created_at),
       case_results(diagnosis_type, summary, first_steps, tasks, provider_categories),
       support_packs(id, status, created_at)
     `)
@@ -79,6 +101,15 @@ export async function GET(request: Request, { params }: { params: { caseId: stri
     answers: row.answers,
     contactName: row.contact_name ?? undefined,
     contactEmail: row.contact_email ?? undefined,
+    consentToSensitiveInfo: row.consent_to_sensitive_info ?? undefined,
+    sensitiveInfoConsentVersion: row.sensitive_info_consent_version ?? undefined,
+    sensitiveInfoConsentedAt: row.sensitive_info_consented_at ?? undefined,
+    consentLogs: (row.consent_logs ?? []).map((item) => ({
+      id: item.id,
+      consentType: item.consent_type,
+      consentText: item.consent_text,
+      createdAt: item.created_at
+    })),
     createdAt: row.created_at,
     result: resultRow ? {
       diagnosisType: resultRow.diagnosis_type ?? undefined,

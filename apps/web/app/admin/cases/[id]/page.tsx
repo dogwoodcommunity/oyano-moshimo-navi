@@ -3,7 +3,7 @@
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getLocalCase } from "@/lib/store";
-import { statusLabel } from "@oyano/shared";
+import { statusLabel, type DiagnosisAnswers } from "@oyano/shared";
 import type { AdminCaseDetail } from "@/app/api/admin/cases/[caseId]/route";
 
 function adminHeaders(): HeadersInit {
@@ -41,6 +41,15 @@ export default function AdminCaseDetailPage() {
   const supportPackStatus = "supportPacks" in record
     ? record.supportPacks.map((item) => item.status).join(", ") || "none"
     : record.supportPackStatus ?? "none";
+  const answers = record.answers as Partial<DiagnosisAnswers> | undefined;
+  const consentToSensitiveInfo = "consentToSensitiveInfo" in record
+    ? record.consentToSensitiveInfo
+    : Boolean(answers?.consentToSensitiveInfo);
+  const consentVersion = "sensitiveInfoConsentVersion" in record
+    ? record.sensitiveInfoConsentVersion
+    : answers?.consentTextVersion;
+  const consentedAt = "sensitiveInfoConsentedAt" in record ? record.sensitiveInfoConsentedAt : undefined;
+  const consentLogs = "consentLogs" in record ? record.consentLogs : [];
 
   return (
     <main className="container">
@@ -67,8 +76,54 @@ export default function AdminCaseDetailPage() {
             <span>連絡先</span>
             <strong>{record.contactName || "-"} {record.contactEmail || ""}</strong>
           </div>
+          <div>
+            <span>要配慮情報の同意</span>
+            <strong>
+              <span className={`admin-chip ${consentToSensitiveInfo ? "success" : ""}`}>
+                {consentToSensitiveInfo ? "同意あり" : "未確認"}
+              </span>
+            </strong>
+          </div>
+          <div>
+            <span>同意バージョン</span>
+            <strong>{consentVersion || "-"}</strong>
+          </div>
+          <div>
+            <span>同意日時</span>
+            <strong>{consentedAt ? new Date(consentedAt).toLocaleString("ja-JP") : "-"}</strong>
+          </div>
         </div>
       </section>
+      {consentLogs.length > 0 ? (
+        <section className="panel" style={{ marginTop: 18 }}>
+          <div className="section-head">
+            <div>
+              <p className="eyebrow">Consent logs</p>
+              <h2>同意履歴</h2>
+            </div>
+          </div>
+          <div className="admin-table-wrap">
+            <table className="admin-table">
+              <thead>
+                <tr>
+                  <th>種別</th>
+                  <th>日時</th>
+                  <th>文言</th>
+                </tr>
+              </thead>
+              <tbody>
+                {consentLogs.map((item) => (
+                  <tr key={item.id}>
+                    <td>{item.consentType}</td>
+                    <td>{new Date(item.createdAt).toLocaleString("ja-JP")}</td>
+                    <td>{item.consentText}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
       {"answers" in record ? (
         <section className="panel" style={{ marginTop: 18 }}>
           <div className="section-head">
