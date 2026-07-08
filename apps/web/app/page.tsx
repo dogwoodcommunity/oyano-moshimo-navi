@@ -10,22 +10,22 @@ const portalTopics = [
   {
     title: "親が入院した",
     body: "病院で聞くこと、支払い、退院後のことを整理します。",
-    href: "/guides/hospitalized"
+    href: "/start"
   },
   {
     title: "介護が始まりそう",
     body: "家族の役割、通院、薬、相談先を整理します。",
-    href: "/guides/care"
+    href: "/start"
   },
   {
     title: "親が亡くなった",
     body: "葬儀、親族連絡、役所手続きの初動を整理します。",
-    href: "/guides/after-death"
+    href: "/start"
   },
   {
     title: "実家を片付けたい",
     body: "写真、鍵、書類、家財の確認順を整理します。",
-    href: "/guides/home-clearance"
+    href: "/start"
   }
 ];
 
@@ -99,35 +99,21 @@ const guideLinks = [
 export default function HomePage() {
   return (
     <main>
-      <section className="plain-hero">
-        <div className="plain-hero-inner">
-          <div className="hero-copy">
+      <section className="photo-portal-hero">
+        <div className="photo-portal-overlay">
+          <div className="hero-copy hero-copy-panel">
             <p className="eyebrow">親のもしもナビ</p>
-            <h1>親のことで困った時に、最初に見る場所です。</h1>
+            <h1>親のことで困った時に、最初に開く場所。</h1>
             <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族で何から確認するかを、短いリストに整理します。</p>
             <div className="start-gateway" aria-label="入口">
-              <p className="gateway-label">入口はこちら</p>
-              <Link className="button gateway-button" href="/start">状況を選んで始める</Link>
+              <p className="gateway-label">ここからです</p>
+              <Link className="button gateway-button" href="/start">状況を選んで整理する</Link>
               <p className="gateway-note">無料・ログインなし。3分ほどで結果を見られます。</p>
             </div>
             <div className="urgent-strip" aria-label="よくある状況">
               {urgentEntries.map((item) => (
                 <Link href="/start" key={item}>{item}</Link>
               ))}
-            </div>
-          </div>
-          <div className="paper-visual" aria-label="整理結果の見本">
-            <div className="paper-head">
-              <span>家族で確認すること</span>
-              <strong>整理メモ</strong>
-            </div>
-            <div className="paper-row checked"><span />病院の相談窓口を確認</div>
-            <div className="paper-row checked"><span />保険証・支払い方法を確認</div>
-            <div className="paper-row"><span />退院後に誰が動くか決める</div>
-            <div className="paper-row"><span />実家の鍵と書類の場所を共有</div>
-            <div className="paper-footer">
-              <p>保存しないもの</p>
-              <strong>暗証番号・パスワード・マイナンバー画像</strong>
             </div>
           </div>
         </div>
@@ -162,9 +148,10 @@ export default function HomePage() {
         </div>
         <div className="grid portal-topic-grid">
           {portalTopics.map((topic) => (
-            <Link className="panel portal-topic simple-topic" href="/start" key={topic.title}>
+            <Link className="panel portal-topic simple-topic" href={topic.href} key={topic.title}>
               <strong>{topic.title}</strong>
               <p>{topic.body}</p>
+              <span>この状況で整理する</span>
             </Link>
           ))}
         </div>

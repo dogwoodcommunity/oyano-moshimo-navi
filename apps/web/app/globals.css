@@ -97,6 +97,38 @@ textarea {
   padding: 42px clamp(18px, 4vw, 56px) 64px;
 }
 
+.photo-portal-hero {
+  background-image:
+    linear-gradient(90deg, rgba(246, 247, 241, 0.98) 0%, rgba(246, 247, 241, 0.92) 36%, rgba(246, 247, 241, 0.42) 70%, rgba(246, 247, 241, 0.08) 100%),
+    url("/images/family-documents-hero.png");
+  background-position: center;
+  background-size: cover;
+  border-bottom: 1px solid var(--line);
+  min-height: calc(100vh - 72px);
+}
+
+.photo-portal-overlay {
+  align-items: center;
+  display: grid;
+  margin: 0 auto;
+  max-width: 1180px;
+  min-height: calc(100vh - 72px);
+  padding: 46px clamp(18px, 6vw, 80px);
+}
+
+.hero-copy-panel {
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(255, 255, 255, 0.92);
+  border-radius: 8px;
+  box-shadow: 0 24px 60px rgba(28, 48, 39, 0.16);
+  max-width: 660px;
+  padding: clamp(22px, 4vw, 34px);
+}
+
+.hero-copy-panel .lead {
+  margin-bottom: 0;
+}
+
 .plain-hero {
   background: #f8f8f4;
   border-bottom: 1px solid var(--line);
@@ -943,6 +975,12 @@ textarea {
   margin: 0;
 }
 
+.portal-topic span {
+  color: var(--green);
+  font-weight: 900;
+  margin-top: auto;
+}
+
 .portal-band {
   background: #173f2e;
   color: white;
@@ -1596,6 +1634,24 @@ textarea {
     background-position: 61% center;
     min-height: auto;
     padding-top: 54px;
+  }
+
+  .photo-portal-hero {
+    background-image:
+      linear-gradient(180deg, rgba(246, 247, 241, 0.98) 0%, rgba(246, 247, 241, 0.88) 54%, rgba(246, 247, 241, 0.32) 100%),
+      url("/images/family-documents-hero.png");
+    background-position: 58% center;
+    min-height: auto;
+  }
+
+  .photo-portal-overlay {
+    min-height: auto;
+    padding-bottom: 34px;
+    padding-top: 34px;
+  }
+
+  .hero-copy-panel {
+    background: rgba(255, 255, 255, 0.9);
   }
 
   .hero-inner {
