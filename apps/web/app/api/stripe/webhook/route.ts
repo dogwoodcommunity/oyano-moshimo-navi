@@ -28,6 +28,12 @@ function verifyStripeSignature(payload: string, signatureHeader: string | null, 
   const signature = parts.v1;
   if (!timestamp || !signature) return false;
 
+  const timestampSeconds = Number(timestamp);
+  if (!Number.isFinite(timestampSeconds)) return false;
+
+  const toleranceSeconds = 5 * 60;
+  if (Math.abs(Date.now() / 1000 - timestampSeconds) > toleranceSeconds) return false;
+
   const signedPayload = `${timestamp}.${payload}`;
   const expected = crypto.createHmac("sha256", webhookSecret).update(signedPayload).digest("hex");
   const expectedBuffer = Buffer.from(expected, "hex");

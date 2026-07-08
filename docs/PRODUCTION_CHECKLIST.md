@@ -15,6 +15,7 @@
 - [x] `supabase/task_template_seed.sql` を実行
 - [x] `supabase/task_generation.sql` を実行
 - [x] `supabase/notification_delivery_hardening.sql` を実行
+- [ ] `claim_due_scheduled_notifications` が `verify_compact.sql` でtrueになることを確認
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行

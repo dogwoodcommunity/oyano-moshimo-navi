@@ -8,6 +8,8 @@ type ScheduledNotificationRow = {
   task_id: string | null;
   notification_type: string;
   scheduled_for: string;
+  task_title?: string | null;
+  assigned_member_id?: string | null;
   tasks?: {
     title: string;
     due_date: string | null;
@@ -67,11 +69,13 @@ function tokyoDateKey(value: string) {
 }
 
 function taskTitle(row: ScheduledNotificationRow) {
+  if (row.task_title) return row.task_title;
   const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
   return task?.title ?? "確認が必要なタスク";
 }
 
 function assignedMemberId(row: ScheduledNotificationRow) {
+  if (row.assigned_member_id) return row.assigned_member_id;
   const task = Array.isArray(row.tasks) ? row.tasks[0] : row.tasks;
   return task?.assigned_member_id ?? null;
 }
@@ -136,13 +140,9 @@ export async function GET(request: Request) {
 
   await supabase.rpc("ensure_monthly_checkin_notifications");
 
-  const now = new Date().toISOString();
-  const { data: schedules, error } = await supabase
-    .from("scheduled_notifications")
-    .select("id, user_id, task_id, notification_type, scheduled_for, tasks(title, due_date, assigned_member_id)")
-    .lte("scheduled_for", now)
-    .eq("status", "scheduled")
-    .limit(100);
+  const { data: schedules, error } = await supabase.rpc("claim_due_scheduled_notifications", {
+    p_limit: 100
+  });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -217,17 +217,27 @@ export async function GET(request: Request) {
     });
 
     if (!expoResponse.ok) {
+      await supabase
+        .from("scheduled_notifications")
+        .update({ status: "scheduled" })
+        .in("id", rows.map((row) => row.id));
+
       return NextResponse.json({ error: await expoResponse.text() }, { status: 502 });
     }
   }
 
-  await supabase
+  const { error: sentError } = await supabase
     .from("scheduled_notifications")
     .update({
       status: "sent",
       sent_at: new Date().toISOString()
     })
-    .in("id", rows.map((row) => row.id));
+    .in("id", rows.map((row) => row.id))
+    .eq("status", "sending");
+
+  if (sentError) {
+    return NextResponse.json({ error: sentError.message }, { status: 500 });
+  }
 
   return NextResponse.json({ sent: messages.length, scheduledNotifications: rows.length });
 }

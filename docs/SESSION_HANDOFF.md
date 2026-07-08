@@ -766,3 +766,41 @@ GitHubが必要な理由:
   - RLS、handoff、admin認可、通知冪等性、Storage権限、App Store審査リスクのコード監査。
 - 注意:
   - `review_exports` はGit管理外。一時共有用の成果物。
+
+## 2026-07-08 追記 17
+
+- コード監査レポート `親のもしもナビ_コード監査_2026-07-08.md` を確認。
+- 監査評価:
+  - handoff、要配慮同意、実家写真、owner承継、admin認可、RLS、秘密情報、Magic Link redirect、Stripe署名、cron secretは概ね良好。
+- 即対応した指摘:
+  - 家族招待RPCの権限昇格穴。
+    - `create_family_invite` は `owner/admin` のみ実行可能に変更。
+    - `admin` 招待は `owner` のみに制限。
+    - `viewer/member` は招待不可。
+    - `accept_family_invite` で既存owner/adminが招待受諾により低いroleへ落ちる事故を防止。
+  - 通知cronの二重送信リスク。
+    - `claim_due_scheduled_notifications(p_limit int)` RPCを追加。
+    - cronは送信前に `scheduled -> sending` へclaimしてからExpo Push送信。
+    - Expo送信全体が失敗した場合はclaim行を `scheduled` に戻す。
+    - 成功時は `sending` の行だけ `sent` に更新。
+  - Stripe webhookのリプレイ対策。
+    - `stripe-signature` のtimestampが5分以内であることを確認。
+- 更新ファイル:
+  - `supabase/family_invite_rpc.sql`
+  - `supabase/notification_delivery_hardening.sql`
+  - `supabase/production_pending_hardening.sql`
+  - `apps/web/app/api/cron/send-due-notifications/route.ts`
+  - `apps/web/app/api/stripe/webhook/route.ts`
+  - `supabase/verify_setup.sql`
+  - `supabase/verify_compact.sql`
+  - `docs/PRODUCTION_CHECKLIST.md`
+- 次:
+  - 検証済み:
+    - `pnpm --filter web run build`
+    - `pnpm --filter web run typecheck`
+    - `pnpm --filter mobile run typecheck`
+    - `pnpm run doctor:local`
+    - `pnpm run doctor:mobile-build`
+    - `git diff --check`
+  - 問題なければcommit/push。
+  - 残る中程度指摘「削除依頼パイプライン」は次に設計して実装する。

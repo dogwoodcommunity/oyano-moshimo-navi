@@ -172,6 +172,7 @@ order by name;
 with required_functions(name) as (
   values
     ('schedule_notifications_for_task'),
+    ('claim_due_scheduled_notifications'),
     ('ensure_monthly_checkin_notifications'),
     ('create_family_invite'),
     ('accept_family_invite'),

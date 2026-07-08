@@ -76,3 +76,55 @@ end;
 $$;
 
 grant execute on function public.promote_family_member_to_owner(uuid) to authenticated;
+
+-- 5. Notification cron claims due rows before sending so concurrent cron runs
+-- do not send the same scheduled notification twice.
+create or replace function public.claim_due_scheduled_notifications(p_limit int default 100)
+returns table (
+  id uuid,
+  user_id uuid,
+  task_id uuid,
+  notification_type text,
+  scheduled_for timestamptz,
+  task_title text,
+  assigned_member_id uuid
+)
+language sql
+security definer
+set search_path = public
+as $$
+  with due as (
+    select scheduled_notifications.id
+    from scheduled_notifications
+    where scheduled_notifications.status = 'scheduled'
+      and scheduled_notifications.scheduled_for <= now()
+    order by scheduled_notifications.scheduled_for asc
+    limit least(greatest(p_limit, 1), 500)
+    for update skip locked
+  ),
+  claimed as (
+    update scheduled_notifications
+    set status = 'sending'
+    from due
+    where scheduled_notifications.id = due.id
+      and scheduled_notifications.status = 'scheduled'
+    returning
+      scheduled_notifications.id,
+      scheduled_notifications.user_id,
+      scheduled_notifications.task_id,
+      scheduled_notifications.notification_type,
+      scheduled_notifications.scheduled_for
+  )
+  select
+    claimed.id,
+    claimed.user_id,
+    claimed.task_id,
+    claimed.notification_type,
+    claimed.scheduled_for,
+    tasks.title as task_title,
+    tasks.assigned_member_id
+  from claimed
+  left join tasks on tasks.id = claimed.task_id;
+$$;
+
+grant execute on function public.claim_due_scheduled_notifications(int) to service_role;

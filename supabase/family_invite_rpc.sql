@@ -31,6 +31,7 @@ declare
   v_count int;
   v_limit int;
   v_invite family_invites;
+  v_inviter_role text;
 begin
   if auth.uid() is null then
     raise exception 'not_authenticated';
@@ -44,13 +45,22 @@ begin
     raise exception 'invalid_invite_role';
   end if;
 
-  if not exists (
-    select 1
-    from family_members
-    where family_id = p_family_id
-      and user_id = auth.uid()
-  ) then
+  select role into v_inviter_role
+  from family_members
+  where family_id = p_family_id
+    and user_id = auth.uid()
+  limit 1;
+
+  if v_inviter_role is null then
     raise exception 'not_a_family_member';
+  end if;
+
+  if v_inviter_role not in ('owner', 'admin') then
+    raise exception 'invite_requires_family_admin';
+  end if;
+
+  if p_role = 'admin' and v_inviter_role <> 'owner' then
+    raise exception 'admin_invite_requires_owner';
   end if;
 
   select plan into v_plan
@@ -181,7 +191,11 @@ begin
   )
   on conflict (family_id, user_id)
   do update set
-    role = excluded.role,
+    role = case
+      when family_members.role = 'owner' then 'owner'
+      when family_members.role = 'admin' and excluded.role in ('member', 'viewer') then 'admin'
+      else excluded.role
+    end,
     relationship = coalesce(excluded.relationship, family_members.relationship)
   returning * into v_member;
 
