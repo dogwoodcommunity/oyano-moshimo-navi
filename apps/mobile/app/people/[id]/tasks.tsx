@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { Link, useLocalSearchParams } from "expo-router";
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   demoDashboardData,
@@ -40,6 +41,28 @@ function matchesFilter(task: MobileTask, filter?: string) {
   if (filter === "soon") return days !== null && days > 0 && days <= 7 && task.status !== "done" && task.status !== "skipped";
   if (filter === "unassigned") return !task.assignedMemberId && task.status !== "done" && task.status !== "skipped";
   return true;
+}
+
+function dueLabel(value?: string) {
+  const days = daysUntil(value);
+  if (days === null) return "期限未設定";
+  if (days < 0) return `${Math.abs(days)}日超過`;
+  if (days === 0) return "今日まで";
+  return `${days}日後`;
+}
+
+function dueTone(value?: string) {
+  const days = daysUntil(value);
+  if (days === null) return "neutral";
+  if (days <= 0) return "danger";
+  if (days <= 7) return "warning";
+  return "neutral";
+}
+
+function priorityLabel(priority: number) {
+  if (priority <= 1) return "重要";
+  if (priority === 2) return "高め";
+  return "通常";
 }
 
 export default function TasksScreen() {
@@ -100,12 +123,15 @@ export default function TasksScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.header}>
-        <Text style={styles.kicker}>Family tasks</Text>
-        <Text style={styles.title}>家族タスクボード</Text>
-        <Text style={styles.lead}>期限と状態を見ながら、家族で動くことを分けていきます。</Text>
-        <View style={styles.filterPill}>
-          <Text style={styles.filterPillText}>表示: {filterLabel(params.filter)}</Text>
-        </View>
+        <Text style={styles.kicker}>タスク</Text>
+        <Text style={styles.title}>家族で分けること</Text>
+        <Text style={styles.lead}>期限が近いもの、担当が決まっていないものから確認します。</Text>
+      </View>
+      <View style={styles.filterTabs}>
+        <FilterLink active={!params.filter} href={`/people/${params.id}/tasks`} label="すべて" />
+        <FilterLink active={params.filter === "due"} href={`/people/${params.id}/tasks?filter=due`} label="今日まで" />
+        <FilterLink active={params.filter === "soon"} href={`/people/${params.id}/tasks?filter=soon`} label="7日以内" />
+        <FilterLink active={params.filter === "unassigned"} href={`/people/${params.id}/tasks?filter=unassigned`} label="担当未定" />
       </View>
       {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
       <View style={styles.summaryRow}>
@@ -130,21 +156,34 @@ export default function TasksScreen() {
             <Text style={styles.countBadge}>{columnTasks.length}</Text>
           </View>
           {columnTasks.map((task) => (
-            <View style={styles.task} key={task.title}>
-              <Text style={styles.taskTitle}>{task.title}</Text>
+            <View style={styles.task} key={task.id}>
+              <View style={styles.taskHeader}>
+                <Text style={styles.taskTitle}>{task.title}</Text>
+                <Text style={[
+                  styles.dueBadge,
+                  dueTone(task.dueDate) === "danger" ? styles.dueDanger : null,
+                  dueTone(task.dueDate) === "warning" ? styles.dueWarning : null
+                ]}>
+                  {dueLabel(task.dueDate)}
+                </Text>
+              </View>
               <View style={styles.metaRow}>
-                <Text style={styles.metaChip}>期限 {task.dueDate ?? "未設定"}</Text>
-                <Text style={styles.metaChip}>優先度 {task.priority}</Text>
+                <Text style={styles.metaChip}>優先度 {priorityLabel(task.priority)}</Text>
                 <Pressable
                   style={[styles.assigneeChip, !task.assignedMemberId ? styles.unassignedChip : null]}
                   onPress={() => setAssigneeTask(task)}
                 >
+                  <MaterialCommunityIcons
+                    color={task.assignedMemberId ? colors.green : colors.gold}
+                    name={task.assignedMemberId ? "account-check-outline" : "account-question-outline"}
+                    size={15}
+                  />
                   <Text style={[styles.assigneeChipText, !task.assignedMemberId ? styles.unassignedChipText : null]}>
                     {task.assigneeLabel ?? "担当未定"}
                   </Text>
                 </Pressable>
               </View>
-              <Text style={styles.body}>{task.description ?? ""}</Text>
+              {task.description ? <Text style={styles.body}>{task.description}</Text> : null}
               <View style={styles.actions}>
                 {task.status !== "doing" ? (
                   <Pressable style={styles.secondaryButton} onPress={() => moveTask(task, "doing")}>
@@ -192,14 +231,23 @@ export default function TasksScreen() {
   );
 }
 
+function FilterLink({ active, href, label }: { active: boolean; href: string; label: string }) {
+  return (
+    <Link href={href} style={active ? styles.filterTabActive : styles.filterTab}>
+      {label}
+    </Link>
+  );
+}
+
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
   header: { gap: 6, paddingTop: 8 },
   kicker: { color: colors.green, fontWeight: "900" },
   title: { color: colors.ink, fontSize: 32, fontWeight: "900", lineHeight: 36 },
   lead: { color: colors.muted, lineHeight: 22 },
-  filterPill: { alignSelf: "flex-start", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6 },
-  filterPillText: { color: colors.green, fontSize: 12, fontWeight: "900" },
+  filterTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
+  filterTab: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 8 },
+  filterTabActive: { backgroundColor: colors.greenDark, borderColor: colors.greenDark, borderRadius: 999, borderWidth: 1, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 8 },
   notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, padding: 12 },
   noticeText: { color: colors.green, fontWeight: "900" },
   summaryRow: { flexDirection: "row", gap: 10 },
@@ -210,11 +258,15 @@ const styles = StyleSheet.create({
   cardHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
   countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 28, overflow: "hidden", paddingHorizontal: 9, paddingVertical: 5, textAlign: "center" },
-  task: { backgroundColor: "#fbfdf9", borderColor: colors.line, borderLeftColor: colors.green, borderLeftWidth: 4, borderRadius: radius.card, borderWidth: 1, gap: 8, padding: 12 },
-  taskTitle: { color: colors.ink, fontWeight: "900", lineHeight: 21 },
+  task: { backgroundColor: "#fbfdf9", borderColor: colors.line, borderLeftColor: colors.green, borderLeftWidth: 4, borderRadius: radius.card, borderWidth: 1, gap: 9, padding: 12 },
+  taskHeader: { alignItems: "flex-start", flexDirection: "row", gap: 8, justifyContent: "space-between" },
+  taskTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: "900", lineHeight: 22 },
+  dueBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
+  dueDanger: { backgroundColor: "#fff1f3", borderColor: "rgba(154,63,86,0.24)", color: colors.rose },
+  dueWarning: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)", color: colors.gold },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
   metaChip: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 12, fontWeight: "800", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
-  assigneeChip: { backgroundColor: colors.surfaceSoft, borderColor: "rgba(39,100,71,0.2)", borderRadius: 999, borderWidth: 1, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
+  assigneeChip: { alignItems: "center", backgroundColor: colors.surfaceSoft, borderColor: "rgba(39,100,71,0.2)", borderRadius: 999, borderWidth: 1, flexDirection: "row", gap: 4, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
   assigneeChipText: { color: colors.green, fontSize: 12, fontWeight: "900" },
   body: { color: colors.muted, lineHeight: 22 },
   emptyText: { color: colors.muted, lineHeight: 22 },

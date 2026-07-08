@@ -956,3 +956,15 @@ GitHubが必要な理由:
   - 期限表示を日付そのものではなく、`今日まで`、`n日後`、`n日超過` と読める表現に変更。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-08 追記 25
+
+- 家族ボードから遷移するタスク画面も整理。
+- 実装:
+  - `apps/mobile/app/people/[id]/tasks.tsx` の英語見出しを廃止。
+  - 上部に `すべて`、`今日まで`、`7日以内`、`担当未定` のフィルタタブを追加。
+  - タスクカードの右上に `今日まで`、`n日後`、`n日超過` の期限バッジを表示。
+  - 担当チップにアイコンを追加し、割当済み/担当未定が視覚的に分かるようにした。
+  - 優先度を数字ではなく `重要`、`高め`、`通常` の表示へ変更。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
