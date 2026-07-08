@@ -1011,3 +1011,21 @@ GitHubが必要な理由:
   - 設定画面から迷わず各詳細画面へ入れるようにした。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-08 追記 29
+
+- プラン画面と削除依頼画面を整理。
+- `apps/mobile/app/(tabs)/plan.tsx`:
+  - 英語見出しを廃止し、現在の利用状態確認に特化。
+  - Freeの範囲、Family Plusで扱う範囲、発動サポートパックの状態表示方針を整理。
+  - App Store審査対策として、アプリ内に外部決済への案内を置かない文言に統一。
+- `apps/mobile/app/account/plan.tsx`:
+  - 利用状態の詳細を表形式で表示。
+  - 発動サポートパックは `未申込または状態未取得` など状態表示のみ。
+  - 外部決済リンクやWeb申込案内は入れていない。
+- `apps/mobile/app/account/delete.tsx`:
+  - 連絡先メールの形式チェックを追加。
+  - 原則30日以内確認、削除対象、保存対象外情報の注意をカード化。
+  - 送信ボタンをアイコン付きにし、小画面でも読める構成へ変更。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
