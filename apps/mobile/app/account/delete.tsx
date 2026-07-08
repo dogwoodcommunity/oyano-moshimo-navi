@@ -24,7 +24,7 @@ export default function AccountDeleteScreen() {
         <Text style={styles.kicker}>Account</Text>
         <Text style={styles.title}>アカウント削除依頼</Text>
         <Text style={styles.body}>
-          家族共有、登録した写真、通知設定などの削除を希望する場合は、ここから運営に依頼できます。誤削除を避けるため、内容を確認してから削除処理を行います。
+          家族共有、登録した写真、通知設定などの削除を希望する場合は、ここから運営に依頼できます。誤削除を避けるため、内容を確認し、原則30日以内に削除処理または継続確認の連絡を行います。
         </Text>
       </View>
 

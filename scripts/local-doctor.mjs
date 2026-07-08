@@ -50,6 +50,7 @@ const requiredFiles = [
   "supabase/production_rls.sql",
   "supabase/family_invite_rpc.sql",
   "supabase/family_owner_succession.sql",
+  "supabase/account_deletion_pipeline.sql",
   "supabase/storage_setup.sql",
   "supabase/verify_setup.sql",
   "supabase/verify_compact.sql",
@@ -100,6 +101,7 @@ const sqlOrder = [
   "production_rls.sql",
   "family_invite_rpc.sql",
   "family_owner_succession.sql",
+  "account_deletion_pipeline.sql",
   "storage_setup.sql",
   "verify_setup.sql",
   "verify_compact.sql"

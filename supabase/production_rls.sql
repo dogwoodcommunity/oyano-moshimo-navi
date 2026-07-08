@@ -36,6 +36,7 @@ alter table support_packs enable row level security;
 alter table support_reviews enable row level security;
 alter table admin_notes enable row level security;
 alter table audit_logs enable row level security;
+alter table account_delete_requests enable row level security;
 
 create or replace function is_family_member(target_family_id uuid)
 returns boolean
@@ -92,6 +93,14 @@ create policy "profiles update own"
 on profiles for update
 using (id = auth.uid())
 with check (id = auth.uid());
+
+create policy "account_delete_requests read own"
+on account_delete_requests for select
+using (user_id = auth.uid());
+
+create policy "account_delete_requests admin read"
+on account_delete_requests for select
+using (is_app_admin());
 
 create policy "families read members"
 on families for select

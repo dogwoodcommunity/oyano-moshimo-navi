@@ -34,6 +34,7 @@ with required_tables(name) as (
     ('support_reviews'),
     ('admin_notes'),
     ('audit_logs'),
+    ('account_delete_requests'),
     ('products'),
     ('purchases'),
     ('subscriptions')
@@ -84,6 +85,7 @@ where n.nspname = 'public'
     'support_reviews',
     'admin_notes',
     'audit_logs',
+    'account_delete_requests',
     'products',
     'purchases',
     'subscriptions'
@@ -115,7 +117,8 @@ with policy_tables(name) as (
     ('case_results'),
     ('support_packs'),
     ('purchases'),
-    ('audit_logs')
+    ('audit_logs'),
+    ('account_delete_requests')
 ),
 policy_counts as (
   select tablename, count(*) as policies

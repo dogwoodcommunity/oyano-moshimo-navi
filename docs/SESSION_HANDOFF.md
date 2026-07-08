@@ -804,3 +804,39 @@ GitHubが必要な理由:
     - `git diff --check`
   - 問題なければcommit/push。
   - 残る中程度指摘「削除依頼パイプライン」は次に設計して実装する。
+
+## 2026-07-08 追記 18
+
+- コード監査で残っていた中程度指摘「アカウント削除依頼がaudit_logsだけで、SLA/処理パイプラインが弱い」に対応中。
+- 実装方針:
+  - `audit_logs` は履歴として残しつつ、正規の処理キュー `account_delete_requests` を追加。
+  - 依頼は原則30日以内対応として `due_at = now() + 30 days` をDBに持つ。
+  - 同一ユーザーの未完了依頼は1件に制限し、再送時は既存依頼を更新。
+  - Adminは `requested/reviewing/needs_followup/completed` を更新でき、状態変更は `audit_logs.action = account_delete_status_updated` に残す。
+  - Admin UIではSLA列を表示し、期限超過を明示する。
+- 変更ファイル:
+  - `supabase/schema.sql`
+  - `supabase/account_deletion_pipeline.sql`
+  - `supabase/production_pending_hardening.sql`
+  - `supabase/indexes.sql`
+  - `supabase/production_rls.sql`
+  - `supabase/verify_setup.sql`
+  - `supabase/verify_compact.sql`
+  - `supabase/README.md`
+  - `scripts/local-doctor.mjs`
+  - `apps/web/app/api/account/delete-request/route.ts`
+  - `apps/web/app/api/admin/delete-requests/route.ts`
+  - `apps/web/components/AdminDeleteRequests.tsx`
+  - `apps/mobile/app/account/delete.tsx`
+  - `apps/mobile/lib/account.ts`
+  - `docs/PRODUCTION_CHECKLIST.md`
+- 次:
+  - 検証済み:
+    - `pnpm --filter web run typecheck`
+    - `pnpm --filter mobile run typecheck`
+    - `pnpm run doctor:local`
+    - `pnpm --filter web run build`
+    - `pnpm run doctor:mobile-build`
+    - `git diff --check`
+  - 問題なければcommit/push。
+  - 本番Supabaseには `account_deletion_pipeline.sql` を投入する必要あり。

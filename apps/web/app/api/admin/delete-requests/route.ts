@@ -8,25 +8,27 @@ export type AdminDeleteRequestRow = {
   contactEmail?: string;
   reason?: string;
   status: "requested" | "reviewing" | "completed" | "needs_followup";
+  dueAt: string;
+  isOverdue: boolean;
+  daysRemaining: number;
   handledAt?: string;
   handledNote?: string;
   handledBy?: string;
   createdAt: string;
 };
 
-type AuditLogRow = {
+type AccountDeleteRequestRow = {
   id: string;
-  actor_user_id: string | null;
-  metadata: {
-    contact_email?: string | null;
-    reason?: string | null;
-    status?: AdminDeleteRequestRow["status"] | null;
-    handled_at?: string | null;
-    handled_note?: string | null;
-    handled_by_email?: string | null;
-    handled_by_user_id?: string | null;
-    handled_by_method?: string | null;
-  } | null;
+  user_id: string | null;
+  contact_email: string | null;
+  reason: string | null;
+  status: AdminDeleteRequestRow["status"];
+  due_at: string;
+  handled_at: string | null;
+  handled_note: string | null;
+  handled_by_email: string | null;
+  handled_by: string | null;
+  handled_by_method: string | null;
   created_at: string;
 };
 
@@ -53,9 +55,8 @@ export async function GET(request: Request) {
   }
 
   const { data, error } = await supabase
-    .from("audit_logs")
-    .select("id, actor_user_id, metadata, created_at")
-    .eq("action", "account_delete_requested")
+    .from("account_delete_requests")
+    .select("id, user_id, contact_email, reason, status, due_at, handled_at, handled_note, handled_by_email, handled_by, handled_by_method, created_at")
     .order("created_at", { ascending: false })
     .limit(100);
 
@@ -63,17 +64,26 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const deleteRequests: AdminDeleteRequestRow[] = ((data ?? []) as AuditLogRow[]).map((item) => ({
-    id: item.id,
-    userId: item.actor_user_id ?? undefined,
-    contactEmail: item.metadata?.contact_email ?? undefined,
-    reason: item.metadata?.reason ?? undefined,
-    status: item.metadata?.status ?? "requested",
-    handledAt: item.metadata?.handled_at ?? undefined,
-    handledNote: item.metadata?.handled_note ?? undefined,
-    handledBy: item.metadata?.handled_by_email ?? item.metadata?.handled_by_method ?? item.metadata?.handled_by_user_id ?? undefined,
-    createdAt: item.created_at
-  }));
+  const now = Date.now();
+  const deleteRequests: AdminDeleteRequestRow[] = ((data ?? []) as AccountDeleteRequestRow[]).map((item) => {
+    const dueTime = new Date(item.due_at).getTime();
+    const daysRemaining = Math.ceil((dueTime - now) / (1000 * 60 * 60 * 24));
+
+    return {
+      id: item.id,
+      userId: item.user_id ?? undefined,
+      contactEmail: item.contact_email ?? undefined,
+      reason: item.reason ?? undefined,
+      status: item.status,
+      dueAt: item.due_at,
+      isOverdue: item.status !== "completed" && dueTime < now,
+      daysRemaining,
+      handledAt: item.handled_at ?? undefined,
+      handledNote: item.handled_note ?? undefined,
+      handledBy: item.handled_by_email ?? item.handled_by_method ?? item.handled_by ?? undefined,
+      createdAt: item.created_at
+    };
+  });
 
   return NextResponse.json({ deleteRequests, source: "supabase" });
 }
@@ -93,36 +103,49 @@ export async function PATCH(request: Request) {
   }
 
   const { data: existing, error: readError } = await supabase
-    .from("audit_logs")
-    .select("metadata")
+    .from("account_delete_requests")
+    .select("id, status")
     .eq("id", body.id)
-    .eq("action", "account_delete_requested")
     .single();
 
   if (readError) {
     return NextResponse.json({ error: readError.message }, { status: 500 });
   }
 
-  const currentMetadata = (existing?.metadata ?? {}) as Record<string, unknown>;
-  const nextMetadata = {
-    ...currentMetadata,
-    status: body.status,
-    handled_at: new Date().toISOString(),
-    handled_note: body.note?.trim() || null,
-    handled_by_user_id: auth.admin.userId ?? null,
-    handled_by_email: auth.admin.email ?? null,
-    handled_by_method: auth.admin.method
-  };
+  const now = new Date().toISOString();
+  const handledAt = body.status === "completed" ? now : null;
 
   const { error } = await supabase
-    .from("audit_logs")
-    .update({ metadata: nextMetadata })
-    .eq("id", body.id)
-    .eq("action", "account_delete_requested");
+    .from("account_delete_requests")
+    .update({
+      status: body.status,
+      last_status_changed_at: now,
+      handled_at: handledAt,
+      handled_note: body.note?.trim() || null,
+      handled_by: auth.admin.userId ?? null,
+      handled_by_email: auth.admin.email ?? null,
+      handled_by_method: auth.admin.method
+    })
+    .eq("id", body.id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await supabase.from("audit_logs").insert({
+    actor_user_id: auth.admin.userId ?? null,
+    action: "account_delete_status_updated",
+    target_type: "account_delete_request",
+    target_id: body.id,
+    metadata: {
+      previous_status: existing.status,
+      status: body.status,
+      handled_note: body.note?.trim() || null,
+      handled_by_user_id: auth.admin.userId ?? null,
+      handled_by_email: auth.admin.email ?? null,
+      handled_by_method: auth.admin.method
+    }
+  });
 
   return NextResponse.json({ updated: true });
 }

@@ -66,6 +66,7 @@ export function AdminDeleteRequests() {
             <th>user</th>
             <th>reason</th>
             <th>status</th>
+            <th>SLA</th>
             <th>handled by</th>
             <th>ops</th>
           </tr>
@@ -78,10 +79,16 @@ export function AdminDeleteRequests() {
               <td>{item.userId ? item.userId.slice(0, 8) : "-"}</td>
               <td>{item.reason || "-"}</td>
               <td>
-                <span className={`admin-chip ${item.status === "completed" ? "success" : ""}`}>
+                <span className={`admin-chip ${item.status === "completed" ? "success" : item.isOverdue ? "warning" : ""}`}>
                   {item.status}
                 </span>
                 {item.handledAt ? <p className="hint">{new Date(item.handledAt).toLocaleString("ja-JP")}</p> : null}
+              </td>
+              <td>
+                <span className={`admin-chip ${item.status === "completed" ? "success" : item.isOverdue ? "warning" : ""}`}>
+                  {item.status === "completed" ? "完了" : item.isOverdue ? "期限超過" : `残り${item.daysRemaining}日`}
+                </span>
+                <p className="hint">{new Date(item.dueAt).toLocaleDateString("ja-JP")}まで</p>
               </td>
               <td>{item.handledBy || "-"}</td>
               <td>
@@ -99,7 +106,7 @@ export function AdminDeleteRequests() {
               </td>
             </tr>
           ))}
-          {rows.length === 0 && !error ? <tr><td colSpan={7}>削除依頼はまだありません。</td></tr> : null}
+          {rows.length === 0 && !error ? <tr><td colSpan={8}>削除依頼はまだありません。</td></tr> : null}
         </tbody>
       </table>
     </div>

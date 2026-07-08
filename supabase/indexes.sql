@@ -27,3 +27,8 @@ create index if not exists idx_scheduled_notifications_user_day on scheduled_not
 create index if not exists idx_scheduled_notifications_task_type on scheduled_notifications(task_id, notification_type);
 create index if not exists idx_provider_recommendations_case_id on provider_recommendations(case_id);
 create index if not exists idx_purchases_provider_checkout_id on purchases(provider_checkout_id);
+create index if not exists idx_account_delete_requests_status_due on account_delete_requests(status, due_at);
+create index if not exists idx_account_delete_requests_user_status on account_delete_requests(user_id, status);
+create unique index if not exists idx_account_delete_requests_one_open
+on account_delete_requests(user_id)
+where status in ('requested', 'reviewing', 'needs_followup') and user_id is not null;

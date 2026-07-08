@@ -33,21 +33,67 @@ export async function POST(request: Request) {
   const contactEmail = body.contact_email?.trim() || user.email || null;
   const reason = body.reason?.trim() || null;
 
-  const { error } = await supabase.from("audit_logs").insert({
+  const now = new Date().toISOString();
+  const { data: existingRequest, error: existingError } = await supabase
+    .from("account_delete_requests")
+    .select("id")
+    .eq("user_id", user.id)
+    .in("status", ["requested", "reviewing", "needs_followup"])
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existingError) {
+    return NextResponse.json({ error: existingError.message }, { status: 500 });
+  }
+
+  const requestPayload = {
+    user_id: user.id,
+    contact_email: contactEmail,
+    reason,
+    requested_from: "mobile_app",
+    last_status_changed_at: now
+  };
+
+  const { data: deleteRequest, error: requestError } = existingRequest?.id
+    ? await supabase
+      .from("account_delete_requests")
+      .update(requestPayload)
+      .eq("id", existingRequest.id)
+      .select("id")
+      .single()
+    : await supabase
+      .from("account_delete_requests")
+      .insert(requestPayload)
+      .select("id")
+      .single();
+
+  if (requestError) {
+    return NextResponse.json({ error: requestError.message }, { status: 500 });
+  }
+
+  const { data: auditLog, error: auditError } = await supabase.from("audit_logs").insert({
     actor_user_id: user.id,
     action: "account_delete_requested",
-    target_type: "profile",
-    target_id: user.id,
+    target_type: "account_delete_request",
+    target_id: deleteRequest.id,
     metadata: {
       contact_email: contactEmail,
       reason,
-      requested_from: "mobile_app"
+      requested_from: "mobile_app",
+      request_id: deleteRequest.id,
+      duplicate_request_updated: Boolean(existingRequest?.id)
     }
-  });
+  }).select("id").single();
 
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  if (auditError) {
+    return NextResponse.json({ error: auditError.message }, { status: 500 });
   }
 
-  return NextResponse.json({ received: true });
+  await supabase
+    .from("account_delete_requests")
+    .update({ audit_log_id: auditLog.id })
+    .eq("id", deleteRequest.id);
+
+  return NextResponse.json({ received: true, requestId: deleteRequest.id });
 }

@@ -407,6 +407,24 @@ create table if not exists audit_logs (
   created_at timestamptz default now()
 );
 
+create table if not exists account_delete_requests (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid references profiles(id) on delete set null,
+  contact_email text,
+  reason text,
+  status text not null default 'requested' check (status in ('requested', 'reviewing', 'needs_followup', 'completed')),
+  requested_from text not null default 'mobile_app',
+  due_at timestamptz not null default (now() + interval '30 days'),
+  last_status_changed_at timestamptz not null default now(),
+  handled_at timestamptz,
+  handled_by uuid references profiles(id) on delete set null,
+  handled_by_email text,
+  handled_by_method text,
+  handled_note text,
+  audit_log_id uuid references audit_logs(id) on delete set null,
+  created_at timestamptz default now()
+);
+
 -- Seeds
 insert into asset_categories (key, label, description) values
 ('bank', '銀行', '銀行名・支店名・通帳やカードの保管場所'),

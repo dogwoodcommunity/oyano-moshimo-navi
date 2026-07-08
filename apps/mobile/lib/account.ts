@@ -35,7 +35,7 @@ export async function requestAccountDeletion(input: DeleteAccountRequest) {
       return { ok: false, message: "削除依頼を送信できませんでした。時間をおいてもう一度お試しください。" };
     }
 
-    return { ok: true, message: "削除依頼を受け付けました。確認後、運営側で削除処理を進めます。" };
+    return { ok: true, message: "削除依頼を受け付けました。原則30日以内に削除処理または継続確認の連絡を行います。" };
   } catch {
     return { ok: false, message: "通信に失敗しました。時間をおいてもう一度お試しください。" };
   }
