@@ -181,6 +181,9 @@ create table if not exists cases (
   contact_line_id text,
   consent_to_contact boolean default false,
   consent_to_provider_share boolean default false,
+  consent_to_sensitive_info boolean default false,
+  sensitive_info_consent_version text,
+  sensitive_info_consented_at timestamptz,
   status text not null default 'draft', -- draft/submitted/result_ready/converted/closed
   created_at timestamptz default now(),
   updated_at timestamptz default now()

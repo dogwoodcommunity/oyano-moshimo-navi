@@ -18,6 +18,7 @@
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
 - [ ] `supabase/handoff_security_hardening.sql` を実行
+- [ ] `supabase/sensitive_info_consent_hardening.sql` を実行
 - [x] `supabase/product_seed.sql` を実行
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行
@@ -73,6 +74,8 @@
 - [x] `ADMIN_ACCESS_TOKEN` を本番に設定
 - [x] RLSが全主要テーブルで有効
 - [x] 銀行暗証番号・パスワード・マイナンバー画像を保存しない表示が残っている
+- [x] Web診断で要配慮情報の理解・最小限入力への同意を必須化
+- [ ] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認
 - [x] アプリ内に外部Web決済CTAがない
 
 ## 7. 公開前

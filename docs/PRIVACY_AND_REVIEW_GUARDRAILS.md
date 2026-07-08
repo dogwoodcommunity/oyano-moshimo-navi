@@ -18,6 +18,14 @@
 - 本人の意思確認が困難な場合は、生活支援、医療・介護・死後手続きの整理に必要な最小限の情報に限定する。
 - 暗証番号、パスワード、マイナンバー画像、健康保険証や通帳の全面コピーは保存対象にしない。
 
+## 実装済みの同意記録
+
+- Web診断送信時に、要配慮情報に該当し得ることの理解と、必要最小限の入力に関する同意を必須にする。
+- 同意文言は `SENSITIVE_INFO_CONSENT_VERSION` でバージョン管理する。
+- `cases` に `consent_to_sensitive_info`、`sensitive_info_consent_version`、`sensitive_info_consented_at` を保存する。
+- `consent_logs` に同意種別、同意文言、User-Agent、IPを保存する。
+- 本番既存DBには `supabase/sensitive_info_consent_hardening.sql` を投入する。
+
 ## App Store審査方針
 
 - アプリ内では発動サポートパックの購入導線を出さない。

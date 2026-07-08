@@ -9,17 +9,18 @@ SQL Editorで以下の順に実行する。
 5. `task_notification_generation.sql`
 6. `monthly_checkin_notifications.sql`
 7. `handoff_security_hardening.sql`
-8. `product_seed.sql`
-9. `indexes.sql`
-10. `api_grants.sql`
-11. `production_rls.sql`
-12. `family_invite_rpc.sql`
-13. `storage_setup.sql`
+8. `sensitive_info_consent_hardening.sql`
+9. `product_seed.sql`
+10. `indexes.sql`
+11. `api_grants.sql`
+12. `production_rls.sql`
+13. `family_invite_rpc.sql`
+14. `storage_setup.sql`
 
 任意確認:
 
-14. `verify_setup.sql`
-15. `verify_compact.sql`
+15. `verify_setup.sql`
+16. `verify_compact.sql`
 
 ## 重要
 

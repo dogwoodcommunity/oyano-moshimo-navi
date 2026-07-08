@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { STATUSES, type DiagnosisAnswers, type ParentStatus } from "@oyano/shared";
+import { SENSITIVE_INFO_CONSENT_VERSION, STATUSES, type DiagnosisAnswers, type ParentStatus } from "@oyano/shared";
 import { submitDiagnosis } from "@/lib/store";
 
 const concernOptions = ["期限がある手続き", "家族の役割分担", "実家の片付け", "相続・名義変更", "相談先探し", "お金・保険の把握"];
@@ -31,7 +31,9 @@ export function DiagnosisForm() {
       homeClearance: String(form.get("homeClearance") ?? ""),
       contactName: String(form.get("contactName") ?? ""),
       contactEmail: String(form.get("contactEmail") ?? ""),
-      consentToContact: form.get("consentToContact") === "on"
+      consentToContact: form.get("consentToContact") === "on",
+      consentToSensitiveInfo: form.get("sensitiveInfoConsent") === "on",
+      consentTextVersion: SENSITIVE_INFO_CONSENT_VERSION
     };
     const record = await submitDiagnosis(caseId, answers);
     router.push(`/result/${record.id}`);

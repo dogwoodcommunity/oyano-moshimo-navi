@@ -21,6 +21,8 @@ export type DiagnosisAnswers = {
   contactName?: string;
   contactEmail?: string;
   consentToContact?: boolean;
+  consentToSensitiveInfo?: boolean;
+  consentTextVersion?: string;
 };
 
 export type TaskTemplate = {
@@ -157,6 +159,11 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     category: "provider"
   }
 ];
+
+export const SENSITIVE_INFO_CONSENT_VERSION = "sensitive-info-v1";
+
+export const SENSITIVE_INFO_CONSENT_TEXT =
+  "親の入院・認知症・危篤・死亡などの情報が要配慮情報に該当し得ることを理解し、本人に説明できる場合は説明したうえで、家族の支援に必要な範囲で入力します。暗証番号、パスワード、マイナンバー画像は入力しません。";
 
 const providerByStatus: Record<ParentStatus, string[]> = {
   preparing: ["行政書士", "司法書士"],

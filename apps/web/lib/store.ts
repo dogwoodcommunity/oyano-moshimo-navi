@@ -1,6 +1,13 @@
 "use client";
 
-import { buildDiagnosisResult, createHandoffToken, type DiagnosisAnswers, type DiagnosisResult, type ParentStatus } from "@oyano/shared";
+import {
+  buildDiagnosisResult,
+  createHandoffToken,
+  SENSITIVE_INFO_CONSENT_VERSION,
+  type DiagnosisAnswers,
+  type DiagnosisResult,
+  type ParentStatus
+} from "@oyano/shared";
 
 export type CaseRecord = {
   id: string;
@@ -125,7 +132,9 @@ export function createLocalDemoCase(): CaseRecord {
     homeClearance: "鍵は長男が保管。電気・水道は契約状況を未確認。",
     contactName: "ローカル確認用",
     contactEmail: "demo@example.com",
-    consentToContact: true
+    consentToContact: true,
+    consentToSensitiveInfo: true,
+    consentTextVersion: SENSITIVE_INFO_CONSENT_VERSION
   };
   const record: CaseRecord = {
     id,

@@ -525,3 +525,23 @@ GitHubが必要な理由:
   - Vercelへ再deployする。
   - Adminを静的tokenから個別管理者認証へ移行する設計を決める。
   - 要配慮個人情報の同意設計を法務レビュー前に具体化する。
+
+## 2026-07-08 追記 5
+
+- 外部レビューの最優先指摘「要配慮個人情報の同意設計」をWeb診断に実装。
+- `packages/shared/src/index.ts` に `SENSITIVE_INFO_CONSENT_VERSION` / `SENSITIVE_INFO_CONSENT_TEXT` と `DiagnosisAnswers.consentToSensitiveInfo` / `consentTextVersion` を追加。
+- `apps/web/app/diagnosis/DiagnosisForm.tsx` で、要配慮情報に該当し得ることの理解と、本人に説明できる場合は説明したうえで必要最小限だけ入力する旨の同意を送信データに含めるよう変更。画面上のチェックボックスは既存の必須チェックを利用。
+- `apps/web/app/api/cases/[caseId]/diagnosis/route.ts` で `consentToSensitiveInfo` をAPI側でも必須化。未同意の場合は400。Supabase保存時に `cases.consent_to_sensitive_info`、`sensitive_info_consent_version`、`sensitive_info_consented_at` を保存し、`consent_logs` に同意種別、同意文言、IP、User-Agentを記録。
+- `apps/web/lib/store.ts` のローカルデモ診断にも同意項目を追加。
+- `supabase/schema.sql` に同意保存カラムを追加。既存本番DB向けに `supabase/sensitive_info_consent_hardening.sql` を追加。
+- `supabase/README.md` と `docs/PRODUCTION_CHECKLIST.md` に `sensitive_info_consent_hardening.sql` の投入手順を追加。
+- `docs/PRIVACY_AND_REVIEW_GUARDRAILS.md` と `outputs/oyano_moshimo_review_response.md` に実装済み同意記録を追記。
+- 確認:
+  - `pnpm --filter web run typecheck` は環境PATHの都合で、Codex同梱NodeをPATHに追加して実行しOK。
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run build` OK。
+  - `pnpm run doctor:mobile-build` OK。
+- 重要残タスク:
+  - 本番Supabaseに `supabase/handoff_security_hardening.sql` と `supabase/sensitive_info_consent_hardening.sql` を投入する。
+  - Vercelへdeploy後、本番Web診断で `cases.consent_to_sensitive_info = true` と `consent_logs` 作成を実弾確認する。
+  - 親本人が同意できない場合の法的整理は弁護士レビューで最終確認する。
