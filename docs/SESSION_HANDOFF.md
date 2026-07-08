@@ -944,3 +944,15 @@ GitHubが必要な理由:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
 - 注意:
   - `review_exports/oyano-moshimo-navi-code-review-97a19bd.zip` は未追跡の監査用zip。今回のアプリ入口改善コミットには混ぜない。
+
+## 2026-07-08 追記 24
+
+- ログイン後の最初の画面「家族ボード」を整理。
+- 実装:
+  - `apps/mobile/app/(tabs)/dashboard.tsx` の英語見出し `Family tasks` を廃止。
+  - 冒頭を `家族ボード` + 対象者ステータス + `○○さんの今` に変更。
+  - `今日見るところ` として、`今日まで`、`7日以内`、`担当未定` の3指標を上部に集約。
+  - タスク一覧の各セクションにアイコンを追加し、低頻度・高重要度アプリらしく「どこを見るか」がすぐ分かる構成に変更。
+  - 期限表示を日付そのものではなく、`今日まで`、`n日後`、`n日超過` と読める表現に変更。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。

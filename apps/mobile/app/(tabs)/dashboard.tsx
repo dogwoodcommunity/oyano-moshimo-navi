@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
@@ -19,6 +20,14 @@ function daysUntil(value?: string) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   return Math.ceil((due.getTime() - today.getTime()) / 86400000);
+}
+
+function dueLabel(value?: string) {
+  const days = daysUntil(value);
+  if (days === null) return "期限未設定";
+  if (days < 0) return `${Math.abs(days)}日超過`;
+  if (days === 0) return "今日まで";
+  return `${days}日後`;
 }
 
 export default function DashboardScreen() {
@@ -82,17 +91,30 @@ export default function DashboardScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <View style={styles.hero}>
-        <Text style={styles.kicker}>親のもしもナビ</Text>
-        <Text style={styles.title}>家族ボード</Text>
-        <Text style={styles.heroBody}>今日動くこと、あとで確認すること、家族で分けることを一画面にまとめます。</Text>
+        <View style={styles.brandRow}>
+          <Text style={styles.kicker}>家族ボード</Text>
+          <Text style={styles.statusBadge}>{statusLabel(data.person.currentStatus)}</Text>
+        </View>
+        <Text style={styles.title}>{data.person.displayName}さんの今</Text>
+        <Text style={styles.heroBody}>期限、担当、家族で確認したいことをここに集めます。</Text>
       </View>
-      <View style={[styles.card, styles.primaryCard]}>
-        <Text style={styles.kickerLight}>{statusLabel(data.person.currentStatus)}</Text>
-        <Text style={styles.primaryTitle}>{data.person.displayName}</Text>
+
+      <View style={styles.boardSummary}>
+        <View style={styles.summaryHeader}>
+          <MaterialCommunityIcons color={colors.greenDark} name="clipboard-text-clock-outline" size={24} />
+          <View style={styles.summaryText}>
+            <Text style={styles.summaryTitle}>今日見るところ</Text>
+            <Text style={styles.summaryLead}>急ぎ、期限前、担当未定だけを先に確認します。</Text>
+          </View>
+        </View>
         <View style={styles.metrics}>
           <View style={styles.metric}>
-            <Text style={styles.metricNumber}>{activeTasks.length}</Text>
-            <Text style={styles.metricLabel}>未完了</Text>
+            <Text style={styles.metricNumber}>{todayTasks.length}</Text>
+            <Text style={styles.metricLabel}>今日まで</Text>
+          </View>
+          <View style={styles.metric}>
+            <Text style={styles.metricNumber}>{soonTasks.length}</Text>
+            <Text style={styles.metricLabel}>7日以内</Text>
           </View>
           <View style={styles.metric}>
             <Text style={styles.metricNumber}>{unassignedTasks.length}</Text>
@@ -100,20 +122,22 @@ export default function DashboardScreen() {
           </View>
         </View>
         <View style={styles.row}>
-          <Link href={`/people/${data.person.id}`} style={styles.button}>対象者を見る</Link>
-          <Link href={`/people/${data.person.id}/tasks`} style={styles.secondaryOnDark}>タスク</Link>
+          <Link href={`/people/${data.person.id}/tasks`} style={styles.button}>タスクを開く</Link>
+          <Link href={`/people/${data.person.id}`} style={styles.secondaryButton}>対象者を見る</Link>
         </View>
       </View>
       <TaskSection
         accent="danger"
         empty="今日までの期限はありません。"
         href={`/people/${data.person.id}/tasks?filter=due`}
+        icon="alert-circle-outline"
         tasks={todayTasks}
         title="今日・期限超過"
       />
       <TaskSection
         empty="7日以内の期限はありません。"
         href={`/people/${data.person.id}/tasks?filter=soon`}
+        icon="calendar-clock"
         tasks={soonTasks}
         title="7日以内"
       />
@@ -121,6 +145,7 @@ export default function DashboardScreen() {
         accent="warning"
         empty="担当未定のタスクはありません。"
         href={`/people/${data.person.id}/tasks?filter=unassigned`}
+        icon="account-question-outline"
         tasks={unassignedTasks}
         title="担当未定"
       />
@@ -132,28 +157,34 @@ function TaskSection({
   accent,
   empty,
   href,
+  icon,
   tasks,
   title
 }: {
   accent?: "danger" | "warning";
   empty: string;
   href: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
   tasks: DashboardData["tasks"];
   title: string;
 }) {
   const titleStyle = accent === "danger" ? styles.dangerTitle : accent === "warning" ? styles.warningTitle : undefined;
+  const iconColor = accent === "danger" ? colors.rose : accent === "warning" ? colors.gold : colors.green;
 
   return (
     <View style={styles.card}>
       <View style={styles.sectionHeader}>
-        <Text style={[styles.cardTitle, titleStyle]}>{title}</Text>
+        <View style={styles.sectionTitleRow}>
+          <MaterialCommunityIcons color={iconColor} name={icon} size={22} />
+          <Text style={[styles.cardTitle, titleStyle]}>{title}</Text>
+        </View>
         <Link href={href} style={styles.countBadge}>{tasks.length}</Link>
       </View>
       {tasks.slice(0, 3).map((task) => (
         <View key={task.id} style={styles.taskRow}>
           <View style={styles.taskText}>
             <Text style={styles.taskTitle}>{task.title}</Text>
-            <Text style={styles.body}>期限 {task.dueDate ?? "未設定"} / 担当 {task.assigneeLabel ?? "未定"}</Text>
+            <Text style={styles.body}>{dueLabel(task.dueDate)} / 担当 {task.assigneeLabel ?? "未定"}</Text>
           </View>
           {!task.assignedMemberId ? <Text style={styles.unassignedBadge}>担当未定</Text> : null}
         </View>
@@ -165,24 +196,28 @@ function TaskSection({
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 18, paddingBottom: 28 },
   hero: { gap: 8, paddingTop: 8 },
+  brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   title: { color: colors.ink, fontSize: 34, fontWeight: "900", lineHeight: 38 },
   heroBody: { color: colors.muted, lineHeight: 22 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
-  primaryCard: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
   kicker: { color: colors.green, fontWeight: "900" },
   kickerLight: { color: "#cfe2d7", fontWeight: "900" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
   countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 34, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6, textAlign: "center" },
   dangerTitle: { color: "#9a3f56" },
   inlineLink: { color: colors.blue, fontWeight: "900", marginTop: 2 },
-  primaryTitle: { color: "#fff", fontSize: 28, fontWeight: "900" },
   body: { color: colors.muted, flex: 1, lineHeight: 22 },
-  metrics: { flexDirection: "row", gap: 10 },
-  metric: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: radius.control, flex: 1, padding: 12 },
-  metricNumber: { color: "#fff", fontSize: 26, fontWeight: "900" },
-  metricLabel: { color: "rgba(255,255,255,0.74)", fontWeight: "800" },
+  boardSummary: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 14, padding: 16, ...shadow },
+  summaryHeader: { alignItems: "flex-start", flexDirection: "row", gap: 10 },
+  summaryText: { flex: 1, gap: 3 },
+  summaryTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },
+  summaryLead: { color: colors.muted, lineHeight: 22 },
+  metrics: { flexDirection: "row", gap: 8 },
+  metric: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flex: 1, padding: 10 },
+  metricNumber: { color: colors.greenDark, fontSize: 26, fontWeight: "900" },
+  metricLabel: { color: colors.muted, fontSize: 12, fontWeight: "800" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   button: { backgroundColor: colors.green, borderRadius: radius.control, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
   buttonDisabled: { opacity: 0.5 },
@@ -191,10 +226,12 @@ const styles = StyleSheet.create({
   emptyHero: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
   emptyLead: { color: "rgba(255,255,255,0.82)", fontSize: 16, lineHeight: 24 },
   emptyTitle: { color: "#fff", fontSize: 31, fontWeight: "900", lineHeight: 36 },
-  secondaryOnDark: { borderColor: "rgba(255,255,255,0.26)", borderRadius: radius.control, borderWidth: 1, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
+  secondaryButton: { borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
   sectionHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  sectionTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   stepRow: { alignItems: "center", flexDirection: "row", gap: 10 },
   stepNumber: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", height: 28, lineHeight: 28, textAlign: "center", width: 28 },
+  statusBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
   taskRow: { alignItems: "flex-start", backgroundColor: "#fbfdf9", borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 12 },
   taskText: { flex: 1, gap: 4 },
   taskTitle: { color: colors.ink, fontWeight: "900", lineHeight: 21 },
