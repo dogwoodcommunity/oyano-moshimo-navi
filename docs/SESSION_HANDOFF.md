@@ -503,3 +503,25 @@ GitHubが必要な理由:
 - エンジニアレビュー用資料 `outputs/oyano_moshimo_engineer_review_packet.md` を追加。
 - 内容は、リポジトリ構成、Web/App/Supabase/通知/RLS/RPC/決済/セキュリティ/環境変数/確認コマンド/未完了/レビュー観点/読む順番を含む。
 - この資料をエンジニアに渡せば、画面だけでなく実装・設計全体をレビューできる。
+
+## 2026-07-08 追記 4
+
+- 外部レビューで、要配慮個人情報の同意設計、service role/admin API認可、handoff token設計、PMF前のネイティブ負荷が指摘された。
+- 判断: 指摘は概ね妥当。Expoは捨てずに既存検証用として維持し、追加開発は抑制。Web課金検証と家族3組テストを優先する。
+- 即時対応:
+  - `packages/shared/src/index.ts` の `createHandoffToken()` を `Math.random()` から `globalThis.crypto.getRandomValues()` ベースに変更。
+  - `case_results.app_handoff_consumed_at` を追加するため、`supabase/schema.sql` と `supabase/handoff_security_hardening.sql` を追加/更新。
+  - `/api/handoff/consume` は24時間以内・未消費handoffだけ受け付け、consume時に `app_handoff_consumed_at` を先に更新。二重consumeは409。
+  - `apps/web/lib/adminAuth.ts` は `?adminToken=` 受付を廃止し、`x-admin-token` headerのみ。比較は `crypto.timingSafeEqual`。
+  - `/api/cron/send-due-notifications` は `?cronToken=` 受付を廃止し、`Authorization: Bearer <CRON_SECRET>` のみ。比較は `crypto.timingSafeEqual`。
+  - `supabase/README.md` と `docs/PRODUCTION_CHECKLIST.md` に `handoff_security_hardening.sql` を反映。
+  - `outputs/oyano_moshimo_review_response.md` を追加し、外部レビューへの対応方針と残課題を整理。
+- 確認:
+  - `pnpm --filter web run build` OK。
+  - 初回 `pnpm run typecheck` は並列build中の `.next/types` 作り直しと衝突してTS6053で失敗。Web build完了後に単独再実行し、`pnpm --filter web run typecheck` OK、`pnpm --filter mobile run typecheck` OK。
+  - `pnpm run doctor:mobile-build` OK。
+- 重要残タスク:
+  - 本番Supabaseに `supabase/handoff_security_hardening.sql` を投入する。
+  - Vercelへ再deployする。
+  - Adminを静的tokenから個別管理者認証へ移行する設計を決める。
+  - 要配慮個人情報の同意設計を法務レビュー前に具体化する。

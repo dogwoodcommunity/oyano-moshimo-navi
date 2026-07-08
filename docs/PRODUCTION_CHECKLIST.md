@@ -17,6 +17,7 @@
 - [x] `supabase/notification_delivery_hardening.sql` を実行
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
+- [ ] `supabase/handoff_security_hardening.sql` を実行
 - [x] `supabase/product_seed.sql` を実行
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行

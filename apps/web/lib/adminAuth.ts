@@ -1,15 +1,19 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
+
+function safeTokenEqual(actualToken: string, expectedToken: string) {
+  const actual = Buffer.from(actualToken);
+  const expected = Buffer.from(expectedToken);
+  return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
+}
 
 export function verifyAdminRequest(request: Request) {
   const expectedToken = process.env.ADMIN_ACCESS_TOKEN;
   if (!expectedToken) return null;
 
-  const headerToken = request.headers.get("x-admin-token");
-  const url = new URL(request.url);
-  const queryToken = url.searchParams.get("adminToken");
-  const actualToken = headerToken ?? queryToken;
+  const actualToken = request.headers.get("x-admin-token");
 
-  if (actualToken !== expectedToken) {
+  if (!actualToken || !safeTokenEqual(actualToken, expectedToken)) {
     return NextResponse.json({ error: "Admin token is required" }, { status: 401 });
   }
 

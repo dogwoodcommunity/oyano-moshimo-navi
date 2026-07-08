@@ -218,5 +218,8 @@ export function buildDiagnosisResult(answers: DiagnosisAnswers, baseDate = new D
 }
 
 export function createHandoffToken(caseId: string): string {
-  return `handoff_${caseId.replace(/-/g, "").slice(0, 20)}_${Math.random().toString(36).slice(2, 10)}`;
+  const bytes = new Uint8Array(24);
+  globalThis.crypto.getRandomValues(bytes);
+  const randomPart = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return `handoff_${caseId.replace(/-/g, "").slice(0, 12)}_${randomPart}`;
 }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import crypto from "crypto";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type ScheduledNotificationRow = {
@@ -41,9 +42,10 @@ function verifyCron(request: Request) {
 
   const auth = request.headers.get("authorization");
   const token = auth?.startsWith("Bearer ") ? auth.slice("Bearer ".length) : null;
-  const urlToken = new URL(request.url).searchParams.get("cronToken");
+  const actual = token ? Buffer.from(token) : null;
+  const expectedBuffer = Buffer.from(expected);
 
-  if (token !== expected && urlToken !== expected) {
+  if (!actual || actual.length !== expectedBuffer.length || !crypto.timingSafeEqual(actual, expectedBuffer)) {
     return NextResponse.json({ error: "Invalid cron token" }, { status: 401 });
   }
 

@@ -17,6 +17,7 @@ type CaseResultRow = {
   id: string;
   case_id: string;
   app_handoff_token: string | null;
+  app_handoff_consumed_at: string | null;
   tasks: Array<{
     title: string;
     description?: string;
@@ -52,11 +53,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Invalid bearer token" }, { status: 401 });
   }
 
+  const handoffCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const { data: caseResult, error: resultError } = await supabase
     .from("case_results")
-    .select("id, case_id, app_handoff_token, tasks")
+    .select("id, case_id, app_handoff_token, app_handoff_consumed_at, tasks")
     .eq("case_id", body.caseId)
     .eq("app_handoff_token", body.token)
+    .is("app_handoff_consumed_at", null)
+    .gt("created_at", handoffCutoff)
     .order("created_at", { ascending: false })
     .limit(1)
     .single();
@@ -77,6 +81,18 @@ export async function POST(request: Request) {
 
   const caze = caseRow as CaseRow;
   const result = caseResult as CaseResultRow;
+
+  const { data: claimedHandoff, error: claimError } = await supabase
+    .from("case_results")
+    .update({ app_handoff_consumed_at: new Date().toISOString() })
+    .eq("id", result.id)
+    .is("app_handoff_consumed_at", null)
+    .select("id")
+    .single();
+
+  if (claimError || !claimedHandoff) {
+    return NextResponse.json({ error: "Handoff token already consumed" }, { status: 409 });
+  }
 
   await supabase.from("profiles").upsert({
     id: userResult.user.id,

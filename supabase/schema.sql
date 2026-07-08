@@ -203,6 +203,7 @@ create table if not exists case_results (
   tasks jsonb default '[]'::jsonb,
   provider_categories jsonb default '[]'::jsonb,
   app_handoff_token text unique,
+  app_handoff_consumed_at timestamptz,
   created_at timestamptz default now()
 );
 
