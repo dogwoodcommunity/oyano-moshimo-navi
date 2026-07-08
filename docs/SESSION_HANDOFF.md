@@ -495,3 +495,11 @@ GitHubが必要な理由:
 - `apps/mobile/app/(tabs)/_layout.tsx` に入口ガードを追加。Supabaseログイン済み、または同一起動中の見本セッションだけTabsを表示し、未ログインで前回Dashboardが復元された場合は `/(auth)/welcome` へ戻す。
 - 確認: `pnpm --filter mobile run typecheck` OK、`pnpm run doctor:mobile-build` OK、`expo export --platform android --output-dir /tmp/oyano-mobile-export-entry-guard` OK。
 - 次: commit/push後、Android preview buildを作成し、実機へ再インストールして「普通に起動すると入口」「見本を見るを押すと家族ボード」を確認する。
+
+## 2026-07-08 追記 3
+
+- ユーザーから「ここまでの設計をプレビューしてもらうから資料だして」と依頼あり。
+- 最初に利用者向けの簡易プレビュー資料 `outputs/oyano_moshimo_preview_brief.md` を作成したが、ユーザーから「開発内容も全部みてもらう。エンジニアに」と訂正あり。
+- エンジニアレビュー用資料 `outputs/oyano_moshimo_engineer_review_packet.md` を追加。
+- 内容は、リポジトリ構成、Web/App/Supabase/通知/RLS/RPC/決済/セキュリティ/環境変数/確認コマンド/未完了/レビュー観点/読む順番を含む。
+- この資料をエンジニアに渡せば、画面だけでなく実装・設計全体をレビューできる。
