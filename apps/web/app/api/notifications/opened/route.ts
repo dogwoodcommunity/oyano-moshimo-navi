@@ -43,16 +43,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "scheduled notification id is required" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("scheduled_notifications")
     .update({ opened_at: new Date().toISOString() })
     .in("id", ids)
     .eq("user_id", userId)
-    .is("opened_at", null);
+    .is("opened_at", null)
+    .select("id");
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ updated: ids.length });
+  return NextResponse.json({ requested: ids.length, updated: data?.length ?? 0 });
 }

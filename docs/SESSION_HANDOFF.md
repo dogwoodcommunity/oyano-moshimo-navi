@@ -875,3 +875,16 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs http://127.0.0.1:3010`
   - 3000番は別Dockerプロセスが使っていたため、確認用にNext dev serverを `127.0.0.1:3010` で起動してsmokeした。
   - 問題なければcommit/push。
+
+## 2026-07-08 追記 20
+
+- 監査の軽微指摘「通知開封APIが実際の更新件数ではなく、リクエストID数を返している」に対応中。
+- `POST /api/notifications/opened` の `scheduled_notifications` 更新に `select("id")` を付け、`opened_at is null` で実際に初回開封更新できた行数を `updated` として返す。
+- レスポンスは `{ requested, updated }`。
+- 次:
+  - 検証済み:
+    - `pnpm --filter web run typecheck`
+    - `pnpm run doctor:local`
+    - `git diff --check`
+    - `pnpm --filter web run build`
+  - 問題なければcommit/push。
