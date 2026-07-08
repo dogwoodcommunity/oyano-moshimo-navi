@@ -560,3 +560,17 @@ GitHubが必要な理由:
   - 並列実行した初回 `pnpm --filter web run typecheck` は、Next buildが `.next/types` を再生成したタイミングと衝突してTS6053。build完了後に単独再実行しOK。
 - 次:
   - 本番SupabaseのSQL投入を済ませたら、本番Web診断で同意ログが作られるか確認する。
+
+## 2026-07-08 追記 7
+
+- 本番Supabaseに後追い投入が必要なSQLを1本にまとめた。
+- 追加ファイル: `supabase/production_pending_hardening.sql`
+  - `case_results.app_handoff_consumed_at` 追加
+  - `idx_case_results_handoff_valid` 追加
+  - `cases.consent_to_sensitive_info` / `sensitive_info_consent_version` / `sensitive_info_consented_at` 追加
+  - `idx_consent_logs_case_type` 追加
+- `supabase/README.md` に、既存本番DBへ後追いhardeningだけ入れる場合は `production_pending_hardening.sql` を実行する旨を追記。
+- `docs/PRODUCTION_CHECKLIST.md` に一括SQLの投入項目を追加。個別SQLは一括SQLを使わない場合だけ実行する扱い。
+- 次:
+  - ユーザーがSupabase SQL Editorで `supabase/production_pending_hardening.sql` を投入。
+  - Vercelの自動deploy完了後、本番 `/diagnosis` から診断送信し、`cases` と `consent_logs` を確認する。

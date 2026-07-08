@@ -2,6 +2,8 @@
 
 SQL Editorで以下の順に実行する。
 
+既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` を実行する。
+
 1. `schema.sql`
 2. `task_template_seed.sql`
 3. `task_generation.sql`
