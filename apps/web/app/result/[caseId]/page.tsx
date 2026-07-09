@@ -24,6 +24,9 @@ export default function ResultPage() {
   const appUrl = record?.handoffToken
     ? `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token: record.handoffToken }).toString()}`
     : "";
+  const supportPackHref = record?.handoffToken
+    ? `/support-pack?${new URLSearchParams({ caseId: params.caseId, checkoutToken: record.handoffToken }).toString()}`
+    : `/support-pack?caseId=${params.caseId}`;
 
   return (
     <main className="container">
@@ -129,7 +132,7 @@ export default function ResultPage() {
           判断を代行するものではなく、家族で次に確認する順番を整理します。
         </p>
         <div className="actions">
-          <Link className="button" href={`/support-pack?caseId=${params.caseId}`}>内容を確認して申し込む</Link>
+          <Link className="button" href={supportPackHref}>内容を確認して申し込む</Link>
         </div>
         <p className="hint">現在の状態: {record?.supportPackStatus ?? "none"}</p>
       </section>

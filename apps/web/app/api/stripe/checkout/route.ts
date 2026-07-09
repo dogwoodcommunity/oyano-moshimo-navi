@@ -8,6 +8,7 @@ type StripeCheckoutResponse = {
 
 type CheckoutBody = {
   caseId?: string;
+  checkoutToken?: string;
   contactName?: string;
   contactEmail?: string;
   consentToContact?: boolean;
@@ -32,6 +33,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "caseId is required" }, { status: 400 });
   }
 
+  if (!body.checkoutToken) {
+    return NextResponse.json({ error: "checkout_token_required" }, { status: 400 });
+  }
+
   const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
   const priceId = process.env.STRIPE_SUPPORT_PACK_PRICE_ID;
 
@@ -48,6 +53,24 @@ export async function POST(request: Request) {
       error: "Supabase is required for Stripe checkout",
       requiredEnv: ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]
     }, { status: 501 });
+  }
+
+  const tokenCutoff = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  const { data: tokenRow, error: tokenError } = await supabase
+    .from("case_results")
+    .select("id")
+    .eq("case_id", body.caseId)
+    .eq("app_handoff_token", body.checkoutToken)
+    .gt("created_at", tokenCutoff)
+    .limit(1)
+    .maybeSingle();
+
+  if (tokenError) {
+    return NextResponse.json({ error: tokenError.message }, { status: 500 });
+  }
+
+  if (!tokenRow) {
+    return NextResponse.json({ error: "invalid_checkout_token" }, { status: 403 });
   }
 
   const { data: caseRow, error: caseError } = await supabase

@@ -1320,3 +1320,24 @@ GitHubが必要な理由:
   - ZIP内のsecret系確認では `.env.example` のみ検出。
 - 旧ZIP:
   - `review_exports/oyano-moshimo-navi-code-review-97a19bd.zip` は古いレビュー用出力として残存。
+
+## 2026-07-09 追記 47
+
+- ユーザー指示「俺が設定しなくてもええのを先に」に従い、外部サービス設定なしでできるStripe checkout認可強化を実装中。
+- 監査観点:
+  - 旧状態では `/api/stripe/checkout` が `caseId` と連絡先だけで `cases.contact_*` と `consent_to_contact` を更新し、Stripe Checkoutを作れるため、既知caseIdへの更新面が広かった。
+- 実装方針:
+  - 結果画面 `/result/[caseId]` だけが持つ `handoffToken` を `checkoutToken` として `/support-pack` に渡す。
+  - `/support-pack` は `checkoutToken` が無い場合、Stripe申込ボタンを無効化し、整理結果画面から開き直すよう案内する。
+  - `POST /api/stripe/checkout` は `checkoutToken` 必須。Supabase `case_results.app_handoff_token` と一致し、`case_results.created_at` が24時間以内の場合のみ、連絡先更新とStripe Checkout作成へ進む。
+  - `app_handoff_consumed_at` は見ない。アプリ引き継ぎ後でも、24時間以内なら同じ結果画面から発動サポートパック申込ができるようにするため。
+- 変更ファイル:
+  - `apps/web/app/result/[caseId]/page.tsx`
+  - `apps/web/app/support-pack/SupportPackClient.tsx`
+  - `apps/web/app/api/stripe/checkout/route.ts`
+  - `docs/STRIPE_SETUP.md`
+- 関連URL:
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+  - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
+  - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`

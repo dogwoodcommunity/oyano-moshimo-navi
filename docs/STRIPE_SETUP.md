@@ -56,7 +56,7 @@ STRIPE_WEBHOOK_SECRET=
 ## 5. 確認すること
 
 1. `/result/{caseId}` から「内容を確認して申し込む」へ進む。
-2. `/support-pack?caseId={caseId}` で連絡先メールを入力し、連絡同意にチェックする。
+2. `/support-pack?caseId={caseId}&checkoutToken=...` で連絡先メールを入力し、連絡同意にチェックする。
 3. 「Stripeの申し込み画面へ進む」を押す。
 4. Stripe Checkoutが開く。
 5. テストカードで支払う。コンビニ決済など非同期決済を使う場合は、async paymentイベントでも状態が更新されることを確認する。
@@ -70,5 +70,6 @@ STRIPE_WEBHOOK_SECRET=
 - Expoアプリ内には外部決済CTAを置かない。
 - アプリ内では発動サポートパックの購入導線を匂わせず、申込済み/レビュー中などの状態表示に留める。
 - `POST /api/support-packs` は無料の依頼作成には使わず、Stripe Checkoutへ誘導する。
+- `POST /api/stripe/checkout` は `caseId` だけでは受け付けない。結果画面から渡される24時間以内の `checkoutToken` を `case_results.app_handoff_token` と照合してから、連絡先更新とCheckout作成を行う。
 - 法律、税務、医療判断の断定は商品範囲に含めない。
 - 正式販売前に特商法表記、プライバシーポリシー、税込表示を最終確認する。
