@@ -47,7 +47,8 @@
 - [x] `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` を実行
 - [x] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [x] `/admin` を確認
-- [ ] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
+- [x] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
+  - 2026-07-09確認: `scripts/smoke-admin-bearer.mjs` で一時app_adminを作成し、`/api/admin/env-check` がBearer認証を受け付けることを確認。確認後、一時データは削除済み。
 - [x] `/api/cron/send-due-notifications` をdeploy対象に含める
 - [ ] Stripe関連env 3項目を設定
 

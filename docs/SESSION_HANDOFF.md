@@ -1150,3 +1150,24 @@ GitHubが必要な理由:
   - Admin APIをapp_admin個別アカウントのBearer認証で確認。
   - Stripe関連env/商品/Webhookを設定。
   - Expo Magic Linkログイン、dashboard/person/tasks実データ読込、push token保存を実機確認。
+
+## 2026-07-09 追記 37
+
+- Admin APIのapp_admin Bearer認証を本番確認。
+- 追加:
+  - `scripts/smoke-admin-bearer.mjs`
+- スモーク内容:
+  - 本番Supabase Authに一時ユーザーを作成。
+  - `profiles` をupsert。
+  - 一時familyを作成。
+  - `family_members.role='admin'` / `relationship='app_admin'` を作成。
+  - Password grantで一時access tokenを発行。
+  - `https://oyano-moshimo-navi.vercel.app/api/admin/env-check` に `Authorization: Bearer <token>` でアクセス。
+  - Admin APIが200を返すことを確認。
+  - 最後に一時familyと一時auth userを削除。
+- 実行結果:
+  - `OK admin env-check accepted app_admin Bearer token`
+  - `OK temporary admin smoke data cleaned up`
+- `docs/PRODUCTION_CHECKLIST.md` のAdmin Bearer確認を完了に更新。
+- 注意:
+  - これは一時ユーザーによる確認。実運用の恒久app_adminユーザー作成は、代表/運営メールが確定した後に `docs/ADMIN_AUTH_POLICY.md` の手順で作る。
