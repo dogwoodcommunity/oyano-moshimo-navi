@@ -1229,6 +1229,11 @@ GitHubが必要な理由:
   - レビュー資料の対象commitを最新へ更新。
   - `git archive` で監査対応後のZIPを作成。
   - 本番Supabaseにはまだ `admin_auth_hardening.sql` と更新済み `notification_delivery_hardening.sql` の投入が必要。
+
+## 2026-07-09 追記 42
+
+- レビュー資料の対象commitを最終HEADへ合わせる。
+  - Final review target: `dfba01c`
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
