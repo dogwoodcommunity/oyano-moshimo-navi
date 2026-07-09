@@ -1181,3 +1181,18 @@ GitHubが必要な理由:
 - 目的:
   - コード、設計、RLS、handoff、Admin認可、通知、要配慮個人情報、Stripe未接続部分、Expoアプリ審査リスクをレビューしてもらう。
   - 最新コード一式のZIPも `review_exports/` に作成する。
+
+## 2026-07-09 追記 39
+
+- エンジニアレビュー依頼用の資料を作成完了。
+- 追加済み資料:
+  - `docs/ENGINEER_REVIEW_BRIEF_2026-07-09.md`
+  - `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-09.md`
+- GitHub push済み:
+  - commit `6e40589 Add engineer review materials`
+- 最新コードZIPを作成:
+  - `review_exports/oyano-moshimo-navi-code-review-2026-07-09-6e40589.zip`
+  - `git archive` で作成したため、`.env.local` など未追跡secretは含まれない。
+  - ZIP内のsecret系確認では `.env.example` のみ検出。
+- 旧ZIP:
+  - `review_exports/oyano-moshimo-navi-code-review-97a19bd.zip` は古いレビュー用出力として残存。
