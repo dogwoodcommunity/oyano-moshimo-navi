@@ -1341,3 +1341,27 @@ GitHubが必要な理由:
   - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
   - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
   - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
+
+## 2026-07-09 追記 48
+
+- Stripe checkout認可強化を検証・GitHub push・本番デプロイまで完了。
+- 検証:
+  - Web typecheck OK
+  - local doctor OK
+  - Web production build OK
+  - 本番 `node scripts/smoke-admin-bearer.mjs https://oyano-moshimo-navi.vercel.app` OK
+  - 本番 `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` OK
+  - 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK
+  - `POST https://oyano-moshimo-navi.vercel.app/api/stripe/checkout` に `checkoutToken` なしで投げると `400 {"error":"checkout_token_required"}` を返すことを確認。
+- GitHub push:
+  - Commit: `b50d2ea Require checkout token for support pack`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+- Vercel本番デプロイ:
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment ID: `dpl_7rpsWuM7qSeVCYxhkoodnx9R7589`
+  - Production URL: `https://oyano-moshimo-navi-kpi0xak3v-dogwoodcommunity1.vercel.app`
+  - Alias: `https://oyano-moshimo-navi.vercel.app`
+- 残タスク:
+  - Stripe Dashboardで商品/Price/Webhook/env設定。
+  - Expo実機でMagic Link、handoff、dashboard/person/tasks、push token保存確認。
+  - iOS preview build。
