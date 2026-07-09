@@ -1,7 +1,8 @@
 # 親のもしもナビ v0.3 エンジニアレビュー依頼
 
 作成日: 2026-07-09  
-対象commit: `dfba01c Update review handoff after hardening`  
+対象commit: `main` latest as of 2026-07-09  
+監査対応本体commit: `0dfbc07 Harden admin auth and notification delivery`  
 本番Web: https://oyano-moshimo-navi.vercel.app  
 Supabase Project ref: `ypnuxyfirlvbsqujocuy`  
 

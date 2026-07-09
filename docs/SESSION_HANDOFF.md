@@ -1232,8 +1232,8 @@ GitHubが必要な理由:
 
 ## 2026-07-09 追記 42
 
-- レビュー資料の対象commitを最終HEADへ合わせる。
-  - Final review target: `dfba01c`
+- レビュー資料の対象commitは、自己参照でcommit hashがずれ続けないように `main latest as of 2026-07-09` 表記へ変更。
+- 監査対応本体commitは `0dfbc07 Harden admin auth and notification delivery`。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
