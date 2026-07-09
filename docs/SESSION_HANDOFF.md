@@ -1352,6 +1352,31 @@ GitHubが必要な理由:
   - `.env` なし
   - 検出されたのは `apps/web/.env.example` と `apps/mobile/.env.example` のみ。
 - このZIPは未追跡ファイルとして `review_exports/` に置いている。GitHubにはpushしていない。
+
+## 2026-07-09 追記 51
+
+- ユーザー指示「全部進めて」に対し、外部設定なしで進められるレビュー準備を追加実施。
+- `docs/ENGINEER_REVIEW_BRIEF_2026-07-09.md` を最新化。
+  - 対象commitを `e2fbea9 Update engineer review scope` に更新。
+  - Stripe checkout token必須化と24時間照合をレビュー観点へ追加。
+  - 最新ZIP名を反映。
+- `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-09.md` を最新化。
+  - `/api/stripe/checkout` が `caseId` だけで進まないこと。
+  - 結果画面から申込に進む場合 `checkoutToken` が付くこと。
+- 検証:
+  - `pnpm run doctor:local` OK
+- GitHub push済み:
+  - Commit: `e2fbea9 Update engineer review scope`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+- 最新レビューZIPを作成:
+  - Path: `review_exports/oyano-moshimo-navi-code-review-2026-07-09-e2fbea9.zip`
+  - Base commit: `e2fbea9 Update engineer review scope`
+  - 作成方法: `git archive --format=zip`
+  - サイズ: 約3.7MB
+  - `.env.local` / 実secretファイルなし。検出された環境変数ファイルは `apps/web/.env.example` と `apps/mobile/.env.example` のみ。
+- 関連URL:
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
   - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
   - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
 
