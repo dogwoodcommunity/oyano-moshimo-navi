@@ -1339,6 +1339,19 @@ GitHubが必要な理由:
 - 関連URL:
   - 本番Web: `https://oyano-moshimo-navi.vercel.app`
   - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+
+## 2026-07-09 追記 50
+
+- 最新レビューZIPを作成。
+  - Path: `review_exports/oyano-moshimo-navi-code-review-2026-07-09-7886bac.zip`
+  - Base commit: `7886bac Smoke checkout token enforcement`
+  - 作成方法: `git archive --format=zip`
+  - サイズ: 約3.7MB
+- ZIP内のsecret系ファイル名確認:
+  - `.env.local` なし
+  - `.env` なし
+  - 検出されたのは `apps/web/.env.example` と `apps/mobile/.env.example` のみ。
+- このZIPは未追跡ファイルとして `review_exports/` に置いている。GitHubにはpushしていない。
   - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
   - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
 
