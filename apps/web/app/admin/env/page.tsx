@@ -2,16 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { AdminTokenControl } from "@/components/AdminTokenControl";
+import { adminHeaders } from "@/lib/adminClientAuth";
 
 type EnvRow = {
   key: string;
   configured: boolean;
 };
-
-function adminHeaders(): HeadersInit {
-  const token = window.localStorage.getItem("oyano_admin_token");
-  return token ? { "x-admin-token": token } : {};
-}
 
 export default function AdminEnvPage() {
   const [rows, setRows] = useState<EnvRow[]>([]);

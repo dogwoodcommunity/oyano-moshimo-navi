@@ -2,11 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { AdminDeleteRequestRow } from "@/app/api/admin/delete-requests/route";
-
-function adminHeaders(): HeadersInit {
-  const token = window.localStorage.getItem("oyano_admin_token");
-  return token ? { "x-admin-token": token } : {};
-}
+import { adminHeaders } from "@/lib/adminClientAuth";
 
 export function AdminDeleteRequests() {
   const [deleteRequests, setDeleteRequests] = useState<AdminDeleteRequestRow[] | null>(null);

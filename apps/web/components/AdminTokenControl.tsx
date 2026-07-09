@@ -1,24 +1,37 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-const STORAGE_KEY = "oyano_admin_token";
+import {
+  ADMIN_BEARER_TOKEN_STORAGE_KEY,
+  ADMIN_STATIC_TOKEN_STORAGE_KEY
+} from "@/lib/adminClientAuth";
 
 export function AdminTokenControl() {
-  const [token, setToken] = useState("");
+  const [bearerToken, setBearerToken] = useState("");
+  const [staticToken, setStaticToken] = useState("");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setToken(window.localStorage.getItem(STORAGE_KEY) ?? "");
+    setBearerToken(window.localStorage.getItem(ADMIN_BEARER_TOKEN_STORAGE_KEY) ?? "");
+    setStaticToken(window.localStorage.getItem(ADMIN_STATIC_TOKEN_STORAGE_KEY) ?? "");
   }, []);
 
   function saveToken() {
-    const nextToken = token.trim();
-    if (nextToken) {
-      window.localStorage.setItem(STORAGE_KEY, nextToken);
+    const nextBearerToken = bearerToken.trim();
+    const nextStaticToken = staticToken.trim();
+
+    if (nextBearerToken) {
+      window.localStorage.setItem(ADMIN_BEARER_TOKEN_STORAGE_KEY, nextBearerToken);
     } else {
-      window.localStorage.removeItem(STORAGE_KEY);
+      window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
     }
+
+    if (nextStaticToken) {
+      window.localStorage.setItem(ADMIN_STATIC_TOKEN_STORAGE_KEY, nextStaticToken);
+    } else {
+      window.localStorage.removeItem(ADMIN_STATIC_TOKEN_STORAGE_KEY);
+    }
+
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
@@ -30,14 +43,27 @@ export function AdminTokenControl() {
         <h2>Admin access</h2>
       </div>
       <div className="field">
-        <label htmlFor="admin-token">ADMIN_ACCESS_TOKEN</label>
+        <label htmlFor="admin-bearer-token">app_admin access token</label>
+        <input
+          id="admin-bearer-token"
+          className="input"
+          type="password"
+          autoComplete="off"
+          value={bearerToken}
+          onChange={(event) => setBearerToken(event.target.value)}
+          placeholder="Supabase Authの個別管理者token"
+        />
+        <p className="hint">本番運用はこちらを優先します。API側で `family_members.role=admin` / `relationship=app_admin` を確認します。</p>
+      </div>
+      <div className="field">
+        <label htmlFor="admin-token">ADMIN_ACCESS_TOKEN fallback</label>
         <input
           id="admin-token"
           className="input"
           type="password"
           autoComplete="off"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
+          value={staticToken}
+          onChange={(event) => setStaticToken(event.target.value)}
           placeholder="暫定運用の管理トークン"
         />
       </div>
@@ -49,8 +75,10 @@ export function AdminTokenControl() {
           className="secondary"
           type="button"
           onClick={() => {
-            setToken("");
-            window.localStorage.removeItem(STORAGE_KEY);
+            setBearerToken("");
+            setStaticToken("");
+            window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
+            window.localStorage.removeItem(ADMIN_STATIC_TOKEN_STORAGE_KEY);
             setSaved(true);
             window.setTimeout(() => setSaved(false), 1800);
           }}
@@ -59,7 +87,7 @@ export function AdminTokenControl() {
         </button>
       </div>
       <p className="hint">
-        本番運用ではSupabase Authのapp_admin個別アカウントを優先します。このトークンは暫定fallbackです。
+        Bearer tokenが保存されている場合はBearer認証を使い、未設定の場合だけ暫定fallbackを使います。
         保存後にAdmin一覧やenv確認を再読み込みすると、Supabase本番データを確認できます。
         {saved ? " 保存しました。" : ""}
       </p>

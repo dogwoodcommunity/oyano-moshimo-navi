@@ -5,11 +5,7 @@ import { useEffect, useState } from "react";
 import { listLocalCases } from "@/lib/store";
 import { statusLabel } from "@oyano/shared";
 import type { AdminCaseRow } from "@/app/api/admin/cases/route";
-
-function adminHeaders(): HeadersInit {
-  const token = window.localStorage.getItem("oyano_admin_token");
-  return token ? { "x-admin-token": token } : {};
-}
+import { adminHeaders } from "@/lib/adminClientAuth";
 
 export function AdminCases() {
   const [remoteCases, setRemoteCases] = useState<AdminCaseRow[] | null>(null);

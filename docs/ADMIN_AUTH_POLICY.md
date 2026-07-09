@@ -7,6 +7,7 @@ Admin APIは `SUPABASE_SERVICE_ROLE_KEY` を使うため、RLSではなくAPI側
 - 正式ルートはSupabase Authの個別ユーザーを使う。
 - `family_members.role = 'admin'` かつ `family_members.relationship = 'app_admin'` のユーザーだけがAdmin APIを使える。
 - 既存運用のため、`ADMIN_ACCESS_TOKEN` + `x-admin-token` は暫定fallbackとして残す。
+- Admin画面のAccess欄は、`app_admin access token` を保存している場合は `Authorization: Bearer ...` を優先して送る。未設定の場合だけ `ADMIN_ACCESS_TOKEN fallback` を `x-admin-token` で送る。
 - 削除依頼の状態変更では、処理者の `user_id` / `email` / 認可方式を `audit_logs.metadata` に保存する。
 
 ## app_adminの作り方

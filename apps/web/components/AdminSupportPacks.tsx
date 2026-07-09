@@ -4,11 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listLocalCases } from "@/lib/store";
 import type { AdminSupportPackRow } from "@/app/api/admin/support-packs/route";
-
-function adminHeaders(): HeadersInit {
-  const token = window.localStorage.getItem("oyano_admin_token");
-  return token ? { "x-admin-token": token } : {};
-}
+import { adminHeaders } from "@/lib/adminClientAuth";
 
 export function AdminSupportPacks() {
   const [supportPacks, setSupportPacks] = useState<AdminSupportPackRow[] | null>(null);

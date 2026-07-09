@@ -2,14 +2,10 @@
 
 import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { adminHeaders } from "@/lib/adminClientAuth";
 import { getLocalCase } from "@/lib/store";
 import { statusLabel, type DiagnosisAnswers } from "@oyano/shared";
 import type { AdminCaseDetail } from "@/app/api/admin/cases/[caseId]/route";
-
-function adminHeaders(): HeadersInit {
-  const token = window.localStorage.getItem("oyano_admin_token");
-  return token ? { "x-admin-token": token } : {};
-}
 
 export default function AdminCaseDetailPage() {
   const params = useParams<{ id: string }>();
