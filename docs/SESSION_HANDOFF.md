@@ -1188,6 +1188,32 @@ GitHubが必要な理由:
 - 追加済み資料:
   - `docs/ENGINEER_REVIEW_BRIEF_2026-07-09.md`
   - `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-09.md`
+
+## 2026-07-09 追記 40
+
+- 外部コード監査結果を受けてCritical/Highを先に修正。
+- Admin APIのBearer認証を `family_members.role='admin'` / `relationship='app_admin'` から `app_admins` 専用テーブルへ分離。
+  - `apps/web/lib/adminAuth.ts` はBearer tokenのSupabase userを確認後、`app_admins.user_id` だけを見る。
+  - `supabase/schema.sql` / `production_rls.sql` / `production_pending_hardening.sql` に `app_admins` と新しい `is_app_admin()` を追加。
+  - 既存本番DB向けに `supabase/admin_auth_hardening.sql` を追加。これを本番Supabase SQL Editorで実行する必要あり。
+  - `scripts/smoke-admin-bearer.mjs` は一時family/family_membersを作らず、一時auth user + profile + `app_admins` 行でAdmin APIを確認する形へ変更。
+- 家族招待RPCの防御を強化。
+  - `create_family_invite` は `relationship='app_admin'` を予約語として拒否。
+  - `accept_family_invite` は招待先メールとログインユーザーのAuth email一致を必須化。
+  - 受諾時にも予約role/relationshipを再チェック。
+- 通知送信の詰まり対策を追加。
+  - `scheduled_notifications.claimed_at` を追加。
+  - `claim_due_scheduled_notifications` は `sending` へclaim時に `claimed_at=now()` を入れる。
+  - `reset_stale_sending_notifications()` を追加し、cron開始時に古い `sending` を `scheduled` へ戻す。
+  - Expo Push ticketで `DeviceNotRegistered` が返ったpush tokenは `is_active=false` に更新。
+- 検証SQLを更新。
+  - `verify_compact.sql` / `verify_setup.sql` に `app_admins`, `reset_stale_sending_notifications`, `legacy_family_app_admin_absent` を追加。
+- 次にやること:
+  - typecheck/build/doctorを実行。
+  - 本番Supabaseへ `supabase/admin_auth_hardening.sql` と更新済み `supabase/notification_delivery_hardening.sql` を投入。
+  - `verify_compact.sql` で全true確認。
+  - `smoke-admin-bearer.mjs` を本番で再実行。
+  - GitHubへcommit/pushし、レビュー用ZIPを再作成。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:

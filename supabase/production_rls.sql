@@ -3,6 +3,7 @@
 -- This keeps anonymous web diagnosis writes behind Next.js server APIs using the service role key.
 
 alter table profiles enable row level security;
+alter table app_admins enable row level security;
 alter table families enable row level security;
 alter table family_members enable row level security;
 alter table people enable row level security;
@@ -78,12 +79,14 @@ set search_path = public
 as $$
   select exists (
     select 1
-    from family_members
-    where family_members.user_id = auth.uid()
-      and family_members.role = 'admin'
-      and family_members.relationship = 'app_admin'
+    from app_admins
+    where app_admins.user_id = auth.uid()
   );
 $$;
+
+create policy "app_admins read own"
+on app_admins for select
+using (user_id = auth.uid());
 
 create policy "profiles read own"
 on profiles for select

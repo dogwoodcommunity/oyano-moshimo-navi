@@ -10,6 +10,9 @@ alter table scheduled_notifications
 alter table scheduled_notifications
   add column if not exists opened_at timestamptz;
 
+alter table scheduled_notifications
+  add column if not exists claimed_at timestamptz;
+
 do $$
 begin
   if exists (
@@ -64,7 +67,8 @@ as $$
   ),
   claimed as (
     update scheduled_notifications
-    set status = 'sending'
+    set status = 'sending',
+        claimed_at = now()
     from due
     where scheduled_notifications.id = due.id
       and scheduled_notifications.status = 'scheduled'
@@ -88,3 +92,26 @@ as $$
 $$;
 
 grant execute on function public.claim_due_scheduled_notifications(int) to service_role;
+
+create or replace function public.reset_stale_sending_notifications(p_before interval default interval '15 minutes')
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  update scheduled_notifications
+  set status = 'scheduled',
+      claimed_at = null
+  where status = 'sending'
+    and claimed_at is not null
+    and claimed_at < now() - p_before;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.reset_stale_sending_notifications(interval) to service_role;

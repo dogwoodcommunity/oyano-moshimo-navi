@@ -63,7 +63,7 @@ Supabase Project ref: `ypnuxyfirlvbsqujocuy`
 - `verify_compact.sql` は全項目true確認済み。
 - 本番同意ログsmoke成功。
 - 本番Web smoke成功。
-- Admin APIのapp_admin Bearer認証smoke成功。
+- Admin APIのapp_admin Bearer認証は監査指摘を受け、`family_members` ではなく `app_admins` 専用テーブルへ分離済み。`admin_auth_hardening.sql` 投入後にBearer smokeを再実行する。
 
 未完了:
 

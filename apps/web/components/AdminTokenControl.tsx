@@ -53,7 +53,7 @@ export function AdminTokenControl() {
           onChange={(event) => setBearerToken(event.target.value)}
           placeholder="Supabase Authの個別管理者token"
         />
-        <p className="hint">本番運用はこちらを優先します。API側で `family_members.role=admin` / `relationship=app_admin` を確認します。</p>
+        <p className="hint">本番運用はこちらを優先します。API側で `app_admins` 専用テーブルを確認します。</p>
       </div>
       <div className="field">
         <label htmlFor="admin-token">ADMIN_ACCESS_TOKEN fallback</label>

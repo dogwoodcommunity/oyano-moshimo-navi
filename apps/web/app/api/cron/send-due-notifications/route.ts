@@ -139,6 +139,7 @@ export async function GET(request: Request) {
   }
 
   await supabase.rpc("ensure_monthly_checkin_notifications");
+  await supabase.rpc("reset_stale_sending_notifications");
 
   const { data: schedules, error } = await supabase.rpc("claim_due_scheduled_notifications", {
     p_limit: 100
@@ -216,13 +217,33 @@ export async function GET(request: Request) {
       body: JSON.stringify(messages)
     });
 
+    const expoBodyText = await expoResponse.text();
+    let expoBody: { data?: Array<{ status?: string; details?: { error?: string } }> } | null = null;
+    try {
+      expoBody = expoBodyText ? JSON.parse(expoBodyText) : null;
+    } catch {
+      expoBody = null;
+    }
+
     if (!expoResponse.ok) {
       await supabase
         .from("scheduled_notifications")
         .update({ status: "scheduled" })
         .in("id", rows.map((row) => row.id));
 
-      return NextResponse.json({ error: await expoResponse.text() }, { status: 502 });
+      return NextResponse.json({ error: expoBodyText }, { status: 502 });
+    }
+
+    const inactiveTokens = (expoBody?.data ?? [])
+      .map((ticket, index) => ({ ticket, token: messages[index]?.to }))
+      .filter(({ ticket, token }) => token && ticket.status === "error" && ticket.details?.error === "DeviceNotRegistered")
+      .map(({ token }) => token as string);
+
+    if (inactiveTokens.length > 0) {
+      await supabase
+        .from("push_tokens")
+        .update({ is_active: false })
+        .in("expo_push_token", inactiveTokens);
     }
   }
 

@@ -4,6 +4,7 @@
 with required_tables(name) as (
   values
     ('cases'),
+    ('app_admins'),
     ('case_photos'),
     ('case_results'),
     ('families'),
@@ -55,6 +56,7 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public'
   and c.relname in (
     'profiles',
+    'app_admins',
     'families',
     'family_members',
     'family_invites',
@@ -119,6 +121,7 @@ with policy_tables(name) as (
     ('purchases'),
     ('audit_logs'),
     ('account_delete_requests')
+    ,('app_admins')
 ),
 policy_counts as (
   select tablename, count(*) as policies
@@ -176,6 +179,7 @@ with required_functions(name) as (
   values
     ('schedule_notifications_for_task'),
     ('claim_due_scheduled_notifications'),
+    ('reset_stale_sending_notifications'),
     ('ensure_monthly_checkin_notifications'),
     ('consume_case_handoff'),
     ('create_family_invite'),
@@ -202,3 +206,13 @@ select
   count(*) > 0 as ok,
   count(*) as rows
 from public.products;
+
+select
+  'security_check' as check_type,
+  'legacy_family_app_admin_absent' as target,
+  not exists(
+    select 1
+    from public.family_members
+    where role = 'admin'
+      and relationship = 'app_admin'
+  ) as ok;

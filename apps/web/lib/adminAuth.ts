@@ -29,11 +29,9 @@ async function verifySupabaseAppAdmin(request: Request): Promise<AdminAuthContex
   if (userError || !userResult.user) return null;
 
   const { data: member } = await supabase
-    .from("family_members")
+    .from("app_admins")
     .select("id")
     .eq("user_id", userResult.user.id)
-    .eq("role", "admin")
-    .eq("relationship", "app_admin")
     .limit(1)
     .maybeSingle();
 

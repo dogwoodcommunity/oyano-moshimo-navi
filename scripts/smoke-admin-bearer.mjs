@@ -47,7 +47,6 @@ const smokeId = randomUUID();
 const email = `admin-smoke+${smokeId.slice(0, 8)}@example.com`;
 const password = `${randomBytes(18).toString("base64url")}aA1!`;
 let userId;
-let familyId;
 
 const serviceHeaders = {
   apikey: serviceRoleKey,
@@ -68,8 +67,8 @@ async function requestJson(url, options, label) {
 }
 
 async function cleanup() {
-  if (familyId) {
-    await fetch(`${supabaseUrl}/rest/v1/families?id=eq.${familyId}`, {
+  if (userId) {
+    await fetch(`${supabaseUrl}/rest/v1/app_admins?user_id=eq.${userId}`, {
       method: "DELETE",
       headers: serviceHeaders
     });
@@ -118,38 +117,19 @@ try {
   );
   console.log("OK   temporary profile upserted");
 
-  const families = await requestJson(
-    `${supabaseUrl}/rest/v1/families`,
-    {
-      method: "POST",
-      headers: { ...serviceHeaders, Prefer: "return=representation" },
-      body: JSON.stringify({
-        name: "親のもしもナビ運営 smoke",
-        owner_user_id: userId,
-        plan: "plus"
-      })
-    },
-    "create admin family"
-  );
-  familyId = families?.[0]?.id;
-  if (!familyId) throw new Error("create admin family did not return id");
-  console.log("OK   temporary admin family created");
-
   await requestJson(
-    `${supabaseUrl}/rest/v1/family_members`,
+    `${supabaseUrl}/rest/v1/app_admins`,
     {
       method: "POST",
       headers: serviceHeaders,
       body: JSON.stringify({
-        family_id: familyId,
         user_id: userId,
-        role: "admin",
-        relationship: "app_admin"
+        note: "temporary admin bearer smoke"
       })
     },
-    "create app_admin family member"
+    "create app_admin"
   );
-  console.log("OK   app_admin family member created");
+  console.log("OK   app_admin row created");
 
   const token = await requestJson(
     `${supabaseUrl}/auth/v1/token?grant_type=password`,

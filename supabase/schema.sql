@@ -13,6 +13,15 @@ create table if not exists profiles (
   updated_at timestamptz default now()
 );
 
+create table if not exists app_admins (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  created_by uuid references profiles(id) on delete set null,
+  note text,
+  created_at timestamptz default now(),
+  unique(user_id)
+);
+
 create table if not exists families (
   id uuid primary key default uuid_generate_v4(),
   name text not null,
@@ -265,6 +274,7 @@ create table if not exists scheduled_notifications (
   notification_type text not null default 'due_1d',
   scheduled_for timestamptz not null,
   status text not null default 'scheduled',
+  claimed_at timestamptz,
   sent_at timestamptz,
   opened_at timestamptz,
   created_at timestamptz default now(),

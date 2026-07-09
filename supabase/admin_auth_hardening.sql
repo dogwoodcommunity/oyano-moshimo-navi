@@ -1,20 +1,38 @@
--- Family invite RPC with free-plan limit enforcement.
--- Run after schema.sql and production_rls.sql.
+-- Admin auth hardening for production.
+-- Run after production_rls.sql and family_invite_rpc.sql.
 
-create extension if not exists "pgcrypto";
+create table if not exists app_admins (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  created_by uuid references profiles(id) on delete set null,
+  note text,
+  created_at timestamptz default now(),
+  unique(user_id)
+);
 
-alter table family_invites
-  add column if not exists relationship text;
+alter table app_admins enable row level security;
 
-alter table family_invites
-  add column if not exists created_by uuid references profiles(id) on delete set null;
+create or replace function is_app_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from app_admins
+    where app_admins.user_id = auth.uid()
+  );
+$$;
 
-alter table family_invites
-  add column if not exists accepted_at timestamptz;
+drop policy if exists "app_admins read own" on app_admins;
+create policy "app_admins read own"
+on app_admins for select
+using (user_id = auth.uid());
 
-create unique index if not exists idx_family_invites_token_unique
-on family_invites(token);
-
+-- family_members.relationship = 'app_admin' used to be the temporary admin marker.
+-- From this point it is reserved and must not be created through family invites.
 create or replace function public.create_family_invite(
   p_family_id uuid,
   p_invited_email text,

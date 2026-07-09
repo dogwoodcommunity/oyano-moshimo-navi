@@ -2,7 +2,7 @@
 
 SQL Editorで以下の順に実行する。
 
-既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` を実行する。
+既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
@@ -18,9 +18,10 @@ SQL Editorで以下の順に実行する。
 12. `api_grants.sql`
 13. `production_rls.sql`
 14. `family_invite_rpc.sql`
-15. `family_owner_succession.sql`
-16. `account_deletion_pipeline.sql`
-17. `storage_setup.sql`
+15. `admin_auth_hardening.sql`
+16. `family_owner_succession.sql`
+17. `account_deletion_pipeline.sql`
+18. `storage_setup.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -28,8 +29,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-18. `verify_setup.sql`
-19. `verify_compact.sql`
+19. `verify_setup.sql`
+20. `verify_compact.sql`
 
 ## 重要
 

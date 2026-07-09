@@ -4,7 +4,7 @@
 
 - [ ] `SUPABASE_SERVICE_ROLE_KEY` を使うAPIが個別に認可している。
 - [ ] `ADMIN_ACCESS_TOKEN` fallbackの残存リスクが許容できる。
-- [ ] app_admin Bearer認証が他familyの通常adminと混同されない。
+- [ ] app_admin Bearer認証が `app_admins` 専用テーブルだけを見ており、他familyの通常adminと混同されない。
 - [ ] handoff tokenが推測困難、短命、使い捨てになっている。
 - [ ] handoff consumeが途中失敗で再試行不能にならない。
 - [ ] Magic Link / deep linkにオープンリダイレクト余地がない。
@@ -23,7 +23,7 @@
 
 - [ ] 法定期限/高優先度/通常タスクの通知段数が設計通り。
 - [ ] 同日ダイジェストで通知スパムになりにくい。
-- [ ] `claim_due_scheduled_notifications` で二重送信が起きにくい。
+- [ ] `claim_due_scheduled_notifications` と `reset_stale_sending_notifications` で二重送信/送信詰まりが起きにくい。
 - [ ] due_date変更、担当者変更、タスク完了、タスク削除時にpending通知が残らない。
 - [ ] push payloadに通知ID配列が入り、opened_at一括更新ができる。
 

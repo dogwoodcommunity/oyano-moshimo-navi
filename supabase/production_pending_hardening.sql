@@ -1,6 +1,37 @@
 -- Run this in Supabase SQL Editor after the initial v0.3 setup.
 -- It contains production hardening added after the first schema import.
 
+-- 0. Admin API authorization is separated from family roles.
+create table if not exists app_admins (
+  id uuid primary key default uuid_generate_v4(),
+  user_id uuid not null references profiles(id) on delete cascade,
+  created_by uuid references profiles(id) on delete set null,
+  note text,
+  created_at timestamptz default now(),
+  unique(user_id)
+);
+
+alter table app_admins enable row level security;
+
+create or replace function is_app_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from app_admins
+    where app_admins.user_id = auth.uid()
+  );
+$$;
+
+drop policy if exists "app_admins read own" on app_admins;
+create policy "app_admins read own"
+on app_admins for select
+using (user_id = auth.uid());
+
 -- 1. Web-to-app handoff tokens are one-time use.
 alter table case_results
   add column if not exists app_handoff_consumed_at timestamptz;
@@ -244,6 +275,9 @@ grant execute on function public.promote_family_member_to_owner(uuid) to authent
 
 -- 5. Notification cron claims due rows before sending so concurrent cron runs
 -- do not send the same scheduled notification twice.
+alter table scheduled_notifications
+  add column if not exists claimed_at timestamptz;
+
 create or replace function public.claim_due_scheduled_notifications(p_limit int default 100)
 returns table (
   id uuid,
@@ -269,7 +303,8 @@ as $$
   ),
   claimed as (
     update scheduled_notifications
-    set status = 'sending'
+    set status = 'sending',
+        claimed_at = now()
     from due
     where scheduled_notifications.id = due.id
       and scheduled_notifications.status = 'scheduled'
@@ -293,6 +328,29 @@ as $$
 $$;
 
 grant execute on function public.claim_due_scheduled_notifications(int) to service_role;
+
+create or replace function public.reset_stale_sending_notifications(p_before interval default interval '15 minutes')
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer;
+begin
+  update scheduled_notifications
+  set status = 'scheduled',
+      claimed_at = null
+  where status = 'sending'
+    and claimed_at is not null
+    and claimed_at < now() - p_before;
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+grant execute on function public.reset_stale_sending_notifications(interval) to service_role;
 
 -- 6. Account deletion requests get a durable queue with a 30-day SLA.
 create table if not exists account_delete_requests (
