@@ -1125,3 +1125,28 @@ GitHubが必要な理由:
 - 次にやること:
   - 改善commitをGitHubへpushし、Vercel再デプロイを待つ。
   - 再度 `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` を実行。
+
+## 2026-07-09 追記 36
+
+- Vercel本番が2日前のデプロイで止まっていることを確認。
+  - `vercel ls oyano-moshimo-navi` で最新Productionが2日前だった。
+  - そのため、GitHub push済みの診断API修正が本番へ反映されていなかった。
+- Vercel CLIで本番へ明示デプロイ。
+  - `pnpm dlx vercel deploy --prod --yes`
+  - Deployment ID: `dpl_9X1aaftb1c7bzHeH2scEuX1L4k2Z`
+  - Production URL: `https://oyano-moshimo-navi-my7cxxbs8-dogwoodcommunity1.vercel.app`
+  - Alias: `https://oyano-moshimo-navi.vercel.app`
+  - Build/Deploy成功。
+- 本番同意ログsmoke再実行。
+  - `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app`
+  - `OK diagnosis submitted`
+  - `OK cases consent fields saved`
+  - `OK consent_logs sensitive_info row saved`
+- 本番Web smoke再実行。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app`
+  - 公開ページと主要API認可はOK。
+  - Admin env APIは `ADMIN_ACCESS_TOKEN` 未指定のため401でSKIP。
+- 次に残る本番化タスク:
+  - Admin APIをapp_admin個別アカウントのBearer認証で確認。
+  - Stripe関連env/商品/Webhookを設定。
+  - Expo Magic Linkログイン、dashboard/person/tasks実データ読込、push token保存を実機確認。
