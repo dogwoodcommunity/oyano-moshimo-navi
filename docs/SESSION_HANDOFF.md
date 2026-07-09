@@ -1234,6 +1234,25 @@ GitHubが必要な理由:
 
 - レビュー資料の対象commitは、自己参照でcommit hashがずれ続けないように `main latest as of 2026-07-09` 表記へ変更。
 - 監査対応本体commitは `0dfbc07 Harden admin auth and notification delivery`。
+
+## 2026-07-09 追記 43
+
+- 監査対応後のGitHub push完了。
+  - Latest pushed branch: `main`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi.git`
+- レビュー用ZIPを作成。
+  - Path: `review_exports/oyano-moshimo-navi-code-review-2026-07-09-main-2d910de.zip`
+  - `git archive` 由来なので `.env.local` は含まない。
+  - ZIP内の秘密情報確認では `.env.example` のみ検出。
+- 検証済み:
+  - Web typecheck OK
+  - Mobile typecheck OK
+  - local doctor OK
+  - Web production build OK
+- 本番Supabaseにはまだ以下をSQL Editorで実行する必要あり:
+  - `supabase/admin_auth_hardening.sql`
+  - 更新済み `supabase/notification_delivery_hardening.sql`
+  - その後 `supabase/verify_compact.sql` で全true確認。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
