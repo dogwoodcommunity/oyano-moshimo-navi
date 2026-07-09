@@ -1253,6 +1253,35 @@ GitHubが必要な理由:
   - `supabase/admin_auth_hardening.sql`
   - 更新済み `supabase/notification_delivery_hardening.sql`
   - その後 `supabase/verify_compact.sql` で全true確認。
+
+## 2026-07-09 追記 44
+
+- 本番Supabaseへ監査対応SQLを投入完了。
+  - SQL Editor URL: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
+  - 投入内容: `admin_auth_hardening.sql` + 更新済み `notification_delivery_hardening.sql`
+  - 初回はコピー範囲が途中で切れて `syntax error at or near "if"` が出たが、完全版を再コピーして再実行し `Success. No rows returned`。
+  - `verify_compact.sql` を実行し、ユーザー確認で全 `ok=true`。
+- Vercel本番へ最新mainを明示デプロイ。
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment ID: `dpl_J88R8ML4ZMvu9rjLaAaZaYu9Qk23`
+  - Production URL: `https://oyano-moshimo-navi-4i2tzed0g-dogwoodcommunity1.vercel.app`
+  - Alias: `https://oyano-moshimo-navi.vercel.app`
+- 本番smoke再確認。
+  - `node scripts/smoke-admin-bearer.mjs https://oyano-moshimo-navi.vercel.app` OK
+    - 一時auth user + profile + `app_admins` 行を作成。
+    - `Authorization: Bearer <token>` で `/api/admin/env-check` が200。
+    - 一時データ削除済み。
+  - `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` OK
+    - diagnosis submitted
+    - cases consent fields saved
+    - consent_logs sensitive_info row saved
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK
+    - public pages/auth-required 401 checks OK
+    - admin env apiはADMIN_ACCESS_TOKEN未指定のためSKIPだが、Bearer smokeで別途OK確認済み。
+- 次に残る大きい本番化タスク:
+  - Stripe商品/Price/Webhook/env設定。
+  - Expo実機でMagic Link、dashboard/person/tasks、push token保存確認。
+  - iOS preview build。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
