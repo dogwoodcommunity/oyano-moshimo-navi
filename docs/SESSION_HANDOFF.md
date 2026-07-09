@@ -1293,6 +1293,25 @@ GitHubが必要な理由:
 - 非同期決済成功時は `purchases.status='paid'`、`support_packs.status='paid'` へ更新。
 - 非同期決済失敗時は `purchases.status='failed'`、`support_packs.status='requested'` のまま維持。
 - `docs/STRIPE_SETUP.md` と `docs/PRODUCTION_CHECKLIST.md` のWebhook購読イベントを更新。
+
+## 2026-07-09 追記 46
+
+- Stripe webhook拡張をGitHubへpush。
+  - Commit: `f76c7df Handle async Stripe checkout events`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi.git`
+- Vercel本番へ明示デプロイ。
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment ID: `dpl_9YzF2EGwFcZiUyHvPTgK74bvET5A`
+  - Production URL: `https://oyano-moshimo-navi-3x0yrh58t-dogwoodcommunity1.vercel.app`
+  - Alias: `https://oyano-moshimo-navi.vercel.app`
+- 本番smoke再確認。
+  - Admin Bearer smoke OK
+  - Production consent smoke OK
+  - Web smoke OK
+- Stripe DashboardでWebhookを作る時のURL:
+  - `https://dashboard.stripe.com/test/webhooks`
+  - Endpoint URL: `https://oyano-moshimo-navi.vercel.app/api/stripe/webhook`
+  - Events: `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed`
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
