@@ -1365,3 +1365,19 @@ GitHubが必要な理由:
   - Stripe Dashboardで商品/Price/Webhook/env設定。
   - Expo実機でMagic Link、handoff、dashboard/person/tasks、push token保存確認。
   - iOS preview build。
+
+## 2026-07-09 追記 49
+
+- ユーザー設定なしで進められる追加品質改善として、`scripts/smoke-web.mjs` にStripe checkout認可の退行検知を追加。
+- 追加チェック:
+  - `POST /api/stripe/checkout`
+  - body: `caseId`, `contactEmail`, `consentToContact` のみ
+  - 期待値: `400`
+  - 意味: `checkoutToken` なしで発動サポートパック申込APIが進まないことを、通常smokeで毎回確認する。
+- 検証:
+  - `pnpm run doctor:local` OK
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK
+  - 追加行 `OK stripe checkout requires token: 400 /api/stripe/checkout` を確認。
+- 関連URL:
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`

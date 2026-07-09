@@ -32,6 +32,17 @@ const checks = [
     body: { expoPushToken: "ExponentPushToken[smoke]" },
     expectStatus: 401
   },
+  {
+    path: "/api/stripe/checkout",
+    label: "stripe checkout requires token",
+    method: "POST",
+    body: {
+      caseId: "00000000-0000-0000-0000-000000000000",
+      contactEmail: "smoke@example.com",
+      consentToContact: true
+    },
+    expectStatus: 400
+  },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
 ];
 
