@@ -24,6 +24,7 @@
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
 - [ ] `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` で同意ログ保存を確認
+  - 2026-07-09確認: 本番診断case作成は成功。ただし `cases.consent_to_sensitive_info` が本番DBに未作成のため、DB検証で失敗。`production_pending_hardening.sql` または `sensitive_info_consent_hardening.sql` の投入が必要。
 - [x] `supabase/product_seed.sql` を実行
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行

@@ -1066,3 +1066,23 @@ GitHubが必要な理由:
 - 現在のローカル状態:
   - `main...origin/main` 同期済み。
   - `review_exports/` のみ未追跡。レビュー用出力なので未commitのまま保持。
+
+## 2026-07-09 追記 32
+
+- GitHub push後の本番確認を実施。
+- Vercel smoke:
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app`
+  - 公開ページ、主要APIの認可確認はOK。
+  - Admin env APIは `ADMIN_ACCESS_TOKEN` 未指定のため401でSKIP。
+- 本番同意ログsmoke:
+  - `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app`
+  - 診断case作成は成功。
+  - DB検証は失敗。理由: 本番DBに `cases.consent_to_sensitive_info` カラムが存在しない。
+  - 次にSupabase SQL Editorで `supabase/production_pending_hardening.sql` を実行する。最低限の個別対応なら `supabase/sensitive_info_consent_hardening.sql`。
+- 実装:
+  - `scripts/smoke-production-consent.mjs` が `.env.local` と `apps/web/.env.local` を自動読込するように変更。
+  - 同意カラム未投入時は、実行すべきSQL名を明示して失敗するように変更。
+- 次にやること:
+  - Supabase SQL Editorで `production_pending_hardening.sql` を投入。
+  - その後 `verify_compact.sql` を実行し、`cases.consent_to_sensitive_info`, `consume_case_handoff`, `claim_due_scheduled_notifications` がtrueか確認。
+  - 再度 `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` を実行。

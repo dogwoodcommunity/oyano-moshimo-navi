@@ -1,3 +1,26 @@
+import { existsSync, readFileSync } from "node:fs";
+
+function loadEnvFile(path) {
+  if (!existsSync(path)) return;
+
+  const body = readFileSync(path, "utf8");
+  for (const line of body.split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) continue;
+
+    const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=(.*)$/);
+    if (!match) continue;
+
+    const [, key, rawValue] = match;
+    if (process.env[key]) continue;
+
+    process.env[key] = rawValue.replace(/^"(.*)"$/, "$1").replace(/^'(.*)'$/, "$1");
+  }
+}
+
+loadEnvFile(".env.local");
+loadEnvFile("apps/web/.env.local");
+
 const baseUrl = (process.argv[2] ?? process.env.WEB_BASE_URL ?? "https://oyano-moshimo-navi.vercel.app").replace(/\/$/, "");
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -59,7 +82,13 @@ caseUrl.searchParams.set("select", "id,consent_to_sensitive_info,sensitive_info_
 
 const caseResponse = await fetch(caseUrl, { headers: restHeaders });
 if (!caseResponse.ok) {
-  fail(`cases REST check returned ${caseResponse.status}: ${await caseResponse.text()}`);
+  const body = await caseResponse.text();
+  if (body.includes("consent_to_sensitive_info")) {
+    fail(
+      `cases REST check returned ${caseResponse.status}: consent columns are missing. Run supabase/production_pending_hardening.sql or supabase/sensitive_info_consent_hardening.sql in Supabase SQL Editor.`
+    );
+  }
+  fail(`cases REST check returned ${caseResponse.status}: ${body}`);
 }
 
 const caseRows = await caseResponse.json();
