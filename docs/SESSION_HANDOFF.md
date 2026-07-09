@@ -1171,3 +1171,13 @@ GitHubが必要な理由:
 - `docs/PRODUCTION_CHECKLIST.md` のAdmin Bearer確認を完了に更新。
 - 注意:
   - これは一時ユーザーによる確認。実運用の恒久app_adminユーザー作成は、代表/運営メールが確定した後に `docs/ADMIN_AUTH_POLICY.md` の手順で作る。
+
+## 2026-07-09 追記 38
+
+- エンジニアレビュー依頼用の資料作成を開始。
+- 追加予定:
+  - `docs/ENGINEER_REVIEW_BRIEF_2026-07-09.md`
+  - `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-09.md`
+- 目的:
+  - コード、設計、RLS、handoff、Admin認可、通知、要配慮個人情報、Stripe未接続部分、Expoアプリ審査リスクをレビューしてもらう。
+  - 最新コード一式のZIPも `review_exports/` に作成する。
