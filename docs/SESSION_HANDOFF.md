@@ -1034,3 +1034,18 @@ GitHubが必要な理由:
   - 送信ボタンをアイコン付きにし、小画面でも読める構成へ変更。
 - 検証:
   - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH CI=true pnpm --filter mobile run typecheck` 成功。
+
+## 2026-07-09 追記 30
+
+- GitHub push再開作業中。
+- ローカル状態:
+  - `main...origin/main [ahead 3]`
+  - 未push commit:
+    - `e6b27db Harden handoff consumption`
+    - `a47442a Harden delete request handling`
+    - `c912b9e Prefer app admin bearer auth`
+  - `review_exports/` は未追跡。レビュー用出力なのでcommit対象外。
+- `gh auth status` はまだ `token invalid`。GitHubブラウザ承認後、ユーザー側ターミナルで `Enter` を押して `gh auth login -h github.com` を完了させる必要あり。
+- 認証完了後に実行すること:
+  - `gh auth status`
+  - `git push origin main`
