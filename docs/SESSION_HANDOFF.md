@@ -1049,3 +1049,20 @@ GitHubが必要な理由:
 - 認証完了後に実行すること:
   - `gh auth status`
   - `git push origin main`
+
+## 2026-07-09 追記 31
+
+- GitHub認証を復旧。
+  - `gh auth status` で `dogwoodcommunity` のログインを確認。
+  - `gh auth setup-git` を実行し、Git pushがGitHub CLI認証を使えるようにした。
+- GitHub push完了。
+  - `git push origin main` 成功。
+  - push範囲: `2cf9933..19721f1`
+  - 送信済みcommit:
+    - `e6b27db Harden handoff consumption`
+    - `a47442a Harden delete request handling`
+    - `c912b9e Prefer app admin bearer auth`
+    - `19721f1 Update session handoff for GitHub auth`
+- 現在のローカル状態:
+  - `main...origin/main` 同期済み。
+  - `review_exports/` のみ未追跡。レビュー用出力なので未commitのまま保持。
