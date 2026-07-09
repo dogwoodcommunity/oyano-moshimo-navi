@@ -1340,6 +1340,35 @@ GitHubが必要な理由:
   - 本番Web: `https://oyano-moshimo-navi.vercel.app`
   - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
 
+## 2026-07-09 追記 53 最新状態
+
+- 最新のコードpush先:
+  - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+  - 最新コードcommit: `51b8515 Automate review zip creation`
+- 最新の本番Web:
+  - `https://oyano-moshimo-navi.vercel.app`
+  - アプリ本体の最新デプロイID: `dpl_7rpsWuM7qSeVCYxhkoodnx9R7589`
+- 最新レビューZIP:
+  - `review_exports/oyano-moshimo-navi-code-review-2026-07-09-51b8515.zip`
+  - `git archive` 由来。
+  - `.env.local` / 実secretファイルなし。`.env.example` のみ許可。
+- ZIP作成コマンド:
+  - `CI=true pnpm run review:zip`
+  - 直接実行するなら `node scripts/create-review-zip.mjs`
+- 直近の検証:
+  - `pnpm run doctor:local` OK
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK
+  - Stripe checkout tokenなし拒否チェックもsmokeに組み込み済み。
+- まだユーザー設定が必要な残タスク:
+  - Stripe Dashboardの商品/Price/Webhook/env設定。
+  - Expo実機でMagic Link、handoff、dashboard/person/tasks、push token保存確認。
+  - iOS preview build。
+- 関連URL:
+  - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
+  - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
+  - Stripe webhook設定: `https://dashboard.stripe.com/test/webhooks`
+  - Expo project: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi`
+
 ## 2026-07-09 追記 50
 
 - 最新レビューZIPを作成。
@@ -1377,6 +1406,29 @@ GitHubが必要な理由:
 - 関連URL:
   - 本番Web: `https://oyano-moshimo-navi.vercel.app`
   - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+
+## 2026-07-09 追記 52
+
+- レビューZIP作成を自動化。
+- 追加:
+  - `scripts/create-review-zip.mjs`
+  - `package.json` script `review:zip`
+- 仕様:
+  - 現在の `HEAD` から `git archive --format=zip` で `review_exports/oyano-moshimo-navi-code-review-YYYY-MM-DD-<commit>.zip` を作る。
+  - `unzip -l` で `.env.local`、`.env`、secret/service role系のファイル名混入を検査する。
+  - `.env.example` は許可。
+- 実行結果:
+  - 初回 `pnpm run review:zip` はCIフラグなしでpnpmが依存確認に入り、ネットワーク制限で失敗。
+  - `CI=true pnpm run review:zip` はOK。
+  - `node scripts/create-review-zip.mjs` もOK。
+- GitHub push済み:
+  - Commit: `51b8515 Automate review zip creation`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+- 最新レビューZIP:
+  - Path: `review_exports/oyano-moshimo-navi-code-review-2026-07-09-51b8515.zip`
+  - Base commit: `51b8515 Automate review zip creation`
+  - `.env.local` / 実secretファイルなし。`.env.example` のみ検出。
+- `docs/ENGINEER_REVIEW_BRIEF_2026-07-09.md` の対象commitとZIP名も `51b8515` へ更新。
   - Vercel: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi`
   - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
 

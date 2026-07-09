@@ -1,7 +1,7 @@
 # 親のもしもナビ v0.3 エンジニアレビュー依頼
 
 作成日: 2026-07-09  
-対象commit: `e2fbea9 Update engineer review scope`  
+対象commit: `51b8515 Automate review zip creation`  
 主な監査対応commit: `0dfbc07 Harden admin auth and notification delivery`, `b50d2ea Require checkout token for support pack`, `7886bac Smoke checkout token enforcement`  
 本番Web: https://oyano-moshimo-navi.vercel.app  
 Supabase Project ref: `ypnuxyfirlvbsqujocuy`  
@@ -81,7 +81,7 @@ Supabase Project ref: `ypnuxyfirlvbsqujocuy`
 最新レビューZIP:
 
 ```text
-review_exports/oyano-moshimo-navi-code-review-2026-07-09-e2fbea9.zip
+review_exports/oyano-moshimo-navi-code-review-2026-07-09-51b8515.zip
 ```
 
 注: このZIPは `git archive` 由来で、`.env.local` は含まない。検出された環境変数ファイルは `.env.example` のみ。
