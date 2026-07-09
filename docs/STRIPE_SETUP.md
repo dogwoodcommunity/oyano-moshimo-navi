@@ -31,7 +31,10 @@ Stripe DashboardのAPI keysからSecret keyを控える。
 Stripe DashboardのWebhookでEndpointを追加する。
 
 - Endpoint URL: `https://oyano-moshimo-navi.vercel.app/api/stripe/webhook`
-- Event: `checkout.session.completed`
+- Events:
+  - `checkout.session.completed`
+  - `checkout.session.async_payment_succeeded`
+  - `checkout.session.async_payment_failed`
 
 作成後、Signing secretを控える。
 
@@ -56,7 +59,7 @@ STRIPE_WEBHOOK_SECRET=
 2. `/support-pack?caseId={caseId}` で連絡先メールを入力し、連絡同意にチェックする。
 3. 「Stripeの申し込み画面へ進む」を押す。
 4. Stripe Checkoutが開く。
-5. テストカードで支払う。
+5. テストカードで支払う。コンビニ決済など非同期決済を使う場合は、async paymentイベントでも状態が更新されることを確認する。
 6. `/result/{caseId}?support_pack=success` に戻り、受付メッセージが出る。
 7. Supabase `purchases` にStripe購入が保存される。
 8. Supabase `support_packs.status` が `paid` になる。

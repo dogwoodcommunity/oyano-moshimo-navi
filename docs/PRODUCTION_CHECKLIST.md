@@ -60,7 +60,7 @@
 - [ ] 発動サポートパック商品を作成
 - [ ] Price IDを `STRIPE_SUPPORT_PACK_PRICE_ID` に設定
 - [ ] Webhook endpoint `/api/stripe/webhook` を登録
-- [ ] `checkout.session.completed` を購読
+- [ ] `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` を購読
 - [ ] テスト決済で `support_packs` が `paid` になることを確認
 
 ## 5. Expo

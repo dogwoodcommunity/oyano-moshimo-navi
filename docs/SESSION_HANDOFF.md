@@ -1282,6 +1282,17 @@ GitHubが必要な理由:
   - Stripe商品/Price/Webhook/env設定。
   - Expo実機でMagic Link、dashboard/person/tasks、push token保存確認。
   - iOS preview build。
+
+## 2026-07-09 追記 45
+
+- 監査指摘M-3対応としてStripe webhookを拡張。
+  - `checkout.session.completed`
+  - `checkout.session.async_payment_succeeded`
+  - `checkout.session.async_payment_failed`
+- `apps/web/app/api/stripe/webhook/route.ts` はcheckout sessionイベントを共通処理し、既存purchaseがある場合もstatusを更新するように変更。
+- 非同期決済成功時は `purchases.status='paid'`、`support_packs.status='paid'` へ更新。
+- 非同期決済失敗時は `purchases.status='failed'`、`support_packs.status='requested'` のまま維持。
+- `docs/STRIPE_SETUP.md` と `docs/PRODUCTION_CHECKLIST.md` のWebhook購読イベントを更新。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:
