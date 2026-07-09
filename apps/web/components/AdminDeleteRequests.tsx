@@ -11,6 +11,7 @@ function adminHeaders(): HeadersInit {
 export function AdminDeleteRequests() {
   const [deleteRequests, setDeleteRequests] = useState<AdminDeleteRequestRow[] | null>(null);
   const [error, setError] = useState("");
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   function loadDeleteRequests() {
@@ -35,6 +36,12 @@ export function AdminDeleteRequests() {
   const rows = deleteRequests ?? [];
 
   async function updateStatus(id: string, status: AdminDeleteRequestRow["status"]) {
+    const note = notes[id]?.trim() ?? "";
+    if (status === "completed" && note.length < 10) {
+      setError("完了にする場合は、実施内容を10文字以上で記録してください。");
+      return;
+    }
+
     setUpdatingId(id);
     setError("");
     const response = await fetch("/api/admin/delete-requests", {
@@ -43,7 +50,7 @@ export function AdminDeleteRequests() {
         ...adminHeaders(),
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({ id, status })
+      body: JSON.stringify({ id, note, status })
     });
     setUpdatingId(null);
 
@@ -93,6 +100,14 @@ export function AdminDeleteRequests() {
               <td>{item.handledBy || "-"}</td>
               <td>
                 <div className="admin-row-actions">
+                  <textarea
+                    aria-label="処理メモ"
+                    className="admin-note-input"
+                    onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))}
+                    placeholder="処理メモ。完了時は実施内容を必ず記録"
+                    rows={2}
+                    value={notes[item.id] ?? item.handledNote ?? ""}
+                  />
                   <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "reviewing")} type="button">
                     確認中
                   </button>

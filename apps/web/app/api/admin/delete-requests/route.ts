@@ -102,6 +102,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "id and valid status are required" }, { status: 400 });
   }
 
+  const note = body.note?.trim() || null;
+  if (body.status === "completed" && (!note || note.length < 10)) {
+    return NextResponse.json({ error: "Completion note of at least 10 characters is required" }, { status: 400 });
+  }
+
   const { data: existing, error: readError } = await supabase
     .from("account_delete_requests")
     .select("id, status")
@@ -121,7 +126,7 @@ export async function PATCH(request: Request) {
       status: body.status,
       last_status_changed_at: now,
       handled_at: handledAt,
-      handled_note: body.note?.trim() || null,
+      handled_note: note,
       handled_by: auth.admin.userId ?? null,
       handled_by_email: auth.admin.email ?? null,
       handled_by_method: auth.admin.method
@@ -140,7 +145,7 @@ export async function PATCH(request: Request) {
     metadata: {
       previous_status: existing.status,
       status: body.status,
-      handled_note: body.note?.trim() || null,
+      handled_note: note,
       handled_by_user_id: auth.admin.userId ?? null,
       handled_by_email: auth.admin.email ?? null,
       handled_by_method: auth.admin.method

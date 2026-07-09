@@ -1587,6 +1587,19 @@ textarea {
   min-width: 220px;
 }
 
+.admin-note-input {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  flex: 1 0 100%;
+  font: inherit;
+  line-height: 1.45;
+  min-height: 58px;
+  padding: 8px 10px;
+  resize: vertical;
+}
+
 .secondary.compact {
   min-height: 34px;
   padding: 7px 10px;
