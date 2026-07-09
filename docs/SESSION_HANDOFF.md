@@ -1214,6 +1214,21 @@ GitHubが必要な理由:
   - `verify_compact.sql` で全true確認。
   - `smoke-admin-bearer.mjs` を本番で再実行。
   - GitHubへcommit/pushし、レビュー用ZIPを再作成。
+
+## 2026-07-09 追記 41
+
+- 監査対応commitを作成しGitHubへpush。
+  - Commit: `0dfbc07 Harden admin auth and notification delivery`
+  - Remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi.git`
+- ローカル検証:
+  - Web typecheck OK
+  - Mobile typecheck OK
+  - local doctor OK
+  - Web production build OK
+- 次にやること:
+  - レビュー資料の対象commitを最新へ更新。
+  - `git archive` で監査対応後のZIPを作成。
+  - 本番Supabaseにはまだ `admin_auth_hardening.sql` と更新済み `notification_delivery_hardening.sql` の投入が必要。
 - GitHub push済み:
   - commit `6e40589 Add engineer review materials`
 - 最新コードZIPを作成:

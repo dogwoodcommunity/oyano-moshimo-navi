@@ -1,7 +1,7 @@
 # 親のもしもナビ v0.3 エンジニアレビュー依頼
 
 作成日: 2026-07-09  
-対象commit: `a8bc52b Add admin bearer production smoke`  
+対象commit: `0dfbc07 Harden admin auth and notification delivery`  
 本番Web: https://oyano-moshimo-navi.vercel.app  
 Supabase Project ref: `ypnuxyfirlvbsqujocuy`  
 
