@@ -63,6 +63,9 @@ const diagnosisBody = await diagnosisResponse.json();
 if (!diagnosisBody?.record?.id || diagnosisBody.record.id !== caseId) {
   fail("diagnosis response did not return the expected case id");
 }
+if (diagnosisBody.persisted !== true) {
+  fail(`diagnosis response did not persist to Supabase: persisted=${String(diagnosisBody.persisted)}`);
+}
 
 console.log(`OK   diagnosis submitted: ${caseId}`);
 
@@ -94,7 +97,7 @@ if (!caseResponse.ok) {
 const caseRows = await caseResponse.json();
 const caseRow = caseRows?.[0];
 if (!caseRow?.consent_to_sensitive_info) {
-  fail("cases.consent_to_sensitive_info was not true");
+  fail(`cases.consent_to_sensitive_info was not true: ${JSON.stringify(caseRow)}`);
 }
 if (caseRow.sensitive_info_consent_version !== "sensitive-info-v1") {
   fail("cases.sensitive_info_consent_version was not sensitive-info-v1");

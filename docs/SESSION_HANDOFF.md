@@ -1086,3 +1086,42 @@ GitHubが必要な理由:
   - Supabase SQL Editorで `production_pending_hardening.sql` を投入。
   - その後 `verify_compact.sql` を実行し、`cases.consent_to_sensitive_info`, `consume_case_handoff`, `claim_due_scheduled_notifications` がtrueか確認。
   - 再度 `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` を実行。
+
+## 2026-07-09 追記 33
+
+- 本番Supabase hardening投入作業を開始。
+- `supabase/production_pending_hardening.sql` をMacのクリップボードへコピー済み。
+- ユーザー作業待ち:
+  - Supabase SQL Editorを開く。
+  - エディタを全消しして `⌘ + V`。
+  - `Run` を押す。
+- 成功後にやること:
+  - `supabase/verify_compact.sql` をクリップボードへコピーして実行してもらう。
+  - `cases.consent_to_sensitive_info`, `consume_case_handoff`, `claim_due_scheduled_notifications` がtrueか確認。
+  - 本番同意ログsmokeを再実行。
+
+## 2026-07-09 追記 34
+
+- ユーザーがSupabase SQL Editorで `production_pending_hardening.sql` を実行。
+- 実行結果: `Success. No rows returned`
+- 次の確認作業:
+  - `supabase/verify_compact.sql` をMacのクリップボードへコピー済み。
+  - SQL Editorの中身を全消しして `⌘ + V`、`Run`。
+  - `ok` が全てtrueか確認。
+  - 特に `cases.consent_to_sensitive_info`, `consume_case_handoff`, `claim_due_scheduled_notifications` を見る。
+
+## 2026-07-09 追記 35
+
+- `verify_compact.sql` の結果をユーザーが確認。
+  - `ok` は全部true。
+  - 重要項目 `cases.consent_to_sensitive_info`, `consume_case_handoff`, `claim_due_scheduled_notifications` もtrue。
+- 本番同意ログsmokeを再実行。
+  - 診断APIは `persisted:true` で成功。
+  - ただしDB上の `cases.consent_to_sensitive_info` がfalse、`sensitive_info_consent_version` がnull。
+  - ローカルコード `apps/web/app/api/cases/[caseId]/diagnosis/route.ts` は同意カラムを書いているため、Vercel本番APIが古いデプロイを返している可能性が高い。
+- `scripts/smoke-production-consent.mjs` を改善。
+  - `persisted:true` を必須確認。
+  - DBの実際のcase行を失敗メッセージに出す。
+- 次にやること:
+  - 改善commitをGitHubへpushし、Vercel再デプロイを待つ。
+  - 再度 `node scripts/smoke-production-consent.mjs https://oyano-moshimo-navi.vercel.app` を実行。
