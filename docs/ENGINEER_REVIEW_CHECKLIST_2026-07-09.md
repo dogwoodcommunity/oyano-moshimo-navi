@@ -7,6 +7,7 @@
 - [ ] app_admin Bearer認証が `app_admins` 専用テーブルだけを見ており、他familyの通常adminと混同されない。
 - [ ] handoff tokenが推測困難、短命、使い捨てになっている。
 - [ ] handoff consumeが途中失敗で再試行不能にならない。
+- [ ] `/api/stripe/checkout` が `caseId` だけでは進まず、結果画面由来の短命 `checkoutToken` を検証している。
 - [ ] Magic Link / deep linkにオープンリダイレクト余地がない。
 - [ ] Storageの写真アップロードが家族権限確認後のsigned URL経由になっている。
 - [ ] アカウント削除依頼とaudit logに漏れがない。
@@ -33,6 +34,7 @@
 - [ ] `/start -> /diagnosis -> /result/[caseId]` が未ログインで完走できる。
 - [ ] 要配慮個人情報の同意なしに診断送信できない。
 - [ ] 結果画面からアプリ引き継ぎリンクが生成される。
+- [ ] 結果画面から発動サポートパック申込に進む場合、`checkoutToken` が付与される。
 - [ ] Stripe未設定時にサイトが壊れない。
 
 ## Expoアプリ

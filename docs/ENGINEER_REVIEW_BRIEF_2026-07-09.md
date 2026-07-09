@@ -1,8 +1,8 @@
 # 親のもしもナビ v0.3 エンジニアレビュー依頼
 
 作成日: 2026-07-09  
-対象commit: `main` latest as of 2026-07-09  
-監査対応本体commit: `0dfbc07 Harden admin auth and notification delivery`  
+対象commit: `2fcefd3 Record latest review zip`  
+主な監査対応commit: `0dfbc07 Harden admin auth and notification delivery`, `b50d2ea Require checkout token for support pack`, `7886bac Smoke checkout token enforcement`  
 本番Web: https://oyano-moshimo-navi.vercel.app  
 Supabase Project ref: `ypnuxyfirlvbsqujocuy`  
 
@@ -52,6 +52,8 @@ Supabase Project ref: `ypnuxyfirlvbsqujocuy`
    - `apps/web/app/api/stripe/checkout/route.ts`
    - `apps/web/app/api/stripe/webhook/route.ts`
    - 本番Stripe設定前に直すべき実装・検証漏れ。
+   - `/api/stripe/checkout` が `caseId` だけで連絡先/同意を更新できないこと。
+   - `checkoutToken` と `case_results.app_handoff_token` の24時間照合が妥当か。
 
 ## 現在の本番確認状況
 
@@ -65,6 +67,7 @@ Supabase Project ref: `ypnuxyfirlvbsqujocuy`
 - 本番同意ログsmoke成功。
 - 本番Web smoke成功。
 - Admin APIのapp_admin Bearer認証は監査指摘を受け、`family_members` ではなく `app_admins` 専用テーブルへ分離済み。`admin_auth_hardening.sql` 投入後にBearer smokeを再実行する。
+- 発動サポートパック申込APIは、結果画面から渡す `checkoutToken` 必須に変更済み。`caseId` だけでは400で拒否する本番smokeを追加済み。
 
 未完了:
 
@@ -72,6 +75,16 @@ Supabase Project ref: `ypnuxyfirlvbsqujocuy`
 - Expo実機でMagic Link、dashboard/person/tasks、push token保存確認。
 - iOS preview build。
 - 事業者正式情報、弁護士レビュー、家族3組テスト。
+
+## レビュー用ZIP
+
+最新レビューZIP:
+
+```text
+review_exports/oyano-moshimo-navi-code-review-2026-07-09-7886bac.zip
+```
+
+注: このZIPは `git archive` 由来で、`.env.local` は含まない。最新の引き継ぎメモcommit `2fcefd3` まで含めたい場合は、同じ方法で再作成する。
 
 ## 本番確認コマンド
 
