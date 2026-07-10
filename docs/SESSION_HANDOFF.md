@@ -1537,3 +1537,42 @@ GitHubが必要な理由:
   - Supabase Custom SMTP設定。
   - Android実機で、同じメールの実Magic Linkを開いた時にアプリへ戻るか再確認。
   - `review_exports/` の扱い確認後、必要ならGitHubへpush。
+
+## 2026-07-10 追記 56
+
+- Supabase Custom SMTP用の候補情報をユーザーから受領。
+  - SMTP host: `mail86.onamae.ne.jp`
+  - SMTP port: `465` SSLあり、または `587` SSLなし
+  - SMTP username: `info@bee-ch.co.jp`
+  - SMTP password: 受領済みだが機密情報のため記録しない
+  - sender email: `info@bee-ch.co.jp`
+- 推奨設定:
+  - まずは `465` + SSL/TLS有効で設定する。
+  - Sender name は `親のもしもナビ`。
+  - Sender email / Reply-to は `info@bee-ch.co.jp`。
+- 注意:
+  - SMTPパスワードがチャットに貼られたため、本番固定前に可能ならメール側でパスワード再発行・ローテーションするのが望ましい。
+  - 設定後、Supabase Authメールの再送テストをAndroid実機で行い、`email rate limit exceeded` が解消されるか確認する。
+
+## 2026-07-10 追記 57
+
+- Supabase Custom SMTP設定後、Android実機で実メール経由handoffを再確認。
+- ユーザー操作:
+  - Supabase Authentication > Emails でCustom SMTPを保存。
+  - Android実機でWebトップから診断を実施。
+  - 結果画面「長期入院タイプ」まで到達。
+  - アプリ保存導線からExpoアプリへ遷移。
+- 確認結果:
+  - Android実機で「家族タスクボード」画面が表示された。
+  - 未完了2件、担当未定2件を確認。
+  - タスク例:
+    - 「病院の窓口と退院見込みを確認する」
+    - 「支払いと保険請求に必要な書類を集める」
+- 判断:
+  - SMTP設定後、実機の通常操作で Web入口 -> 診断 -> 結果 -> アプリ保存 -> 家族タスクボード の流れは成功。
+  - v0.3のWeb/App接続導線は実機で成立。
+- 次候補:
+  - SMTPパスワードのローテーション。
+  - メールテンプレート日本語化。
+  - Android実機で担当者変更・完了ボタン・通知許可の確認。
+  - GitHubへこの引き継ぎメモをpush。
