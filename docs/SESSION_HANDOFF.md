@@ -1471,3 +1471,40 @@ GitHubが必要な理由:
 - 関連URL:
   - 本番Web: `https://oyano-moshimo-navi.vercel.app`
   - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+
+## 2026-07-10 追記 54
+
+- Android実機でWeb診断 -> Expoアプリhandoffを確認。
+- 実機:
+  - ADB device: `42545251`
+  - installed package: `jp.beech.oyanomoshimo`
+- `apps/mobile/.env.local` はローカル確認用に `EXPO_PUBLIC_WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app` を使った。
+  - Android端末の `localhost` は端末自身を指すため、本番Web APIを見る設定にした。
+  - `.env.local` はGit管理外。commitしない。
+- 追加した確認用スクリプト:
+  - `scripts/create-handoff-smoke-case.mjs`
+    - 本番 `/api/cases/:caseId/diagnosis` にテスト診断を作成し、Web結果URLとアプリhandoff URLを出す。
+  - `scripts/create-mobile-auth-redirect.mjs`
+    - ローカルの `apps/web/.env.local` からSupabase URL/service roleを読み、実機確認用のSupabase Auth URLを生成する。
+    - secretはコードへ書かない。
+  - `scripts/adb-open-url.mjs`
+    - Android shellで `&` や認証パラメータが壊れないよう、URLを端末側shellでクォートして開く。
+- 作成したhandoffテストケース:
+  - caseId: `c24c4160-300a-4fa6-9602-e4baf0d1f07f`
+  - Web result: `https://oyano-moshimo-navi.vercel.app/result/c24c4160-300a-4fa6-9602-e4baf0d1f07f`
+  - app link: `oyanomoshimo://handoff?caseId=c24c4160-300a-4fa6-9602-e4baf0d1f07f&token=...`
+- 確認結果:
+  - `oyanomoshimo://handoff?...` はAndroid実機で `jp.beech.oyanomoshimo/.MainActivity` を開けた。
+  - 未ログイン状態ではhandoff画面に留まり、「本人確認メールを送る」「ログイン済みなので保存する」が表示された。
+  - Supabase Authの生成リンクは、現状だとプロジェクトのSite URL `http://localhost:3000` へ戻る。実ユーザーのMagic Linkを成立させるには、Supabase AuthのRedirect URLsにアプリスキーム/本番URLを追加する必要がある。
+  - 開発確認として、認証後URLを `oyanomoshimo://handoff?...` に変換して実機で開いたところ、Supabase session復帰 -> `/api/handoff/consume` -> RPC `consume_case_handoff` -> タスク画面遷移まで成功。
+  - 実機画面で「家族タスクボード」が表示され、未完了2件/担当未定2件、タスク「病院の窓口と退院見込みを確認する」「支払いと保険請求に必要な書類を集める」が確認できた。
+- 次に必須の外部設定:
+  - Supabase Dashboard > Authentication > URL Configuration でRedirect URLsを確認。
+  - 少なくとも `oyanomoshimo://**` 相当、またはExpo/standaloneアプリの実際の戻りURLを許可する。
+  - 設定後、メール本文のMagic Linkを実機で直接開き、localhostに落ちずアプリへ戻ることを再確認する。
+- 関連URL:
+  - 本番Web: `https://oyano-moshimo-navi.vercel.app`
+  - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
+  - Supabase Auth URL設定: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/url-configuration`
+  - Expo project: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi`
