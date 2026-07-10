@@ -1576,3 +1576,42 @@ GitHubが必要な理由:
   - メールテンプレート日本語化。
   - Android実機で担当者変更・完了ボタン・通知許可の確認。
   - GitHubへこの引き継ぎメモをpush。
+
+## 2026-07-10 追記 58
+
+- ユーザー指示: SMTPパスワード変更は除外し、それ以外を進める。
+- 追加した資料:
+  - `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md`
+  - Supabase Authメールを日本語化するためのテンプレート集。
+  - 対象は Confirm signup / Magic Link / Invite user / Reset password / Reauthentication。
+  - 送信元は `親のもしもナビ <info@bee-ch.co.jp>` 前提。
+- 追加した確認スクリプト:
+  - `scripts/verify-mobile-user-state.mjs`
+  - メールアドレスを指定して、本番Supabase上のauth user / push_tokens / notification_preferences / family_members / people / tasksを確認する。
+  - service role keyはローカル環境変数・`.env.local`から読む。値はログ出力しない。
+- 実行確認:
+  - `node --check scripts/verify-mobile-user-state.mjs` は成功。
+  - `scripts/verify-mobile-user-state.mjs tettsu0529@gmail.com` を本番Supabaseに対して実行。
+  - 結果:
+    - auth userあり。
+    - family_members: 2件。
+    - people: 2件。
+    - tasks: 4件。
+    - incomplete: 4件。
+    - unassigned: 4件。
+    - done: 0件。
+    - push_tokens: 0件。
+    - notification_preferences: 未作成。
+  - 表示タスク:
+    - 「病院の窓口と退院見込みを確認する」
+    - 「支払いと保険請求に必要な書類を集める」
+- 判断:
+  - Web診断 -> アプリhandoff -> タスクDB保存は成立済み。
+  - 複数回テストにより、同じユーザー配下にpeople/tasksが重複している。これは検証操作由来で、削除はまだ行っていない。
+  - push token保存は未完了。Android実機で通知許可画面を開いて「この端末で通知を受け取る」を押す確認が必要。
+- 現在のブロッカー:
+  - `adb devices` で接続端末が表示されないため、こちらからAndroid実機操作を自動化できない。
+  - Android実機をUSBデバッグ接続し直したら、通知許可、push token保存、タスクの進行中/完了/担当変更を確認する。
+- 機密メモ:
+  - SMTPパスワードはユーザーから共有済みだが、コード・docs・ログには残さない。
+  - 本番前にはメール側でパスワード再発行/ローテーション推奨。
