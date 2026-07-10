@@ -1508,3 +1508,32 @@ GitHubが必要な理由:
   - Supabase SQL Editor: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/sql/new`
   - Supabase Auth URL設定: `https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/url-configuration`
   - Expo project: `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi`
+
+## 2026-07-10 追記 55
+
+- Supabase Auth URL Configuration をユーザー操作で更新済み。
+  - Site URL: `https://oyano-moshimo-navi.vercel.app`
+  - Redirect URLs:
+    - `https://oyano-moshimo-navi.vercel.app/**`
+    - `oyanomoshimo://handoff`
+    - `oyanomoshimo:///handoff`
+- Android実機handoffの追加確認:
+  - 使用メール: `tettsu0529@gmail.com`
+  - 実機画面で「本人確認メールを送る」を押したところ、Supabase側の `email rate limit exceeded` が表示された。
+  - これはアプリの入力エラーではなく、Supabase内蔵メール送信のレート制限。
+  - 待機で進めず、検証用スクリプト `scripts/create-mobile-auth-redirect.mjs` で認証済みhandoff URLを生成し、`scripts/adb-open-url.mjs` でAndroid実機へ直接投入した。
+  - secret/tokenはログ・コード・docsに残さない方針。
+- 確認結果:
+  - Android実機で `jp.beech.oyanomoshimo/.MainActivity` がhandoff URLを受け取った。
+  - Supabase session復帰後、アプリは「タスク」画面へ遷移。
+  - 画面上で「家族タスクボード」、未完了2件、担当未定2件を確認。
+  - 表示タスク:
+    - 「病院の窓口と退院見込みを確認する」
+    - 「支払いと保険請求に必要な書類を集める」
+- 判断:
+  - Web診断結果 -> アプリhandoff -> ログイン/session -> case consume -> 家族タスクボード表示の本筋は成功。
+  - 実ユーザー向けメール送信は、Supabase内蔵メールの制限に当たるため、本番/テスト配布前にCustom SMTP設定が必要。
+- 次候補:
+  - Supabase Custom SMTP設定。
+  - Android実機で、同じメールの実Magic Linkを開いた時にアプリへ戻るか再確認。
+  - `review_exports/` の扱い確認後、必要ならGitHubへpush。
