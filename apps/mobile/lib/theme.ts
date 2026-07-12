@@ -1,15 +1,17 @@
 export const colors = {
-  ink: "#18231f",
-  muted: "#5f6d66",
-  line: "#d9e2dc",
-  paper: "#f6f7f1",
-  surface: "#ffffff",
-  surfaceSoft: "#eef4ed",
-  green: "#276447",
-  greenDark: "#183f2e",
-  blue: "#284f79",
-  gold: "#a56f24",
-  rose: "#9a3f56"
+  ink: "#202822",
+  muted: "#697268",
+  line: "#ddd8ca",
+  paper: "#f3efe4",
+  surface: "#fffdf7",
+  surfaceSoft: "#f0eadc",
+  green: "#286348",
+  greenDark: "#153b2b",
+  blue: "#365c7e",
+  gold: "#9b6d2b",
+  rose: "#99475c",
+  clay: "#b8764d",
+  moss: "#6f7d4d"
 };
 
 export const radius = {
@@ -18,9 +20,9 @@ export const radius = {
 };
 
 export const shadow = {
-  shadowColor: "#1c3027",
-  shadowOpacity: 0.1,
-  shadowRadius: 18,
-  shadowOffset: { width: 0, height: 10 },
+  shadowColor: "#342b1e",
+  shadowOpacity: 0.09,
+  shadowRadius: 16,
+  shadowOffset: { width: 0, height: 8 },
   elevation: 3
 };

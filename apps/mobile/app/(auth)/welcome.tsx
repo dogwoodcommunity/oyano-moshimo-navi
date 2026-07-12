@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
-import { Image, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { demoResult } from "@/lib/demoData";
 import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
@@ -62,24 +62,24 @@ export default function WelcomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen} style={styles.scroll} keyboardShouldPersistTaps="handled">
-      <View style={styles.photoWrap}>
-        <Image
-          resizeMode="cover"
-          source={require("../../assets/onboarding-family-home.png")}
-          style={styles.photo}
-        />
-      </View>
-
-      <View style={styles.hero}>
-        <View style={styles.brandRow}>
-          <Text style={styles.brand}>親のもしもナビ</Text>
-          <Text style={styles.tag}>家族の保管庫・通知係</Text>
+      <ImageBackground
+        imageStyle={styles.heroPhoto}
+        resizeMode="cover"
+        source={require("../../assets/onboarding-family-home.png")}
+        style={styles.photoHero}
+      >
+        <View style={styles.photoShade} />
+        <View style={styles.heroContent}>
+          <View style={styles.brandRow}>
+            <Text style={styles.brand}>親のもしもナビ</Text>
+            <Text style={styles.tag}>家族の保管庫・通知係</Text>
+          </View>
+          <Text style={styles.title}>親のことで、家族が迷わないように。</Text>
+          <Text style={styles.lead}>
+            入院、認知症、相続、実家整理。必要なことを、家族で見られる短いリストに整えます。
+          </Text>
         </View>
-        <Text style={styles.title}>親のことで、家族が迷わないように。</Text>
-        <Text style={styles.lead}>
-          入院、認知症、相続、実家整理。必要なことを整理して、期限と担当を家族で共有します。
-        </Text>
-      </View>
+      </ImageBackground>
 
       {hasHandoff ? (
         <View style={styles.handoffBox}>
@@ -92,8 +92,9 @@ export default function WelcomeScreen() {
       ) : null}
 
       <View style={styles.startPanel}>
-        <Text style={styles.startTitle}>もっと詳しく使いたい方へ</Text>
-        <Text style={styles.body}>まず内容を見て、家族で続けて管理したいと思った時に会員登録できます。</Text>
+        <Text style={styles.panelEyebrow}>ここからです</Text>
+        <Text style={styles.startTitle}>続けて管理する方は、会員登録へ</Text>
+        <Text style={styles.body}>まずWebで整理したあと、期限・担当・写真を家族で残したい方だけ登録できます。</Text>
         <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
@@ -197,19 +198,21 @@ function FeatureRow({
 
 const styles = StyleSheet.create({
   scroll: { backgroundColor: colors.paper, flex: 1 },
-  screen: { gap: 16, padding: 18, paddingBottom: 36, paddingTop: 18 },
-  photoWrap: { backgroundColor: "#efe8da", borderRadius: radius.card, height: 270, overflow: "hidden", ...shadow },
-  photo: { height: "100%", width: "100%" },
-  hero: { gap: 10, paddingHorizontal: 2 },
+  screen: { gap: 16, padding: 16, paddingBottom: 36, paddingTop: 16 },
+  photoHero: { borderRadius: 18, minHeight: 390, overflow: "hidden", ...shadow },
+  heroPhoto: { borderRadius: 18 },
+  photoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.22)" },
+  heroContent: { flex: 1, gap: 12, justifyContent: "flex-end", padding: 20 },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  brand: { backgroundColor: colors.greenDark, borderRadius: 999, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
-  tag: { color: colors.greenDark, fontSize: 13, fontWeight: "900" },
-  title: { color: colors.ink, fontSize: 33, fontWeight: "900", lineHeight: 40 },
-  lead: { color: colors.muted, fontSize: 16, lineHeight: 26 },
+  brand: { backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
+  tag: { backgroundColor: "rgba(21,59,43,0.74)", borderRadius: 999, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
+  title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 41, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  lead: { color: "rgba(255,253,247,0.92)", fontSize: 16, fontWeight: "700", lineHeight: 26, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   handoffBox: { alignItems: "flex-start", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 14 },
   handoffText: { flex: 1, gap: 4 },
   handoffTitle: { color: colors.greenDark, fontSize: 16, fontWeight: "900", lineHeight: 22 },
-  startPanel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 10, padding: 16, ...shadow },
+  startPanel: { backgroundColor: colors.surface, borderColor: "#d3c7b3", borderRadius: 14, borderWidth: 1, gap: 11, padding: 17, ...shadow },
+  panelEyebrow: { color: colors.clay, fontSize: 13, fontWeight: "900" },
   startTitle: { color: colors.ink, fontSize: 20, fontWeight: "900", lineHeight: 26 },
   disabledButton: { opacity: 0.55 },
   primaryButton: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 54, paddingHorizontal: 14 },
@@ -220,7 +223,7 @@ const styles = StyleSheet.create({
   previewButtonText: { color: colors.greenDark, fontSize: 15, fontWeight: "900" },
   loginButton: { alignItems: "center", minHeight: 36, justifyContent: "center" },
   loginText: { color: colors.blue, fontWeight: "900" },
-  noteBand: { alignItems: "center", backgroundColor: "#fff9eb", borderColor: "#ead9b8", borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 13 },
+  noteBand: { alignItems: "center", backgroundColor: "#fff6e2", borderColor: "#ead9b8", borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 13 },
   noteBandText: { color: "#6f532b", flex: 1, fontSize: 13, fontWeight: "800", lineHeight: 20 },
   storyPanel: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16 },
   sectionTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },
@@ -228,7 +231,7 @@ const styles = StyleSheet.create({
   safeHeader: { alignItems: "center", flexDirection: "row", gap: 8 },
   safeTitle: { color: colors.greenDark, flex: 1, fontSize: 18, fontWeight: "900", lineHeight: 24 },
   featureRow: { alignItems: "center", flexDirection: "row", gap: 12 },
-  iconWrap: { alignItems: "center", backgroundColor: colors.surfaceSoft, borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
+  iconWrap: { alignItems: "center", backgroundColor: "#efe7d6", borderRadius: 999, height: 44, justifyContent: "center", width: 44 },
   featureText: { flex: 1, gap: 3 },
   featureTitle: { color: colors.ink, fontSize: 16, fontWeight: "900", lineHeight: 22 },
   body: { color: colors.muted, lineHeight: 22 },

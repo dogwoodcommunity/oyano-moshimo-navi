@@ -1653,3 +1653,41 @@ GitHubが必要な理由:
 - 残:
   - Android実機がADBに出ていないため、UI上のタップ確認とpush token保存確認は未実施。
   - 通知許可/push token確認は今回ユーザー指示で除外。
+
+## 2026-07-12 追記 60
+
+- ユーザー指示: モバイルのデザインがダサい/AIっぽいので、写真素材や背景色を含めてこだわってほしい。
+- 対応画面:
+  - `apps/mobile/app/(auth)/welcome.tsx`
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+  - `apps/mobile/app/people/[id]/tasks.tsx`
+  - `apps/mobile/lib/theme.ts`
+- デザイン方針:
+  - 既存の生活感ある写真素材 `apps/mobile/assets/onboarding-family-home.png` を、単なる挿絵ではなくヒーロー背景として使用。
+  - 白一色/濃緑一色のAIっぽい画面から、生成感の少ない「家の机・書類・暮らし」のトーンへ寄せた。
+  - 背景色を少し暖かい紙色に変更し、カードも真っ白ではなく温かい白へ調整。
+  - 入口の文言を「ここからです」「続けて管理する方は、会員登録へ」に変更し、いきなりログインを迫る印象を弱めた。
+  - 家族ボード/タスク画面にも同じ写真背景を入れ、プロダクト全体の一貫性を上げた。
+- 変更内容:
+  - Welcome:
+    - 写真ヒーロー化。
+    - 写真上にブランド/価値/説明を重ねる構成へ変更。
+    - 新規会員登録導線をより明確化。
+  - Dashboard:
+    - 写真ヒーロー化。
+    - 「必要な時に戻れる場所」という低頻度・高重要度の位置付けに文言調整。
+    - 今日までの件数がある場合のメトリクスを少し目立たせる。
+  - Tasks:
+    - 上部だけ写真ヒーロー化し、リスト本体は読みやすさ優先。
+    - タスクカード背景/チップ色を暖かい紙色に調整。
+  - Theme:
+    - `paper` / `surface` / `surfaceSoft` / `line` を暖色寄りに変更。
+    - `clay` / `moss` を追加。
+    - shadowを少し控えめで自然な色へ変更。
+- 検証:
+  - `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH node_modules/.bin/tsc --noEmit`
+  - mobile typecheck成功。
+  - `pnpm --filter mobile run typecheck` はpnpmがregistryへメタ情報取得しに行き、ネットワーク/TTY都合で失敗したため、直接tscで検証した。
+- 未実施:
+  - Android実機スクリーンショット確認。
+  - 外部フリー素材への差し替え。現時点ではライセンス/通信依存を避け、既存ローカル写真素材を活用した。

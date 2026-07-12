@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
@@ -90,14 +90,20 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <View style={styles.hero}>
+      <ImageBackground
+        imageStyle={styles.heroImage}
+        resizeMode="cover"
+        source={require("../../assets/onboarding-family-home.png")}
+        style={styles.hero}
+      >
+        <View style={styles.heroShade} />
         <View style={styles.brandRow}>
           <Text style={styles.kicker}>家族ボード</Text>
           <Text style={styles.statusBadge}>{statusLabel(data.person.currentStatus)}</Text>
         </View>
         <Text style={styles.title}>{data.person.displayName}さんの今</Text>
-        <Text style={styles.heroBody}>期限、担当、家族で確認したいことをここに集めます。</Text>
-      </View>
+        <Text style={styles.heroBody}>期限、担当、家族で確認したいことを、必要な時に戻れる形で残します。</Text>
+      </ImageBackground>
 
       <View style={styles.boardSummary}>
         <View style={styles.summaryHeader}>
@@ -108,7 +114,7 @@ export default function DashboardScreen() {
           </View>
         </View>
         <View style={styles.metrics}>
-          <View style={styles.metric}>
+          <View style={[styles.metric, todayTasks.length > 0 ? styles.metricAlert : null]}>
             <Text style={styles.metricNumber}>{todayTasks.length}</Text>
             <Text style={styles.metricLabel}>今日まで</Text>
           </View>
@@ -196,26 +202,29 @@ function TaskSection({
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper, gap: 14, padding: 18, paddingBottom: 28 },
-  hero: { gap: 8, paddingTop: 8 },
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 16, paddingBottom: 28 },
+  hero: { borderRadius: 18, gap: 10, minHeight: 240, justifyContent: "flex-end", overflow: "hidden", padding: 18, ...shadow },
+  heroImage: { borderRadius: 18 },
+  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.26)" },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  title: { color: colors.ink, fontSize: 34, fontWeight: "900", lineHeight: 38 },
-  heroBody: { color: colors.muted, lineHeight: 22 },
+  title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 39, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  heroBody: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
-  kicker: { color: colors.green, fontWeight: "900" },
+  kicker: { backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
   kickerLight: { color: "#cfe2d7", fontWeight: "900" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
   countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 34, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6, textAlign: "center" },
   dangerTitle: { color: "#9a3f56" },
   inlineLink: { color: colors.blue, fontWeight: "900", marginTop: 2 },
   body: { color: colors.muted, flex: 1, lineHeight: 22 },
-  boardSummary: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 14, padding: 16, ...shadow },
+  boardSummary: { backgroundColor: colors.surface, borderColor: "#d3c7b3", borderRadius: 14, borderWidth: 1, gap: 14, padding: 16, ...shadow },
   summaryHeader: { alignItems: "flex-start", flexDirection: "row", gap: 10 },
   summaryText: { flex: 1, gap: 3 },
   summaryTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },
   summaryLead: { color: colors.muted, lineHeight: 22 },
   metrics: { flexDirection: "row", gap: 8 },
-  metric: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flex: 1, padding: 10 },
+  metric: { backgroundColor: "#f6f1e6", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flex: 1, padding: 10 },
+  metricAlert: { backgroundColor: "#fff1f3", borderColor: "rgba(154,63,86,0.24)" },
   metricNumber: { color: colors.greenDark, fontSize: 26, fontWeight: "900" },
   metricLabel: { color: colors.muted, fontSize: 12, fontWeight: "800" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
@@ -231,8 +240,8 @@ const styles = StyleSheet.create({
   sectionTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   stepRow: { alignItems: "center", flexDirection: "row", gap: 10 },
   stepNumber: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", height: 28, lineHeight: 28, textAlign: "center", width: 28 },
-  statusBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
-  taskRow: { alignItems: "flex-start", backgroundColor: "#fbfdf9", borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 12 },
+  statusBadge: { backgroundColor: "rgba(21,59,43,0.78)", borderColor: "rgba(255,255,255,0.32)", borderRadius: 999, borderWidth: 1, color: "#fff", fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
+  taskRow: { alignItems: "flex-start", backgroundColor: "#fffdf7", borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 12 },
   taskText: { flex: 1, gap: 4 },
   taskTitle: { color: colors.ink, fontWeight: "900", lineHeight: 21 },
   unassignedBadge: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)", borderRadius: 999, borderWidth: 1, color: colors.gold, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },

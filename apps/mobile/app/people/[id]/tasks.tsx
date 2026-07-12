@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, useLocalSearchParams } from "expo-router";
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
   demoDashboardData,
   fetchFamilyMembers,
@@ -122,11 +122,17 @@ export default function TasksScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
-      <View style={styles.header}>
+      <ImageBackground
+        imageStyle={styles.headerImage}
+        resizeMode="cover"
+        source={require("../../../assets/onboarding-family-home.png")}
+        style={styles.header}
+      >
+        <View style={styles.headerShade} />
         <Text style={styles.kicker}>タスク</Text>
         <Text style={styles.title}>家族で分けること</Text>
         <Text style={styles.lead}>期限が近いもの、担当が決まっていないものから確認します。</Text>
-      </View>
+      </ImageBackground>
       <View style={styles.filterTabs}>
         <FilterLink active={!params.filter} href={`/people/${params.id}/tasks`} label="すべて" />
         <FilterLink active={params.filter === "due"} href={`/people/${params.id}/tasks?filter=due`} label="今日まで" />
@@ -240,32 +246,34 @@ function FilterLink({ active, href, label }: { active: boolean; href: string; la
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper, gap: 14, padding: 18 },
-  header: { gap: 6, paddingTop: 8 },
-  kicker: { color: colors.green, fontWeight: "900" },
-  title: { color: colors.ink, fontSize: 32, fontWeight: "900", lineHeight: 36 },
-  lead: { color: colors.muted, lineHeight: 22 },
+  screen: { backgroundColor: colors.paper, gap: 14, padding: 16 },
+  header: { borderRadius: 18, gap: 8, justifyContent: "flex-end", minHeight: 220, overflow: "hidden", padding: 18, ...shadow },
+  headerImage: { borderRadius: 18 },
+  headerShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.28)" },
+  kicker: { alignSelf: "flex-start", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
+  title: { color: "#fffdf7", fontSize: 32, fontWeight: "900", lineHeight: 37, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  lead: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   filterTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   filterTab: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 8 },
   filterTabActive: { backgroundColor: colors.greenDark, borderColor: colors.greenDark, borderRadius: 999, borderWidth: 1, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 8 },
   notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, padding: 12 },
   noticeText: { color: colors.green, fontWeight: "900" },
   summaryRow: { flexDirection: "row", gap: 10 },
-  summaryBox: { backgroundColor: colors.greenDark, borderRadius: radius.card, flex: 1, padding: 14 },
+  summaryBox: { backgroundColor: colors.greenDark, borderRadius: 12, flex: 1, padding: 14 },
   summaryNumber: { color: "#fff", fontSize: 26, fontWeight: "900" },
   summaryLabel: { color: "rgba(255,255,255,0.72)", fontWeight: "800" },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   cardHeader: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
   countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 28, overflow: "hidden", paddingHorizontal: 9, paddingVertical: 5, textAlign: "center" },
-  task: { backgroundColor: "#fbfdf9", borderColor: colors.line, borderLeftColor: colors.green, borderLeftWidth: 4, borderRadius: radius.card, borderWidth: 1, gap: 9, padding: 12 },
+  task: { backgroundColor: "#fffdf7", borderColor: colors.line, borderLeftColor: colors.green, borderLeftWidth: 4, borderRadius: radius.card, borderWidth: 1, gap: 9, padding: 12 },
   taskHeader: { alignItems: "flex-start", flexDirection: "row", gap: 8, justifyContent: "space-between" },
   taskTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: "900", lineHeight: 22 },
   dueBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
   dueDanger: { backgroundColor: "#fff1f3", borderColor: "rgba(154,63,86,0.24)", color: colors.rose },
   dueWarning: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)", color: colors.gold },
   metaRow: { flexDirection: "row", flexWrap: "wrap", gap: 6 },
-  metaChip: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 12, fontWeight: "800", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
+  metaChip: { backgroundColor: "#f6f1e6", borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.muted, fontSize: 12, fontWeight: "800", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
   assigneeChip: { alignItems: "center", backgroundColor: colors.surfaceSoft, borderColor: "rgba(39,100,71,0.2)", borderRadius: 999, borderWidth: 1, flexDirection: "row", gap: 4, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 },
   assigneeChipText: { color: colors.green, fontSize: 12, fontWeight: "900" },
   body: { color: colors.muted, lineHeight: 22 },
