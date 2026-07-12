@@ -1615,3 +1615,41 @@ GitHubが必要な理由:
 - 機密メモ:
   - SMTPパスワードはユーザーから共有済みだが、コード・docs・ログには残さない。
   - 本番前にはメール側でパスワード再発行/ローテーション推奨。
+
+## 2026-07-12 追記 59
+
+- ユーザー指示: 通知許可/push token確認は除外し、それ以外を進める。
+- 追加した検証スクリプト:
+  - `scripts/verify-task-actions.mjs`
+  - 指定メールのユーザー配下からタスク1件を選び、`doing`、担当者設定、`done`、元状態への復元を実行できる。
+  - デフォルトはdry-run。`--apply` 指定時だけ本番DBのテスト対象タスクを一時更新する。
+  - service role keyはローカル環境から読む。値はログ出力しない。
+- タスク操作検証:
+  - 対象ユーザー: `tettsu0529@gmail.com`
+  - 対象タスク: 「病院の窓口と退院見込みを確認する」
+  - 実行結果:
+    - `todo` -> `doing` 成功。
+    - 担当未定 -> 自分のfamily_memberへ割当成功。
+    - `done` + `completed_at` 設定成功。
+    - 最後に `todo` / 担当未定へ復元成功。
+  - 復元後の確認:
+    - tasks: 4件。
+    - incomplete: 4件。
+    - unassigned: 4件。
+    - done: 0件。
+- 追加した整理レポート:
+  - `scripts/report-test-duplicates.mjs`
+  - 指定メールのfamily/people/tasks/casesを読み、同じfamily内の重複person候補を表示する。
+- 重複テストデータ確認:
+  - 対象ユーザー: `tettsu0529@gmail.com`
+  - families: 2件。
+  - people: 2件。
+  - tasks: 4件。
+  - duplicate person groups: 0件。
+  - 同じタスク名が4件見えるが、2つのfamilyに分かれているため、現時点では削除しない判断。
+- メールテンプレート:
+  - 日本語テンプレート資料は `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md` に作成済み。
+  - Supabase DashboardのAuth Templatesへ貼り付ける外部操作は未実施。
+- 残:
+  - Android実機がADBに出ていないため、UI上のタップ確認とpush token保存確認は未実施。
+  - 通知許可/push token確認は今回ユーザー指示で除外。
