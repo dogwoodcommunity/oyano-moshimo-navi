@@ -44,12 +44,14 @@ export default function DashboardScreen() {
   const unassignedTasks = activeTasks.filter((task) => !task.assignedMemberId);
 
   useEffect(() => {
-    fetchDashboardData().then(setData);
+    fetchDashboardData()
+      .then(setData)
+      .catch(() => setData(demoDashboardData()));
   }, []);
 
   function openWebStart() {
     if (!webBaseUrl) return;
-    void Linking.openURL(`${webBaseUrl}/start`);
+    void Linking.openURL(`${webBaseUrl}/start`).catch(() => null);
   }
 
   if (data.source === "empty") {

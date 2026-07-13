@@ -1691,3 +1691,36 @@ GitHubが必要な理由:
 - 未実施:
   - Android実機スクリーンショット確認。
   - 外部フリー素材への差し替え。現時点ではライセンス/通信依存を避け、既存ローカル写真素材を活用した。
+
+## 2026-07-13 追記 61
+
+- ユーザー指示: Android実機を接続したので、モバイルの最新デザイン確認を進める。
+- Android実機:
+  - `adb devices` で `42545251 device` を確認。
+  - 端末には `host.exp.exponent` と `jp.beech.oyanomoshimo` が入っていた。
+  - 既存の `jp.beech.oyanomoshimo` を起動したところ、古いビルドの画面が表示されたため、最新ソース確認にはExpo Goを使う判断。
+- Expo Go:
+  - 端末のExpo GoがSDK 54系で、現在のアプリSDK 51と合わなかった。
+  - Expo CLIの案内に従い、互換版Expo Go 2.31.2を端末へインストール。
+  - `apps/mobile` で `expo start --android --localhost` を起動し、`exp://127.0.0.1:8081` をAndroid実機で開いた。
+  - 最新のwelcome画面が実機表示された。
+- 実機で見えた問題:
+  - 初回表示時に `Possible unhandled promise rejection` の黄色い警告が出た。
+  - Metro/logcatには原因の詳細が残らなかったため、Promise投げっぱなしになっている箇所を先に安全化。
+- 修正:
+  - `apps/mobile/app/_layout.tsx`
+    - `Linking.getInitialURL()`、`handleAuthRedirectUrl()`、`expo-notifications` dynamic import、`markNotificationsOpened()` にcatchを追加。
+  - `apps/mobile/app/(auth)/welcome.tsx`
+    - Web開始リンクの `Linking.openURL()` にcatchを追加し、失敗時はユーザー向けメッセージを出す。
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+    - `fetchDashboardData()` 失敗時にdemo dashboardへ戻すcatchを追加。
+    - Web開始リンクの `Linking.openURL()` にcatchを追加。
+  - `apps/mobile/app/(tabs)/settings.tsx`
+    - プライバシーポリシーリンクの `Linking.openURL()` にcatchを追加。
+- 検証:
+  - `apps/mobile` で直接 `tsc --noEmit` 成功。
+  - Expo Goで再表示後、スクリーンショット確認では黄色い警告は消えた。
+  - `adb logcat` の直近ログにも `Possible unhandled` / `TypeError` / `ReferenceError` は出ていない。
+- 注意:
+  - Expo Goで表示しているのは最新ソースの開発表示。
+  - 端末に入っている standalone app `jp.beech.oyanomoshimo` は古いビルドのため、最新デザインを正式アプリとして見るにはEAS preview buildを作り直してインストールする必要がある。

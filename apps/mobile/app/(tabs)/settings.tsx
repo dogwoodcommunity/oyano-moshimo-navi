@@ -8,7 +8,7 @@ const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 export default function SettingsScreen() {
   function openPrivacyPolicy() {
     if (!webBaseUrl) return;
-    void Linking.openURL(`${webBaseUrl}/legal/privacy`);
+    void Linking.openURL(`${webBaseUrl}/legal/privacy`).catch(() => null);
   }
 
   return (

@@ -57,7 +57,9 @@ export default function WelcomeScreen() {
 
   function openWebStart() {
     if (!webBaseUrl) return;
-    void Linking.openURL(`${webBaseUrl}/start`);
+    void Linking.openURL(`${webBaseUrl}/start`).catch(() => {
+      setMessage("Webページを開けませんでした。通信状態を確認してください。");
+    });
   }
 
   return (

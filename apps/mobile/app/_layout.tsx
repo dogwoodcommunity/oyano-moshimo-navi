@@ -10,12 +10,15 @@ enableScreens(false);
 
 export default function RootLayout() {
   useEffect(() => {
-    void Linking.getInitialURL().then((url) => {
-      if (url) void handleAuthRedirectUrl(url);
-    });
+    void Linking.getInitialURL()
+      .then((url) => {
+        if (url) return handleAuthRedirectUrl(url);
+        return null;
+      })
+      .catch(() => null);
 
     const subscription = Linking.addEventListener("url", ({ url }) => {
-      void handleAuthRedirectUrl(url);
+      void handleAuthRedirectUrl(url).catch(() => null);
     });
 
     return () => subscription.remove();
@@ -26,12 +29,16 @@ export default function RootLayout() {
     let mounted = true;
 
     const timeout = setTimeout(() => {
-      void import("expo-notifications").then((Notifications) => {
-        if (!mounted) return;
-        subscription = Notifications.addNotificationResponseReceivedListener((response) => {
-          void markNotificationsOpened(response.notification.request.content.data ?? {});
+      void import("expo-notifications")
+        .then((Notifications) => {
+          if (!mounted) return;
+          subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+            void markNotificationsOpened(response.notification.request.content.data ?? {}).catch(() => null);
+          });
+        })
+        .catch(() => {
+          return null;
         });
-      });
     }, 500);
 
     return () => {
