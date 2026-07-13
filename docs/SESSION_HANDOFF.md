@@ -1724,3 +1724,39 @@ GitHubが必要な理由:
 - 注意:
   - Expo Goで表示しているのは最新ソースの開発表示。
   - 端末に入っている standalone app `jp.beech.oyanomoshimo` は古いビルドのため、最新デザインを正式アプリとして見るにはEAS preview buildを作り直してインストールする必要がある。
+
+## 2026-07-13 追記 62
+
+- ユーザー指示: 次へ進める。Expo Go確認から、家族3組テストに使えるAndroid preview build作成へ進めた。
+- EASログイン:
+  - `pnpm dlx eas-cli whoami` で `oyanomosimonavi / info@bee-ch.co.jp` を確認。
+  - EAS project:
+    - fullName: `@oyanomosimonavi/oyano-moshimo-navi`
+    - ID: `8ed038b0-28d1-42e1-8ef6-e7e2098c11d3`
+- EAS preview環境変数:
+  - `EXPO_PUBLIC_APP_SCHEME=oyanomoshimo`
+  - `EXPO_PUBLIC_EAS_PROJECT_ID=8ed038b0-28d1-42e1-8ef6-e7e2098c11d3`
+  - `EXPO_PUBLIC_SUPABASE_URL=https://ypnuxyfirlvbsqujocuy.supabase.co`
+  - `EXPO_PUBLIC_SUPABASE_ANON_KEY` はEAS上で登録済み。値は表示/記録しない。
+  - `EXPO_PUBLIC_WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app`
+- Android preview build:
+  - `pnpm dlx eas-cli build --platform android --profile preview --non-interactive` 実行。
+  - build ID: `5da38ffb-625c-45f9-8fa7-cb3c65546c83`
+  - 完了ステータス: `FINISHED`
+  - Install URL:
+    - `https://expo.dev/accounts/oyanomosimonavi/projects/oyano-moshimo-navi/builds/5da38ffb-625c-45f9-8fa7-cb3c65546c83`
+  - APK artifact:
+    - `https://expo.dev/artifacts/eas/JBa8QRRgNijixexJOw3ODmjkz6zZSfYwSQrZz30NQxs.apk`
+  - buildはcommit `ba093def75117ab73409b62d8f78e6ccb1e19ad8` を元に作成された。
+- Android実機インストール:
+  - `eas build:run --platform android --latest` はAPKダウンロード成功後、ローカルemulator実行ファイルが無いことで失敗。
+  - APKを `/private/tmp/oyano-preview.apk` にcurlで取得し、`adb push` で `/data/local/tmp/oyano-preview.apk` へ転送成功。
+  - `adb install -r` と `adb shell pm install -r -d` は端末側で返ってこず、手動停止した。空き容量は `/data` 73GB空きで問題なし。
+  - 端末のブラウザへEAS build URLを `adb shell am start -a VIEW -d ...` で開いた。ユーザー側でInstallを押して入れるのが次の安全な手順。
+- 設定修正:
+  - `apps/mobile/eas.json` に `cli.appVersionSource: "local"` を追加。EASの将来必須警告を次回以降消すため。
+- 検証:
+  - `node scripts/mobile-build-doctor.mjs` OK。
+- 次にやること:
+  - Android実機でEAS buildページからInstallを押して最新preview appを入れる。
+  - インストール後、`jp.beech.oyanomoshimo/.MainActivity` を起動して、welcome/dashboard/tasksの最新デザインがstandalone appでも反映されているか確認する。
