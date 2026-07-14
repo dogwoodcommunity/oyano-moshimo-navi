@@ -59,11 +59,17 @@ export default function DashboardScreen() {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
         <View style={[styles.card, styles.emptyHero]}>
-          <Text style={styles.kickerLight}>はじめに</Text>
+          <View style={styles.emptyHeroTop}>
+            <MascotMark size={58} />
+            <Text style={styles.kickerLight}>はじめに</Text>
+          </View>
           <Text style={styles.emptyTitle}>まずWebで状況を整理します</Text>
           <Text style={styles.emptyLead}>
             親御さんの状況を選ぶと、期限のある手続きと家族で分けることがまとまります。保存すると、この家族ボードに表示されます。
           </Text>
+          <View style={styles.emptyHint}>
+            <Text style={styles.emptyHintText}>最初は登録なしで整理できます。必要になった時だけ保存しましょう。</Text>
+          </View>
           <Pressable disabled={!webBaseUrl} onPress={openWebStart} style={[styles.emptyButton, !webBaseUrl && styles.buttonDisabled]}>
             <Text style={styles.emptyButtonText}>Webで5分整理を始める</Text>
           </Pressable>
@@ -241,6 +247,9 @@ const styles = StyleSheet.create({
   emptyButton: { alignItems: "center", backgroundColor: "#fff", borderRadius: radius.control, justifyContent: "center", minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
   emptyButtonText: { color: colors.greenDark, fontWeight: "900" },
   emptyHero: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
+  emptyHeroTop: { alignItems: "center", flexDirection: "row", gap: 10 },
+  emptyHint: { backgroundColor: "rgba(255,253,247,0.12)", borderColor: "rgba(255,253,247,0.22)", borderRadius: radius.card, borderWidth: 1, padding: 12 },
+  emptyHintText: { color: "#fff8ea", fontSize: 13, fontWeight: "900", lineHeight: 20 },
   emptyLead: { color: "rgba(255,255,255,0.82)", fontSize: 16, lineHeight: 24 },
   emptyTitle: { color: "#fff", fontSize: 31, fontWeight: "900", lineHeight: 36 },
   secondaryButton: { borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },

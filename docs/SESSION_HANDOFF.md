@@ -1803,3 +1803,39 @@ GitHubが必要な理由:
 - 次にやること:
   - Android端末をUSBデバッグで再接続し、Expo Goまたは新しいEAS preview buildでwelcome/dashboard/tasksの表示を確認。
   - 見た目がOKならEAS preview buildを再作成し、家族3組テスト用の配布URLを更新する。
+
+## 2026-07-14 追記 64
+
+- ユーザー指示: Android携帯を接続したので実機確認を進める。
+- Android実機:
+  - `adb devices` で `42545251 device` を確認。
+  - 端末解像度: 1080x2340 / density 480。
+  - `host.exp.exponent` と `jp.beech.oyanomoshimo` がインストール済み。
+- Expo Go:
+  - 端末のExpo GoがSDK 54版に戻っていたため、SDK 51の本プロジェクトと非互換。
+  - Expo CLIの案内に従い、SDK 51推奨のExpo Go 2.31.2を再インストール。
+  - Metro起動時、Node 24 + `freeport-async` + sandboxの組み合わせでポート探索が落ちたため、権限付きでMetroを起動。
+  - `node_modules/.pnpm/freeport-async@2.0.0/node_modules/freeport-async/index.js` は作業用に一時パッチ済みだが、node_modules配下なのでgit管理対象外。リポジトリにはコミットしない。
+  - Metro URL: `exp://127.0.0.1:8081`
+  - `adb reverse tcp:8081 tcp:8081` 後、端末でExpo Go起動成功。
+- 実機確認:
+  - Welcome画面のキャラ入りデザインをAndroid実機で確認。
+  - 初回確認で入口カードの見出し「続けて管理する方は、会員登録へ」が端末の大きい文字設定で「へ」だけ改行されていた。
+  - `apps/mobile/app/(auth)/welcome.tsx` を修正:
+    - Hero title: `親のことで、家族が迷わないように。` → `親のことで、家族が迷わないように`
+    - CTA見出し: `続けて管理する方は、会員登録へ` → `会員登録して続ける`
+  - 再スクショで「会員登録して続ける」が自然に収まることを確認。
+  - 空の家族ボードがまだ硬く見えたため、`apps/mobile/app/(tabs)/dashboard.tsx` のempty stateにもマスコットと短い案内を追加。
+- 検証:
+  - `apps/mobile` で `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH ./node_modules/.bin/tsc --noEmit` 成功。
+  - Expo GoでAndroid bundle成功。
+  - `adb logcat` 直近確認でアプリ由来の `Possible unhandled` / `TypeError` / `ReferenceError` / `SyntaxError` は見当たらず。Google Play Services由来の `DEVELOPER_ERROR` ログは端末環境側。
+- スクショ:
+  - `/private/tmp/oyano-mascot-welcome.png`
+  - `/private/tmp/oyano-mascot-welcome-v2.png`
+  - `/private/tmp/oyano-after-tap.png`
+  - `/private/tmp/oyano-mascot-dashboard.png`
+  - `/private/tmp/oyano-empty-dashboard-v2.png`
+- 次にやること:
+  - 実機で「登録前に見本を見る」からdemo dashboard/tasksまでの遷移確認を完了する。
+  - その後、最新コミットでEAS Android preview buildを再作成する。

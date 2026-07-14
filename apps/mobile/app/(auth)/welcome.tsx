@@ -80,7 +80,7 @@ export default function WelcomeScreen() {
             </View>
             <Text style={styles.tag}>家族の保管庫・通知係</Text>
           </View>
-          <Text style={styles.title}>親のことで、家族が迷わないように。</Text>
+          <Text style={styles.title}>親のことで、家族が迷わないように</Text>
           <Text style={styles.lead}>
             入院、認知症、相続、実家整理。必要なことを、家族で見られる短いリストに整えます。
           </Text>
@@ -99,7 +99,7 @@ export default function WelcomeScreen() {
 
       <View style={styles.startPanel}>
         <Text style={styles.panelEyebrow}>ここからです</Text>
-        <Text style={styles.startTitle}>続けて管理する方は、会員登録へ</Text>
+        <Text style={styles.startTitle}>会員登録して続ける</Text>
         <Text style={styles.body}>まずWebで整理したあと、期限・担当・写真を家族で残したい方だけ登録できます。</Text>
         <MascotGuide compact message="登録前でも見本を確認できます。保存したくなった時だけ、メールで本人確認します。" />
         <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
