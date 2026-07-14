@@ -6,6 +6,15 @@ import { SENSITIVE_INFO_CONSENT_VERSION, STATUSES, type DiagnosisAnswers, type P
 import { submitDiagnosis } from "@/lib/store";
 
 const concernOptions = ["期限がある手続き", "家族の役割分担", "実家の片付け", "相続・名義変更", "相談先探し", "お金・保険の把握"];
+const statusNotes: Partial<Record<ParentStatus, string>> = {
+  hospitalized: "入院中・退院調整中",
+  facility: "施設入所や介護の相談中",
+  cognitive_decline: "認知症や判断力低下が心配",
+  after_death: "亡くなった直後の手続き",
+  inheritance: "相続や名義変更が心配",
+  home_clearance: "実家の片付けを進めたい",
+  preparing: "今のうちに備えたい"
+};
 
 export function DiagnosisForm() {
   const router = useRouter();
@@ -47,38 +56,54 @@ export function DiagnosisForm() {
     <>
       <section className="diagnosis-intro">
         <div>
-          <p className="pill">現在の状態: {statusLabel}</p>
-          <p className="lead">分かる範囲だけで大丈夫です。結果画面では、期限のあるタスクと家族で確認することを分けて表示します。</p>
+          <p className="pill">3分で整理</p>
+          <p className="lead">分かる範囲だけで大丈夫です。家族で話す順番と、期限のある手続きを短いリストにします。</p>
         </div>
         <div className="progress-rail" aria-label="整理チェックの流れ">
-          <span className="progress-step active">状態</span>
-          <span className="progress-step active">確認</span>
-          <span className="progress-step">結果</span>
+          <span className="progress-step active">1 状況を選ぶ</span>
+          <span className="progress-step active">2 分かる範囲で確認</span>
+          <span className="progress-step">3 結果を見る</span>
         </div>
       </section>
 
-      <form className="form diagnosis-form" onSubmit={onSubmit}>
-        <section className="panel field form-section">
+      <form className="diagnosis-notebook" onSubmit={onSubmit}>
+        <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">01</span>
+            <span className="step-badge">1</span>
             <div>
-              <h2>いまの状況</h2>
-              <p className="hint">あとから変更できます。近いものを選んでください。</p>
+              <h2>いま一番近い状況を選ぶ</h2>
+              <p className="hint">あとから変更できます。迷ったら一番近いものを押してください。</p>
             </div>
           </div>
-          <label htmlFor="status">親の状況</label>
-          <select className="select" id="status" value={selectedStatus} onChange={(event) => setSelectedStatus(event.target.value as ParentStatus)}>
-            {STATUSES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-          </select>
-          <textarea className="textarea" name="parentSituation" placeholder="例: 入院中。退院後の生活場所を相談している。" />
+
+          <div className="status-choice-grid" role="radiogroup" aria-label="親の状況">
+            {STATUSES.map((item) => (
+              <button
+                aria-checked={selectedStatus === item.key}
+                className={`diagnosis-status-card ${selectedStatus === item.key ? "selected" : ""}`}
+                key={item.key}
+                onClick={() => setSelectedStatus(item.key)}
+                role="radio"
+                type="button"
+              >
+                <span>{item.label}</span>
+                <small>{statusNotes[item.key] ?? "家族で確認したい"}</small>
+              </button>
+            ))}
+          </div>
+
+          <div className="soft-memo-field">
+            <label htmlFor="parentSituation">いま分かっていること</label>
+            <textarea className="textarea" id="parentSituation" name="parentSituation" placeholder="例: 入院中。退院後の生活場所を家族で相談している。" />
+          </div>
         </section>
 
-        <section className="panel form-section">
+        <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">02</span>
+            <span className="step-badge">2</span>
             <div>
-              <h2>家族・実家・資産の把握</h2>
-              <p className="hint">正確でなくても、現時点の把握状況を選びます。</p>
+              <h2>家族で確認できていること</h2>
+              <p className="hint">正確でなくても大丈夫です。今の把握状況だけ選びます。</p>
             </div>
           </div>
           <div className="columns compact-columns">
@@ -105,43 +130,45 @@ export function DiagnosisForm() {
           </div>
         </section>
 
-        <section className="panel field form-section">
+        <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">03</span>
+            <span className="step-badge">3</span>
             <div>
-              <h2>困っていること</h2>
-              <p className="hint">複数選択できます。結果の優先順位に反映します。</p>
+              <h2>気になっていること</h2>
+              <p className="hint">複数選べます。結果の優先順位に反映します。</p>
             </div>
           </div>
-          <div className="checks">
+          <div className="concern-grid">
             {concernOptions.map((item) => (
-              <label className="check" key={item}>
+              <label className={`concern-card ${concerns.includes(item) ? "selected" : ""}`} key={item}>
                 <input type="checkbox" checked={concerns.includes(item)} onChange={() => toggleConcern(item)} />
-                {item}
+                <span>{item}</span>
               </label>
             ))}
           </div>
         </section>
 
-        <section className="panel field form-section">
+        <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">04</span>
+            <span className="step-badge">4</span>
             <div>
-              <h2>実家・家じまい</h2>
+              <h2>実家や家じまいのメモ</h2>
               <p className="hint">分からない場合は空欄でも進めます。</p>
             </div>
           </div>
-          <label htmlFor="homeClearance">家じまい状況</label>
-          <textarea className="textarea" id="homeClearance" name="homeClearance" placeholder="例: 空き家になりそう。鍵の場所は兄が把握。" />
+          <div className="soft-memo-field">
+            <label htmlFor="homeClearance">メモ</label>
+            <textarea className="textarea" id="homeClearance" name="homeClearance" placeholder="例: 空き家になりそう。鍵の場所は兄が把握。" />
+          </div>
           <p className="hint">写真アップロードは後続実装枠です。MVPではアプリ側の写真管理へ引き継ぎます。</p>
         </section>
 
-        <section className="panel form-section">
+        <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">05</span>
+            <span className="step-badge">5</span>
             <div>
-              <h2>連絡先</h2>
-              <p className="hint">発動サポートを使う場合だけ必要になります。</p>
+              <h2>必要なら連絡先を残す</h2>
+              <p className="hint">結果を見るだけなら任意です。発動サポートを使う場合だけ必要になります。</p>
             </div>
           </div>
           <div className="columns compact-columns">

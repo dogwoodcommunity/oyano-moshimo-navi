@@ -595,8 +595,29 @@ textarea {
   color: var(--green);
 }
 
-.diagnosis-form {
+.diagnosis-notebook {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(246, 247, 241, 0.86)),
+    repeating-linear-gradient(0deg, transparent 0 31px, rgba(39, 100, 71, 0.06) 32px);
+  border: 1px solid rgba(217, 226, 220, 0.9);
+  border-radius: 8px;
+  box-shadow: 0 18px 48px rgba(28, 48, 39, 0.09);
+  display: grid;
+  gap: 18px;
+  margin-top: 24px;
   max-width: 960px;
+  padding: clamp(14px, 2.6vw, 24px);
+}
+
+.diagnosis-sheet {
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(217, 226, 220, 0.88);
+  border-left: 5px solid rgba(39, 100, 71, 0.42);
+  border-radius: 8px;
+  box-shadow: 0 14px 34px rgba(28, 48, 39, 0.07);
+  display: grid;
+  gap: 18px;
+  padding: clamp(18px, 3vw, 26px);
 }
 
 .form-section {
@@ -618,16 +639,17 @@ textarea {
 
 .step-badge {
   align-items: center;
-  background: var(--green-dark);
-  border-radius: 8px;
-  color: white;
+  background: #e5efe4;
+  border: 1px solid rgba(39, 100, 71, 0.18);
+  border-radius: 999px;
+  color: var(--green-dark);
   display: inline-flex;
   flex: 0 0 auto;
   font-size: 12px;
   font-weight: 900;
-  height: 34px;
+  height: 36px;
   justify-content: center;
-  width: 42px;
+  width: 36px;
 }
 
 .compact-columns {
@@ -679,6 +701,105 @@ textarea {
 .textarea {
   min-height: 92px;
   resize: vertical;
+}
+
+.status-choice-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.diagnosis-status-card {
+  background: #fbfcf7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  min-height: 94px;
+  padding: 16px;
+  text-align: left;
+  transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+}
+
+.diagnosis-status-card:hover {
+  border-color: rgba(39, 100, 71, 0.44);
+  box-shadow: 0 12px 28px rgba(28, 48, 39, 0.08);
+  transform: translateY(-1px);
+}
+
+.diagnosis-status-card.selected {
+  background: linear-gradient(180deg, #1f5b3f, #153f2d);
+  border-color: #153f2d;
+  box-shadow: 0 14px 34px rgba(24, 63, 46, 0.18);
+  color: white;
+}
+
+.diagnosis-status-card span {
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.diagnosis-status-card small {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.diagnosis-status-card.selected small {
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.soft-memo-field {
+  background: #f7faf4;
+  border: 1px dashed rgba(39, 100, 71, 0.28);
+  border-radius: 8px;
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+}
+
+.soft-memo-field label {
+  color: var(--green-dark);
+  font-weight: 900;
+}
+
+.concern-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+}
+
+.concern-card {
+  align-items: center;
+  background: #fbfcf7;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  gap: 10px;
+  min-height: 54px;
+  padding: 12px 14px;
+}
+
+.concern-card input {
+  accent-color: var(--green);
+  height: 18px;
+  width: 18px;
+}
+
+.concern-card span {
+  font-weight: 900;
+}
+
+.concern-card.selected {
+  background: #eef7f0;
+  border-color: rgba(39, 100, 71, 0.48);
+  box-shadow: inset 0 0 0 1px rgba(39, 100, 71, 0.12);
+  color: var(--green-dark);
 }
 
 .checks {

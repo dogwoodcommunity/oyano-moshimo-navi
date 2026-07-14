@@ -1839,3 +1839,36 @@ GitHubが必要な理由:
 - 次にやること:
   - 実機で「登録前に見本を見る」からdemo dashboard/tasksまでの遷移確認を完了する。
   - その後、最新コミットでEAS Android preview buildを再作成する。
+
+## 2026-07-14 追記 65
+
+- ユーザー指示: Webの質問ページがGoogle Formっぽいので、デザインを変えてほしい。
+- 判断:
+  - Google Formっぽさの主因は、`select` / `textarea` / checkboxが縦に並ぶ「入力フォーム主役」の構成。
+  - 親のもしもナビの入口トーンに合わせ、診断ではなく「家族の整理ノート」として見せる方針に変更。
+  - いきなり情報を要求されている印象を下げるため、状態選択をプルダウンから大きい選択カードに変更。
+- 実装:
+  - `apps/web/app/diagnosis/page.tsx`
+    - eyebrowを「家族の整理ノート」に変更。
+    - H1を「いま必要なことを、順番に整理します」に変更。
+    - loading文言を「整理ノートを読み込み中」に変更。
+  - `apps/web/app/diagnosis/DiagnosisForm.tsx`
+    - intro文言を「3分で整理」に変更。
+    - progress表示を `1 状況を選ぶ / 2 分かる範囲で確認 / 3 結果を見る` に変更。
+    - form全体を `diagnosis-notebook` に変更。
+    - 各sectionを `diagnosis-sheet` に変更。
+    - 親の状況選択を `<select>` からカード式radio風buttonに変更。
+    - 困りごとは `concern-card` の選択チップ風UIに変更。
+    - 自由入力欄は `soft-memo-field` に入れて、メモ扱いの見え方に変更。
+  - `apps/web/app/globals.css`
+    - `diagnosis-notebook`, `diagnosis-sheet`, `status-choice-grid`, `diagnosis-status-card`, `soft-memo-field`, `concern-grid`, `concern-card` を追加。
+    - 紙の整理ノート風の薄い罫線背景、カード選択、選択済みグリーン表示を追加。
+- 検証:
+  - `apps/web` で `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH ./node_modules/.bin/tsc --noEmit` 成功。
+  - `git diff --check` 成功。
+  - `pnpm --filter web run typecheck` はpnpmが依存状態確認でregistryへアクセスしようとして失敗。ローカルの`tsc`直接実行で代替検証済み。
+  - Next dev serverを `http://127.0.0.1:3005` で一時起動し、in-app browserで `/diagnosis?status=hospitalized` を確認。
+  - PC幅・390pxスマホ幅で、フォーム感が薄れ、選択カード型になっていることを目視確認。
+- 次にやること:
+  - 必要なら `/result/[caseId]` も同じ「整理ノート」トーンにさらに寄せる。
+  - 本番反映後、スマホ実機でWeb診断から結果画面まで通し確認する。
