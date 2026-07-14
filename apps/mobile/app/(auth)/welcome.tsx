@@ -7,6 +7,7 @@ import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
 import { colors, radius, shadow } from "@/lib/theme";
+import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
 type AuthMode = "signup" | "login";
 
@@ -73,7 +74,10 @@ export default function WelcomeScreen() {
         <View style={styles.photoShade} />
         <View style={styles.heroContent}>
           <View style={styles.brandRow}>
-            <Text style={styles.brand}>親のもしもナビ</Text>
+            <View style={styles.brandPill}>
+              <MascotMark size={34} />
+              <Text style={styles.brand}>親のもしもナビ</Text>
+            </View>
             <Text style={styles.tag}>家族の保管庫・通知係</Text>
           </View>
           <Text style={styles.title}>親のことで、家族が迷わないように。</Text>
@@ -97,6 +101,7 @@ export default function WelcomeScreen() {
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>続けて管理する方は、会員登録へ</Text>
         <Text style={styles.body}>まずWebで整理したあと、期限・担当・写真を家族で残したい方だけ登録できます。</Text>
+        <MascotGuide compact message="登録前でも見本を確認できます。保存したくなった時だけ、メールで本人確認します。" />
         <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
@@ -115,7 +120,7 @@ export default function WelcomeScreen() {
       </View>
 
       <View style={styles.noteBand}>
-        <MaterialCommunityIcons color={colors.gold} name="bell-check-outline" size={24} />
+        <MascotMark size={48} />
         <Text style={styles.noteBandText}>毎日開かせるアプリではありません。必要な時に、家族が戻ってこられる場所です。</Text>
       </View>
 
@@ -206,7 +211,8 @@ const styles = StyleSheet.create({
   photoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.22)" },
   heroContent: { flex: 1, gap: 12, justifyContent: "flex-end", padding: 20 },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  brand: { backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
+  brandPill: { alignItems: "center", backgroundColor: "rgba(255,253,247,0.94)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
+  brand: { color: colors.greenDark, fontSize: 13, fontWeight: "900" },
   tag: { backgroundColor: "rgba(21,59,43,0.74)", borderRadius: 999, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
   title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 41, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   lead: { color: "rgba(255,253,247,0.92)", fontSize: 16, fontWeight: "700", lineHeight: 26, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },

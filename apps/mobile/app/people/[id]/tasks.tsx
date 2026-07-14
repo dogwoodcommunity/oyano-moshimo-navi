@@ -12,6 +12,7 @@ import {
   type MobileTask
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
 function dateOnly(value?: string) {
   if (!value) return null;
@@ -129,10 +130,14 @@ export default function TasksScreen() {
         style={styles.header}
       >
         <View style={styles.headerShade} />
-        <Text style={styles.kicker}>タスク</Text>
+        <View style={styles.headerBrand}>
+          <MascotMark size={34} />
+          <Text style={styles.kicker}>タスク</Text>
+        </View>
         <Text style={styles.title}>家族で分けること</Text>
         <Text style={styles.lead}>期限が近いもの、担当が決まっていないものから確認します。</Text>
       </ImageBackground>
+      <MascotGuide compact message={`${filterLabel(params.filter)}を表示しています。担当未定が残っている時は、まず一人だけ主担当を決めると進めやすいです。`} />
       <View style={styles.filterTabs}>
         <FilterLink active={!params.filter} href={`/people/${params.id}/tasks`} label="すべて" />
         <FilterLink active={params.filter === "due"} href={`/people/${params.id}/tasks?filter=due`} label="今日まで" />
@@ -250,7 +255,8 @@ const styles = StyleSheet.create({
   header: { borderRadius: 18, gap: 8, justifyContent: "flex-end", minHeight: 220, overflow: "hidden", padding: 18, ...shadow },
   headerImage: { borderRadius: 18 },
   headerShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.28)" },
-  kicker: { alignSelf: "flex-start", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
+  headerBrand: { alignItems: "center", alignSelf: "flex-start", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
+  kicker: { color: colors.greenDark, fontWeight: "900" },
   title: { color: "#fffdf7", fontSize: 32, fontWeight: "900", lineHeight: 37, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   lead: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   filterTabs: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

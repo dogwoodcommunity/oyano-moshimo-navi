@@ -5,6 +5,7 @@ import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
@@ -100,7 +101,10 @@ export default function DashboardScreen() {
       >
         <View style={styles.heroShade} />
         <View style={styles.brandRow}>
-          <Text style={styles.kicker}>家族ボード</Text>
+          <View style={styles.heroBrand}>
+            <MascotMark size={34} />
+            <Text style={styles.kicker}>家族ボード</Text>
+          </View>
           <Text style={styles.statusBadge}>{statusLabel(data.person.currentStatus)}</Text>
         </View>
         <Text style={styles.title}>{data.person.displayName}さんの今</Text>
@@ -109,12 +113,13 @@ export default function DashboardScreen() {
 
       <View style={styles.boardSummary}>
         <View style={styles.summaryHeader}>
-          <MaterialCommunityIcons color={colors.greenDark} name="clipboard-text-clock-outline" size={24} />
+          <MascotMark size={58} />
           <View style={styles.summaryText}>
             <Text style={styles.summaryTitle}>今日見るところ</Text>
             <Text style={styles.summaryLead}>急ぎ、期限前、担当未定だけを先に確認します。</Text>
           </View>
         </View>
+        <MascotGuide compact message="全部を一度に片付けなくて大丈夫です。まず担当未定から家族で分けましょう。" />
         <View style={styles.metrics}>
           <View style={[styles.metric, todayTasks.length > 0 ? styles.metricAlert : null]}>
             <Text style={styles.metricNumber}>{todayTasks.length}</Text>
@@ -212,7 +217,8 @@ const styles = StyleSheet.create({
   title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 39, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   heroBody: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
-  kicker: { backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
+  heroBrand: { alignItems: "center", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
+  kicker: { color: colors.greenDark, fontWeight: "900" },
   kickerLight: { color: "#cfe2d7", fontWeight: "900" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
   countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 34, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6, textAlign: "center" },

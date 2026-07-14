@@ -1760,3 +1760,46 @@ GitHubが必要な理由:
 - 次にやること:
   - Android実機でEAS buildページからInstallを押して最新preview appを入れる。
   - インストール後、`jp.beech.oyanomoshimo/.MainActivity` を起動して、welcome/dashboard/tasksの最新デザインがstandalone appでも反映されているか確認する。
+
+## 2026-07-14 追記 63
+
+- ユーザー指示: モバイルデザインをさらに親しみやすくするため、かわいいキャラを作りたい。
+- 判断:
+  - 画像生成は一度試したが方向がズレたため採用せず。
+  - 外部素材/生成画像に依存せず、React NativeのViewで描ける小さな案内役キャラを作る方針に変更。
+  - キャラは人型や動物ではなく、親しみがある「小さな緑のノート/お守り」風。重いテーマを軽くしすぎず、年配ユーザーにも不安を与えない意図。
+- 実装:
+  - `apps/mobile/components/MascotGuide.tsx`
+    - `MascotMark`: 葉っぱ付きのノート/お守り風マスコット。
+    - `MascotGuide`: マスコット+吹き出し。入口やタスク画面で短く案内する用途。
+  - `apps/mobile/app/(auth)/welcome.tsx`
+    - ブランドピルにマスコットを追加。
+    - 新規会員登録CTA前に、登録前の見本確認と本人確認の説明をキャラ吹き出しで表示。
+    - 低頻度・高重要度の説明帯にもマスコットを追加。
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+    - 家族ボードのheroと「今日見るところ」にマスコットを追加。
+    - 全部やらなくてよい、担当未定から分ける、という案内文を追加。
+  - `apps/mobile/app/people/[id]/tasks.tsx`
+    - タスクheroにマスコットを追加。
+    - 現在のfilterに応じた案内吹き出しを追加。
+  - `apps/mobile/scripts/renderBrandAssets.swift`
+    - 追加インストールなしでアイコン/スプラッシュ/通知アイコンを再生成するSwiftスクリプトを追加。
+  - 再生成したアセット:
+    - `apps/mobile/assets/icon.png`
+    - `apps/mobile/assets/adaptive-icon.png`
+    - `apps/mobile/assets/splash.png`
+    - `apps/mobile/assets/notification-icon.png`
+- 検証:
+  - `apps/mobile` で `PATH=/Users/ikedatetsuya/.cache/codex-runtimes/codex-primary-runtime/dependencies/node/bin:$PATH ./node_modules/.bin/tsc --noEmit` 成功。
+  - `node scripts/mobile-build-doctor.mjs` 成功。
+  - `git diff --check` 成功。
+  - `sips` でアセットサイズ確認:
+    - icon/adaptive-icon: 1024x1024
+    - splash: 1242x2436
+    - notification-icon: 96x96
+  - `view_image` でicon/splashを目視確認。落ち着いた緑のマスコットに更新済み。
+- 未実施:
+  - Android実機確認。`adb devices` で端末が見えていなかったため、今回のターンでは実機スクショ確認なし。
+- 次にやること:
+  - Android端末をUSBデバッグで再接続し、Expo Goまたは新しいEAS preview buildでwelcome/dashboard/tasksの表示を確認。
+  - 見た目がOKならEAS preview buildを再作成し、家族3組テスト用の配布URLを更新する。
