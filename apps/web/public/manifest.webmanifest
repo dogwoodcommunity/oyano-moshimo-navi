@@ -1,0 +1,50 @@
+{
+  "name": "親のもしもナビ",
+  "short_name": "親のもしも",
+  "description": "親の入院、介護、亡くなった後の手続き、実家の片付けを家族で整理する入口。",
+  "id": "/home",
+  "start_url": "/home?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6f7f1",
+  "theme_color": "#276447",
+  "categories": ["productivity", "health", "lifestyle"],
+  "lang": "ja",
+  "icons": [
+    {
+      "src": "/brand/apple-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/brand/pwa-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/brand/logo-mark.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "ここから始める",
+      "short_name": "始める",
+      "description": "親の状況を選んで整理を始める",
+      "url": "/start?source=pwa_shortcut",
+      "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "チェックリスト",
+      "short_name": "確認",
+      "description": "入院・介護・死亡後・実家じまいの確認リストを見る",
+      "url": "/checklists?source=pwa_shortcut",
+      "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

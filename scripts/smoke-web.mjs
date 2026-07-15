@@ -15,6 +15,8 @@ const checks = [
   { path: "/result/smoke-case/share", label: "result share fallback" },
   { path: "/invite/smoke-token", label: "invite fallback" },
   { path: "/support-pack", label: "support pack" },
+  { path: "/manifest.webmanifest", label: "pwa manifest" },
+  { path: "/sw.js", label: "service worker" },
   { path: "/sitemap.xml", label: "sitemap" },
   { path: "/robots.txt", label: "robots" },
   { path: "/legal/privacy", label: "privacy" },

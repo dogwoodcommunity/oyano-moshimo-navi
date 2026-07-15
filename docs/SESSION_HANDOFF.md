@@ -1872,3 +1872,33 @@ GitHubが必要な理由:
 - 次にやること:
   - 必要なら `/result/[caseId]` も同じ「整理ノート」トーンにさらに寄せる。
   - 本番反映後、スマホ実機でWeb診断から結果画面まで通し確認する。
+
+## 2026-07-16 追記 66
+
+- ユーザー指示: Web入口をPWAにする。最初は「WPS」と言われたが、確認後にPWAと判明。
+- 判断:
+  - 親の病気・入院・死亡など要配慮情報を扱うため、PWA化しても診断結果・API・Admin・診断入力ページをservice workerで勝手にキャッシュしない。
+  - まずはホーム画面追加、standalone起動、アイコン、テーマカラー、iPhoneのWeb App設定を入れる。
+  - オフライン対応は後回し。MVPでは個人情報保護を優先し、service workerはブランドアイコン等の静的資産だけをキャッシュする。
+- 実装:
+  - `apps/web/public/manifest.webmanifest`
+    - `name`, `short_name`, `start_url=/home?source=pwa`, `display=standalone`, `theme_color`, `background_color`, icons, shortcutsを追加。
+  - `apps/web/public/sw.js`
+    - brand iconsのみcache。
+    - `/api/`, `/admin`, `/result/`, `/diagnosis` はfetch handler対象外にして、個人情報や結果を保存しない。
+  - `apps/web/components/PwaRegister.tsx`
+    - production環境のみ `/sw.js` を登録。
+    - 登録失敗してもWeb入口自体は止めない。
+  - `apps/web/app/layout.tsx`
+    - `manifest`, `applicationName`, `themeColor`, `appleWebApp`, `formatDetection` をmetadataへ追加。
+    - `<PwaRegister />` をbody末尾に追加。
+  - `apps/web/public/brand/pwa-icon-192.png`
+    - `logo-mark.png` から `sips -z 192 192` で生成。
+  - `scripts/local-doctor.mjs`
+    - PWA関連ファイルとアイコンを必須確認に追加。
+  - `scripts/smoke-web.mjs`
+    - `/manifest.webmanifest` と `/sw.js` を疎通確認に追加。
+- 次にやること:
+  - Web build/typecheck/smokeで検証。
+  - 本番Vercel反映後、Android Chrome/iPhone Safariで「ホーム画面に追加」確認。
+  - 必要ならPWA用の案内UI(「ホーム画面に追加できます」)を控えめに追加する。
