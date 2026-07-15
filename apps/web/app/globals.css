@@ -84,10 +84,6 @@ textarea {
   gap: 18px;
 }
 
-.nav-start {
-  color: var(--green-dark);
-}
-
 .container {
   margin: 0 auto;
   max-width: 1080px;

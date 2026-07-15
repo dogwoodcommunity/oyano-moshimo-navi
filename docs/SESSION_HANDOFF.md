@@ -1929,3 +1929,18 @@ GitHubが必要な理由:
   - `next build` OK。
 - 次にやること:
   - GitHub push後、Vercel反映を待ってスマホ実機でトップの入口が1つに見えるか確認。
+
+## 2026-07-16 追記 68
+
+- ユーザー指摘:
+  - スマホ実機で上部の「ここから始める」がまだ残って見えており、入口が複数に見える。
+- 判断:
+  - CSSでスマホだけ隠すのではなく、上部ナビから `/start` 導線自体を削除する。
+  - トップの入口はヒーロー内の大きいCTAだけに固定する。
+- 実装:
+  - `apps/web/app/layout.tsx`
+    - `<Link className="nav-start" href="/start">入口</Link>` を削除。
+  - `apps/web/app/globals.css`
+    - `.nav-start` スタイルを削除。
+- 次にやること:
+  - build後にGitHubへpushし、Vercel反映後にスマホで強制リロードして確認。
