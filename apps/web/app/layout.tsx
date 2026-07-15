@@ -38,7 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header className="nav">
             <Link className="brand" href="/">親のもしもナビ</Link>
             <nav className="navlinks" aria-label="main">
-              <Link className="nav-start" href="/start">ここから始める</Link>
+              <Link className="nav-start" href="/start">入口</Link>
               <Link href="/guides">読む</Link>
               <Link href="/checklists">チェックリスト</Link>
               <Link href="/safety">安心</Link>

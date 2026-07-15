@@ -85,10 +85,7 @@ textarea {
 }
 
 .nav-start {
-  background: var(--green);
-  border-radius: 999px;
-  color: #fff;
-  padding: 8px 12px;
+  color: var(--green-dark);
 }
 
 .container {
@@ -155,28 +152,59 @@ textarea {
 }
 
 .start-gateway {
-  background: var(--surface);
-  border: 2px solid var(--green);
-  border-radius: 8px;
-  box-shadow: 0 14px 36px rgba(28, 48, 39, 0.1);
+  background: #fffdf7;
+  border: 3px solid var(--green);
+  border-radius: 10px;
+  box-shadow: 0 18px 42px rgba(28, 48, 39, 0.16);
   display: grid;
-  gap: 10px;
+  gap: 12px;
   margin-top: 26px;
   max-width: 480px;
-  padding: 18px;
+  padding: 20px;
+  position: relative;
+}
+
+.start-gateway::before {
+  align-items: center;
+  background: var(--green);
+  border: 4px solid #fffdf7;
+  border-radius: 999px;
+  color: #fff;
+  content: "1";
+  display: inline-flex;
+  font-size: 20px;
+  font-weight: 900;
+  height: 44px;
+  justify-content: center;
+  position: absolute;
+  right: 18px;
+  top: -24px;
+  width: 44px;
 }
 
 .gateway-label {
   color: var(--green);
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
 
 .gateway-button {
-  font-size: 20px;
-  min-height: 64px;
+  align-items: center;
+  box-shadow: 0 14px 24px rgba(24, 63, 46, 0.26);
+  display: flex;
+  flex-direction: column;
+  font-size: 22px;
+  gap: 4px;
+  justify-content: center;
+  min-height: 74px;
   width: 100%;
+}
+
+.gateway-button span {
+  color: rgba(255, 255, 255, 0.86);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .gateway-note {
@@ -194,11 +222,12 @@ textarea {
   margin-top: 18px;
 }
 
-.urgent-strip a {
+.urgent-strip span {
   background: #fff;
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--green-dark);
+  display: inline-flex;
   font-size: 14px;
   font-weight: 900;
   padding: 8px 11px;
@@ -1756,6 +1785,7 @@ textarea {
     justify-content: flex-start;
   }
 
+  .navlinks a[href="/start"],
   .navlinks a[href="/checklists"],
   .navlinks a[href="/plans"] {
     display: none;

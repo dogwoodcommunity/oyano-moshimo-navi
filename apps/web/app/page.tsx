@@ -106,13 +106,16 @@ export default function HomePage() {
             <h1>親のことで困った時に、最初に開く場所。</h1>
             <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族で何から確認するかを、短いリストに整理します。</p>
             <div className="start-gateway" aria-label="入口">
-              <p className="gateway-label">ここからです</p>
-              <Link className="button gateway-button" href="/start">状況を選んで整理する</Link>
-              <p className="gateway-note">無料・ログインなし。3分ほどで結果を見られます。</p>
+              <p className="gateway-label">入口はこのボタンです</p>
+              <Link className="button gateway-button" href="/start">
+                無料で状況を選ぶ
+                <span>ログインなしで始められます</span>
+              </Link>
+              <p className="gateway-note">親の状態に近いものを1つ選ぶだけ。3分ほどで整理結果を見られます。</p>
             </div>
             <div className="urgent-strip" aria-label="よくある状況">
               {urgentEntries.map((item) => (
-                <Link href="/start" key={item}>{item}</Link>
+                <span key={item}>{item}</span>
               ))}
             </div>
           </div>
