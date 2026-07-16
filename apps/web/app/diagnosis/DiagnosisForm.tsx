@@ -6,6 +6,18 @@ import { SENSITIVE_INFO_CONSENT_VERSION, STATUSES, type DiagnosisAnswers, type P
 import { submitDiagnosis } from "@/lib/store";
 
 const concernOptions = ["期限がある手続き", "家族の役割分担", "実家の片付け", "相続・名義変更", "相談先探し", "お金・保険の把握"];
+const targetOptions: Array<{
+  key: NonNullable<DiagnosisAnswers["targetRelationship"]>;
+  label: string;
+  note: string;
+}> = [
+  { key: "mother", label: "母", note: "お母さんのこと" },
+  { key: "father", label: "父", note: "お父さんのこと" },
+  { key: "mother_in_law", label: "義母", note: "配偶者のお母さん" },
+  { key: "father_in_law", label: "義父", note: "配偶者のお父さん" },
+  { key: "grandparent", label: "祖父母", note: "祖父・祖母のこと" },
+  { key: "other", label: "その他", note: "叔父叔母など" }
+];
 const statusNotes: Partial<Record<ParentStatus, string>> = {
   hospitalized: "入院中・退院調整中",
   facility: "施設入所や介護の相談中",
@@ -22,6 +34,7 @@ export function DiagnosisForm() {
   const caseId = params.get("caseId") ?? crypto.randomUUID();
   const initialStatus = (params.get("status") ?? "preparing") as ParentStatus;
   const [selectedStatus, setSelectedStatus] = useState<ParentStatus>(initialStatus);
+  const [targetRelationship, setTargetRelationship] = useState<NonNullable<DiagnosisAnswers["targetRelationship"]>>("mother");
   const [concerns, setConcerns] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const statusLabel = useMemo(() => STATUSES.find((item) => item.key === selectedStatus)?.label, [selectedStatus]);
@@ -32,6 +45,8 @@ export function DiagnosisForm() {
     const form = new FormData(event.currentTarget);
     const answers: DiagnosisAnswers = {
       selectedStatus,
+      targetRelationship,
+      targetName: String(form.get("targetName") ?? ""),
       parentSituation: String(form.get("parentSituation") ?? ""),
       familyStructure: String(form.get("familyStructure") ?? ""),
       hasHome: String(form.get("hasHome") ?? "unknown") as DiagnosisAnswers["hasHome"],
@@ -61,8 +76,9 @@ export function DiagnosisForm() {
         </div>
         <div className="progress-rail" aria-label="整理チェックの流れ">
           <span className="progress-step active">1 状況を選ぶ</span>
-          <span className="progress-step active">2 分かる範囲で確認</span>
-          <span className="progress-step">3 結果を見る</span>
+          <span className="progress-step active">2 対象者を確認</span>
+          <span className="progress-step active">3 分かる範囲で確認</span>
+          <span className="progress-step">4 結果を見る</span>
         </div>
       </section>
 
@@ -70,6 +86,40 @@ export function DiagnosisForm() {
         <section className="diagnosis-sheet">
           <div className="form-section-head">
             <span className="step-badge">1</span>
+            <div>
+              <h2>誰のことを整理しますか？</h2>
+              <p className="hint">まず対象者を選んでください。名前や呼び名は任意です。</p>
+            </div>
+          </div>
+
+          <div className="target-choice-grid" role="radiogroup" aria-label="対象者">
+            {targetOptions.map((item) => (
+              <button
+                aria-checked={targetRelationship === item.key}
+                className={`target-choice-card ${targetRelationship === item.key ? "selected" : ""}`}
+                key={item.key}
+                onClick={() => setTargetRelationship(item.key)}
+                role="radio"
+                type="button"
+              >
+                <span className="target-avatar" aria-hidden="true">{item.label.slice(0, 1)}</span>
+                <span>
+                  <strong>{item.label}</strong>
+                  <small>{item.note}</small>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="soft-memo-field">
+            <label htmlFor="targetName">呼び名 任意</label>
+            <input className="input" id="targetName" name="targetName" placeholder="例: 母、花子さん、おばあちゃん" />
+          </div>
+        </section>
+
+        <section className="diagnosis-sheet">
+          <div className="form-section-head">
+            <span className="step-badge">2</span>
             <div>
               <h2>いま一番近い状況を選ぶ</h2>
               <p className="hint">あとから変更できます。迷ったら一番近いものを押してください。</p>
@@ -100,7 +150,7 @@ export function DiagnosisForm() {
 
         <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">2</span>
+            <span className="step-badge">3</span>
             <div>
               <h2>家族で確認できていること</h2>
               <p className="hint">正確でなくても大丈夫です。今の把握状況だけ選びます。</p>
@@ -132,7 +182,7 @@ export function DiagnosisForm() {
 
         <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">3</span>
+            <span className="step-badge">4</span>
             <div>
               <h2>気になっていること</h2>
               <p className="hint">複数選べます。結果の優先順位に反映します。</p>
@@ -150,7 +200,7 @@ export function DiagnosisForm() {
 
         <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">4</span>
+            <span className="step-badge">5</span>
             <div>
               <h2>実家や家じまいのメモ</h2>
               <p className="hint">分からない場合は空欄でも進めます。</p>
@@ -165,7 +215,7 @@ export function DiagnosisForm() {
 
         <section className="diagnosis-sheet">
           <div className="form-section-head">
-            <span className="step-badge">5</span>
+            <span className="step-badge">6</span>
             <div>
               <h2>必要なら連絡先を残す</h2>
               <p className="hint">結果を見るだけなら任意です。発動サポートを使う場合だけ必要になります。</p>

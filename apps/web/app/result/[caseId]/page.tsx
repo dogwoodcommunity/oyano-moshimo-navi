@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { buildDiagnosisResult, type DiagnosisAnswers } from "@oyano/shared";
+import { buildDiagnosisResult, targetLabel, type DiagnosisAnswers } from "@oyano/shared";
 import { getLocalCase } from "@/lib/store";
 
 export default function ResultPage() {
@@ -12,6 +12,8 @@ export default function ResultPage() {
   const record = getLocalCase(params.caseId);
   const fallbackAnswers = {
     selectedStatus: record?.selectedStatus ?? "preparing",
+    targetRelationship: "mother",
+    targetName: "",
     parentSituation: "",
     familyStructure: "",
     hasHome: "unknown",
@@ -19,7 +21,9 @@ export default function ResultPage() {
     concerns: [],
     homeClearance: ""
   } satisfies DiagnosisAnswers;
-  const result = record?.result ?? buildDiagnosisResult((record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers);
+  const answers = (record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers;
+  const result = record?.result ?? buildDiagnosisResult(answers);
+  const target = targetLabel(answers);
   const appScheme = process.env.NEXT_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
   const appUrl = record?.handoffToken
     ? `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token: record.handoffToken }).toString()}`
@@ -32,9 +36,10 @@ export default function ResultPage() {
     <main className="container">
       <section className="result-summary">
         <p className="pill">{result.diagnosisType}</p>
-        <h1 className="page-title">整理結果</h1>
+        <h1 className="page-title">{target}の整理結果</h1>
         <p className="lead">{result.summary}</p>
         <div className="meta-row">
+          <span className="meta-chip">対象者 {target}</span>
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
           <span className="meta-chip">保存すると家族で見られます</span>
           <span className="meta-chip">専門判断は断定しません</span>
