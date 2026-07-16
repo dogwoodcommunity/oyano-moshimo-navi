@@ -2115,3 +2115,24 @@ GitHubが必要な理由:
 - 残タスク:
   - Supabase SQL Editorで `supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` を本番DBへ投入する。
   - 投入後、`supabase/verify_compact.sql` で新しいrate limit/retention項目までtrue確認する。
+
+## 2026-07-16 追記 78
+
+- ユーザー指摘:
+  - スマホで `/start` のカードをタップしても、すぐ反応せず時間差でページが開く感じがある。
+- 原因:
+  - `apps/web/lib/store.ts` の `createCase()` が、カードタップ直後に `/api/cases` のPOST完了を待ってから `/diagnosis` へ遷移していた。
+  - スマホ回線やVercelの応答で数百ms以上待つと、押しても反応していないように見える。
+- 対応:
+  - `createCase()` を端末内で即時case作成する形に変更。DB保存は診断送信時の `/api/cases/[caseId]/diagnosis` upsertに寄せる。
+  - `/start` でカードを押した瞬間に `choosingStatus` を立て、選択カードだけ「開いています」表示に変更。
+  - 他カードは無効化して二重タップを防止。
+  - `router.prefetch("/diagnosis")` を追加。
+  - CSSに `touch-action: manipulation`、押下中のscale、遷移中の濃緑反転表示を追加。
+- 検証:
+  - `apps/web` の `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `next build` OK。
+- 次にやること:
+  - commit/push/Vercel本番deploy。
+  - 実機スマホでカードタップ直後に見た目が反応し、診断画面へ速く移るか確認。

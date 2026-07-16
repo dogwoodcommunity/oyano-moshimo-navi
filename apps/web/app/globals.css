@@ -527,6 +527,9 @@ textarea {
   min-height: 188px;
   position: relative;
   text-align: left;
+  touch-action: manipulation;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: rgba(39, 100, 71, 0.18);
   width: 100%;
 }
 
@@ -570,7 +573,9 @@ textarea {
   position: relative;
   padding: 18px;
   text-align: left;
-  transition: transform 120ms ease, box-shadow 120ms ease;
+  touch-action: manipulation;
+  transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, opacity 120ms ease, transform 120ms ease;
+  -webkit-tap-highlight-color: rgba(39, 100, 71, 0.18);
 }
 
 .quick-status-button::after {
@@ -615,6 +620,52 @@ textarea {
 .secondary:hover {
   border-color: rgba(39, 100, 71, 0.5);
   box-shadow: 0 12px 30px rgba(28, 48, 39, 0.08);
+}
+
+.quick-status-button:active,
+.status-button:active {
+  transform: scale(0.985);
+}
+
+.quick-status-button:disabled,
+.status-button:disabled {
+  cursor: wait;
+}
+
+.quick-status-button:disabled:not(.is-opening),
+.status-button:disabled:not(.is-opening) {
+  opacity: 0.54;
+}
+
+.quick-status-button.is-opening,
+.status-button.is-opening {
+  background: linear-gradient(180deg, #0e4b32, #083221);
+  border-color: #0e4b32;
+  box-shadow: 0 14px 34px rgba(8, 50, 33, 0.24);
+  color: white;
+  opacity: 1;
+  transform: translateY(1px) scale(0.99);
+}
+
+.quick-status-button.is-opening span,
+.quick-status-button.is-opening > span:not(.status-visual),
+.quick-status-button.is-opening strong,
+.status-button.is-opening span,
+.status-button.is-opening > span:not(.status-visual),
+.status-button.is-opening strong {
+  color: white;
+}
+
+.quick-status-button.is-opening .tap-badge,
+.status-button.is-opening .tap-badge {
+  background: white;
+  color: #0e4b32 !important;
+}
+
+.quick-status-button.is-opening em,
+.status-button.is-opening em {
+  background: rgba(255, 255, 255, 0.16);
+  color: white;
 }
 
 .form {

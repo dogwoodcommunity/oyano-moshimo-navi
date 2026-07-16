@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { STATUSES, type ParentStatus } from "@oyano/shared";
 import { createCase } from "@/lib/store";
@@ -67,8 +68,15 @@ const statusByKey = new Map(STATUSES.map((item) => [item.key, item]));
 
 export default function StartPage() {
   const router = useRouter();
+  const [choosingStatus, setChoosingStatus] = useState<ParentStatus | null>(null);
+
+  useEffect(() => {
+    router.prefetch("/diagnosis");
+  }, [router]);
 
   async function choose(status: ParentStatus) {
+    if (choosingStatus) return;
+    setChoosingStatus(status);
     const record = await createCase(status);
     router.push(`/diagnosis?caseId=${record.id}&status=${status}`);
   }
@@ -123,17 +131,23 @@ export default function StartPage() {
           {priorityStatuses.map((key) => {
             const item = statusByKey.get(key);
             if (!item) return null;
+            const isChoosing = choosingStatus === key;
             return (
-              <button className="quick-status-button" key={key} onClick={() => choose(key)}>
+              <button
+                className={`quick-status-button ${isChoosing ? "is-opening" : ""}`}
+                disabled={Boolean(choosingStatus)}
+                key={key}
+                onClick={() => choose(key)}
+              >
                 <span className="status-card-top">
                   <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
                     {statusVisuals[key].icon}
                   </span>
-                  <span className="tap-badge">タップ</span>
+                  <span className="tap-badge">{isChoosing ? "開く" : "タップ"}</span>
                 </span>
                 <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                 <span>{statusDescriptions[key]}</span>
-                <em>この状況で始める <b aria-hidden="true">→</b></em>
+                <em>{isChoosing ? "開いています" : "この状況で始める"} <b aria-hidden="true">→</b></em>
               </button>
             );
           })}
@@ -151,17 +165,23 @@ export default function StartPage() {
               {group.keys.map((key) => {
                 const item = statusByKey.get(key);
                 if (!item) return null;
+                const isChoosing = choosingStatus === key;
                 return (
-                  <button className="status-button" key={key} onClick={() => choose(key)}>
+                  <button
+                    className={`status-button ${isChoosing ? "is-opening" : ""}`}
+                    disabled={Boolean(choosingStatus)}
+                    key={key}
+                    onClick={() => choose(key)}
+                  >
                     <span className="status-card-top">
                       <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
                         {statusVisuals[key].icon}
                       </span>
-                      <span className="tap-badge">タップ</span>
+                      <span className="tap-badge">{isChoosing ? "開く" : "タップ"}</span>
                     </span>
                     <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
-                    <em>これを選ぶ <b aria-hidden="true">→</b></em>
+                    <em>{isChoosing ? "開いています" : "これを選ぶ"} <b aria-hidden="true">→</b></em>
                   </button>
                 );
               })}

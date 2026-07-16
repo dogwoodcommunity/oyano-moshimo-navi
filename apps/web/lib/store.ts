@@ -61,9 +61,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T | null> {
 }
 
 export async function createCase(selectedStatus: ParentStatus): Promise<CaseRecord> {
-  const apiResult = await postJson<{ record: CaseRecord }>("/api/cases", { selectedStatus });
-
-  const record: CaseRecord = apiResult?.record ?? {
+  const record: CaseRecord = {
     id: crypto.randomUUID(),
     selectedStatus,
     answers: { selectedStatus },
