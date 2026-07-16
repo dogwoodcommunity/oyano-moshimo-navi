@@ -59,7 +59,15 @@ declare
   v_family_id uuid;
   v_person_id uuid;
   v_family_name text;
+  v_primary_name text;
+  v_primary_relationship text;
+  v_additional_target jsonb;
+  v_additional_person_id uuid;
+  v_additional_status text;
+  v_additional_name text;
+  v_additional_relationship text;
   v_task jsonb;
+  v_template task_templates;
   v_tasks_created int := 0;
   v_existing_task_count int := 0;
   v_due_date date;
@@ -131,6 +139,21 @@ begin
     '親のもしもナビ家族'
   );
 
+  v_primary_relationship := case coalesce(v_case.answers ->> 'targetRelationship', 'mother')
+    when 'mother' then '母'
+    when 'father' then '父'
+    when 'mother_in_law' then '義母'
+    when 'father_in_law' then '義父'
+    when 'grandparent' then '祖父母'
+    else '家族'
+  end;
+
+  v_primary_name := coalesce(
+    nullif(trim(v_case.answers ->> 'targetName'), ''),
+    v_primary_relationship,
+    '親'
+  );
+
   insert into families (name, owner_user_id, plan)
   values (v_family_name, p_user_id, 'free')
   returning id into v_family_id;
@@ -146,8 +169,8 @@ begin
   )
   values (
     v_family_id,
-    coalesce(nullif(trim(p_display_name), ''), v_case.contact_name, '親'),
-    '親',
+    v_primary_name,
+    v_primary_relationship,
     coalesce(v_case.selected_status, 'preparing')
   )
   returning id into v_person_id;
@@ -180,6 +203,80 @@ begin
     );
 
     v_tasks_created := v_tasks_created + 1;
+  end loop;
+
+  for v_additional_target in
+    select value
+    from jsonb_array_elements(coalesce(v_case.answers -> 'additionalTargets', '[]'::jsonb))
+  loop
+    v_additional_relationship := case coalesce(v_additional_target ->> 'relationship', 'other')
+      when 'mother' then '母'
+      when 'father' then '父'
+      when 'mother_in_law' then '義母'
+      when 'father_in_law' then '義父'
+      when 'grandparent' then '祖父母'
+      else '家族'
+    end;
+
+    v_additional_name := coalesce(
+      nullif(trim(v_additional_target ->> 'name'), ''),
+      v_additional_relationship,
+      '家族'
+    );
+
+    v_additional_status := coalesce(
+      nullif(v_additional_target ->> 'status', ''),
+      v_case.selected_status,
+      'preparing'
+    );
+
+    insert into people (
+      family_id,
+      display_name,
+      relationship_to_family,
+      current_status
+    )
+    values (
+      v_family_id,
+      v_additional_name,
+      v_additional_relationship,
+      v_additional_status
+    )
+    returning id into v_additional_person_id;
+
+    for v_template in
+      select *
+      from task_templates
+      where status = v_additional_status
+      order by priority asc, default_due_offset_days asc nulls last, created_at asc
+      limit 4
+    loop
+      insert into tasks (
+        person_id,
+        template_id,
+        title,
+        description,
+        priority,
+        category,
+        due_date,
+        status
+      )
+      values (
+        v_additional_person_id,
+        v_template.id,
+        v_template.title,
+        v_template.description,
+        coalesce(v_template.priority, 3),
+        v_template.category,
+        case
+          when v_template.default_due_offset_days is null then null
+          else current_date + v_template.default_due_offset_days
+        end,
+        'todo'
+      );
+
+      v_tasks_created := v_tasks_created + 1;
+    end loop;
   end loop;
 
   update cases

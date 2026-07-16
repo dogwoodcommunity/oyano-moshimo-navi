@@ -58,7 +58,8 @@ export function DiagnosisForm() {
       targetName: String(form.get("targetName") ?? ""),
       additionalTargets: additionalTargets.map((target) => ({
         relationship: target.relationship,
-        name: target.name?.trim() ?? ""
+        name: target.name?.trim() ?? "",
+        status: target.status ?? selectedStatus
       })),
       parentSituation: String(form.get("parentSituation") ?? ""),
       familyStructure: String(form.get("familyStructure") ?? ""),
@@ -81,7 +82,7 @@ export function DiagnosisForm() {
   }
 
   function addTarget() {
-    setAdditionalTargets((current) => [...current, { relationship: "father" as TargetRelationship, name: "" }].slice(0, 4));
+    setAdditionalTargets((current) => [...current, { relationship: "father" as TargetRelationship, name: "", status: selectedStatus }].slice(0, 4));
   }
 
   function updateAdditionalTarget(index: number, updates: Partial<DiagnosisTarget>) {
@@ -146,7 +147,7 @@ export function DiagnosisForm() {
           <div className="additional-targets">
             <div>
               <strong>ほかにも一緒に気になる人がいる場合</strong>
-              <p className="hint">追加した人も結果に残します。個別の期限やタスクは、あとでアプリの家族ボードで人ごとに分けて管理できます。</p>
+              <p className="hint">追加した人も結果に残します。状況が違う場合は、それぞれ近いものを選んでください。</p>
             </div>
             {additionalTargets.map((target, index) => (
               <div className="additional-target-row" key={`${target.relationship}-${index}`}>
@@ -165,6 +166,14 @@ export function DiagnosisForm() {
                   value={target.name ?? ""}
                   onChange={(event) => updateAdditionalTarget(index, { name: event.target.value })}
                 />
+                <select
+                  aria-label={`追加対象者${index + 1}の状況`}
+                  className="select"
+                  value={target.status ?? selectedStatus}
+                  onChange={(event) => updateAdditionalTarget(index, { status: event.target.value as ParentStatus })}
+                >
+                  {STATUSES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
+                </select>
                 <button className="remove-target-button" type="button" onClick={() => removeAdditionalTarget(index)}>削除</button>
               </div>
             ))}

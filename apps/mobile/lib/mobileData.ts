@@ -47,6 +47,7 @@ export type AcceptFamilyInviteResult = {
 
 export type DashboardData = {
   person: MobilePerson;
+  people: MobilePerson[];
   tasks: MobileTask[];
   registryItems: string[];
   firstSteps: string[];
@@ -118,6 +119,7 @@ function demoTasksFromResult(result: DiagnosisResult): MobileTask[] {
 export function demoDashboardData(): DashboardData {
   return {
     person: demoPerson,
+    people: [demoPerson],
     tasks: demoTasksFromResult(demoResult),
     registryItems: demoResult.registryItems,
     firstSteps: demoResult.firstSteps,
@@ -132,6 +134,7 @@ export function emptyDashboardData(): DashboardData {
       displayName: "未登録",
       currentStatus: "preparing"
     },
+    people: [],
     tasks: [],
     registryItems: [],
     firstSteps: [],
@@ -146,13 +149,19 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const { data: people } = await supabase
     .from("people")
     .select("id, display_name, relationship_to_family, current_status")
-    .order("created_at", { ascending: true })
-    .limit(1);
+    .order("created_at", { ascending: true });
 
   const personRow = (people?.[0] ?? null) as PersonRow | null;
   if (!personRow) return emptyDashboardData();
 
   const tasks = await fetchTasks(personRow.id);
+  const personList = ((people ?? []) as PersonRow[]).map((row) => ({
+    id: row.id,
+    displayName: row.display_name,
+    relationship: row.relationship_to_family ?? undefined,
+    currentStatus: row.current_status
+  }));
+
   return {
     person: {
       id: personRow.id,
@@ -160,6 +169,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       relationship: personRow.relationship_to_family ?? undefined,
       currentStatus: personRow.current_status
     },
+    people: personList,
     tasks,
     registryItems: demoResult.registryItems,
     firstSteps: tasks.slice(0, 3).map((task) => task.title),

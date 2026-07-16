@@ -16,6 +16,7 @@ export type TargetRelationship = "mother" | "father" | "mother_in_law" | "father
 export type DiagnosisTarget = {
   relationship: TargetRelationship;
   name?: string;
+  status?: ParentStatus;
 };
 
 export type DiagnosisAnswers = {
@@ -240,10 +241,13 @@ export function targetDisplayName(target: DiagnosisTarget): string {
   return targetRelationshipLabels[target.relationship];
 }
 
-export function diagnosisTargets(answers: Pick<DiagnosisAnswers, "targetRelationship" | "targetName" | "additionalTargets">): DiagnosisTarget[] {
+export function diagnosisTargets(
+  answers: Pick<DiagnosisAnswers, "targetRelationship" | "targetName" | "additionalTargets"> & Partial<Pick<DiagnosisAnswers, "selectedStatus">>
+): DiagnosisTarget[] {
   const primary: DiagnosisTarget = {
     relationship: answers.targetRelationship ?? "mother",
-    name: answers.targetName
+    name: answers.targetName,
+    status: answers.selectedStatus
   };
   const additional = (answers.additionalTargets ?? [])
     .filter((target): target is DiagnosisTarget => Boolean(target?.relationship))

@@ -145,6 +145,26 @@ export default function DashboardScreen() {
           <Link href={`/people/${data.person.id}`} style={styles.secondaryButton}>対象者を見る</Link>
         </View>
       </View>
+      {data.people.length > 1 ? (
+        <View style={styles.card}>
+          <View style={styles.sectionHeader}>
+            <View style={styles.summaryText}>
+              <Text style={styles.cardTitle}>対象者</Text>
+              <Text style={styles.body}>人ごとに状態とタスクを分けて見られます。</Text>
+            </View>
+            <Text style={styles.countBadge}>{data.people.length}</Text>
+          </View>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personList}>
+            {data.people.map((person) => (
+              <Link href={`/people/${person.id}/tasks`} key={person.id} style={styles.personCard}>
+                <Text style={styles.personName}>{person.displayName}</Text>
+                <Text style={styles.personMeta}>{person.relationship ?? "対象者"}</Text>
+                <Text style={styles.personStatus}>{statusLabel(person.currentStatus)}</Text>
+              </Link>
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
       <TaskSection
         accent="danger"
         empty="今日までの期限はありません。"
@@ -241,6 +261,19 @@ const styles = StyleSheet.create({
   metricAlert: { backgroundColor: "#fff1f3", borderColor: "rgba(154,63,86,0.24)" },
   metricNumber: { color: colors.greenDark, fontSize: 26, fontWeight: "900" },
   metricLabel: { color: colors.muted, fontSize: 12, fontWeight: "800" },
+  personCard: {
+    backgroundColor: colors.surfaceSoft,
+    borderColor: colors.line,
+    borderRadius: 14,
+    borderWidth: 1,
+    minWidth: 148,
+    overflow: "hidden",
+    padding: 14
+  },
+  personList: { gap: 10, paddingVertical: 2 },
+  personMeta: { color: colors.muted, fontWeight: "800", marginBottom: 10 },
+  personName: { color: colors.ink, fontSize: 18, fontWeight: "900", marginBottom: 4 },
+  personStatus: { color: colors.greenDark, fontWeight: "900" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   button: { backgroundColor: colors.green, borderRadius: radius.control, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
   buttonDisabled: { opacity: 0.5 },

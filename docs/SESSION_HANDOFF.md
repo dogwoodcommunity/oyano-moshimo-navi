@@ -2238,3 +2238,30 @@ GitHubが必要な理由:
 - 実機確認ポイント:
   - スマホで `/diagnosis` の最初に「対象者を追加」ボタンが出るか確認する。
   - 複数対象を追加して結果画面へ進むと、「2名を一緒に整理」などのchipが出るか確認する。
+
+## 2026-07-16 追記 83
+
+- ユーザー確認:
+  - 「複数選んだら、それぞれの状況で管理できるの？アプリにも引き継がれる？」
+- 正直な現状確認:
+  - 追記82時点では、Web回答に `additionalTargets` は保存されるが、Supabase `consume_case_handoff` RPC は `people` を1件だけ作っていた。
+  - Expo Dashboardも `people.limit(1)` で最初の対象者だけ表示していた。
+  - つまり「結果には残る」が「アプリで複数人をそれぞれ管理できる」とは言えない状態だった。
+- 対応:
+  - `DiagnosisTarget.status` を追加。追加対象者ごとに状況を選べるようにした。
+  - Web診断の追加対象者行に、関係性・呼び名・状況の3項目を表示。
+  - `supabase/handoff_consume_rpc.sql` と `supabase/production_pending_hardening.sql` の `consume_case_handoff` を更新。
+    - 主対象は `targetName` / `targetRelationship` から `people.display_name` と `relationship_to_family` を作成。
+    - 追加対象者は `answers.additionalTargets` を走査して、対象者ごとに `people` を作成。
+    - 追加対象者ごとの `status` に応じて `task_templates` から初期タスクを作成。
+  - Expo `fetchDashboardData()` は `people.limit(1)` をやめ、同じ家族の対象者一覧を取得。
+  - Expo Dashboardに「対象者」横スクロール一覧を追加。複数人がいる場合、各対象者のタスク画面へ移動できる。
+- 検証:
+  - Web typecheck OK。
+  - Mobile typecheck OK。
+  - `git diff --check` OK。
+  - `next build apps/web` OK。
+- 重要な残タスク:
+  - 本番Supabase SQL Editorで `supabase/handoff_consume_rpc.sql` を再実行する。
+  - これを実行しない限り、本番DBのRPCは古いままで、複数対象者はアプリに複数 `people` として作られない。
+  - SQL投入後、実機で「母: 入院」「父: 退院後・在宅療養」など複数対象を選び、アプリ保存後にDashboardの対象者一覧へ2名出るか確認する。
