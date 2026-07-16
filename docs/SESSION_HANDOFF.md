@@ -2136,3 +2136,17 @@ GitHubが必要な理由:
 - 次にやること:
   - commit/push/Vercel本番deploy。
   - 実機スマホでカードタップ直後に見た目が反応し、診断画面へ速く移るか確認。
+
+## 2026-07-16 追記 79
+
+- スマホタップ反応改善をcommit/pushし、本番deployまで完了。
+  - commit: `27dd47d Make start card taps respond immediately`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-6n0pppj0d-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_DgbFDdBpgqKLyVm4oSUNo1ndKNFu`
+- 本番確認:
+  - `GET https://oyano-moshimo-navi.vercel.app/api/health` は `200`。
+  - `HEAD https://oyano-moshimo-navi.vercel.app/start` は `200`。
+- 実機確認ポイント:
+  - スマホで `/start` の状況カードを押した瞬間に、カードが濃緑になり「開いています」が表示されるか確認する。
+  - 画面遷移前に反応が見えるため、以前の「押しても反応していない感じ」は改善しているはず。
