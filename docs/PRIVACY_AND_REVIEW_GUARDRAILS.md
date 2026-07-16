@@ -41,6 +41,14 @@
 - Magic Linkの戻り先は、アプリ内のdashboard、invite、handoffだけを許可する。
 - 許可外の戻り先が渡された場合はdashboardへ戻し、オープンリダイレクト化を防ぐ。
 
+## 保持期限と公開API保護
+
+- ログインなしのWeb診断は、家族ボードへ引き継がれていない匿名ケースに限り、一定期間後に自動削除する。
+- 初期値は30日保持。`ANONYMOUS_CASE_RETENTION_DAYS` で延長できるが、7日未満にはできない。
+- `support_packs` が進行中、または `app_handoff_consumed_at` が記録されたケースは自動削除対象から外す。
+- `/api/cases`、`/api/cases/[caseId]/diagnosis`、`/api/stripe/checkout` には公開APIレート制限をかける。
+- 本番では `supabase/public_api_rate_limits.sql` のRPCを使い、Vercelの複数インスタンスでも制限が共有されるようにする。
+
 ## App Store審査方針
 
 - アプリ内では発動サポートパックの購入導線を出さない。

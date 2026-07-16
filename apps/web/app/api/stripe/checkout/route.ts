@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type StripeCheckoutResponse = {
@@ -27,6 +28,13 @@ function looksLikeEmail(value: string) {
 }
 
 export async function POST(request: Request) {
+  const rateLimited = await checkPublicRateLimit(request, {
+    keyPrefix: "stripe:checkout",
+    limit: 8,
+    windowSeconds: 600
+  });
+  if (rateLimited) return rateLimited;
+
   const body = await request.json() as CheckoutBody;
 
   if (!body.caseId) {

@@ -32,6 +32,7 @@ const requiredFiles = [
   "apps/web/app/api/stripe/checkout/route.ts",
   "apps/web/app/api/stripe/webhook/route.ts",
   "apps/web/app/api/cron/send-due-notifications/route.ts",
+  "apps/web/app/api/cron/purge-anonymous-cases/route.ts",
   "apps/web/app/api/notifications/opened/route.ts",
   "apps/web/app/api/account/delete-request/route.ts",
   "apps/web/app/api/admin/delete-requests/route.ts",
@@ -59,6 +60,8 @@ const requiredFiles = [
   "supabase/admin_auth_hardening.sql",
   "supabase/family_owner_succession.sql",
   "supabase/account_deletion_pipeline.sql",
+  "supabase/public_api_rate_limits.sql",
+  "supabase/anonymous_case_retention.sql",
   "supabase/storage_setup.sql",
   "supabase/verify_setup.sql",
   "supabase/verify_compact.sql",
@@ -84,6 +87,8 @@ const envFiles = {
     "STRIPE_SUPPORT_PACK_PRICE_ID",
     "STRIPE_WEBHOOK_SECRET",
     "CRON_SECRET",
+    "ANONYMOUS_CASE_RETENTION_DAYS",
+    "ANONYMOUS_CASE_PURGE_LIMIT",
     "NEXT_PUBLIC_APP_SCHEME",
     "NEXT_PUBLIC_WEB_BASE_URL"
   ],
@@ -112,6 +117,8 @@ const sqlOrder = [
   "admin_auth_hardening.sql",
   "family_owner_succession.sql",
   "account_deletion_pipeline.sql",
+  "public_api_rate_limits.sql",
+  "anonymous_case_retention.sql",
   "storage_setup.sql",
   "verify_setup.sql",
   "verify_compact.sql"
@@ -162,6 +169,7 @@ check("deployment warns service role", deploymentDoc.includes("SUPABASE_SERVICE_
 const vercelConfig = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
 check("vercel build command", vercelConfig.buildCommand === "pnpm --filter web run build");
 check("vercel cron route", vercelConfig.crons?.some((cron) => cron.path === "/api/cron/send-due-notifications"));
+check("vercel anonymous purge cron route", vercelConfig.crons?.some((cron) => cron.path === "/api/cron/purge-anonymous-cases"));
 
 if (failed) {
   process.exit(1);

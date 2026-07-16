@@ -21,7 +21,9 @@ SQL Editorで以下の順に実行する。
 15. `admin_auth_hardening.sql`
 16. `family_owner_succession.sql`
 17. `account_deletion_pipeline.sql`
-18. `storage_setup.sql`
+18. `public_api_rate_limits.sql`
+19. `anonymous_case_retention.sql`
+20. `storage_setup.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -29,8 +31,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-19. `verify_setup.sql`
-20. `verify_compact.sql`
+21. `verify_setup.sql`
+22. `verify_compact.sql`
 
 ## 重要
 
@@ -38,6 +40,8 @@ SQL Editorで以下の順に実行する。
 - `SUPABASE_SERVICE_ROLE_KEY` はVercelなどのサーバー環境変数にだけ入れる。
 - `SUPABASE_SERVICE_ROLE_KEY` を `NEXT_PUBLIC_` や `EXPO_PUBLIC_` に入れない。
 - Expoアプリは `EXPO_PUBLIC_SUPABASE_URL` と `EXPO_PUBLIC_SUPABASE_ANON_KEY` のみを使う。
+- 公開APIの連打対策は `public_api_rate_limits.sql` のRPCで制御する。SQL未投入時はWebサーバー内の簡易制限に落ちるが、本番では必ずSQLを投入する。
+- 放置された匿名診断ケースは `anonymous_case_retention.sql` と Vercel Cron `/api/cron/purge-anonymous-cases` で削除する。
 
 ## SQL実行後に取得する値
 

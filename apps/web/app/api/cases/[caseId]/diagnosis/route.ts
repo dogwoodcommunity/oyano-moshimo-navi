@@ -6,9 +6,17 @@ import {
   SENSITIVE_INFO_CONSENT_VERSION,
   type DiagnosisAnswers
 } from "@oyano/shared";
+import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 export async function POST(request: Request, { params }: { params: { caseId: string } }) {
+  const rateLimited = await checkPublicRateLimit(request, {
+    keyPrefix: "cases:diagnosis",
+    limit: 30,
+    windowSeconds: 60
+  });
+  if (rateLimited) return rateLimited;
+
   const answers = await request.json() as DiagnosisAnswers;
 
   if (!answers.selectedStatus) {

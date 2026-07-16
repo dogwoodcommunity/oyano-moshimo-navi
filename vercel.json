@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/send-due-notifications",
       "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/purge-anonymous-cases",
+      "schedule": "30 3 * * *"
     }
   ]
 }

@@ -32,6 +32,8 @@
 - [x] `supabase/admin_auth_hardening.sql` を実行
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [ ] `supabase/account_deletion_pipeline.sql` を実行
+- [ ] `supabase/public_api_rate_limits.sql` を実行
+- [ ] `supabase/anonymous_case_retention.sql` を実行
 - [x] `supabase/storage_setup.sql` を実行
 - [x] `supabase/verify_setup.sql` / `verify_compact.sql` で主要項目trueを確認
 - [x] `supabase/api_grants.sql` を実行
@@ -52,6 +54,7 @@
   - 2026-07-09監査対応: Admin判定は `family_members` から `app_admins` 専用テーブルへ変更。
   - 2026-07-09再確認: `scripts/smoke-admin-bearer.mjs` で一時 `app_admins` 行を作成し、`/api/admin/env-check` がBearer認証を受け付けることを確認。確認後、一時データは削除済み。
 - [x] `/api/cron/send-due-notifications` をdeploy対象に含める
+- [x] `/api/cron/purge-anonymous-cases` をdeploy対象に含める
 - [ ] Stripe関連env 3項目を設定
 
 ## 4. Stripe
@@ -90,6 +93,9 @@
 - [x] 実家写真のアップロードURL発行を認証・家族権限チェック付きに変更
 - [ ] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認
 - [x] アプリ内に外部Web決済CTAがない
+- [x] 公開APIにレート制限を追加
+- [ ] 本番DBで `public_api_rate_limits.sql` を投入し、DB側レート制限を有効化
+- [ ] 本番DBで `anonymous_case_retention.sql` を投入し、匿名診断の保持期限削除を有効化
 
 ## 7. 公開前
 

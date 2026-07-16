@@ -2051,3 +2051,37 @@ GitHubが必要な理由:
   - secretチェック: `.env.local` やsecret envは含まれず、`.env.example` のみ許可でOK。
 - 注意:
   - この追記自体をcommitする場合は、最終レビューZIPを再生成するとさらに新しいcommit名のZIPになる。
+
+## 2026-07-16 追記 74
+
+- ユーザー共有の再監査資料 `親のもしもナビ_再監査_2026-07-16.md` を確認。
+- 監査結論:
+  - RLS、handoff、admin認可、Stripe、通知は、閉じた家族3組テストならブロッカーなし。
+  - 広い本番公開前には、削除実行、匿名診断保持期限、公開APIレート制限、RLS自動テスト、監視、バックアップ方針が残る。
+- 今回の実装方針:
+  - すぐ効く公開APIレート制限と、放置匿名診断ケースの保持期限削除から対応。
+  - 削除実行はAuth削除や家族データの扱いが絡むため、次のまとまった工程で慎重に実装する。
+- 実装中のファイル:
+  - `apps/web/lib/publicRateLimit.ts` を追加。Supabase RPC `check_public_api_rate_limit` があればDB共有制限、未投入時はローカル簡易制限。
+  - `apps/web/app/api/cases/route.ts`、`apps/web/app/api/cases/[caseId]/diagnosis/route.ts`、`apps/web/app/api/stripe/checkout/route.ts` に制限を追加。
+  - `apps/web/lib/cronAuth.ts` を追加し、cron認証を共通化。
+  - `apps/web/app/api/cron/purge-anonymous-cases/route.ts` を追加。
+  - `supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` を追加。
+  - `vercel.json` に匿名ケース削除cronを追加。
+  - `supabase/README.md`、`supabase/verify_compact.sql`、`docs/PRODUCTION_CHECKLIST.md`、`docs/PRIVACY_AND_REVIEW_GUARDRAILS.md`、`apps/web/.env.example`、`scripts/local-doctor.mjs` を更新。
+- 次にやること:
+  - `tsc`、`local-doctor`、`next build` を通す。
+  - 必要なら本番Supabaseに新SQL 2本を投入し、`verify_compact.sql` で新項目までtrue確認。
+  - commit/push/Vercel deploy。
+
+## 2026-07-16 追記 75
+
+- 再監査対応の検証結果:
+  - `apps/web` の `tsc --noEmit` OK。
+  - `apps/mobile` の `tsc --noEmit` OK。
+  - `node scripts/local-doctor.mjs` OK。
+  - `next build` OK。新しい `/api/cron/purge-anonymous-cases` route もbuild対象に入った。
+- 注意:
+  - 通常の `pnpm --filter web exec tsc --noEmit` は、Codex環境の `pnpm` がregistry確認に行き、ネットワーク制限で失敗した。
+  - 代わりにバンドルNodeをPATHへ追加し、既存 `apps/web/node_modules/.bin/tsc` と `apps/mobile/node_modules/.bin/tsc` を直接実行して検証した。
+  - 本番DBの新SQL投入は未実行。`supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` をSQL Editorで実行後、`verify_compact.sql` で新項目がtrueになるか確認する。

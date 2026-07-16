@@ -1,7 +1,7 @@
 # 親のもしもナビ v0.3 エンジニアレビュー・チェックリスト
 
 作成日: 2026-07-16  
-対象commit: `b00fdb2`
+対象commit: この資料更新後の最新 `main`
 
 ## 1. セキュリティ
 
@@ -16,6 +16,8 @@
 - [ ] Magic Link / deep linkのredirectにオープンリダイレクト余地がない。
 - [ ] Storageの写真アップロードが家族権限確認後のsigned URL経由になっている。
 - [ ] アカウント削除依頼とaudit logに漏れがない。
+- [ ] `/api/cases`、`/api/cases/[caseId]/diagnosis`、`/api/stripe/checkout` に公開APIレート制限が効く。
+- [ ] レート制限RPC未投入時のfallbackが、本番で気づけない沈黙リスクになっていない。
 
 ## 2. Supabase / RLS
 
@@ -26,6 +28,8 @@
 - [ ] invite受諾時にも上限を再チェックしている。
 - [ ] app_admin policyが必要な管理テーブルだけに効いている。
 - [ ] `verify_compact.sql` のチェック項目に不足がない。
+- [ ] `public_api_rate_limits` と `check_public_api_rate_limit` が本番DBで有効。
+- [ ] `purge_stale_anonymous_cases` が本番DBで有効。
 - [ ] `storage.objects` のポリシーがhome photoのfamily境界を守っている。
 
 ## 3. 通知
@@ -47,6 +51,8 @@
 - [ ] `/start` の選択カードが「押せる」ことを高齢者/家族が理解できる。
 - [ ] 診断ページがGoogle Formっぽく見えすぎない。
 - [ ] 要配慮個人情報の同意なしに診断送信できない。
+- [ ] 放置された匿名診断ケースが保持期限後に削除される。
+- [ ] handoff済み/サポートパック進行中のケースが自動削除されない。
 - [ ] 結果画面からアプリ/PWA引き継ぎリンクが生成される。
 - [ ] 結果画面から発動サポートパック申込に進む場合、`checkoutToken` が付与される。
 - [ ] Stripe未設定時にサイトが壊れない。

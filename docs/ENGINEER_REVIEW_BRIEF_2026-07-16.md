@@ -1,7 +1,7 @@
 # 親のもしもナビ v0.3 エンジニアレビュー依頼
 
 作成日: 2026-07-16  
-対象実装commit: `b00fdb2 Clarify start card selection affordance`  
+対象実装commit: この資料更新後の最新 `main`
 本番Web: https://oyano-moshimo-navi.vercel.app  
 GitHub: https://github.com/dogwoodcommunity/oyano-moshimo-navi  
 Supabase Project ref: `ypnuxyfirlvbsqujocuy`
@@ -167,6 +167,30 @@ service roleはRLSをバイパスするため、API側認可が重要です。
 - 診断ページがGoogle Formっぽく見えすぎないか
 - PWAインストール導線が押し付けになっていないか
 
+### 8. 公開APIレート制限 / 匿名診断の保持期限
+
+2026-07-16再監査で、広い本番公開前に必要な穴として指摘された部分を追加実装しました。
+
+確認対象:
+
+- `apps/web/lib/publicRateLimit.ts`
+- `apps/web/app/api/cases/route.ts`
+- `apps/web/app/api/cases/[caseId]/diagnosis/route.ts`
+- `apps/web/app/api/stripe/checkout/route.ts`
+- `apps/web/app/api/cron/purge-anonymous-cases/route.ts`
+- `supabase/public_api_rate_limits.sql`
+- `supabase/anonymous_case_retention.sql`
+- `supabase/verify_compact.sql`
+- `vercel.json`
+
+見てほしい観点:
+
+- 公開APIへの連打/スパムに対して、DB共有のレート制限が効くか
+- RPC未投入時のローカルfallbackが、開発/閉域テストを壊さないか
+- 匿名診断ケースの自動削除条件が広すぎないか
+- support pack進行中、handoff済みケースを消さない条件が十分か
+- Vercel Cron + `CRON_SECRET` の運用で問題ないか
+
 ## 現在の本番確認状況
 
 完了:
@@ -183,10 +207,13 @@ service roleはRLSをバイパスするため、API側認可が重要です。
 - Web/mobile typecheck OK。
 - `node scripts/local-doctor.mjs` OK。
 - `next build` OK。
+- 公開APIレート制限を追加済み。
+- 放置匿名診断ケースの保持期限削除cronを追加済み。
 
 未完了/要確認:
 
 - Stripe本番決済の実接続。
+- 本番Supabaseへ `supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` を投入し、`verify_compact.sql` で新項目true確認。
 - iOS/TestFlight配布。
 - push通知の実配信確認。
 - 家族3組テスト。
