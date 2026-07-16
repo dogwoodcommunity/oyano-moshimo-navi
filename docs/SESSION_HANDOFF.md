@@ -2085,3 +2085,17 @@ GitHubが必要な理由:
   - 通常の `pnpm --filter web exec tsc --noEmit` は、Codex環境の `pnpm` がregistry確認に行き、ネットワーク制限で失敗した。
   - 代わりにバンドルNodeをPATHへ追加し、既存 `apps/web/node_modules/.bin/tsc` と `apps/mobile/node_modules/.bin/tsc` を直接実行して検証した。
   - 本番DBの新SQL投入は未実行。`supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` をSQL Editorで実行後、`verify_compact.sql` で新項目がtrueになるか確認する。
+
+## 2026-07-16 追記 76
+
+- 再監査対応をcommit/pushした。
+  - commit: `3c10c6f Add public API rate limits and anonymous retention`
+  - GitHub `origin/main` へpush済み。
+- 最新レビューZIPを生成した。
+  - `review_exports/oyano-moshimo-navi-code-review-2026-07-16-3c10c6f.zip`
+  - サイズ: 3.9MB
+  - secret envチェックOK。`.env.local` 等は含まず、`.env.example` のみ許可。
+- 次に必要:
+  - この追記を含めてもう一度commitする場合は、レビューZIPのbase commitが1つ古くなるため、必要なら再生成する。
+  - 本番反映はVercel deployまたはGitHub連携の自動deploy確認。
+  - 本番Supabase SQL Editorで `public_api_rate_limits.sql`、`anonymous_case_retention.sql` を実行し、`verify_compact.sql` で `public_api_rate_limits`、`check_public_api_rate_limit`、`purge_stale_anonymous_cases` がtrueになることを確認する。
