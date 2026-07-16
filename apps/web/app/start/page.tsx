@@ -30,6 +30,19 @@ const statusDisplayLabels: Record<ParentStatus, string> = {
   completed: "整理が終わった"
 };
 
+const statusVisuals: Record<ParentStatus, { icon: string; tone: string }> = {
+  preparing: { icon: "書", tone: "leaf" },
+  hospitalized: { icon: "病", tone: "rose" },
+  facility: { icon: "介", tone: "blue" },
+  cognitive_decline: { icon: "心", tone: "gold" },
+  end_of_life: { icon: "話", tone: "leaf" },
+  after_death: { icon: "届", tone: "rose" },
+  after_funeral: { icon: "役", tone: "blue" },
+  inheritance: { icon: "家", tone: "gold" },
+  home_clearance: { icon: "鍵", tone: "leaf" },
+  completed: { icon: "済", tone: "blue" }
+};
+
 const priorityStatuses: ParentStatus[] = ["hospitalized", "facility", "after_death"];
 
 const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
@@ -75,10 +88,19 @@ export default function StartPage() {
             <span>3. リストを見る</span>
           </div>
         </div>
-        <aside className="start-help panel">
-          <p className="pill">ここからです</p>
-          <h2>下のボタンから、今の状況を1つ選んでください。</h2>
-          <p>ログインなしで、次に確認することを見られます。</p>
+        <aside className="start-guide-card" aria-label="案内">
+          <div className="start-mascot" aria-hidden="true">
+            <span className="mascot-face">
+              <span className="mascot-eye left" />
+              <span className="mascot-eye right" />
+              <span className="mascot-smile" />
+            </span>
+            <span className="mascot-paper paper-one" />
+            <span className="mascot-paper paper-two" />
+          </div>
+          <p className="pill">迷ったら近いものを</p>
+          <h2>家族で確認することを、短いリストにします。</h2>
+          <p>入院、介護、亡くなった後の手続きも、まずは1つ選ぶだけで大丈夫です。</p>
         </aside>
       </section>
 
@@ -93,6 +115,9 @@ export default function StartPage() {
             if (!item) return null;
             return (
               <button className="quick-status-button" key={key} onClick={() => choose(key)}>
+                <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
+                  {statusVisuals[key].icon}
+                </span>
                 <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                 <span>{statusDescriptions[key]}</span>
                 <em>この状況で始める</em>
@@ -115,6 +140,9 @@ export default function StartPage() {
                 if (!item) return null;
                 return (
                   <button className="status-button" key={key} onClick={() => choose(key)}>
+                    <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
+                      {statusVisuals[key].icon}
+                    </span>
                     <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
                     <em>選ぶ</em>
