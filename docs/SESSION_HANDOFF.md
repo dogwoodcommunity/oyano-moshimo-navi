@@ -1944,3 +1944,22 @@ GitHubが必要な理由:
     - `.nav-start` スタイルを削除。
 - 次にやること:
   - build後にGitHubへpushし、Vercel反映後にスマホで強制リロードして確認。
+
+## 2026-07-16 追記 69
+
+- ユーザー指摘:
+  - GitHub push後も本番スマホ表示に「ここから始める」が残っていた。
+- 調査:
+  - `curl -L https://oyano-moshimo-navi.vercel.app` で本番HTMLを確認したところ、Vercelが古いbuildを返していた。
+  - GitHub `origin/main` は最新commit `8f2b618` までpush済みだったため、GitHubではなくVercel側の反映遅れ/未反映と判断。
+- 対応:
+  - `pnpm dlx vercel@latest --prod --yes` をNode PATH付きで実行し、Productionへ手動デプロイ。
+  - デプロイID: `dpl_853UqeNMgvtZS3HiULdQ5PEBehJ9`
+  - Production URL: `https://oyano-moshimo-navi-nwf54uycl-dogwoodcommunity1.vercel.app`
+  - Alias: `https://oyano-moshimo-navi.vercel.app`
+- 検証:
+  - 再度本番HTMLを確認し、上部ナビから「ここから始める」が消えていることを確認。
+  - ヒーローCTAは「入口はこのボタンです」「無料で状況を選ぶ」に更新済み。
+- 次にやること:
+  - ユーザーのスマホでページを閉じて再オープン、または更新して確認。
+  - もしまだ古い表示なら、ブラウザ/PWAキャッシュの可能性が高いため、タブを閉じる・履歴/サイトデータ削除・別ブラウザで確認する。
