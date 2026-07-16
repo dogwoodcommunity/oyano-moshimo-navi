@@ -2169,3 +2169,9 @@ GitHubが必要な理由:
   - Mobile typecheck OK。
   - `git diff --check` OK。
   - `next build apps/web` OK。
+- 本番反映:
+  - commit: `2908962 Add diagnosis target person selection`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-299hu47g8-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_BQxbaJSeRzwgqxgiAVERZWT7WKKJ`
+  - `HEAD /start` 200、`HEAD /diagnosis` 200。
