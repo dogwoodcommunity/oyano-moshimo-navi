@@ -2202,3 +2202,9 @@ GitHubが必要な理由:
   - `next build apps/web` OK。
 - 残タスク:
   - 本番Supabase SQL Editorで `supabase/post_discharge_home_task_seed.sql` を実行する。
+- 本番反映:
+  - commit: `392f972 Add post-discharge home status`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-gp1kdzaph-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_5URBDHsinvydyaqAu4b7bnctGbQH`
+  - `HEAD /start` 200、`HEAD /diagnosis` 200。
