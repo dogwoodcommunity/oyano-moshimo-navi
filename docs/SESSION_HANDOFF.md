@@ -2038,3 +2038,16 @@ GitHubが必要な理由:
   - 新規レビュー資料をcommitする。
   - `scripts/create-review-zip.mjs` で最新版レビューZIPを作成する。
   - ZIPに `.env.local` やsecretが入っていないことを確認する。
+
+## 2026-07-16 追記 73
+
+- レビュー資料作成後の実行結果:
+  - `docs/ENGINEER_REVIEW_BRIEF_2026-07-16.md` と `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-16.md` をcommit。
+  - commit: `46171aa Add engineer review package docs`
+  - GitHub `origin/main` へpush済み。
+  - `scripts/create-review-zip.mjs` でレビューZIPを生成。
+  - 生成ZIP: `review_exports/oyano-moshimo-navi-code-review-2026-07-16-46171aa.zip`
+  - ZIPサイズ: 3.9MB
+  - secretチェック: `.env.local` やsecret envは含まれず、`.env.example` のみ許可でOK。
+- 注意:
+  - この追記自体をcommitする場合は、最終レビューZIPを再生成するとさらに新しいcommit名のZIPになる。
