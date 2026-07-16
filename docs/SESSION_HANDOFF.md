@@ -2099,3 +2099,19 @@ GitHubが必要な理由:
   - この追記を含めてもう一度commitする場合は、レビューZIPのbase commitが1つ古くなるため、必要なら再生成する。
   - 本番反映はVercel deployまたはGitHub連携の自動deploy確認。
   - 本番Supabase SQL Editorで `public_api_rate_limits.sql`、`anonymous_case_retention.sql` を実行し、`verify_compact.sql` で `public_api_rate_limits`、`check_public_api_rate_limit`、`purge_stale_anonymous_cases` がtrueになることを確認する。
+
+## 2026-07-16 追記 77
+
+- Vercel本番deployを実行し、成功。
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-182x6tjg3-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_EdhbCQqYYRduBeDwrNUQfTXZ3od2`
+- 本番確認:
+  - `GET https://oyano-moshimo-navi.vercel.app/api/health` は `200`。
+  - `GET https://oyano-moshimo-navi.vercel.app/api/cron/purge-anonymous-cases` はトークンなしで `401 Invalid cron token`。cron保護OK。
+- 最新レビューZIP:
+  - `review_exports/oyano-moshimo-navi-code-review-2026-07-16-3d7e4ec.zip`
+  - `.env.local` などsecret envは含まれないことを生成時に確認済み。
+- 残タスク:
+  - Supabase SQL Editorで `supabase/public_api_rate_limits.sql` と `supabase/anonymous_case_retention.sql` を本番DBへ投入する。
+  - 投入後、`supabase/verify_compact.sql` で新しいrate limit/retention項目までtrue確認する。
