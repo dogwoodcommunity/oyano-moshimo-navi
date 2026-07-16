@@ -2229,6 +2229,12 @@ GitHubが必要な理由:
   - Mobile typecheck OK。
   - `git diff --check` OK。
   - `next build apps/web` OK。
-- 次にやること:
-  - commit/push/Vercel本番deploy。
-  - 実機スマホで `/diagnosis` の対象者追加UIと結果画面の複数対象表示を確認する。
+- 本番反映:
+  - commit: `aeeef07 Allow multiple diagnosis targets`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-2hl0s221o-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_HGkossDpewDifRYKSh5p7vjt1e2t`
+  - `HEAD /start` 200、`HEAD /diagnosis` 200。
+- 実機確認ポイント:
+  - スマホで `/diagnosis` の最初に「対象者を追加」ボタンが出るか確認する。
+  - 複数対象を追加して結果画面へ進むと、「2名を一緒に整理」などのchipが出るか確認する。
