@@ -2020,3 +2020,21 @@ GitHubが必要な理由:
 - 注意:
   - Playwrightのブラウザ実体がローカルに無く、スクショ自動取得は未実施。
   - 次はGitHub pushとVercel本番反映後、実機で `/start` を再確認する。
+
+## 2026-07-16 追記 72
+
+- ユーザー依頼:
+  - エンジニアに再レビューしてもらうため、最新版の資料とZIPを再度出す。
+- 対応:
+  - `docs/ENGINEER_REVIEW_BRIEF_2026-07-16.md` を新規作成。
+  - `docs/ENGINEER_REVIEW_CHECKLIST_2026-07-16.md` を新規作成。
+  - 対象commitは直近の `b00fdb2 Clarify start card selection affordance`。
+  - 2026-07-09版資料から、PWA対応、Android実機handoff確認、入口/選択画面デザイン改善、Supabase Auth Redirect/SMTP設定、未完了リスクを反映。
+- 検証:
+  - `apps/web` の `tsc --noEmit` OK。
+  - `apps/mobile` の `tsc --noEmit` OK。
+  - `node scripts/local-doctor.mjs` OK。
+- 次にやること:
+  - 新規レビュー資料をcommitする。
+  - `scripts/create-review-zip.mjs` で最新版レビューZIPを作成する。
+  - ZIPに `.env.local` やsecretが入っていないことを確認する。
