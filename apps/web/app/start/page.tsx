@@ -80,10 +80,11 @@ export default function StartPage() {
           <p className="eyebrow">入口</p>
           <h1 className="page-title">親はいま、どの状況に近いですか？</h1>
           <p className="lead">
-            ぴったり合わなくても大丈夫です。近いものを選ぶと、次に確認することを分かりやすく整理します。
+            下のカードから、当てはまるものを1つ押してください。ぴったり合わなくても大丈夫です。
+            近いものを選ぶと、次に確認することを分かりやすく整理します。
           </p>
           <div className="start-steps" aria-label="利用の流れ">
-            <span>1. 選ぶ</span>
+            <span>1. カードを押す</span>
             <span>2. 少し入力</span>
             <span>3. リストを見る</span>
           </div>
@@ -104,10 +105,19 @@ export default function StartPage() {
         </aside>
       </section>
 
+      <section className="start-select-guide" aria-label="選び方">
+        <div className="select-guide-icon" aria-hidden="true">押</div>
+        <div>
+          <p className="eyebrow">選び方</p>
+          <h2>当てはまるカードを1つタップしてください。</h2>
+          <p>カード全体が押せます。選ぶと、3分ほどの確認画面へ進みます。</p>
+        </div>
+      </section>
+
       <section className="quick-start panel" aria-label="よく選ばれる入口">
         <div>
           <p className="eyebrow">まずここから</p>
-          <h2>急いでいる時は、ここから選んでください。</h2>
+          <h2>急いでいる時は、近いカードを押してください。</h2>
         </div>
         <div className="quick-status-row">
           {priorityStatuses.map((key) => {
@@ -115,12 +125,15 @@ export default function StartPage() {
             if (!item) return null;
             return (
               <button className="quick-status-button" key={key} onClick={() => choose(key)}>
-                <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
-                  {statusVisuals[key].icon}
+                <span className="status-card-top">
+                  <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
+                    {statusVisuals[key].icon}
+                  </span>
+                  <span className="tap-badge">タップ</span>
                 </span>
                 <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                 <span>{statusDescriptions[key]}</span>
-                <em>この状況で始める</em>
+                <em>この状況で始める <b aria-hidden="true">→</b></em>
               </button>
             );
           })}
@@ -140,12 +153,15 @@ export default function StartPage() {
                 if (!item) return null;
                 return (
                   <button className="status-button" key={key} onClick={() => choose(key)}>
-                    <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
-                      {statusVisuals[key].icon}
+                    <span className="status-card-top">
+                      <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
+                        {statusVisuals[key].icon}
+                      </span>
+                      <span className="tap-badge">タップ</span>
                     </span>
                     <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
-                    <em>選ぶ</em>
+                    <em>これを選ぶ <b aria-hidden="true">→</b></em>
                   </button>
                 );
               })}

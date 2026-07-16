@@ -519,14 +519,31 @@ textarea {
 
 .status-button {
   align-items: flex-start;
-  border-radius: 12px;
-  box-shadow: 0 10px 26px rgba(28, 48, 39, 0.06);
+  border-radius: 16px;
+  box-shadow: 0 12px 30px rgba(28, 48, 39, 0.08);
   flex-direction: column;
   gap: 8px;
   justify-content: center;
-  min-height: 168px;
+  min-height: 188px;
+  position: relative;
   text-align: left;
   width: 100%;
+}
+
+.status-button::after {
+  background: rgba(39, 100, 71, 0.08);
+  border-radius: 999px;
+  color: var(--green);
+  content: "→";
+  display: grid;
+  font-size: 20px;
+  font-weight: 900;
+  height: 36px;
+  place-items: center;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 36px;
 }
 
 .status-button strong {
@@ -544,15 +561,32 @@ textarea {
   align-items: flex-start;
   background: #173f2e;
   border: 1px solid #173f2e;
-  border-radius: 8px;
+  border-radius: 16px;
   color: white;
   cursor: pointer;
   display: grid;
   gap: 8px;
   min-height: 146px;
+  position: relative;
   padding: 18px;
   text-align: left;
   transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.quick-status-button::after {
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  color: white;
+  content: "→";
+  display: grid;
+  font-size: 20px;
+  font-weight: 900;
+  height: 36px;
+  place-items: center;
+  position: absolute;
+  right: 16px;
+  top: 16px;
+  width: 36px;
 }
 
 .quick-status-button:hover {
@@ -1539,6 +1573,62 @@ textarea {
   transform: rotate(8deg);
 }
 
+.start-select-guide {
+  align-items: center;
+  background: #173f2e;
+  border-radius: 18px;
+  box-shadow: 0 16px 36px rgba(28, 48, 39, 0.18);
+  color: white;
+  display: grid;
+  gap: 16px;
+  grid-template-columns: 66px minmax(0, 1fr);
+  margin-bottom: 18px;
+  padding: 18px 20px;
+}
+
+.start-select-guide .eyebrow {
+  color: #d8f2df;
+}
+
+.start-select-guide h2 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.22;
+  margin: 0;
+}
+
+.start-select-guide p:last-child {
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+
+.select-guide-icon {
+  align-items: center;
+  background: #fff7e8;
+  border: 3px solid #d8f2df;
+  border-radius: 22px;
+  color: var(--green-dark);
+  display: flex;
+  font-size: 20px;
+  font-weight: 900;
+  height: 66px;
+  justify-content: center;
+  position: relative;
+  width: 66px;
+}
+
+.select-guide-icon::after {
+  background: var(--gold);
+  border-radius: 999px;
+  bottom: 8px;
+  content: "";
+  height: 12px;
+  position: absolute;
+  right: 8px;
+  width: 12px;
+}
+
 .quick-start {
   align-items: center;
   background: #fffdf7;
@@ -1566,10 +1656,15 @@ textarea {
   background: linear-gradient(180deg, #fff, #fbfbf7);
   border: 1px solid var(--line);
   border-left: 0;
-  border-radius: 12px;
+  border-radius: 16px;
   color: var(--ink);
   min-height: 190px;
-  padding-top: 18px;
+  padding: 18px;
+}
+
+.quick-status-button::after {
+  background: rgba(39, 100, 71, 0.08);
+  color: var(--green);
 }
 
 .quick-status-button:nth-child(1) {
@@ -1591,6 +1686,25 @@ textarea {
 .quick-status-button > span:not(.status-visual),
 .status-button > span:not(.status-visual) {
   color: var(--muted);
+}
+
+.status-card-top {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  padding-right: 42px;
+  width: 100%;
+}
+
+.tap-badge {
+  background: #173f2e;
+  border-radius: 999px;
+  color: white !important;
+  font-size: 12px !important;
+  font-weight: 900 !important;
+  line-height: 1;
+  padding: 8px 10px;
+  white-space: nowrap;
 }
 
 .status-visual {
@@ -1647,11 +1761,23 @@ textarea {
 
 .quick-status-button em,
 .status-button em {
+  align-items: center;
+  background: rgba(39, 100, 71, 0.1);
+  border-radius: 999px;
   color: var(--green);
+  display: inline-flex;
   font-size: 13px;
   font-style: normal;
   font-weight: 900;
+  gap: 6px;
   margin-top: auto;
+  padding: 9px 12px;
+}
+
+.quick-status-button em b,
+.status-button em b {
+  font-size: 16px;
+  line-height: 1;
 }
 
 .start-groups {
@@ -2043,6 +2169,27 @@ textarea {
 
   .start-hero {
     padding: 22px;
+  }
+
+  .start-select-guide {
+    align-items: flex-start;
+    grid-template-columns: 52px minmax(0, 1fr);
+    padding: 16px;
+  }
+
+  .start-select-guide h2 {
+    font-size: 22px;
+  }
+
+  .start-select-guide p:last-child {
+    font-size: 14px;
+  }
+
+  .select-guide-icon {
+    border-radius: 18px;
+    font-size: 18px;
+    height: 52px;
+    width: 52px;
   }
 
   .start-guide-card {
