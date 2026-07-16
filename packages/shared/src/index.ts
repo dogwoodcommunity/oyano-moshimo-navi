@@ -11,10 +11,18 @@ export type ParentStatus =
   | "home_clearance"
   | "completed";
 
+export type TargetRelationship = "mother" | "father" | "mother_in_law" | "father_in_law" | "grandparent" | "other";
+
+export type DiagnosisTarget = {
+  relationship: TargetRelationship;
+  name?: string;
+};
+
 export type DiagnosisAnswers = {
   selectedStatus: ParentStatus;
-  targetRelationship?: "mother" | "father" | "mother_in_law" | "father_in_law" | "grandparent" | "other";
+  targetRelationship?: TargetRelationship;
   targetName?: string;
+  additionalTargets?: DiagnosisTarget[];
   parentSituation: string;
   familyStructure: string;
   hasHome: "yes" | "no" | "unknown";
@@ -217,7 +225,7 @@ export function statusLabel(status: ParentStatus): string {
   return STATUSES.find((item) => item.key === status)?.label ?? status;
 }
 
-const targetRelationshipLabels: Record<NonNullable<DiagnosisAnswers["targetRelationship"]>, string> = {
+const targetRelationshipLabels: Record<TargetRelationship, string> = {
   mother: "お母さん",
   father: "お父さん",
   mother_in_law: "義母",
@@ -226,15 +234,40 @@ const targetRelationshipLabels: Record<NonNullable<DiagnosisAnswers["targetRelat
   other: "その他の家族"
 };
 
-export function targetLabel(answers: Pick<DiagnosisAnswers, "targetRelationship" | "targetName">): string {
-  const name = answers.targetName?.trim();
+export function targetDisplayName(target: DiagnosisTarget): string {
+  const name = target.name?.trim();
   if (name) return name;
-  return answers.targetRelationship ? targetRelationshipLabels[answers.targetRelationship] : "親御さん";
+  return targetRelationshipLabels[target.relationship];
+}
+
+export function diagnosisTargets(answers: Pick<DiagnosisAnswers, "targetRelationship" | "targetName" | "additionalTargets">): DiagnosisTarget[] {
+  const primary: DiagnosisTarget = {
+    relationship: answers.targetRelationship ?? "mother",
+    name: answers.targetName
+  };
+  const additional = (answers.additionalTargets ?? [])
+    .filter((target): target is DiagnosisTarget => Boolean(target?.relationship))
+    .map((target) => ({
+      relationship: target.relationship,
+      name: target.name
+    }));
+  return [primary, ...additional];
+}
+
+export function targetLabel(answers: Pick<DiagnosisAnswers, "targetRelationship" | "targetName" | "additionalTargets">): string {
+  const targets = diagnosisTargets(answers);
+  const labels = targets.map(targetDisplayName).filter(Boolean);
+  if (labels.length === 0) return "親御さん";
+  if (labels.length <= 2) return labels.join("、");
+  return `${labels.slice(0, 2).join("、")}ほか${labels.length - 2}名`;
 }
 
 export function buildDiagnosisResult(answers: DiagnosisAnswers, baseDate = new Date()): DiagnosisResult {
   const status = answers.selectedStatus;
-  const target = targetLabel(answers);
+  const targets = diagnosisTargets(answers);
+  const primaryTarget = targetDisplayName(targets[0] ?? { relationship: "mother" });
+  const targetSummary = targetLabel(answers);
+  const targetNote = targets.length > 1 ? `対象者は${targetSummary}です。` : "";
   const statusTasks = TASK_TEMPLATES.filter((task) => task.status === status).slice(0, 4);
   const homeTask = answers.hasHome === "yes" && status !== "home_clearance"
     ? TASK_TEMPLATES.find((task) => task.status === "home_clearance")
@@ -247,7 +280,7 @@ export function buildDiagnosisResult(answers: DiagnosisAnswers, baseDate = new D
   const concerns = answers.concerns.length > 0 ? answers.concerns.join("、") : "家族内の未整理事項";
   return {
     diagnosisType: `${statusLabel(status)}タイプ`,
-    summary: `${target}は現在「${statusLabel(status)}」として、${concerns}を先にほどく状態です。期限のある手続きと、家族で確認する情報を分けて進めましょう。`,
+    summary: `${primaryTarget}は現在「${statusLabel(status)}」として、${concerns}を先にほどく状態です。${targetNote}期限のある手続きと、家族で確認する情報を分けて進めましょう。`,
     firstSteps: tasks.slice(0, 3).map((task) => task.title),
     tasks,
     familyQuestions: [

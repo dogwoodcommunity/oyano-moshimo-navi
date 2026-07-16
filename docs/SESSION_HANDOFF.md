@@ -2208,3 +2208,27 @@ GitHubが必要な理由:
   - Deployment URL: `https://oyano-moshimo-navi-gp1kdzaph-dogwoodcommunity1.vercel.app`
   - Deployment ID: `dpl_5URBDHsinvydyaqAu4b7bnctGbQH`
   - `HEAD /start` 200、`HEAD /diagnosis` 200。
+
+## 2026-07-16 追記 82
+
+- ユーザー指摘:
+  - 「対象者が複数いる場合もあるやろ」
+- 判断:
+  - その通り。実際には母と父、実父母と義父母などを同時に気にしているケースがある。
+  - ただしWeb診断のステータス選択と期限タスク生成は、まず一番急ぐ人を主対象にしないと結果がぼやける。
+  - 方針は「主対象1名 + 追加対象者」。主対象に対して整理結果と初期タスクを作り、追加対象者は結果に残して、アプリ保存後に人ごとの家族ボードへ展開できる設計にする。
+- 対応:
+  - sharedに `TargetRelationship` / `DiagnosisTarget` を追加。
+  - `DiagnosisAnswers.additionalTargets` を追加し、既存の `targetRelationship` / `targetName` は互換のため残した。
+  - `diagnosisTargets()` と `targetDisplayName()` を追加し、`targetLabel()` は複数対象なら「母、父」または「母、父ほか1名」と表示。
+  - Web診断の対象者セクションに「ほかにも一緒に気になる人がいる場合」を追加。
+  - 追加対象者は最大4名まで、関係性選択 + 呼び名任意 + 削除ボタンで入力できる。
+  - 結果画面では複数対象のchipを表示し、「主対象のタスクを作っている」「複数対象はアプリ保存後に人ごとに分けられる」と補足する。
+- 検証:
+  - Web typecheck OK。
+  - Mobile typecheck OK。
+  - `git diff --check` OK。
+  - `next build apps/web` OK。
+- 次にやること:
+  - commit/push/Vercel本番deploy。
+  - 実機スマホで `/diagnosis` の対象者追加UIと結果画面の複数対象表示を確認する。

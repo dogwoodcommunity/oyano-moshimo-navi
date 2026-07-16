@@ -938,6 +938,49 @@ textarea {
   padding: 14px;
 }
 
+.additional-targets {
+  background: #fffdf8;
+  border: 1px solid rgba(39, 100, 71, 0.18);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.additional-targets strong {
+  color: var(--green-dark);
+  display: block;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.additional-target-row {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(112px, 0.8fr) minmax(160px, 1.2fr) auto;
+}
+
+.remove-target-button {
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 900;
+  min-height: 42px;
+  padding: 9px 12px;
+}
+
+.remove-target-button:hover {
+  border-color: rgba(39, 100, 71, 0.34);
+  color: var(--green-dark);
+}
+
+.compact-action {
+  justify-self: start;
+}
+
 .soft-memo-field label {
   color: var(--green-dark);
   font-weight: 900;
@@ -2402,6 +2445,16 @@ textarea {
   .diagnosis-intro {
     align-items: stretch;
     grid-template-columns: 1fr;
+  }
+
+  .additional-target-row {
+    grid-template-columns: 1fr;
+  }
+
+  .compact-action,
+  .remove-target-button {
+    justify-self: stretch;
+    width: 100%;
   }
 
   .admin-stat-grid,
