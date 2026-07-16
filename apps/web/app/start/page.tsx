@@ -8,6 +8,7 @@ import { createCase } from "@/lib/store";
 const statusDescriptions: Record<ParentStatus, string> = {
   preparing: "元気なうちに、連絡先や書類の場所をまとめます。",
   hospitalized: "病院で聞くこと、支払い、退院後のことを整理します。",
+  post_discharge_home: "退院後の在宅生活、通院、訪問サービスを整理します。",
   facility: "介護や施設のこと、家族の役割を整理します。",
   cognitive_decline: "もの忘れや判断が心配な時に、相談先を整理します。",
   end_of_life: "看取りや緊急連絡について、家族で確認します。",
@@ -21,6 +22,7 @@ const statusDescriptions: Record<ParentStatus, string> = {
 const statusDisplayLabels: Record<ParentStatus, string> = {
   preparing: "元気なうちに準備したい",
   hospitalized: "入院した",
+  post_discharge_home: "退院後、家で過ごす",
   facility: "介護・施設のこと",
   cognitive_decline: "もの忘れが心配",
   end_of_life: "看取り・終末期のこと",
@@ -34,6 +36,7 @@ const statusDisplayLabels: Record<ParentStatus, string> = {
 const statusVisuals: Record<ParentStatus, { icon: string; tone: string }> = {
   preparing: { icon: "書", tone: "leaf" },
   hospitalized: { icon: "病", tone: "rose" },
+  post_discharge_home: { icon: "家", tone: "blue" },
   facility: { icon: "介", tone: "blue" },
   cognitive_decline: { icon: "心", tone: "gold" },
   end_of_life: { icon: "話", tone: "leaf" },
@@ -44,13 +47,13 @@ const statusVisuals: Record<ParentStatus, { icon: string; tone: string }> = {
   completed: { icon: "済", tone: "blue" }
 };
 
-const priorityStatuses: ParentStatus[] = ["hospitalized", "facility", "after_death"];
+const priorityStatuses: ParentStatus[] = ["hospitalized", "post_discharge_home", "after_death"];
 
 const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
   {
     title: "急いで確認したい",
-    lead: "入院、介護、亡くなった直後など",
-    keys: ["hospitalized", "facility", "cognitive_decline", "end_of_life", "after_death"]
+    lead: "入院、退院後の在宅、介護、亡くなった直後など",
+    keys: ["hospitalized", "post_discharge_home", "facility", "cognitive_decline", "end_of_life", "after_death"]
   },
   {
     title: "前もって準備したい",

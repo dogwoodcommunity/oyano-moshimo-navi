@@ -20,6 +20,7 @@ const targetOptions: Array<{
 ];
 const statusNotes: Partial<Record<ParentStatus, string>> = {
   hospitalized: "入院中・退院調整中",
+  post_discharge_home: "退院後に自宅で過ごしている",
   facility: "施設入所や介護の相談中",
   cognitive_decline: "認知症や判断力低下が心配",
   after_death: "亡くなった直後の手続き",

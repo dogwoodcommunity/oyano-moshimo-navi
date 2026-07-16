@@ -28,6 +28,8 @@ SQL Editorで以下の順に実行する。
 既存DBで個別hardeningする場合のみ:
 
 - `home_photo_security_hardening.sql`
+- `post_discharge_home_task_seed.sql`
+  退院後・在宅療養ステータスを後から追加する場合に実行する。新規DBでは `task_template_seed.sql` に含まれる。
 
 任意確認:
 

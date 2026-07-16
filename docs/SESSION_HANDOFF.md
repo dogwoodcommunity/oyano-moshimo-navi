@@ -2175,3 +2175,30 @@ GitHubが必要な理由:
   - Deployment URL: `https://oyano-moshimo-navi-299hu47g8-dogwoodcommunity1.vercel.app`
   - Deployment ID: `dpl_BQxbaJSeRzwgqxgiAVERZWT7WKKJ`
   - `HEAD /start` 200、`HEAD /diagnosis` 200。
+
+## 2026-07-16 追記 81
+
+- ユーザー指摘:
+  - 「入院して退院後で在宅のステータスはないの？」
+- 判断:
+  - 必要。入院中と施設入所の間に、退院後の在宅療養・通院・服薬・訪問サービス・家の安全確認という別フェーズがある。
+  - ここを「入院した」に混ぜると、退院後に家族が実際に困るタスクが弱くなるため、独立ステータス `post_discharge_home` として追加した。
+- 対応:
+  - shared `ParentStatus` に `post_discharge_home` を追加。
+  - 表示名は「退院後・在宅療養」、Web入口ラベルは「退院後、家で過ごす」。
+  - Web `/start` の急ぎ導線と状況グループへ追加。
+  - Web `/diagnosis` の状況選択説明へ追加。
+  - `buildDiagnosisResult` のタスクテンプレートに以下を追加:
+    - 退院後の生活体制を確認する
+    - 在宅サービスと連絡先をまとめる
+    - 家の中の危ない場所を確認する
+  - 相談先カテゴリは「ケアマネジャー」「訪問看護」「地域包括支援センター」。
+  - `supabase/task_template_seed.sql` に新規DB向けseedを追加。
+  - 既存本番DB向けに `supabase/post_discharge_home_task_seed.sql` を追加。Supabase SQL Editorで1回実行すれば、handoff後のtask生成にも反映される。
+- 検証:
+  - Web typecheck OK。
+  - Mobile typecheck OK。
+  - `git diff --check` OK。
+  - `next build apps/web` OK。
+- 残タスク:
+  - 本番Supabase SQL Editorで `supabase/post_discharge_home_task_seed.sql` を実行する。

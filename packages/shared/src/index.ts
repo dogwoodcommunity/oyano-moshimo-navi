@@ -1,6 +1,7 @@
 export type ParentStatus =
   | "preparing"
   | "hospitalized"
+  | "post_discharge_home"
   | "facility"
   | "cognitive_decline"
   | "end_of_life"
@@ -51,6 +52,7 @@ export type DiagnosisResult = {
 export const STATUSES: Array<{ key: ParentStatus; label: string; tone: string }> = [
   { key: "preparing", label: "元気・準備中", tone: "green" },
   { key: "hospitalized", label: "長期入院", tone: "blue" },
+  { key: "post_discharge_home", label: "退院後・在宅療養", tone: "teal" },
   { key: "facility", label: "施設入居", tone: "teal" },
   { key: "cognitive_decline", label: "認知症・判断能力低下", tone: "amber" },
   { key: "end_of_life", label: "危篤・看取り準備", tone: "rose" },
@@ -93,6 +95,30 @@ export const TASK_TEMPLATES: TaskTemplate[] = [
     defaultDueOffsetDays: 7,
     priority: 2,
     category: "money"
+  },
+  {
+    status: "post_discharge_home",
+    title: "退院後の生活体制を確認する",
+    description: "退院日、通院予定、服薬、食事、入浴、移動、見守りの担当を整理します。",
+    defaultDueOffsetDays: 3,
+    priority: 1,
+    category: "care"
+  },
+  {
+    status: "post_discharge_home",
+    title: "在宅サービスと連絡先をまとめる",
+    description: "ケアマネ、訪問看護、訪問介護、福祉用具、かかりつけ医の連絡先を控えます。",
+    defaultDueOffsetDays: 7,
+    priority: 1,
+    category: "home_care"
+  },
+  {
+    status: "post_discharge_home",
+    title: "家の中の危ない場所を確認する",
+    description: "段差、浴室、トイレ、寝室、玄関、緊急時の鍵の扱いを家族で確認します。",
+    defaultDueOffsetDays: 7,
+    priority: 2,
+    category: "home"
   },
   {
     status: "facility",
@@ -170,6 +196,7 @@ export const SENSITIVE_INFO_CONSENT_TEXT =
 const providerByStatus: Record<ParentStatus, string[]> = {
   preparing: ["行政書士", "司法書士"],
   hospitalized: ["地域包括支援センター", "医療相談員"],
+  post_discharge_home: ["ケアマネジャー", "訪問看護", "地域包括支援センター"],
   facility: ["ケアマネジャー", "行政書士"],
   cognitive_decline: ["地域包括支援センター", "司法書士", "弁護士"],
   end_of_life: ["葬儀社", "行政書士"],
