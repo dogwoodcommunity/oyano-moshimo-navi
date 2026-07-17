@@ -2300,6 +2300,13 @@ GitHubが必要な理由:
   - Mobile typecheck OK。
   - `git diff --check` OK。
   - `next build apps/web` OK。
+- 本番反映:
+  - commit: `d8a5c35 Switch diagnosis to one person at a time`
+  - GitHub push: `main` へ反映済み。
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-iibpm0g69-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_E8qKiaSf8fLqyYC8Mh8PfLAckEYQ`
+  - `HEAD /start` 200、`HEAD /diagnosis` 200。
 - 次の確認:
   - Android実機で家族ボードを開き、「対象者を追加」から2人目を登録できるか確認する。
   - 追加した対象者のタスク画面に、その状態に応じたタスクが出るか確認する。
