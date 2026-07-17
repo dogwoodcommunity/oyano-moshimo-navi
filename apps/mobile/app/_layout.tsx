@@ -53,6 +53,7 @@ export default function RootLayout() {
       <Stack.Screen name="(auth)/welcome" options={{ title: "はじめに" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="handoff" options={{ title: "アプリに保存" }} />
+      <Stack.Screen name="people/new" options={{ title: "対象者を追加" }} />
       <Stack.Screen name="people/[id]/index" options={{ title: "対象者" }} />
       <Stack.Screen name="people/[id]/tasks" options={{ title: "タスク" }} />
       <Stack.Screen name="people/[id]/status" options={{ title: "状態変更" }} />

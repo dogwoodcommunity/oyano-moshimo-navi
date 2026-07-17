@@ -2265,3 +2265,41 @@ GitHubが必要な理由:
   - 本番Supabase SQL Editorで `supabase/handoff_consume_rpc.sql` を再実行する。
   - これを実行しない限り、本番DBのRPCは古いままで、複数対象者はアプリに複数 `people` として作られない。
   - SQL投入後、実機で「母: 入院」「父: 退院後・在宅療養」など複数対象を選び、アプリ保存後にDashboardの対象者一覧へ2名出るか確認する。
+
+## 2026-07-17 追記 84
+
+- ユーザー指摘:
+  - 「対象者を追加できるのはええけど、それ以降の質問でそれぞれの状態や状況がバラバラになる可能性もある」
+  - 「とりあえず1人ずつ登録して、次に2人目・3人目を登録してマイページでそれぞれ管理できるようにできへんか」
+- 判断:
+  - この指摘を採用。Web診断内で複数人を同時に入力すると、後続質問の回答が誰の状態なのか曖昧になる。
+  - 方針を「Web診断は1人ずつ」「2人目以降はアプリの家族ボードで追加」「対象者ごとに状態・期限・担当を分ける」に戻した。
+  - DB/RPCの複数対象者対応は、古い診断データ互換のため残す。ただし新しいUIからは `additionalTargets` を送らない。
+- 対応:
+  - `apps/web/app/diagnosis/DiagnosisForm.tsx`
+    - 追加対象者フォームを削除。
+    - 対象者説明を「まず1人だけ」「2人目以降はアプリの家族ボードから追加」に変更。
+    - 送信データから `additionalTargets` を外した。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 複数対象者chipと補足文を削除。
+    - アプリ保存案内に「複数人は保存後に家族ボードから1人ずつ追加」と明記。
+  - `apps/mobile/lib/mobileData.ts`
+    - `createPersonForFamily()` を追加。
+    - 既存の対象者から `family_id` を取得し、同じ家族に新しい `people` を作成。
+    - 作成後に `person_status_events` をinsertし、DB triggerで対象者ごとの初期タスク生成につなぐ。
+  - `apps/mobile/app/people/new.tsx`
+    - 新規追加。呼び名、続柄、今の状態だけで対象者を追加する画面。
+    - 追加後はその対象者のタスク画面へ遷移。初期タスク生成に失敗した場合はステータス変更画面へ遷移して再保存できる。
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+    - 家族ボードに「対象者を追加」ボタンを常時表示。
+    - 対象者カード一覧を1人だけの時も表示し、横スクロール末尾に「対象者を追加」カードを追加。
+  - `apps/mobile/app/_layout.tsx`
+    - `people/new` をStackに追加。
+- 検証:
+  - Web typecheck OK。
+  - Mobile typecheck OK。
+  - `git diff --check` OK。
+  - `next build apps/web` OK。
+- 次の確認:
+  - Android実機で家族ボードを開き、「対象者を追加」から2人目を登録できるか確認する。
+  - 追加した対象者のタスク画面に、その状態に応じたタスクが出るか確認する。

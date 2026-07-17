@@ -143,28 +143,33 @@ export default function DashboardScreen() {
         <View style={styles.row}>
           <Link href={`/people/${data.person.id}/tasks`} style={styles.button}>タスクを開く</Link>
           <Link href={`/people/${data.person.id}`} style={styles.secondaryButton}>対象者を見る</Link>
+          <Link href={`/people/new?anchorPersonId=${data.person.id}`} style={styles.secondaryButton}>対象者を追加</Link>
         </View>
       </View>
-      {data.people.length > 1 ? (
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <View style={styles.summaryText}>
-              <Text style={styles.cardTitle}>対象者</Text>
-              <Text style={styles.body}>人ごとに状態とタスクを分けて見られます。</Text>
-            </View>
-            <Text style={styles.countBadge}>{data.people.length}</Text>
+      <View style={styles.card}>
+        <View style={styles.sectionHeader}>
+          <View style={styles.summaryText}>
+            <Text style={styles.cardTitle}>対象者</Text>
+            <Text style={styles.body}>父母・義父母などは1人ずつ登録します。人ごとに状態とタスクを分けて管理できます。</Text>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personList}>
-            {data.people.map((person) => (
-              <Link href={`/people/${person.id}/tasks`} key={person.id} style={styles.personCard}>
-                <Text style={styles.personName}>{person.displayName}</Text>
-                <Text style={styles.personMeta}>{person.relationship ?? "対象者"}</Text>
-                <Text style={styles.personStatus}>{statusLabel(person.currentStatus)}</Text>
-              </Link>
-            ))}
-          </ScrollView>
+          <Text style={styles.countBadge}>{data.people.length}</Text>
         </View>
-      ) : null}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personList}>
+          {data.people.map((person) => (
+            <Link href={`/people/${person.id}/tasks`} key={person.id} style={styles.personCard}>
+              <Text style={styles.personName}>{person.displayName}</Text>
+              <Text style={styles.personMeta}>{person.relationship ?? "対象者"}</Text>
+              <Text style={styles.personStatus}>{statusLabel(person.currentStatus)}</Text>
+            </Link>
+          ))}
+          <Link href={`/people/new?anchorPersonId=${data.person.id}`} style={[styles.personCard, styles.addPersonCard]}>
+            <MaterialCommunityIcons color={colors.green} name="plus-circle-outline" size={26} />
+            <Text style={styles.personName}>対象者を追加</Text>
+            <Text style={styles.personMeta}>2人目・3人目を登録</Text>
+            <Text style={styles.personStatus}>1人ずつ管理</Text>
+          </Link>
+        </ScrollView>
+      </View>
       <TaskSection
         accent="danger"
         empty="今日までの期限はありません。"
@@ -270,6 +275,7 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     padding: 14
   },
+  addPersonCard: { backgroundColor: "#fffdf7", borderColor: colors.green },
   personList: { gap: 10, paddingVertical: 2 },
   personMeta: { color: colors.muted, fontWeight: "800", marginBottom: 10 },
   personName: { color: colors.ink, fontSize: 18, fontWeight: "900", marginBottom: 4 },

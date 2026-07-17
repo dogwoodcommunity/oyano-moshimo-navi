@@ -6,7 +6,6 @@ import {
   SENSITIVE_INFO_CONSENT_VERSION,
   STATUSES,
   type DiagnosisAnswers,
-  type DiagnosisTarget,
   type ParentStatus,
   type TargetRelationship
 } from "@oyano/shared";
@@ -43,7 +42,6 @@ export function DiagnosisForm() {
   const initialStatus = (params.get("status") ?? "preparing") as ParentStatus;
   const [selectedStatus, setSelectedStatus] = useState<ParentStatus>(initialStatus);
   const [targetRelationship, setTargetRelationship] = useState<TargetRelationship>("mother");
-  const [additionalTargets, setAdditionalTargets] = useState<DiagnosisTarget[]>([]);
   const [concerns, setConcerns] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const statusLabel = useMemo(() => STATUSES.find((item) => item.key === selectedStatus)?.label, [selectedStatus]);
@@ -56,11 +54,6 @@ export function DiagnosisForm() {
       selectedStatus,
       targetRelationship,
       targetName: String(form.get("targetName") ?? ""),
-      additionalTargets: additionalTargets.map((target) => ({
-        relationship: target.relationship,
-        name: target.name?.trim() ?? "",
-        status: target.status ?? selectedStatus
-      })),
       parentSituation: String(form.get("parentSituation") ?? ""),
       familyStructure: String(form.get("familyStructure") ?? ""),
       hasHome: String(form.get("hasHome") ?? "unknown") as DiagnosisAnswers["hasHome"],
@@ -79,20 +72,6 @@ export function DiagnosisForm() {
 
   function toggleConcern(value: string) {
     setConcerns((current) => current.includes(value) ? current.filter((item) => item !== value) : [...current, value]);
-  }
-
-  function addTarget() {
-    setAdditionalTargets((current) => [...current, { relationship: "father" as TargetRelationship, name: "", status: selectedStatus }].slice(0, 4));
-  }
-
-  function updateAdditionalTarget(index: number, updates: Partial<DiagnosisTarget>) {
-    setAdditionalTargets((current) => current.map((target, currentIndex) => (
-      currentIndex === index ? { ...target, ...updates } : target
-    )));
-  }
-
-  function removeAdditionalTarget(index: number) {
-    setAdditionalTargets((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
   return (
@@ -116,7 +95,7 @@ export function DiagnosisForm() {
             <span className="step-badge">1</span>
             <div>
               <h2>誰のことを整理しますか？</h2>
-              <p className="hint">まず一番急いで整理したい人を選んでください。父母・義父母など複数いる場合は下で追加できます。</p>
+              <p className="hint">まず一番急いで整理したい人を1人だけ選んでください。2人目以降は、保存後にアプリの家族ボードから追加できます。</p>
             </div>
           </div>
 
@@ -144,42 +123,11 @@ export function DiagnosisForm() {
             <input className="input" id="targetName" name="targetName" placeholder="例: 母、花子さん、おばあちゃん" />
           </div>
 
-          <div className="additional-targets">
-            <div>
-              <strong>ほかにも一緒に気になる人がいる場合</strong>
-              <p className="hint">追加した人も結果に残します。状況が違う場合は、それぞれ近いものを選んでください。</p>
-            </div>
-            {additionalTargets.map((target, index) => (
-              <div className="additional-target-row" key={`${target.relationship}-${index}`}>
-                <select
-                  aria-label={`追加対象者${index + 1}`}
-                  className="select"
-                  value={target.relationship}
-                  onChange={(event) => updateAdditionalTarget(index, { relationship: event.target.value as TargetRelationship })}
-                >
-                  {targetOptions.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-                </select>
-                <input
-                  aria-label={`追加対象者${index + 1}の呼び名`}
-                  className="input"
-                  placeholder="呼び名 任意"
-                  value={target.name ?? ""}
-                  onChange={(event) => updateAdditionalTarget(index, { name: event.target.value })}
-                />
-                <select
-                  aria-label={`追加対象者${index + 1}の状況`}
-                  className="select"
-                  value={target.status ?? selectedStatus}
-                  onChange={(event) => updateAdditionalTarget(index, { status: event.target.value as ParentStatus })}
-                >
-                  {STATUSES.map((item) => <option key={item.key} value={item.key}>{item.label}</option>)}
-                </select>
-                <button className="remove-target-button" type="button" onClick={() => removeAdditionalTarget(index)}>削除</button>
-              </div>
-            ))}
-            <button className="secondary compact-action" type="button" onClick={addTarget} disabled={additionalTargets.length >= 4}>
-              対象者を追加
-            </button>
+          <div className="additional-targets single-target-note">
+            <strong>父母・義父母など複数いる場合</strong>
+            <p className="hint">
+              状況や手続きは人によって変わるため、この整理では1人ずつ登録します。次の人は結果をアプリに保存したあと、家族ボードの「対象者を追加」から登録してください。
+            </p>
           </div>
         </section>
 

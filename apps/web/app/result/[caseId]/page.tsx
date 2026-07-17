@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
-import { buildDiagnosisResult, diagnosisTargets, targetLabel, type DiagnosisAnswers } from "@oyano/shared";
+import { buildDiagnosisResult, targetLabel, type DiagnosisAnswers } from "@oyano/shared";
 import { getLocalCase } from "@/lib/store";
 
 export default function ResultPage() {
@@ -25,7 +25,6 @@ export default function ResultPage() {
   const answers = (record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers;
   const result = record?.result ?? buildDiagnosisResult(answers);
   const target = targetLabel(answers);
-  const targets = diagnosisTargets(answers);
   const appScheme = process.env.NEXT_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
   const appUrl = record?.handoffToken
     ? `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token: record.handoffToken }).toString()}`
@@ -42,16 +41,10 @@ export default function ResultPage() {
         <p className="lead">{result.summary}</p>
         <div className="meta-row">
           <span className="meta-chip">対象者 {target}</span>
-          {targets.length > 1 ? <span className="meta-chip">{targets.length}名を一緒に整理</span> : null}
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
           <span className="meta-chip">保存すると家族で見られます</span>
           <span className="meta-chip">専門判断は断定しません</span>
         </div>
-        {targets.length > 1 ? (
-          <p className="hint">
-            まず主対象のタスクを作っています。複数の対象者は、アプリ保存後に人ごとの家族ボードとして分けて管理できます。
-          </p>
-        ) : null}
       </section>
 
       <section className="columns">
@@ -110,6 +103,9 @@ export default function ResultPage() {
         <h2>この結果を残して、家族で見るならアプリへ。</h2>
         <p>
           最初はアプリを入れなくても大丈夫です。まずWebで整理し、あとで見返したい時、家族と共有したい時、期限通知や写真管理が必要な時だけアプリに保存します。
+        </p>
+        <p className="hint">
+          父母・義父母など複数人を管理する場合は、保存後にアプリの家族ボードから1人ずつ追加できます。人ごとに状態、期限、担当を分けて管理します。
         </p>
         <div className="handoff-choice-grid" aria-label="Webとアプリの役割">
           <div>

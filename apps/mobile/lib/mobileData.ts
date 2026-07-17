@@ -45,6 +45,13 @@ export type AcceptFamilyInviteResult = {
   error?: string;
 };
 
+export type CreatePersonResult = {
+  source: "supabase" | "demo";
+  person?: MobilePerson;
+  warning?: string;
+  error?: string;
+};
+
 export type DashboardData = {
   person: MobilePerson;
   people: MobilePerson[];
@@ -270,6 +277,73 @@ async function fetchFamilyId(personId: string) {
     .single();
 
   return (person as PersonFamilyRow | null)?.family_id ?? null;
+}
+
+export async function createPersonForFamily({
+  anchorPersonId,
+  currentStatus,
+  displayName,
+  relationship
+}: {
+  anchorPersonId: string;
+  currentStatus: ParentStatus;
+  displayName: string;
+  relationship?: string;
+}): Promise<CreatePersonResult> {
+  const normalizedName = displayName.trim();
+  if (!normalizedName) return { source: "demo", error: "呼び名を入力してください。" };
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return {
+      source: "demo",
+      person: {
+        id: `demo-person-${Date.now()}`,
+        displayName: normalizedName,
+        relationship: relationship?.trim() || undefined,
+        currentStatus
+      }
+    };
+  }
+
+  const familyId = await fetchFamilyId(anchorPersonId);
+  if (!familyId) return { source: "supabase", error: "家族ボードが見つかりませんでした。" };
+
+  const { data: insertedPerson, error: insertError } = await supabase
+    .from("people")
+    .insert({
+      family_id: familyId,
+      display_name: normalizedName,
+      relationship_to_family: relationship?.trim() || null,
+      current_status: currentStatus
+    })
+    .select("id, display_name, relationship_to_family, current_status")
+    .single();
+
+  if (insertError) return { source: "supabase", error: insertError.message };
+
+  const row = insertedPerson as PersonRow | null;
+  if (!row) return { source: "supabase", error: "対象者を作成できませんでした。" };
+
+  const { data: userResult } = await supabase.auth.getUser();
+  const { error: eventError } = await supabase.from("person_status_events").insert({
+    person_id: row.id,
+    previous_status: null,
+    new_status: currentStatus,
+    note: "mobile person created",
+    created_by: userResult.user?.id ?? null
+  });
+
+  return {
+    source: "supabase",
+    person: {
+      id: row.id,
+      displayName: row.display_name,
+      relationship: row.relationship_to_family ?? undefined,
+      currentStatus: row.current_status
+    },
+    warning: eventError ? "対象者は追加できましたが、初期タスクの作成に失敗しました。ステータス変更画面でもう一度保存してください。" : undefined
+  };
 }
 
 export async function createFamilyInvite(
