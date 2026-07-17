@@ -2333,3 +2333,10 @@ GitHubが必要な理由:
   - Web typecheck OK。
   - `git diff --check` OK。
   - `next build apps/web` OK。
+- 本番反映:
+  - commit: `8493685 Clarify start status selection`
+  - GitHub push: `main` へ反映済み。
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-hqy0662gi-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_BKkUAJQNcisozX5QG1NH5Rjnk1Wt`
+  - `HEAD /start` 200。
