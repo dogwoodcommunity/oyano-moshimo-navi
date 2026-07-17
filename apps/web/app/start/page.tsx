@@ -47,22 +47,20 @@ const statusVisuals: Record<ParentStatus, { icon: string; tone: string }> = {
   completed: { icon: "済", tone: "blue" }
 };
 
-const priorityStatuses: ParentStatus[] = ["hospitalized", "post_discharge_home", "after_death"];
-
 const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
   {
-    title: "急いで確認したい",
-    lead: "入院、退院後の在宅、介護、亡くなった直後など",
+    title: "当てはまるものを1つ選んでください",
+    lead: "カード全体が押せます。迷ったら一番近いものを選んでください。",
     keys: ["hospitalized", "post_discharge_home", "facility", "cognitive_decline", "end_of_life", "after_death"]
   },
   {
-    title: "前もって準備したい",
-    lead: "元気なうちの準備、相続前、実家の整理など",
+    title: "前もって準備する",
+    lead: "元気なうちの準備、相続前、実家の整理はこちらです。",
     keys: ["preparing", "inheritance", "home_clearance"]
   },
   {
     title: "葬儀の後の手続き",
-    lead: "役所、年金、保険、名義変更など",
+    lead: "役所、年金、保険、名義変更などを整理します。",
     keys: ["after_funeral"]
   }
 ];
@@ -120,40 +118,8 @@ export default function StartPage() {
         <div className="select-guide-icon" aria-hidden="true">押</div>
         <div>
           <p className="eyebrow">選び方</p>
-          <h2>当てはまるカードを1つタップしてください。</h2>
-          <p>カード全体が押せます。選ぶと、3分ほどの確認画面へ進みます。</p>
-        </div>
-      </section>
-
-      <section className="quick-start panel" aria-label="よく選ばれる入口">
-        <div>
-          <p className="eyebrow">まずここから</p>
-          <h2>急いでいる時は、近いカードを押してください。</h2>
-        </div>
-        <div className="quick-status-row">
-          {priorityStatuses.map((key) => {
-            const item = statusByKey.get(key);
-            if (!item) return null;
-            const isChoosing = choosingStatus === key;
-            return (
-              <button
-                className={`quick-status-button ${isChoosing ? "is-opening" : ""}`}
-                disabled={Boolean(choosingStatus)}
-                key={key}
-                onClick={() => choose(key)}
-              >
-                <span className="status-card-top">
-                  <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
-                    {statusVisuals[key].icon}
-                  </span>
-                  <span className="tap-badge">{isChoosing ? "開く" : "タップ"}</span>
-                </span>
-                <strong>{statusDisplayLabels[key] ?? item.label}</strong>
-                <span>{statusDescriptions[key]}</span>
-                <em>{isChoosing ? "開いています" : "この状況で始める"} <b aria-hidden="true">→</b></em>
-              </button>
-            );
-          })}
+          <h2>下のカードから、近いものを1つ選びます。</h2>
+          <p>文字の部分でも余白でも、カード全体を押せます。選ぶと3分ほどの確認画面へ進みます。</p>
         </div>
       </section>
 
@@ -180,11 +146,10 @@ export default function StartPage() {
                       <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
                         {statusVisuals[key].icon}
                       </span>
-                      <span className="tap-badge">{isChoosing ? "開く" : "タップ"}</span>
                     </span>
                     <strong>{statusDisplayLabels[key] ?? item.label}</strong>
                     <span>{statusDescriptions[key]}</span>
-                    <em>{isChoosing ? "開いています" : "これを選ぶ"} <b aria-hidden="true">→</b></em>
+                    <em>{isChoosing ? "開いています" : "このカードを選ぶ"} <b aria-hidden="true">→</b></em>
                   </button>
                 );
               })}

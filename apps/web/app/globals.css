@@ -522,9 +522,9 @@ textarea {
   border-radius: 16px;
   box-shadow: 0 12px 30px rgba(28, 48, 39, 0.08);
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   justify-content: center;
-  min-height: 188px;
+  min-height: 214px;
   position: relative;
   text-align: left;
   touch-action: manipulation;
@@ -534,7 +534,7 @@ textarea {
 }
 
 .status-button::after {
-  background: rgba(39, 100, 71, 0.08);
+  background: #edf5ef;
   border-radius: 999px;
   color: var(--green);
   content: "→";
@@ -550,7 +550,8 @@ textarea {
 }
 
 .status-button strong {
-  font-size: 20px;
+  font-size: 22px;
+  line-height: 1.28;
 }
 
 .status-button span {
@@ -1932,6 +1933,12 @@ textarea {
   padding: 9px 12px;
 }
 
+.status-button em {
+  justify-content: center;
+  min-height: 40px;
+  width: 100%;
+}
+
 .quick-status-button em b,
 .status-button em b {
   font-size: 16px;
@@ -1951,15 +1958,22 @@ textarea {
 }
 
 .start-group-head {
-  align-items: flex-end;
-  display: flex;
+  align-items: flex-start;
+  display: grid;
   gap: 16px;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .start-group-head h2 {
-  font-size: 30px;
+  font-size: clamp(24px, 3vw, 34px);
   line-height: 1.2;
+  margin: 0;
+}
+
+.start-group-head p {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.6;
   margin: 0;
 }
 
