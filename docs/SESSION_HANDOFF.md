@@ -2340,3 +2340,24 @@ GitHubが必要な理由:
   - Deployment URL: `https://oyano-moshimo-navi-hqy0662gi-dogwoodcommunity1.vercel.app`
   - Deployment ID: `dpl_BKkUAJQNcisozX5QG1NH5Rjnk1Wt`
   - `HEAD /start` 200。
+
+## 2026-07-18 追記 86
+
+- ユーザー状況:
+  - 「アプリの中身を見れてないんや」と相談。
+  - まずExpo実機プレビューを出す作業を開始。
+- 確認:
+  - 8081番ポートは未使用。
+  - `adb devices` ではAndroid端末が未検出だったため、USB自動起動ではなくExpo GoのQR/URLで案内する方針にした。
+  - `pnpm --filter mobile start -- --lan` はpnpmがnode_modules再作成を求めたため中止。
+  - Codex同梱Node 24ではExpo SDK 51の `freeport-async` が `ERR_SOCKET_BAD_PORT` で落ちた。
+  - Homebrewで `node@20` をインストールし、Node 20で再試行。
+  - サンドボックス内ではポート待受が `EPERM` になったため、権限付きでExpo Metroを起動。
+- 起動結果:
+  - Expo Metro起動済み。
+  - 実機確認URL: `exp://192.168.11.63:8081`
+  - Expo GoでQRを読むか、URLを手入力すればアプリの中身を確認できる。
+  - 表示対象は `apps/mobile` のExpoアプリ。
+- 注意:
+  - この起動はローカル開発サーバーなので、PCとスマホが同じWi-Fiにいる必要がある。
+  - AndroidをUSBで直接開くには、端末側でUSBデバッグ許可後に `adb devices` で表示される必要がある。
