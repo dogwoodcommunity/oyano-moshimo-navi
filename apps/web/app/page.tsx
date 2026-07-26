@@ -2,68 +2,51 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "親のもしも準備ポータル",
-  description: "入院、介護、認知症、相続前整理、実家じまい。親のもしもに備えて家族で確認することを整理します。"
+  title: "親のもしもナビ | 家族で使う保管庫・通知係",
+  description: "入院、介護、認知症、相続前整理、実家じまい。親のもしもに備えて、家族でタスク・期限・写真を管理するアプリです。"
 };
 
-const portalTopics = [
+const appUseCases = [
   {
-    title: "親が入院した",
-    body: "病院で聞くこと、支払い、退院後のことを整理します。",
-    href: "/start"
+    title: "家族ボード",
+    body: "親ごとに、いま必要なこと・未完了・担当未定を一覧で見ます。"
   },
   {
-    title: "介護が始まりそう",
-    body: "家族の役割、通院、薬、相談先を整理します。",
-    href: "/start"
+    title: "期限通知",
+    body: "死亡届、年金、準確定申告、相続税など、忘れたくない期限を通知します。"
   },
   {
-    title: "親が亡くなった",
-    body: "葬儀、親族連絡、役所手続きの初動を整理します。",
-    href: "/start"
+    title: "写真とメモ",
+    body: "保険証券、鍵、通帳の保管場所など、家族で確認する情報を残します。"
   },
   {
-    title: "実家を片付けたい",
-    body: "写真、鍵、書類、家財の確認順を整理します。",
-    href: "/start"
+    title: "対象者ごとに管理",
+    body: "母は入院、父は在宅介護など、状況が違う場合も1人ずつ管理します。"
   }
 ];
 
-const entryCards = [
+const appSteps = [
   {
     label: "1",
-    title: "状況を選ぶ",
-    body: "親のいまの状態に近いものを1つ選びます。正確でなくても大丈夫です。",
-    href: "/start",
-    cta: "はじめる"
+    title: "アプリを開く",
+    body: "最初からアプリで、親の名前と今の状況を登録します。"
   },
   {
     label: "2",
-    title: "5分で整理する",
-    body: "家族に聞くこと、期限があること、相談先をわかりやすく出します。",
-    href: "/start",
-    cta: "無料で整理"
+    title: "家族で分ける",
+    body: "誰がやるか決まっていないタスクを見える化します。"
   },
   {
     label: "3",
-    title: "必要なら保存する",
-    body: "結果を家族で共有したい時だけ、アプリに引き継いで管理できます。",
-    href: "/plans",
-    cta: "使い方を見る"
+    title: "必要な時に戻る",
+    body: "毎日使うのではなく、期限や家族更新の時に戻ってこられます。"
   }
-];
-
-const urgentEntries = [
-  "親が入院した",
-  "介護が始まりそう",
-  "亡くなった直後",
-  "実家を片付けたい"
 ];
 
 const reasonCards = [
   {
-    title: "ログインなしで始められます",
-    body: "まず結果を見るところまで、会員登録は必要ありません。"
+    title: "入口はアプリです",
+    body: "診断サイトで回り道せず、家族ボードから始めます。"
   },
   {
     title: "大事な番号は預かりません",
@@ -103,20 +86,21 @@ export default function HomePage() {
         <div className="photo-portal-overlay">
           <div className="hero-copy hero-copy-panel">
             <p className="eyebrow">親のもしもナビ</p>
-            <h1>親のことで困った時に、最初に開く場所。</h1>
-            <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族で何から確認するかを、短いリストに整理します。</p>
-            <div className="start-gateway" aria-label="入口">
-              <p className="gateway-label">入口はこのボタンです</p>
-              <Link className="button gateway-button" href="/start">
-                無料で状況を選ぶ
-                <span>ログインなしで始められます</span>
-              </Link>
-              <p className="gateway-note">親の状態に近いものを1つ選ぶだけ。3分ほどで整理結果を見られます。</p>
+            <h1>親のことは、アプリで家族と管理する。</h1>
+            <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族でやること、期限、写真、メモを1つのボードにまとめます。</p>
+            <div className="app-gateway" aria-label="アプリ入口">
+              <p className="gateway-label">入口はアプリです</p>
+              <a className="button gateway-button" href="oyanomoshimo://">
+                アプリを開く
+                <span>家族ボードから始めます</span>
+              </a>
+              <p className="gateway-note">アプリ未インストールの場合は、公開後にストア案内へ進めます。今はテスト版で確認します。</p>
             </div>
-            <div className="urgent-strip" aria-label="よくある状況">
-              {urgentEntries.map((item) => (
-                <span key={item}>{item}</span>
-              ))}
+            <div className="urgent-strip" aria-label="アプリでできること">
+              <span>家族ボード</span>
+              <span>期限通知</span>
+              <span>写真管理</span>
+              <span>対象者追加</span>
             </div>
           </div>
         </div>
@@ -126,17 +110,16 @@ export default function HomePage() {
         <div className="section-head">
           <div>
             <p className="eyebrow">使い方</p>
-            <h2>まずは「状況を選ぶ」だけで大丈夫です。</h2>
+            <h2>最初からアプリで始めます。</h2>
           </div>
         </div>
         <div className="entry-grid">
-          {entryCards.map((entry, index) => (
-            <Link className={`entry-card panel ${index === 1 ? "featured" : ""}`} href={entry.href} key={entry.title}>
+          {appSteps.map((entry, index) => (
+            <div className={`entry-card panel ${index === 0 ? "featured" : ""}`} key={entry.title}>
               <span className="meta-chip">{entry.label}</span>
               <strong>{entry.title}</strong>
               <p>{entry.body}</p>
-              <span className="entry-link">{entry.cta}</span>
-            </Link>
+            </div>
           ))}
         </div>
       </section>
@@ -144,18 +127,17 @@ export default function HomePage() {
       <section className="container portal-section" id="portal-topics">
         <div className="section-head">
           <div>
-            <p className="eyebrow">入口</p>
-            <h2>当てはまるものがあれば、ここから始めてください。</h2>
+            <p className="eyebrow">アプリの中身</p>
+            <h2>低頻度でも、必要な瞬間に戻ってこられる設計です。</h2>
           </div>
-          <Link className="secondary" href="/start">選んで始める</Link>
+          <Link className="secondary" href="/guides">使い方を読む</Link>
         </div>
         <div className="grid portal-topic-grid">
-          {portalTopics.map((topic) => (
-            <Link className="panel portal-topic simple-topic" href={topic.href} key={topic.title}>
+          {appUseCases.map((topic) => (
+            <div className="panel portal-topic simple-topic" key={topic.title}>
               <strong>{topic.title}</strong>
               <p>{topic.body}</p>
-              <span>この状況で整理する</span>
-            </Link>
+            </div>
           ))}
         </div>
       </section>
@@ -199,12 +181,12 @@ export default function HomePage() {
         <div className="container portal-band-inner">
           <div>
             <p className="eyebrow">Start</p>
-            <h2>迷ったら、まず状況を1つ選んでください。</h2>
+            <h2>アプリを開いて、家族ボードを作ります。</h2>
             <p>
-              くわしく分からなくても大丈夫です。近いものを選ぶと、次に確認することが見えてきます。
+              親が複数いる場合も、1人ずつ登録して、それぞれの状態とタスクを分けて管理できます。
             </p>
           </div>
-          <Link className="button" href="/start">はじめる</Link>
+          <a className="button" href="oyanomoshimo://">アプリを開く</a>
         </div>
       </section>
     </main>

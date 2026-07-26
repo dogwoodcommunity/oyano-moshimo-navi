@@ -147,7 +147,8 @@ textarea {
   margin: 0;
 }
 
-.start-gateway {
+.start-gateway,
+.app-gateway {
   background: #fffdf7;
   border: 3px solid var(--green);
   border-radius: 10px;
@@ -160,7 +161,8 @@ textarea {
   position: relative;
 }
 
-.start-gateway::before {
+.start-gateway::before,
+.app-gateway::before {
   align-items: center;
   background: var(--green);
   border: 4px solid #fffdf7;
@@ -176,6 +178,14 @@ textarea {
   right: 18px;
   top: -24px;
   width: 44px;
+}
+
+.app-gateway::before {
+  content: "アプリ";
+  font-size: 13px;
+  height: 52px;
+  top: -28px;
+  width: 52px;
 }
 
 .gateway-label {
@@ -2435,7 +2445,8 @@ textarea {
     right: 10px;
   }
 
-  .start-gateway {
+  .start-gateway,
+  .app-gateway {
     margin-top: 20px;
   }
 

@@ -56,9 +56,9 @@ export default function WelcomeScreen() {
     setMessage("");
   }
 
-  function openWebStart() {
+  function openGuide() {
     if (!webBaseUrl) return;
-    void Linking.openURL(`${webBaseUrl}/start`).catch(() => {
+    void Linking.openURL(`${webBaseUrl}/guides`).catch(() => {
       setMessage("Webページを開けませんでした。通信状態を確認してください。");
     });
   }
@@ -100,15 +100,15 @@ export default function WelcomeScreen() {
       <View style={styles.startPanel}>
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>会員登録して続ける</Text>
-        <Text style={styles.body}>まずWebで整理したあと、期限・担当・写真を家族で残したい方だけ登録できます。</Text>
-        <MascotGuide compact message="登録前でも見本を確認できます。保存したくなった時だけ、メールで本人確認します。" />
+        <Text style={styles.body}>親の名前と今の状況を入れると、家族ボード、期限、担当、写真メモをこのアプリで管理できます。</Text>
+        <MascotGuide compact message="迷ったら、登録前に見本を開いてください。使うと決めた時だけ、メールで本人確認します。" />
         <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
         </Pressable>
-        <Pressable disabled={!webBaseUrl} onPress={openWebStart} style={[styles.webButton, !webBaseUrl && styles.disabledButton]}>
-          <MaterialCommunityIcons color={colors.greenDark} name="web" size={20} />
-          <Text style={styles.webButtonText}>登録せずにWebで状況を整理する</Text>
+        <Pressable disabled={!webBaseUrl} onPress={openGuide} style={[styles.webButton, !webBaseUrl && styles.disabledButton]}>
+          <MaterialCommunityIcons color={colors.greenDark} name="book-open-page-variant-outline" size={20} />
+          <Text style={styles.webButtonText}>使い方・安心設計を読む</Text>
         </Pressable>
         <Pressable onPress={continueDemo} style={styles.previewButton}>
           <MaterialCommunityIcons color={colors.greenDark} name="eye-outline" size={20} />

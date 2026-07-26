@@ -2361,3 +2361,33 @@ GitHubが必要な理由:
 - 注意:
   - この起動はローカル開発サーバーなので、PCとスマホが同じWi-Fiにいる必要がある。
   - AndroidをUSBで直接開くには、端末側でUSBデバッグ許可後に `adb devices` で表示される必要がある。
+
+## 2026-07-27 追記 87
+
+- ユーザー判断:
+  - 「基本アプリのみで使うやつと思ってる」
+  - 「アプリの前段階がこの診断サイトってこと？」
+  - 「いや、もうweb入口いらんで。いきなりアプリでええと思うで」
+- 判断:
+  - この方針を採用。
+  - プロダクト本体はExpoアプリの「家族ボード・期限通知・写真/メモ・対象者管理」。
+  - Webは診断入口ではなく、アプリ紹介、ガイド、法務、Stripe/管理画面などの補助役にする。
+  - 既存の `/start -> /diagnosis -> /result` は互換・検証用として残すが、トップページの主導線からは外す。
+- 対応:
+  - `apps/web/app/page.tsx`
+    - メタデータを「家族で使う保管庫・通知係」に変更。
+    - Heroの主CTAを「無料で状況を選ぶ」から「アプリを開く」に変更。
+    - Web診断入口を前面に出す構成をやめ、アプリの機能紹介へ変更。
+    - 「最初からアプリで始めます」「対象者ごとに管理」など、アプリ本体前提のコピーへ変更。
+  - `apps/web/app/globals.css`
+    - 新しい `.app-gateway` を追加し、Webトップの主CTAがアプリ入口として見えるよう調整。
+  - `apps/mobile/app/(auth)/welcome.tsx`
+    - 「まずWebで整理したあと」という表現を削除。
+    - アプリ内で親の名前・状況を登録して始めるコピーへ変更。
+    - Webへの導線は「登録せずにWebで状況を整理する」から「使い方・安心設計を読む」へ変更。
+- 検証:
+  - Web typecheck OK: `apps/web/node_modules/.bin/tsc --noEmit`
+  - Mobile typecheck OK: `apps/mobile/node_modules/.bin/tsc --noEmit`
+  - `git diff --check` OK。
+  - `next build` OK。
+  - 注意: `pnpm --filter` はローカル環境でnode_modules再作成確認が出るため使わず、既存 `.bin` を直接実行した。
