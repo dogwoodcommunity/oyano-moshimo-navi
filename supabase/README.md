@@ -12,18 +12,19 @@ SQL Editorで以下の順に実行する。
 6. `monthly_checkin_notifications.sql`
 7. `handoff_security_hardening.sql`
 8. `handoff_consume_rpc.sql`
-9. `sensitive_info_consent_hardening.sql`
-10. `product_seed.sql`
-11. `indexes.sql`
-12. `api_grants.sql`
-13. `production_rls.sql`
-14. `family_invite_rpc.sql`
-15. `admin_auth_hardening.sql`
-16. `family_owner_succession.sql`
-17. `account_deletion_pipeline.sql`
-18. `public_api_rate_limits.sql`
-19. `anonymous_case_retention.sql`
-20. `storage_setup.sql`
+9. `create_initial_family_person.sql`
+10. `sensitive_info_consent_hardening.sql`
+11. `product_seed.sql`
+12. `indexes.sql`
+13. `api_grants.sql`
+14. `production_rls.sql`
+15. `family_invite_rpc.sql`
+16. `admin_auth_hardening.sql`
+17. `family_owner_succession.sql`
+18. `account_deletion_pipeline.sql`
+19. `public_api_rate_limits.sql`
+20. `anonymous_case_retention.sql`
+21. `storage_setup.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -33,8 +34,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-21. `verify_setup.sql`
-22. `verify_compact.sql`
+22. `verify_setup.sql`
+23. `verify_compact.sql`
 
 ## 重要
 
@@ -64,7 +65,7 @@ EXPO_PUBLIC_SUPABASE_ANON_KEY=
 
 ## 次の確認
 
-ローカルWebの `.env.local` に値を入れ、`/start -> /diagnosis -> /result/[caseId]` を実行する。
+ローカルWeb/Mobileの `.env.local` に値を入れ、Expoアプリから「家族ボードを作る」を実行する。
 
 確認するテーブル:
 

@@ -2391,3 +2391,37 @@ GitHubが必要な理由:
   - `git diff --check` OK。
   - `next build` OK。
   - 注意: `pnpm --filter` はローカル環境でnode_modules再作成確認が出るため使わず、既存 `.bin` を直接実行した。
+
+## 2026-07-27 追記 88
+
+- ユーザー確認:
+  - 「これは、アプリをダウンロードした後、開いたら最初に見るページ？」
+  - 「せやな。アプリ内の設計、デザインやろ」
+- 判断:
+  - Web診断を前段にしない方針に合わせ、Expoアプリだけで初回の家族ボード作成が完了する必要がある。
+  - 既存実装は `dashboard` の空状態がまだ「まずWebで状況を整理します」になっており、`people/new` も既存 `anchorPersonId` がないと対象者を追加できなかった。
+- 対応:
+  - `supabase/create_initial_family_person.sql`
+    - 認証済みユーザー向けRPC `create_initial_family_person(display_name, relationship, status)` を追加。
+    - profile upsert、family作成、owner family_member作成、people作成、person_status_events作成を1回で実行。
+    - 既存familyがあるユーザーはそれを再利用し、初期タスクは既存triggerで生成する。
+  - `apps/mobile/lib/mobileData.ts`
+    - `createInitialFamilyPerson()` を追加。
+    - 初回登録ではSupabase RPCを呼び、作成後に `fetchPerson()` で対象者を取得する。
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+    - 空状態を「Webで5分整理」から「まず親を1人登録して、家族ボードを作ります」へ変更。
+    - CTAを `/people/new` への「家族ボードを作る」に変更。
+    - Web整理済み説明を削除し、登録内容の説明へ変更。
+  - `apps/mobile/app/people/new.tsx`
+    - `anchorPersonId` がない場合は初回登録モードとして動作。
+    - 初回CTAを「家族ボードを作る」に変更。
+    - 2人目以降は従来通り既存familyへ追加。
+  - `supabase/README.md`、`supabase/verify_setup.sql`、`supabase/verify_compact.sql`、`scripts/local-doctor.mjs`、`docs/PRODUCTION_CHECKLIST.md`
+    - 新SQLと確認項目を追加。
+- 検証:
+  - Mobile typecheck OK: `apps/mobile/node_modules/.bin/tsc --noEmit`
+  - `git diff --check` OK。
+  - `node scripts/local-doctor.mjs` OK。
+- 本番DBに追加で必要:
+  - Supabase SQL Editorで `supabase/create_initial_family_person.sql` を1回実行する。
+  - その後 `supabase/verify_compact.sql` で `create_initial_family_person` が true になることを確認する。

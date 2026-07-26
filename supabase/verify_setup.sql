@@ -182,6 +182,7 @@ with required_functions(name) as (
     ('reset_stale_sending_notifications'),
     ('ensure_monthly_checkin_notifications'),
     ('consume_case_handoff'),
+    ('create_initial_family_person'),
     ('create_family_invite'),
     ('accept_family_invite'),
     ('promote_family_member_to_owner')

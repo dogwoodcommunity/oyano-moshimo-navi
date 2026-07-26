@@ -52,6 +52,12 @@ export type CreatePersonResult = {
   error?: string;
 };
 
+type InitialFamilyPersonRpcResult = {
+  familyId?: string;
+  personId?: string;
+  tasksCreated?: number;
+};
+
 export type DashboardData = {
   person: MobilePerson;
   people: MobilePerson[];
@@ -343,6 +349,50 @@ export async function createPersonForFamily({
       currentStatus: row.current_status
     },
     warning: eventError ? "対象者は追加できましたが、初期タスクの作成に失敗しました。ステータス変更画面でもう一度保存してください。" : undefined
+  };
+}
+
+export async function createInitialFamilyPerson({
+  currentStatus,
+  displayName,
+  relationship
+}: {
+  currentStatus: ParentStatus;
+  displayName: string;
+  relationship?: string;
+}): Promise<CreatePersonResult> {
+  const normalizedName = displayName.trim();
+  if (!normalizedName) return { source: "demo", error: "呼び名を入力してください。" };
+
+  const supabase = getSupabase();
+  if (!supabase) {
+    return {
+      source: "demo",
+      person: {
+        id: `demo-person-${Date.now()}`,
+        displayName: normalizedName,
+        relationship: relationship?.trim() || undefined,
+        currentStatus
+      }
+    };
+  }
+
+  const { data, error } = await supabase.rpc("create_initial_family_person", {
+    p_display_name: normalizedName,
+    p_relationship: relationship?.trim() || null,
+    p_status: currentStatus
+  });
+
+  if (error) return { source: "supabase", error: error.message };
+
+  const result = data as InitialFamilyPersonRpcResult | null;
+  if (!result?.personId) return { source: "supabase", error: "家族ボードを作成できませんでした。" };
+
+  const person = await fetchPerson(result.personId);
+  return {
+    source: "supabase",
+    person,
+    warning: result.tasksCreated === 0 ? "対象者は作成できましたが、初期タスクがありません。状態変更画面でもう一度保存してください。" : undefined
   };
 }
 

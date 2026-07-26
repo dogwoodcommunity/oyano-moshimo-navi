@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { STATUSES, statusLabel, type ParentStatus } from "@oyano/shared";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
-import { createPersonForFamily } from "@/lib/mobileData";
+import { createInitialFamilyPerson, createPersonForFamily } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
 const relationshipOptions = ["母", "父", "義母", "義父", "祖父母", "その他"];
@@ -13,6 +13,7 @@ export default function NewPersonScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ anchorPersonId?: string }>();
   const anchorPersonId = typeof params.anchorPersonId === "string" ? params.anchorPersonId : "";
+  const isFirstPerson = !anchorPersonId;
   const [displayName, setDisplayName] = useState("");
   const [relationship, setRelationship] = useState("母");
   const [status, setStatus] = useState<ParentStatus>("preparing");
@@ -23,12 +24,12 @@ export default function NewPersonScreen() {
     if (saving) return;
     setMessage("");
     setSaving(true);
-    const result = await createPersonForFamily({
-      anchorPersonId,
+    const payload = {
       currentStatus: status,
       displayName,
       relationship
-    });
+    };
+    const result = isFirstPerson ? await createInitialFamilyPerson(payload) : await createPersonForFamily({ anchorPersonId, ...payload });
     setSaving(false);
 
     if (result.error || !result.person) {
@@ -44,13 +45,24 @@ export default function NewPersonScreen() {
       <View style={styles.hero}>
         <View style={styles.heroTop}>
           <MascotMark size={48} />
-          <Text style={styles.kicker}>対象者を追加</Text>
+          <Text style={styles.kicker}>{isFirstPerson ? "最初の登録" : "対象者を追加"}</Text>
         </View>
-        <Text style={styles.title}>2人目以降は、1人ずつ登録します。</Text>
-        <Text style={styles.lead}>状態や期限は人によって変わります。まず呼び名と今の状態だけ入れると、その人専用のタスクボードを作ります。</Text>
+        <Text style={styles.title}>{isFirstPerson ? "親を1人登録して、家族ボードを作ります。" : "2人目以降は、1人ずつ登録します。"}</Text>
+        <Text style={styles.lead}>
+          {isFirstPerson
+            ? "まず呼び名と今の状態だけ入れてください。期限と担当を分けるためのタスクボードを作ります。"
+            : "状態や期限は人によって変わります。まず呼び名と今の状態だけ入れると、その人専用のタスクボードを作ります。"}
+        </Text>
       </View>
 
-      <MascotGuide compact message="父と母で状況が違う時も大丈夫です。人ごとにタスク、担当、期限を分けて管理します。" />
+      <MascotGuide
+        compact
+        message={
+          isFirstPerson
+            ? "あとから父・母・義父母を追加できます。まずは一番気になる人を1人だけ登録しましょう。"
+            : "父と母で状況が違う時も大丈夫です。人ごとにタスク、担当、期限を分けて管理します。"
+        }
+      />
 
       <View style={styles.card}>
         <Text style={styles.sectionLabel}>1. 呼び名</Text>
@@ -98,11 +110,11 @@ export default function NewPersonScreen() {
       {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
 
       <Pressable
-        disabled={saving || !anchorPersonId || !displayName.trim()}
+        disabled={saving || !displayName.trim()}
         onPress={save}
-        style={[styles.saveButton, (saving || !anchorPersonId || !displayName.trim()) && styles.disabled]}
+        style={[styles.saveButton, (saving || !displayName.trim()) && styles.disabled]}
       >
-        <Text style={styles.saveButtonText}>{saving ? "追加しています" : "この対象者を追加する"}</Text>
+        <Text style={styles.saveButtonText}>{saving ? "作成しています" : isFirstPerson ? "家族ボードを作る" : "この対象者を追加する"}</Text>
       </Pressable>
     </ScrollView>
   );

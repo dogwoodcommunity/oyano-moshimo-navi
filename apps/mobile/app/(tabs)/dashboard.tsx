@@ -1,13 +1,11 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
-
-const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 function dateOnly(value?: string) {
   if (!value) return null;
@@ -50,11 +48,6 @@ export default function DashboardScreen() {
       .catch(() => setData(demoDashboardData()));
   }, []);
 
-  function openWebStart() {
-    if (!webBaseUrl) return;
-    void Linking.openURL(`${webBaseUrl}/start`).catch(() => null);
-  }
-
   if (data.source === "empty") {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
@@ -63,20 +56,18 @@ export default function DashboardScreen() {
             <MascotMark size={58} />
             <Text style={styles.kickerLight}>はじめに</Text>
           </View>
-          <Text style={styles.emptyTitle}>まずWebで状況を整理します</Text>
+          <Text style={styles.emptyTitle}>まず親を1人登録して、家族ボードを作ります</Text>
           <Text style={styles.emptyLead}>
-            親御さんの状況を選ぶと、期限のある手続きと家族で分けることがまとまります。保存すると、この家族ボードに表示されます。
+            呼び名と今の状態だけで始められます。期限のある手続き、担当未定、あとで見返すメモを人ごとにまとめます。
           </Text>
           <View style={styles.emptyHint}>
-            <Text style={styles.emptyHintText}>最初は登録なしで整理できます。必要になった時だけ保存しましょう。</Text>
+            <Text style={styles.emptyHintText}>父母・義父母など複数いる場合も、1人ずつ追加して別々に管理できます。</Text>
           </View>
-          <Pressable disabled={!webBaseUrl} onPress={openWebStart} style={[styles.emptyButton, !webBaseUrl && styles.buttonDisabled]}>
-            <Text style={styles.emptyButtonText}>Webで5分整理を始める</Text>
-          </Pressable>
+          <Link href="/people/new" style={styles.emptyButton}>家族ボードを作る</Link>
         </View>
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>すでにWebで整理した場合</Text>
-          <Text style={styles.body}>結果画面の「アプリに保存する」を開いてください。本人確認のあと、対象者とタスクがこの画面に入ります。</Text>
+          <Text style={styles.cardTitle}>登録する内容</Text>
+          <Text style={styles.body}>最初に必要なのは「呼び名」「続柄」「今の状態」だけです。詳しい情報はあとから足せます。</Text>
         </View>
         <View style={styles.card}>
           <Text style={styles.cardTitle}>このアプリで続けること</Text>
@@ -282,9 +273,7 @@ const styles = StyleSheet.create({
   personStatus: { color: colors.greenDark, fontWeight: "900" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
   button: { backgroundColor: colors.green, borderRadius: radius.control, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12 },
-  buttonDisabled: { opacity: 0.5 },
-  emptyButton: { alignItems: "center", backgroundColor: "#fff", borderRadius: radius.control, justifyContent: "center", minHeight: 50, paddingHorizontal: 14, paddingVertical: 12 },
-  emptyButtonText: { color: colors.greenDark, fontWeight: "900" },
+  emptyButton: { backgroundColor: "#fff", borderRadius: radius.control, color: colors.greenDark, fontSize: 17, fontWeight: "900", overflow: "hidden", paddingHorizontal: 18, paddingVertical: 15, textAlign: "center" },
   emptyHero: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
   emptyHeroTop: { alignItems: "center", flexDirection: "row", gap: 10 },
   emptyHint: { backgroundColor: "rgba(255,253,247,0.12)", borderColor: "rgba(255,253,247,0.22)", borderRadius: radius.card, borderWidth: 1, padding: 12 },
