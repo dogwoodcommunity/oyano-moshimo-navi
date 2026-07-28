@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/guides",
     "/checklists",
     "/safety",
+    "/install",
     "/plans",
     "/start",
     "/providers",

@@ -8,7 +8,7 @@ export function PwaRegister() {
     if (!("serviceWorker" in navigator)) return;
 
     navigator.serviceWorker.register("/sw.js").catch(() => {
-      // PWA installability should never block the web入口 itself.
+      // PWA installability should never block the page itself.
     });
   }, []);
 

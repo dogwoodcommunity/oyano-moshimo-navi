@@ -90,11 +90,11 @@ export default function HomePage() {
             <p className="lead">入院、介護、亡くなった後の手続き、実家の片付け。家族でやること、期限、写真、メモを1つのボードにまとめます。</p>
             <div className="app-gateway" aria-label="アプリ入口">
               <p className="gateway-label">入口はアプリです</p>
-              <a className="button gateway-button" href="oyanomoshimo://">
-                アプリを開く
-                <span>家族ボードから始めます</span>
-              </a>
-              <p className="gateway-note">アプリ未インストールの場合は、公開後にストア案内へ進めます。今はテスト版で確認します。</p>
+              <Link className="button gateway-button" href="/install">
+                ホーム画面に追加
+                <span>PWAとしてすぐ開けます</span>
+              </Link>
+              <p className="gateway-note">正式アプリ公開前は、PWAとしてホーム画面に置いて確認します。ストア公開後はアプリ案内へ切り替えます。</p>
             </div>
             <div className="urgent-strip" aria-label="アプリでできること">
               <span>家族ボード</span>
@@ -186,7 +186,7 @@ export default function HomePage() {
               親が複数いる場合も、1人ずつ登録して、それぞれの状態とタスクを分けて管理できます。
             </p>
           </div>
-          <a className="button" href="oyanomoshimo://">アプリを開く</a>
+          <Link className="button" href="/install">ホーム画面に追加</Link>
         </div>
       </section>
     </main>

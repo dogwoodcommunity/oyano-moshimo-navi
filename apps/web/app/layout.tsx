@@ -41,6 +41,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/guides">読む</Link>
               <Link href="/checklists">チェックリスト</Link>
               <Link href="/safety">安心</Link>
+              <Link href="/install">ホームに追加</Link>
               <Link href="/plans">料金</Link>
             </nav>
           </header>
@@ -51,6 +52,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
+            <Link href="/install">ホーム画面に追加</Link>
           </footer>
         </div>
         <PwaRegister />

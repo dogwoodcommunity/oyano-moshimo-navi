@@ -1,7 +1,7 @@
 {
   "name": "親のもしもナビ",
   "short_name": "親のもしも",
-  "description": "親の入院、介護、亡くなった後の手続き、実家の片付けを家族で整理する入口。",
+  "description": "親の入院、介護、亡くなった後の手続き、実家の片付けを家族で整理する家族ボード。",
   "id": "/home",
   "start_url": "/home?source=pwa",
   "scope": "/",
@@ -33,10 +33,17 @@
   ],
   "shortcuts": [
     {
-      "name": "ここから始める",
-      "short_name": "始める",
-      "description": "親の状況を選んで整理を始める",
-      "url": "/start?source=pwa_shortcut",
+      "name": "ホーム",
+      "short_name": "ホーム",
+      "description": "親のもしもナビを開く",
+      "url": "/home?source=pwa_shortcut",
+      "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "ホーム画面に追加",
+      "short_name": "追加",
+      "description": "PWAとしてホーム画面に追加する",
+      "url": "/install?source=pwa_shortcut",
       "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
     },
     {

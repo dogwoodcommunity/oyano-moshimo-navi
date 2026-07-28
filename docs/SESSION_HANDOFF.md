@@ -2425,3 +2425,46 @@ GitHubが必要な理由:
 - 本番DBに追加で必要:
   - Supabase SQL Editorで `supabase/create_initial_family_person.sql` を1回実行する。
   - その後 `supabase/verify_compact.sql` で `create_initial_family_person` が true になることを確認する。
+
+## 2026-07-27 追記 89
+
+- ユーザー依頼:
+  - 「pwaつくって」
+- 判断:
+  - 方針はアプリ/PWAファースト。
+  - ネイティブアプリ公開前でも、iPhone/Androidのホーム画面に追加して「アプリのように使える」導線を先に完成させる。
+  - 既存Web診断は残すが、PWA導線は `/home` と家族ボード利用を中心にする。
+- 対応:
+  - `apps/web/app/install/page.tsx`
+    - PWAインストール案内ページを追加。
+    - Android/Chromeではインストールボタン、iPhone/Safariでは共有ボタンからホーム画面追加の手順を表示。
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - `beforeinstallprompt` を受けて、対応ブラウザではその場でインストールを促すUIを追加。
+    - すでにスタンドアロン起動中の場合は「追加済み」と表示。
+  - `apps/web/app/offline/page.tsx`
+    - オフライン時のフォールバック画面を追加。
+  - `apps/web/public/manifest.webmanifest`
+    - `start_url` は `/home?source=pwa` のまま、ショートカットを「家族ボード」「ホームに追加」に更新。
+  - `apps/web/public/sw.js`
+    - Service Workerをv2化。
+    - `/home`、`/install`、`/offline`、ガイド系ページと主要アイコンをキャッシュ。
+    - `/api`、`/admin`、`/result`、`/diagnosis` はキャッシュ対象外。
+    - ナビゲーション失敗時は `/offline` へフォールバック。
+  - `apps/web/app/layout.tsx`
+    - ナビとフッターに「ホームに追加」を追加。
+  - `apps/web/app/page.tsx`
+    - トップの主導線をPWA追加導線へ変更。
+  - `apps/web/app/sitemap.ts`
+    - `/install` を追加。
+  - `scripts/local-doctor.mjs`、`scripts/smoke-web.mjs`
+    - PWA必須ファイルと `/install`、`/offline` の確認を追加。
+- 検証:
+  - `python3 -m json.tool apps/web/public/manifest.webmanifest` OK。
+  - Web typecheck OK: `apps/web/node_modules/.bin/tsc --noEmit`
+  - `git diff --check` OK。
+  - `node scripts/local-doctor.mjs` OK。
+  - `next build` OK。
+  - ローカル本番起動 `next start -p 3010` 後、`node scripts/smoke-web.mjs http://localhost:3010` OK。
+- ユーザー確認URL:
+  - 本番PWA追加ページ: `https://oyano-moshimo-navi.vercel.app/install`
+  - iPhoneではSafariで開いて、共有ボタンから「ホーム画面に追加」。

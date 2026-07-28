@@ -1,8 +1,16 @@
-const CACHE_VERSION = "oyano-moshimo-navi-v1";
+const CACHE_VERSION = "oyano-moshimo-navi-v2";
 const STATIC_CACHE_URLS = [
+  "/home",
+  "/install",
+  "/offline",
+  "/guides",
+  "/checklists",
+  "/safety",
   "/brand/logo-mark.png",
   "/brand/apple-touch-icon.png",
-  "/brand/pwa-icon-192.png"
+  "/brand/pwa-icon-192.png",
+  "/images/family-documents-hero.png",
+  "/manifest.webmanifest"
 ];
 
 self.addEventListener("install", (event) => {
@@ -32,5 +40,18 @@ self.addEventListener("fetch", (event) => {
 
   if (STATIC_CACHE_URLS.includes(url.pathname)) {
     event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));
+    return;
+  }
+
+  if (request.mode === "navigate") {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_VERSION).then((cache) => cache.put(request, responseClone));
+          return response;
+        })
+        .catch(() => caches.match("/offline").then((cached) => cached || caches.match("/home")))
+    );
   }
 });

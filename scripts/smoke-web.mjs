@@ -10,6 +10,8 @@ const checks = [
   { path: "/checklists", label: "checklists" },
   { path: "/safety", label: "safety" },
   { path: "/plans", label: "plans" },
+  { path: "/install", label: "pwa install" },
+  { path: "/offline", label: "pwa offline" },
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/result/smoke-case", label: "result fallback" },
   { path: "/result/smoke-case/share", label: "result share fallback" },
