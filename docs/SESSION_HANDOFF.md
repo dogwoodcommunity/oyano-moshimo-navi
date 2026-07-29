@@ -2493,3 +2493,10 @@ GitHubが必要な理由:
 - 次に必要:
   - commit/push後、GitHub Actionsが通ることを確認。
   - Vercelが再デプロイした後、`https://oyano-moshimo-navi.vercel.app/install` が 200 になることを確認。
+- 完了確認:
+  - GitHub Actions `Allow smoke auth skip response` は success。
+  - Vercel CLIで本番デプロイを実行。
+  - Production alias: `https://oyano-moshimo-navi.vercel.app`
+  - `curl -I https://oyano-moshimo-navi.vercel.app/install` は 200。
+  - `manifest.webmanifest` も新しいPWAショートカット内容へ更新済み。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
