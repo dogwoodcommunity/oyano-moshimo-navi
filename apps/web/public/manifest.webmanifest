@@ -40,9 +40,9 @@
       "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
     },
     {
-      "name": "ホーム画面に追加",
-      "short_name": "追加",
-      "description": "PWAとしてホーム画面に追加する",
+      "name": "親のもしもナビを開く",
+      "short_name": "開く",
+      "description": "家族ボードへ進む",
       "url": "/install?source=pwa_shortcut",
       "icons": [{ "src": "/brand/pwa-icon-192.png", "sizes": "192x192" }]
     },

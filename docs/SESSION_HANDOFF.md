@@ -2500,3 +2500,39 @@ GitHubが必要な理由:
   - `curl -I https://oyano-moshimo-navi.vercel.app/install` は 200。
   - `manifest.webmanifest` も新しいPWAショートカット内容へ更新済み。
   - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+
+## 2026-07-29 追記 91
+
+- ユーザー指摘:
+  - 「入口がださい」
+  - 「アプリ化するから最初のアプリにできますはいらん」
+  - 「AI感がすごいからデザイン変えて」
+- 判断:
+  - `/install` はPWA説明ページではなく、アプリを開いた最初の入口画面として扱う。
+  - 「ホーム画面に追加」「PWAとして使えます」をファーストビューから外し、家族ボードへ進む導線を中心にする。
+  - ホーム画面追加の説明は、必要な人だけ読む下部補助に落とす。
+- 対応:
+  - `apps/web/app/install/page.tsx`
+    - metadataを「ホーム画面に追加」から「親のもしもナビを開く」へ変更。
+    - 「アプリ公開前の確認」など検証用コピーを削除。
+    - 「親を1人ずつ管理」「期限と担当を見える化」「必要な時だけ戻る」へ説明を変更。
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - 見出しを「ホーム画面に追加して、アプリのように使えます」から「家族で確認することを、ここにまとめます」へ変更。
+    - 主CTAを「家族ボードを開く」に変更。
+    - 「状況から整理する」も補助CTAとして残す。
+    - 家族ボードのプレビューカードを追加し、単なる説明ページ感を減らした。
+  - `apps/web/app/globals.css`
+    - `/install` のheroを紙・付箋・家族ボード風に調整。
+    - 白い説明カード中心から、家族ボードプレビューが見える構成へ変更。
+  - `apps/web/app/page.tsx`
+    - トップCTAを「ホーム画面に追加」から「親のもしもナビを開く」へ変更。
+  - `apps/web/app/layout.tsx`
+    - ナビ文言を「アプリを開く」に変更。
+  - `apps/web/public/manifest.webmanifest`
+    - shortcut名を「ホーム画面に追加」から「親のもしもナビを開く」へ変更。
+- 検証:
+  - Web typecheck OK: `apps/web/node_modules/.bin/tsc --noEmit`
+  - `git diff --check` OK。
+  - `manifest.webmanifest` JSON OK。
+  - `next build` OK。
+  - ローカル本番起動後、`node scripts/smoke-web.mjs http://localhost:3010` OK。

@@ -91,10 +91,10 @@ export default function HomePage() {
             <div className="app-gateway" aria-label="アプリ入口">
               <p className="gateway-label">入口はアプリです</p>
               <Link className="button gateway-button" href="/install">
-                ホーム画面に追加
-                <span>PWAとしてすぐ開けます</span>
+                親のもしもナビを開く
+                <span>家族ボードへ進みます</span>
               </Link>
-              <p className="gateway-note">正式アプリ公開前は、PWAとしてホーム画面に置いて確認します。ストア公開後はアプリ案内へ切り替えます。</p>
+              <p className="gateway-note">親を1人ずつ登録し、状態・期限・担当を家族で見られるようにします。</p>
             </div>
             <div className="urgent-strip" aria-label="アプリでできること">
               <span>家族ボード</span>
@@ -186,7 +186,7 @@ export default function HomePage() {
               親が複数いる場合も、1人ずつ登録して、それぞれの状態とタスクを分けて管理できます。
             </p>
           </div>
-          <Link className="button" href="/install">ホーム画面に追加</Link>
+          <Link className="button" href="/install">親のもしもナビを開く</Link>
         </div>
       </section>
     </main>

@@ -2262,9 +2262,11 @@ textarea {
 
 .install-hero {
   background:
-    linear-gradient(180deg, rgba(246, 247, 241, 0.88), rgba(246, 247, 241, 0.96)),
+    radial-gradient(circle at 12% 10%, rgba(255, 232, 183, 0.72), transparent 28%),
+    radial-gradient(circle at 90% 18%, rgba(201, 225, 219, 0.74), transparent 30%),
+    linear-gradient(180deg, rgba(248, 248, 241, 0.84), rgba(246, 247, 241, 0.98)),
     url("/images/family-documents-hero.png");
-  background-position: center;
+  background-position: center 46%;
   background-size: cover;
 }
 
@@ -2273,33 +2275,73 @@ textarea {
 }
 
 .pwa-install-panel {
-  background: rgba(255, 253, 247, 0.92);
-  border: 1px solid rgba(217, 226, 220, 0.96);
-  border-radius: 12px;
-  box-shadow: var(--shadow);
+  background:
+    linear-gradient(135deg, rgba(255, 253, 247, 0.96), rgba(247, 251, 245, 0.94));
+  border: 1px solid rgba(196, 211, 203, 0.94);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(28, 48, 39, 0.16);
   display: grid;
-  gap: 22px;
+  gap: clamp(18px, 3vw, 28px);
+  grid-template-columns: minmax(0, 0.95fr) minmax(280px, 0.72fr);
   padding: clamp(22px, 5vw, 40px);
+  position: relative;
+}
+
+.pwa-install-panel::before {
+  background: #c98f32;
+  border-radius: 999px;
+  content: "";
+  height: 12px;
+  left: 28px;
+  position: absolute;
+  top: 18px;
+  width: 12px;
 }
 
 .pwa-install-main {
   max-width: 760px;
+  padding-top: 12px;
 }
 
 .pwa-install-main h1 {
-  font-size: clamp(34px, 5vw, 58px);
-  line-height: 1.12;
+  font-size: clamp(34px, 5vw, 60px);
+  letter-spacing: 0;
+  line-height: 1.1;
   margin: 0;
+}
+
+.app-entry-actions {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
 }
 
 .pwa-primary {
   border: 0;
   box-shadow: 0 16px 30px rgba(24, 63, 46, 0.24);
   cursor: pointer;
+  flex-direction: column;
   font-size: 18px;
   margin-top: 18px;
   min-height: 56px;
   padding-inline: 28px;
+}
+
+.app-entry-actions .pwa-primary {
+  margin-top: 0;
+  min-width: min(100%, 260px);
+}
+
+.pwa-primary span {
+  color: rgba(255, 255, 255, 0.84);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pwa-secondary-action {
+  min-height: 58px;
 }
 
 .pwa-message {
@@ -2308,10 +2350,117 @@ textarea {
   margin: 14px 0 0;
 }
 
-.pwa-steps {
+.pwa-steps,
+.pwa-mini-steps {
   display: grid;
   gap: 12px;
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.app-board-preview {
+  align-self: center;
+  background:
+    linear-gradient(180deg, #ffffff, #fbfaf3);
+  border: 1px solid rgba(38, 72, 55, 0.16);
+  border-radius: 16px;
+  box-shadow: 0 18px 42px rgba(30, 54, 43, 0.14);
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+}
+
+.preview-person {
+  align-items: center;
+  background: #f3f6ef;
+  border: 1px solid rgba(39, 100, 71, 0.16);
+  border-radius: 12px;
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+}
+
+.person-avatar {
+  align-items: center;
+  background: #276447;
+  border-radius: 14px;
+  color: #fff;
+  display: inline-flex;
+  font-weight: 900;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.preview-person strong,
+.preview-task strong {
+  color: var(--ink);
+  display: block;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.preview-person p,
+.preview-task p {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.55;
+  margin: 4px 0 0;
+}
+
+.preview-task {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-left: 6px solid #8aa8d6;
+  border-radius: 12px;
+  padding: 14px 14px 14px 16px;
+}
+
+.preview-task.urgent {
+  border-left-color: #b85b6c;
+}
+
+.preview-task span {
+  color: var(--green);
+  display: block;
+  font-size: 13px;
+  font-weight: 900;
+  margin-bottom: 6px;
+}
+
+.pwa-helper {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px dashed rgba(39, 100, 71, 0.28);
+  border-radius: 14px;
+  grid-column: 1 / -1;
+  padding: 16px;
+}
+
+.pwa-helper strong {
+  color: var(--ink);
+  display: block;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.pwa-helper p {
+  color: var(--muted);
+  font-weight: 800;
+  line-height: 1.6;
+  margin: 8px 0 10px;
+}
+
+.pwa-mini-steps {
+  grid-template-columns: repeat(3, max-content);
+  margin-top: 12px;
+}
+
+.pwa-mini-steps span {
+  background: #edf4ed;
+  border-radius: 999px;
+  color: var(--green-dark);
+  font-size: 13px;
+  font-weight: 900;
+  padding: 8px 10px;
 }
 
 .pwa-step-card,
@@ -2428,6 +2577,14 @@ textarea {
   }
 
   .pwa-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .pwa-install-panel {
+    grid-template-columns: 1fr;
+  }
+
+  .pwa-mini-steps {
     grid-template-columns: 1fr;
   }
 
