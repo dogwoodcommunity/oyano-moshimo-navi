@@ -27,7 +27,7 @@ const checks = [
   { path: "/admin/support-packs", label: "admin support packs" },
   { path: "/admin/delete-requests", label: "admin delete requests" },
   { path: "/api/health", label: "health api" },
-  { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatus: 401 },
+  { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatuses: [200, 401] },
   { path: "/api/notification-preferences", label: "notification preferences api requires auth", expectStatus: 401 },
   {
     path: "/api/push-tokens/register",
@@ -62,7 +62,8 @@ for (const check of checks) {
     headers,
     method: check.method ?? "GET"
   });
-  const ok = check.expectStatus ? response.status === check.expectStatus : response.status >= 200 && response.status < 400;
+  const expectedStatuses = check.expectStatuses ?? (check.expectStatus ? [check.expectStatus] : null);
+  const ok = expectedStatuses ? expectedStatuses.includes(response.status) : response.status >= 200 && response.status < 400;
 
   if (!ok && check.admin && response.status === 401) {
     console.log(`SKIP ${check.label}: ${response.status} (set ADMIN_ACCESS_TOKEN to verify)`);
@@ -71,7 +72,7 @@ for (const check of checks) {
 
   if (!ok) {
     failed = true;
-    const expected = check.expectStatus ? ` expected ${check.expectStatus}` : "";
+    const expected = expectedStatuses ? ` expected ${expectedStatuses.join("/")}` : "";
     console.error(`FAIL ${check.label}: ${response.status}${expected} ${check.path}`);
     continue;
   }

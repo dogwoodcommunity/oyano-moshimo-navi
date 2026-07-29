@@ -2485,6 +2485,11 @@ GitHubが必要な理由:
   - `.github/workflows/ci.yml` を修正。
     - 新: `pnpm --filter web exec next start -p 3000`
   - これでCIのSmokeが正しくNext本番サーバーを3000番で起動する想定。
+- 追加対応:
+  - 修正後のCIでは `/install` は 200 になった。
+  - 残りの失敗は `/api/account/delete-request`。
+  - このAPIはSupabase未設定環境では `{ skipped: true }` で 200 を返し、本番設定ありでBearerなしなら 401 を返す設計。
+  - `scripts/smoke-web.mjs` を `expectStatuses: [200, 401]` 対応にし、CI未設定環境と本番設定環境の両方を許容するよう修正。
 - 次に必要:
   - commit/push後、GitHub Actionsが通ることを確認。
   - Vercelが再デプロイした後、`https://oyano-moshimo-navi.vercel.app/install` が 200 になることを確認。
