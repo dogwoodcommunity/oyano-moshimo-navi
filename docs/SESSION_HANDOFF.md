@@ -2586,3 +2586,23 @@ GitHubが必要な理由:
   - commit/push。
   - Vercel本番deploy。
   - 本番URL `https://oyano-moshimo-navi.vercel.app/install` で確認。
+
+## 2026-07-29 追記 94
+
+- 追記93の変更を保存・本番反映。
+- Git:
+  - commit: `552e350 Warm up app entry design`
+  - push: `main -> origin/main`
+- 注意:
+  - 一度 `apps/web` 直下で `npx vercel --prod --yes` を実行したところ、誤って別Vercelプロジェクト `dogwoodcommunity1/web` にリンクされ、`npm install` で失敗した。
+  - その際に生成された `apps/web/.vercel` と `apps/web/.gitignore` は削除済み。
+  - 今後Vercel本番deployは必ずリポジトリルート `/Users/ikedatetsuya/Documents/Codex/2026-07-05/zip-v0-3-web-expo-codex` で実行する。
+- 正しい本番deploy:
+  - project: `dogwoodcommunity1/oyano-moshimo-navi`
+  - deployment id: `dpl_ED9rBa3Y8mZwEXiDSxyfjTSjXukf`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-htbs1xucs-dogwoodcommunity1.vercel.app`
+- 本番確認:
+  - `curl -I https://oyano-moshimo-navi.vercel.app/install` は 200。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+  - `/install` は 200、主要導線・manifest・service workerもOK。
