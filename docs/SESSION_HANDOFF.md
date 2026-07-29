@@ -2468,3 +2468,23 @@ GitHubが必要な理由:
 - ユーザー確認URL:
   - 本番PWA追加ページ: `https://oyano-moshimo-navi.vercel.app/install`
   - iPhoneではSafariで開いて、共有ボタンから「ホーム画面に追加」。
+
+## 2026-07-29 追記 90
+
+- ユーザー確認:
+  - iPhoneで `oyano-moshimo-navi.vercel.app` を開いたところ、PWA確認ページが 404 になったスクリーンショットを共有。
+- 調査:
+  - `https://oyano-moshimo-navi.vercel.app/home` は 200。
+  - `https://oyano-moshimo-navi.vercel.app/install` は 404。
+  - GitHub Actionsの最新run `Add PWA install flow` が失敗していた。
+  - Next buildログ上では `/install` は生成されていたため、ページ実装ではなくデプロイ/CI側の問題。
+  - 失敗原因は `.github/workflows/ci.yml` のSmoke起動コマンド。
+    - 旧: `pnpm --filter web run start -- -p 3000`
+    - Next側で `-p` がプロジェクトディレクトリ扱いになり、`apps/web/-p` が存在しないとして失敗。
+- 対応:
+  - `.github/workflows/ci.yml` を修正。
+    - 新: `pnpm --filter web exec next start -p 3000`
+  - これでCIのSmokeが正しくNext本番サーバーを3000番で起動する想定。
+- 次に必要:
+  - commit/push後、GitHub Actionsが通ることを確認。
+  - Vercelが再デプロイした後、`https://oyano-moshimo-navi.vercel.app/install` が 200 になることを確認。
