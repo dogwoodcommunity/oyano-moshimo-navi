@@ -2536,3 +2536,23 @@ GitHubが必要な理由:
   - `manifest.webmanifest` JSON OK。
   - `next build` OK。
   - ローカル本番起動後、`node scripts/smoke-web.mjs http://localhost:3010` OK。
+
+## 2026-07-29 追記 92
+
+- 追記91の変更を本番へ反映。
+- Git:
+  - commit: `52f73cb Refine app entry design`
+  - push: `main -> origin/main`
+- Vercel:
+  - production deploy OK。
+  - deployment id: `dpl_Zu3gRbxmShkncY5qza1jwxwRihHN`
+  - production alias: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-k6j0bkspw-dogwoodcommunity1.vercel.app`
+- 本番確認:
+  - `curl -I https://oyano-moshimo-navi.vercel.app/install` は 200。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+  - `/install`、`/home`、`/start`、`/diagnosis`、`/manifest.webmanifest`、`/sw.js` など主要導線が 200。
+  - 認証必須APIは期待通り 401、Stripe checkoutは期待通り 400。
+- 次に見るなら:
+  - iPhoneで `https://oyano-moshimo-navi.vercel.app/install` を開き、入口が「PWA説明」ではなく「家族ボード入口」に見えるか確認。
+  - まだAI感が残る場合は、次は写真/イラスト/キャラクター素材を入れて、アプリ初回画面全体のトーンを再設計する。
