@@ -3487,4 +3487,10 @@ GitHubが必要な理由:
   - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。
 - 注意:
   - `review_exports/` は未追跡のまま残している。今回の変更には含めない。
-  - まだ本番デプロイ前。次に commit / push / Vercel production deploy を行う。
+  - 実装commit: `4e1ae55 Refine PWA family notebook experience`
+  - `origin/main` へpush済み。
+  - Vercel production deploy済み。
+    - Production: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-3ovkx2j10-dogwoodcommunity1.vercel.app`
+    - Deployment ID: `dpl_B5nH6ZCaZvzv59MsPrV7Ve8igSpC`
+  - `curl -I https://oyano-moshimo-navi.vercel.app/home` でHTTP 200確認済み。
