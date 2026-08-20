@@ -2762,7 +2762,19 @@ GitHubが必要な理由:
 - 注意:
   - 最初に `apps/web` 直下から `npx vercel --prod --yes --scope dogwoodcommunity1` を実行したところ、誤って別Vercelプロジェクト `web` にデプロイされ、`npm install` で失敗した。
   - 正しい本番はリポジトリルートの `.vercel/project.json` に紐づく `oyano-moshimo-navi`。以後デプロイは必ずリポジトリルートから実行する。
-  - この時点では `next.config.mjs` 修正のcommit/push/deploy前。この追記100以降で実施すること。
+  - Git commit/push/deployまで完了。
+  - commits:
+    - `9cddd6f Remove app entry interstitial`
+    - `348d22a Point root route to registration`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_B4NGWD6eUGes9bS6n9Kf7xCcuAt5`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-25etpjgbf-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/` 307, `location: /start`。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/install` 307。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 98
