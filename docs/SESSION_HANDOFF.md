@@ -38,6 +38,13 @@
   - `git diff --check` OK。
   - `npm run build --workspace web` OK。
   - ローカルdevは `http://localhost:3002/home` で起動確認。375px幅で未登録状態は横スクロールなし、CTA高さ58pxを確認。
+  - 本番deploy OK。
+    - Deployment ID: `dpl_5FtDYdf6tHoHmSkaVS7HPoEJs9MZ`
+    - Production URL: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-rgqprslsr-dogwoodcommunity1.vercel.app`
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。主要ページ/APIは全て期待ステータスで通過。
+- GitHub:
+  - 実装コミット `65f4342 Refresh home notebook design` を `main` へpush済み。
 - 注意:
   - in-app browserのlocalStorage注入が制限され、登録済み状態のブラウザ強制再現は未実施。ただしTypeScript/buildは通過し、登録済み分岐のJSX/CSSは実装済み。
 - 現在の実装方針は、当初の「Web入口 + Expo継続アプリ」から、ユーザー判断により「PWA/アプリのみで完結する家族の手帳」へ寄せている。
