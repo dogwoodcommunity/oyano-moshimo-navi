@@ -2862,6 +2862,50 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 103
+
+- ユーザー方針:
+  - 「家族ボード」はタスク管理だけでは足りない。
+  - 父母に固定せず、義父母・親戚など対象者ごとの「手帳」にする。
+  - 日々の体調、発言、入院・介護の変化、家族で集まったこと、写真/PDFを記録できるようにする。
+  - 記録をもとに、AIが次に確認することや備え方を相談できる状態にしたい。
+  - 2人目以降とAI相談は有料版の中心にする。
+  - 選択画面の意味が分かりにくい余計なチップ/説明は削る。
+- 対応:
+  - `apps/web/lib/store.ts`
+    - `DiaryEntry` / `DiaryAttachment` 型を追加。
+    - localStorage `oyano_diary_entries_v01` に日々の記録を保存する関数を追加。
+    - `addDiaryEntry()`、`listDiaryEntries()`、`diaryAdvice()` を追加。
+    - `diaryAdvice()` は本番AI導入前の安全なMVPとして、記録本文から医療/認知/お金/実家などの確認アドバイスを返す。
+  - `apps/web/app/home/page.tsx`
+    - 対象者カード内に「日々の記録」「対象者の手帳」を追加。
+    - 本文、変化状態、写真/PDF添付を入力できるようにした。
+    - 画像はプレビュー、PDF等はファイル名で表示。
+    - 最新記録と、記録内容からの次に確認することを表示。
+    - AI相談カードを有料版として追加。
+  - `apps/web/app/start/page.tsx`
+    - 見出しを「管理する人の、今の状況を選んでください。」へ変更。
+    - 父母固定ではなく、義父母・親戚なども後で名前入力できる説明へ変更。
+    - `このカードを押す` と右上の `選択` チップを削除し、カード内の自然な文言「この状況で登録する」へ変更。
+  - `apps/web/app/plans/page.tsx`
+    - 無料=1人目の家族ボード/日々の記録。
+    - Family Plus=複数対象者、写真/PDF容量、PDF出力、履歴保存。
+    - AI相談=Plus内機能として、対象者プロフィールと日々の記録を踏まえる相談機能へ整理。
+  - `apps/web/app/globals.css`
+    - 日々の記録、添付ファイル、最新記録、AI相談カードのスタイルを追加。
+    - 選択カードの新しい行動文スタイルを追加。
+    - mobileで日記入力とAI相談カードが縦積みになるよう調整。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - build時にSupabase JSのNode 22推奨警告が出るが、ビルド自体は成功。
+- 注意:
+  - この追記時点ではcommit/push/deploy前。
+  - 写真/PDF保存はまずPWA内localStorage MVP。Supabase Storage永続化は次フェーズ。
+  - 本格AI相談はまだUI/設計導線。OpenAI API連携・課金ゲート・要配慮情報同意の再確認が必要。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:

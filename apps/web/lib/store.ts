@@ -22,7 +22,26 @@ export type CaseRecord = {
   supportPackStatus?: "none" | "requested" | "paid" | "reviewing" | "report_ready";
 };
 
+export type DiaryAttachment = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  previewUrl?: string;
+};
+
+export type DiaryEntry = {
+  id: string;
+  caseId: string;
+  date: string;
+  mood: "stable" | "changed" | "urgent";
+  body: string;
+  attachments: DiaryAttachment[];
+  createdAt: string;
+};
+
 const STORAGE_KEY = "oyano_cases_v03";
+const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
 
 function readCases(): CaseRecord[] {
   if (typeof window === "undefined") return [];
@@ -40,6 +59,58 @@ export function listLocalCases(): CaseRecord[] {
 
 export function getLocalCase(caseId: string): CaseRecord | undefined {
   return readCases().find((item) => item.id === caseId);
+}
+
+function readDiaryEntries(): DiaryEntry[] {
+  if (typeof window === "undefined") return [];
+  const raw = window.localStorage.getItem(DIARY_STORAGE_KEY);
+  return raw ? JSON.parse(raw) as DiaryEntry[] : [];
+}
+
+function writeDiaryEntries(entries: DiaryEntry[]) {
+  window.localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+}
+
+export function listDiaryEntries(caseId: string): DiaryEntry[] {
+  return readDiaryEntries()
+    .filter((item) => item.caseId === caseId)
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+
+export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
+  const entry: DiaryEntry = {
+    ...input,
+    id: crypto.randomUUID(),
+    createdAt: new Date().toISOString()
+  };
+  writeDiaryEntries([entry, ...readDiaryEntries()]);
+  return entry;
+}
+
+export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] {
+  const text = entry.body;
+  const advice = new Set<string>();
+
+  if (entry.mood === "urgent") {
+    advice.add("急な変化がある時は、まず医療・介護の窓口と家族の連絡順を確認してください。");
+  }
+  if (/入院|病院|退院|医師|看護|薬|服薬/.test(text)) {
+    advice.add("病院名、担当窓口、退院見込み、薬の変更を記録しておくと次の相談が早くなります。");
+  }
+  if (/認知|忘れ|徘徊|怒|混乱|判断/.test(text)) {
+    advice.add("判断力や記憶の変化は、日付・発言・困った場面を事実ベースで残しておくと相談時に役立ちます。");
+  }
+  if (/お金|通帳|保険|年金|支払|請求/.test(text)) {
+    advice.add("暗証番号は保存せず、書類の存在と保管場所だけを家族で共有してください。");
+  }
+  if (/家|実家|片付|鍵|写真|荷物/.test(text)) {
+    advice.add("実家や荷物の記録は、部屋ごとの写真と鍵・ライフラインの状態をセットで残すと整理しやすくなります。");
+  }
+  if (advice.size === 0) {
+    advice.add("今日の記録は残せています。次は、家族に確認したいことが1つあるかだけ見ておくと十分です。");
+  }
+
+  return Array.from(advice).slice(0, 3);
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T | null> {

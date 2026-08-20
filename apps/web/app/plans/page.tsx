@@ -8,54 +8,54 @@ export const metadata: Metadata = {
 
 const plans = [
   {
-    name: "無料ポータル",
+    name: "無料",
     price: "0円",
-    audience: "まず何をすればいいか知りたい家族",
+    audience: "まず1人目を整理したい家族",
     items: [
-      "状況別ガイド",
+      "1人目の家族ボード",
       "状況整理チェック",
       "初回やることリスト",
-      "相談先カテゴリ整理"
+      "日々の記録"
     ],
     cta: "無料で始める",
-    href: "/start",
+    href: "/",
     featured: false
   },
   {
-    name: "家族共有アプリ",
-    price: "IAP想定",
-    audience: "継続して家族で管理したい人",
+    name: "Family Plus",
+    price: "月額想定",
+    audience: "2人目以降も管理したい家族",
     items: [
-      "家族共有ボード",
-      "期限通知",
-      "実家メモ・写真管理",
-      "タイムライン保存"
+      "複数対象者の管理",
+      "写真・PDF容量の拡張",
+      "家族会議用PDF",
+      "履歴保存とカスタム通知"
     ],
-    cta: "チェック後に引き継ぐ",
-    href: "/start",
+    cta: "Plusを確認する",
+    href: "/plans",
     featured: true
   },
   {
-    name: "困った時の整理サポート",
-    price: "Web決済",
-    audience: "家族会議や相談前に人の整理が欲しい人",
+    name: "AI相談",
+    price: "Plus内機能",
+    audience: "毎回説明せずに相談したい人",
     items: [
-      "入力内容の人力レビュー",
-      "家族会議用メモ",
-      "相談先比較軸",
-      "次に確認する論点整理"
+      "対象者プロフィールを参照",
+      "日々の記録を踏まえた助言",
+      "今聞くべき質問の提案",
+      "専門判断は断定しない安全設計"
     ],
-    cta: "内容を見る",
-    href: "/support-pack",
+    cta: "設計を見る",
+    href: "/safety",
     featured: false
   }
 ];
 
 const revenueRules = [
-  "不安を煽って売らず、無料で整理価値を先に出す",
-  "アプリ内には外部Web決済CTAを置かない",
+  "1人目と基本の記録は無料で価値を出す",
+  "2人目以降、容量、PDF、AI相談を有料の中心にする",
   "法律・税務判断の断定や成約課金に寄せない",
-  "保存・共有・通知・人力整理に対して課金する"
+  "保存・共有・通知・長期相談に対して課金する"
 ];
 
 export default function PlansPage() {
@@ -63,9 +63,9 @@ export default function PlansPage() {
     <main className="container">
       <section className="result-summary">
         <p className="pill">料金と使い方</p>
-        <h1 className="page-title">無料で整理し、必要になった時だけ保存・共有・人力サポートへ。</h1>
+        <h1 className="page-title">1人目は無料。複数管理とAI相談は有料へ。</h1>
         <p className="lead">
-          親のもしもナビは、最初から売り込むサイトではありません。まず不安を整理し、継続管理や人のレビューが必要な家族だけが有料機能へ進む設計です。
+          親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人目を記録し、2人目以降やAI相談が必要になった家族だけが有料機能へ進みます。
         </p>
       </section>
 

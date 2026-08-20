@@ -79,8 +79,8 @@ export default function StartPage() {
           ‹ もどる
         </button>
         <p className="toc-kicker">1人目の登録</p>
-        <h1>親は今、どの状況に近いですか？</h1>
-        <p>当てはまるカードを1つだけ選んでください。文字の上でも、余白でも、カード全体をタップできます。</p>
+        <h1>管理する人の、今の状況を選んでください。</h1>
+        <p>父母、義父母、親戚など、対象者はあとで名前を入力できます。まずは近い状況を1つ選びます。</p>
       </section>
 
       <section className="notebook-card toc-book" aria-label="親の状況を選ぶ">
@@ -102,11 +102,10 @@ export default function StartPage() {
                       {isChoosing ? <span className="toc-checkmark">✓</span> : <span className="toc-symbol" />}
                     </span>
                     <span className="toc-main">
-                      <span className="toc-helper">このカードを押す</span>
                       <strong className="toc-title">{item.title}</strong>
                       <span className="toc-hint">{item.hint}</span>
+                      <span className="toc-action-text">この状況で登録する</span>
                     </span>
-                    <span className="current-chip">{isChoosing ? "開いています" : "選択"}</span>
                     <span className="toc-arrow" aria-hidden="true">
                       →
                     </span>
