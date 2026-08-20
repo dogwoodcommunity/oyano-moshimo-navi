@@ -35,18 +35,18 @@
   - Service Workerをさらに `oyano-moshimo-navi-v6` に更新。
 - 直近コミット:
   - `89e79d9 Fix PWA logo and stale page cache`
-  - ヘッダー緑四角の追加修正はcommit/push/deploy前。
+  - `7277488 Replace cached header logo pseudo element`
 - 直近本番デプロイ:
-  - Deployment ID: `dpl_BeiHaTjnqV9qqYb26QcoEqBxqJJm`
+  - Deployment ID: `dpl_2eKp9rgi3aaLxFwz5a2zzBvVxqj3`
   - Production URL: `https://oyano-moshimo-navi.vercel.app`
-  - Deployment URL: `https://oyano-moshimo-navi-n90oajfc0-dogwoodcommunity1.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-mria21kko-dogwoodcommunity1.vercel.app`
 - 直近検証:
   - `npm run typecheck --workspace apps/web` OK。
   - `git diff --check` OK。
   - `npm run build --workspace apps/web` OK。
   - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
-  - `curl -L https://oyano-moshimo-navi.vercel.app/sw.js` で `oyano-moshimo-navi-v5` を確認。
-  - `curl -L https://oyano-moshimo-navi.vercel.app/` で critical CSS が `/brand/watch-bird-mark.svg` を参照していることを確認。
+  - `curl -L https://oyano-moshimo-navi.vercel.app/sw.js` で `oyano-moshimo-navi-v6` を確認。
+  - `curl -L https://oyano-moshimo-navi.vercel.app/` で header が `.app-brand` と `<img class="app-brand-logo" src="/brand/watch-bird-mark.svg">` になっていることを確認。
   - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
 - 注意:
   - iPhone/PWA側で古いService Workerが残っている場合、タブまたはホーム画面PWAを一度閉じて開き直すと更新される。
