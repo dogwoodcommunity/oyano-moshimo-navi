@@ -3274,3 +3274,20 @@ GitHubが必要な理由:
   - 写真/PDFは今回「日記上の添付メモ」まで。実ファイル選択/アップロードは次工程で `expo-image-picker` / `expo-document-picker` 等を入れて実装する。
   - 本番Supabaseへは新規DB差分の投入が必要。個別なら `supabase/person_notebook_hardening.sql`、一括なら更新済み `supabase/production_pending_hardening.sql`。
   - `review_exports/` は未追跡のまま残っている。
+
+## 2026-08-20 追記 101
+- 実施:
+  - 追記100の「1人目の管理手帳・日記基盤」実装をコミットし、GitHub `main` にpushした。
+- GitHub:
+  - commit: `e59ba96 Build person notebook and diary foundation`
+  - remote: `https://github.com/dogwoodcommunity/oyano-moshimo-navi.git`
+  - branch: `main`
+- 検証済み:
+  - `npm run typecheck --workspace mobile` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - root `npm run typecheck` は環境に `pnpm` がなく `sh: pnpm: command not found` で失敗。web/mobile個別は通っている。
+- 次候補:
+  - 本番Supabaseに `supabase/person_notebook_hardening.sql` を投入して、`verify_setup.sql` または `verify_compact.sql` で全true確認。
+  - 日記の写真/PDFを「メモ」から実ファイルアップロードへ拡張する。
+  - 1人目管理手帳の画面を実機で確認し、文字サイズ・余白・CTAのわかりやすさを磨く。
