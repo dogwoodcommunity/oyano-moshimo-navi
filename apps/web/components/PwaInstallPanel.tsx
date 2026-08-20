@@ -79,7 +79,7 @@ export function PwaInstallPanel() {
           入院、退院後の在宅、介護、亡くなった後の手続き、実家の片付け。親ごとに状況を登録して、今やることを家族で確認できます。
         </p>
         <Link className="entry-main-button" href="/start">
-          1人目を登録する
+          1人目の手帳を作る
           <span>親の状況を選んで、確認リストを作ります</span>
         </Link>
       </section>

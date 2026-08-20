@@ -5,6 +5,7 @@ import Link from "next/link";
 import { statusLabel, targetLabel } from "@oyano/shared";
 import {
   addDiaryEntry,
+  createLocalId,
   diaryAdvice,
   listDiaryEntries,
   listLocalCases,
@@ -30,12 +31,12 @@ const emptyDiaryForm: DiaryFormState = {
 };
 
 const healthNotes = [
-  { icon: "食", title: "食事・水分", note: "食事や水分量が気になる" },
-  { icon: "薬", title: "薬・服薬", note: "薬・服薬で気になることがある" },
-  { icon: "体", title: "体調", note: "体調は安定している" },
-  { icon: "歩", title: "歩行・転倒", note: "歩行・転倒が心配" },
-  { icon: "話", title: "発言・気分", note: "物忘れ・発言の変化があった" },
-  { icon: "連", title: "病院・介護先", note: "病院・介護先から連絡があった" }
+  { tone: "meal", title: "食事・水分", note: "食事や水分量が気になる" },
+  { tone: "medicine", title: "薬・服薬", note: "薬・服薬で気になることがある" },
+  { tone: "condition", title: "体調", note: "体調に変化があった" },
+  { tone: "walking", title: "歩行・転倒", note: "歩行・転倒が心配" },
+  { tone: "mood", title: "発言・気分", note: "物忘れ・発言の変化があった" },
+  { tone: "contact", title: "病院・介護先", note: "病院・介護先から連絡があった" }
 ];
 
 const emptyNotebookPromises = [
@@ -50,21 +51,6 @@ const emptyNotebookPromises = [
   {
     title: "Plusで家族共有とAI相談",
     body: "2人目以降、招待制の家族共有、この人の記録を踏まえたAI相談を有料で広げます。"
-  }
-];
-
-const activeNotebookPromises = [
-  {
-    title: "この人の情報が1冊にまとまる",
-    body: "基本情報、病院・介護先、薬、書類の場所、日記、写真、PDFを人ごとに分けて残します。"
-  },
-  {
-    title: "日々の変化から相談しやすくなる",
-    body: "発言、体調、病院連絡、家族で決めたことを時系列で残すので、あとから説明し直す手間を減らせます。"
-  },
-  {
-    title: "必要になった時だけPlusで広げる",
-    body: "2人目以降、家族招待、AI相談、PDF出力はPlusで追加。まず1人目をしっかり作ります。"
   }
 ];
 
@@ -183,6 +169,22 @@ function profileCompletion(profile: PersonProfile) {
   };
 }
 
+function missingProfileItems(profile: PersonProfile) {
+  const items = [
+    ["フルネーム", profile.fullName],
+    ["呼び名", profile.displayName],
+    ["関係", profile.relationship],
+    ["生年月日", profile.birthDate],
+    ["いまの状態", profile.careStatus],
+    ["主な連絡窓口", profile.keyContact],
+    ["病院・施設・ケア先", profile.hospitalOrFacility],
+    ["薬・注意点", profile.medicationNote],
+    ["書類・鍵の保管メモ", profile.documentLocationNote]
+  ] as const;
+
+  return items.filter(([, value]) => !value?.trim()).map(([label]) => label);
+}
+
 function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
   const answers = caseRecord.answers;
   return [
@@ -224,6 +226,7 @@ export default function FamilyBoardPage() {
   const activeForm = activeCase ? forms[activeCase.id] ?? emptyDiaryForm : emptyDiaryForm;
   const activeProfile = activeCase ? profileForms[activeCase.id] ?? profileSeed(activeCase) : undefined;
   const activeProfileCompletion = activeProfile ? profileCompletion(activeProfile) : { filled: 0, total: 0, percent: 0 };
+  const activeMissingProfileItems = activeProfile ? missingProfileItems(activeProfile) : [];
   const attachments = activeEntries.flatMap((entry) =>
     entry.attachments.map((file) => ({ ...file, entryDate: entry.date }))
   );
@@ -237,45 +240,6 @@ export default function FamilyBoardPage() {
     { value: "日記", label: "毎日の記録", detail: "写真・PDFも一緒に保存" },
     { value: "Plus", label: "必要なら拡張", detail: "2人目・家族共有・AI相談" }
   ];
-  const promiseCards = activeCase ? activeNotebookPromises : emptyNotebookPromises;
-  const controlCards = activeCase ? [
-    {
-      label: "本人情報",
-      value: `${activeProfileCompletion.percent}%`,
-      title: "プロフィールを育てる",
-      body: "フルネーム、生年月日、関係、病院・施設、薬、書類の保管場所を少しずつ埋めます。"
-    },
-    {
-      label: "日記",
-      value: "今日",
-      title: "変化を1分で残す",
-      body: "体調、発言、病院連絡、家族で決めたことを日付つきで残します。写真やPDFも一緒に置けます。"
-    },
-    {
-      label: "保管庫",
-      value: `${attachments.length}件`,
-      title: "写真・PDFをまとめる",
-      body: "診断書、保険証券、施設資料、実家の写真などを、この人の記録として見返せます。"
-    },
-    {
-      label: "期限",
-      value: dueText(nextTask),
-      title: "次にやることを見る",
-      body: nextTask?.title ?? "状況に合わせて、期限のある確認リストを表示します。"
-    },
-    {
-      label: "共有",
-      value: "Plus",
-      title: "家族に招待して共有",
-      body: "リンクを知っているだけでは見られない、ログイン制の家族共有として広げます。"
-    },
-    {
-      label: "相談",
-      value: "Plus",
-      title: "記録を踏まえてAI相談",
-      body: "この人のプロフィールと日記を前提に、次に確認することを相談できる有料機能へつなげます。"
-    }
-  ] : [];
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
     setForms((current) => ({
@@ -322,7 +286,7 @@ export default function FamilyBoardPage() {
   async function attachFiles(caseId: string, fileList: FileList | null) {
     const files = Array.from(fileList ?? []).slice(0, 4);
     const nextAttachments = await Promise.all(files.map(async (file) => ({
-      id: crypto.randomUUID(),
+      id: createLocalId("attachment"),
       name: file.name,
       type: file.type || "application/octet-stream",
       size: file.size,
@@ -353,17 +317,19 @@ export default function FamilyBoardPage() {
   }
 
   return (
-    <main className="container board-page family-notebook-page">
-      <section className="notebook-identity-card" aria-label="サービスの説明">
-        <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-        <div>
-          <strong>親のもしもナビ</strong>
-          <span>MOSHIMO NAVI</span>
-        </div>
-        <p>家族で進める、親・親族ごとの管理手帳</p>
-      </section>
+    <main className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
+      {!activeCase ? (
+        <section className="notebook-identity-card" aria-label="サービスの説明">
+          <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+          <div>
+            <strong>親のもしもナビ</strong>
+            <span>MOSHIMO NAVI</span>
+          </div>
+          <p>家族で進める、親・親族ごとの管理手帳</p>
+        </section>
+      ) : null}
 
-      <section className="notebook-hero">
+      <section className={`notebook-hero ${activeCase ? "is-person-hero" : ""}`}>
         <div className="notebook-hero-copy">
           <p className="pill">{activeCase ? "この人の管理手帳" : "まず1人目から"}</p>
           <h1>{activeCase ? `${personName(activeCase)}の管理手帳` : "親の状況を、1人ずつ管理します。"}</h1>
@@ -379,7 +345,7 @@ export default function FamilyBoardPage() {
                 <a className="secondary" href="#person-profile">プロフィールを整える</a>
               </>
             ) : (
-              <Link className="button" href="/start">1人目を登録する</Link>
+              <Link className="button" href="/start">1人目の手帳を作る</Link>
             )}
           </div>
         </div>
@@ -400,7 +366,7 @@ export default function FamilyBoardPage() {
         </div>
       </section>
 
-      {cases.length > 0 ? (
+      {cases.length > 1 ? (
         <section className="person-switcher" aria-label="対象者を切り替える">
           {cases.map((caseRecord, index) => (
             <button
@@ -414,51 +380,73 @@ export default function FamilyBoardPage() {
               <small>{statusLabel(caseRecord.selectedStatus)}</small>
             </button>
           ))}
-          <Link className="person-add-card" href="/plans">
-            <span>Plus</span>
-            <strong>＋ 追加</strong>
-            <small>2人目以降</small>
-          </Link>
         </section>
       ) : null}
 
-      <section className="board-stats notebook-stats" aria-label="選択中の対象者の状況">
-        {stats.map((item) => (
-          <div key={item.label}>
-            <strong>{item.value}</strong>
-            <span>{item.label}</span>
-            <small>{item.detail}</small>
-          </div>
-        ))}
-      </section>
-
-      <section className="notebook-promise-grid" aria-label="このアプリでできること">
-        {promiseCards.map((item) => (
-          <article key={item.title}>
-            <strong>{item.title}</strong>
-            <p>{item.body}</p>
-          </article>
-        ))}
-      </section>
-
-      {activeCase ? (
-        <section className="notebook-control-map" aria-label={`${personName(activeCase)}の手帳で管理できること`}>
-          <div className="section-title-row">
-            <div>
-              <p className="pill">この人のマイページ</p>
-              <h2>{personName(activeCase)}のことを、ここから毎日少しずつ整えます。</h2>
-            </div>
-          </div>
-          <div className="control-map-grid">
-            {controlCards.map((item) => (
-              <article key={item.title}>
-                <span>{item.label}</span>
+      {!activeCase ? (
+        <>
+          <section className="board-stats notebook-stats" aria-label="このアプリで始められること">
+            {stats.map((item) => (
+              <div key={item.label}>
                 <strong>{item.value}</strong>
-                <h3>{item.title}</h3>
+                <span>{item.label}</span>
+                <small>{item.detail}</small>
+              </div>
+            ))}
+          </section>
+
+          <section className="notebook-promise-grid" aria-label="このアプリでできること">
+            {emptyNotebookPromises.map((item) => (
+              <article key={item.title}>
+                <strong>{item.title}</strong>
                 <p>{item.body}</p>
               </article>
             ))}
+          </section>
+        </>
+      ) : null}
+
+      {activeCase ? (
+        <section className="today-overview-panel" aria-label={`${personName(activeCase)}の今日の管理`}>
+          <div className="section-title-row">
+            <div>
+              <p className="pill">今日見るところ</p>
+              <h2>{personName(activeCase)}の管理は、まずここだけ見れば大丈夫です。</h2>
+            </div>
           </div>
+          <div className="today-overview-grid">
+            <a className="today-overview-card is-primary" href="#today-diary">
+              <span>記録</span>
+              <strong>今日あったことを書く</strong>
+              <p>体調、発言、病院・介護先からの連絡、家族で決めたことを1分で残します。</p>
+            </a>
+            <Link className="today-overview-card" href={`/result/${activeCase.id}`}>
+              <span>期限</span>
+              <strong>{nextTask?.title ?? "確認リストを見る"}</strong>
+              <p>{nextTask ? `${dueText(nextTask)}。忘れないように、この人のタスクとして残します。` : "状況を選ぶと、期限つきの確認リストができます。"}</p>
+            </Link>
+            <a className="today-overview-card" href="#person-profile">
+              <span>本人情報</span>
+              <strong>プロフィール {activeProfileCompletion.percent}%</strong>
+              <p>
+                {activeMissingProfileItems.length > 0
+                  ? `次は「${activeMissingProfileItems.slice(0, 2).join("」「")}」を足すと、家族に説明しやすくなります。`
+                  : "基本情報はかなり整っています。変化があれば更新してください。"}
+              </p>
+            </a>
+          </div>
+        </section>
+      ) : null}
+
+      {activeCase ? (
+        <section className="board-stats notebook-stats active-notebook-stats" aria-label="選択中の対象者の状況">
+          {stats.map((item) => (
+            <div key={item.label}>
+              <strong>{item.value}</strong>
+              <span>{item.label}</span>
+              <small>{item.detail}</small>
+            </div>
+          ))}
         </section>
       ) : null}
 
@@ -612,11 +600,13 @@ export default function FamilyBoardPage() {
               </div>
               <div className="health-chip-grid">
                 {healthNotes.map((item) => (
-                  <button key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
-                    <span aria-hidden="true">{item.icon}</span>
-                    <strong>{item.title}</strong>
-                    <small>{item.note}</small>
-                    <em>記録に入れる</em>
+                  <button className={`health-chip is-${item.tone}`} key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
+                    <span aria-hidden="true" />
+                    <div>
+                      <strong>{item.title}</strong>
+                      <small>{item.note}</small>
+                    </div>
+                    <em>記録に追加</em>
                   </button>
                 ))}
               </div>
@@ -795,18 +785,27 @@ export default function FamilyBoardPage() {
               </div>
               <Link className="secondary" href="/plans">Plusを見る</Link>
             </article>
+
+            <article className="person-add-card side-add-person-card">
+              <span>必要になったら</span>
+              <strong>2人目・3人目を別の手帳で管理</strong>
+              <small>Plusで父母、義父母、親戚を分けて登録できます。</small>
+              <Link className="secondary" href="/plans">追加方法を見る</Link>
+            </article>
           </aside>
         </section>
       ) : null}
 
-      <section className="board-plus notebook-plus">
-        <div>
-          <p className="pill">Family Plus</p>
-          <h2>無料は1人目の手帳から。必要になったらPlusで広げる。</h2>
-          <p>2人目以降の登録、家族への招待共有、この人の記録を踏まえたAI相談、PDF出力をPlusで使える設計にします。</p>
-        </div>
-        <Link className="button" href="/plans">プランを見る</Link>
-      </section>
+      {!activeCase ? (
+        <section className="board-plus notebook-plus">
+          <div>
+            <p className="pill">Family Plus</p>
+            <h2>無料は1人目の手帳から。必要になったらPlusで広げる。</h2>
+            <p>2人目以降の登録、家族への招待共有、この人の記録を踏まえたAI相談、PDF出力をPlusで使える設計にします。</p>
+          </div>
+          <Link className="button" href="/plans">プランを見る</Link>
+        </section>
+      ) : null}
     </main>
   );
 }

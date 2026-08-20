@@ -6,7 +6,7 @@ export default function AdminCasesPage() {
       <section className="admin-hero compact">
         <p className="pill">Cases</p>
         <h1 className="page-title">Admin cases</h1>
-        <p className="lead">Web入口で作成された診断caseを確認します。Supabase未設定時はlocalStorageのデモcaseを表示します。</p>
+        <p className="lead">PWA/アプリで作成されたcaseを確認します。Supabase未設定時はlocalStorageのデモcaseを表示します。</p>
       </section>
       <section className="panel">
         <AdminCases />

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { buildDiagnosisResult, targetLabel, type DiagnosisAnswers } from "@oyano/shared";
 import { getLocalCase, type CaseRecord } from "@/lib/store";
 
@@ -28,8 +28,6 @@ function normalizeAnswers(record: CaseRecord): DiagnosisAnswers {
 
 export default function ResultPage() {
   const params = useParams<{ caseId: string }>();
-  const searchParams = useSearchParams();
-  const supportPackResult = searchParams.get("support_pack");
   const [record, setRecord] = useState<CaseRecord | undefined>();
   const [loaded, setLoaded] = useState(false);
   const answers = useMemo(() => record ? normalizeAnswers(record) : undefined, [record]);
@@ -58,17 +56,14 @@ export default function ResultPage() {
         <section className="panel result-missing">
           <p className="pill">整理結果</p>
           <h1 className="page-title">整理結果が見つかりませんでした。</h1>
-          <p className="lead">同じ端末で、もう一度「1人目の登録」から状況を選んでください。</p>
-          <Link className="button" href="/start">1人目を登録する</Link>
+          <p className="lead">同じ端末の家族ボードに戻って、管理中の手帳を確認してください。</p>
+          <Link className="button" href="/home">家族ボードへ戻る</Link>
         </section>
       </main>
     );
   }
 
   const target = targetLabel(answers);
-  const supportPackHref = record?.handoffToken
-    ? `/support-pack?${new URLSearchParams({ caseId: params.caseId, checkoutToken: record.handoffToken }).toString()}`
-    : `/support-pack?caseId=${params.caseId}`;
   const resultValueItems = [
     {
       title: "日々の変化を残す",
@@ -90,8 +85,8 @@ export default function ResultPage() {
   const notebookPlanItems = [
     {
       label: "無料",
-      title: `${target}の管理手帳を作る`,
-      body: "この整理結果を1人目のマイページに保存します。プロフィール、日記、写真、PDF、期限リストをこの人ごとに管理できます。"
+      title: `${target}の管理手帳に保存済み`,
+      body: "この整理結果は、この人の手帳に残ります。プロフィール、日記、写真、PDF、期限リストをあとから育てられます。"
     },
     {
       label: "毎日",
@@ -156,7 +151,7 @@ export default function ResultPage() {
               <li>家族共有・AI相談・2人目以降はPlusで拡張</li>
             </ul>
           </div>
-          <Link className="button" href="/home">無料でこの人の手帳を作る</Link>
+          <Link className="button" href="/home">この人の手帳を開く</Link>
         </div>
       </section>
 
@@ -215,7 +210,7 @@ export default function ResultPage() {
         <p className="pill">次にすること</p>
         <h2>{target}の管理手帳として続けます。</h2>
         <p>
-          期限のあるタスク、担当未定、家族に聞くこと、日々の記録をこの人のマイページで進めます。
+          期限のあるタスク、担当未定、家族に聞くこと、日々の記録をこの人の管理手帳で進めます。
           あとから状況が変わったら、同じ対象者として更新できます。
         </p>
         <p className="hint">
@@ -235,33 +230,6 @@ export default function ResultPage() {
           <Link className="button" href="/home">この人の管理手帳へ進む</Link>
           <Link className="secondary" href="/plans">家族共有はPlusで設定</Link>
         </div>
-      </section>
-
-      <section className="board-plus" style={{ marginTop: 18 }}>
-        <div>
-          <p className="pill">Family Plus</p>
-          <h2>2人目以降、PDF、履歴保存が必要なら。</h2>
-          <p>父母・義父母を分けて管理したい、家族会議用PDFを出したい、写真や履歴を残したい場合に有料プランを案内します。</p>
-        </div>
-        <Link className="button" href="/plans">有料プランを見る</Link>
-      </section>
-
-      <section className="panel" style={{ marginTop: 18 }}>
-        <h2>発動サポートパック</h2>
-        {supportPackResult === "success" ? (
-          <p className="notice success">申し込みを受け付けました。運営側で内容を確認します。</p>
-        ) : null}
-        {supportPackResult === "cancel" ? (
-          <p className="notice">申し込みは完了していません。必要になった時に、もう一度この画面から進めます。</p>
-        ) : null}
-        <p>
-          入力内容の人力レビュー、家族会議用レポート、専門家・業者候補整理をWebで申し込む商品です。
-          判断を代行するものではなく、家族で次に確認する順番を整理します。
-        </p>
-        <div className="actions">
-          <Link className="button" href={supportPackHref}>内容を確認して申し込む</Link>
-        </div>
-        <p className="hint">現在の状態: {record?.supportPackStatus ?? "none"}</p>
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>

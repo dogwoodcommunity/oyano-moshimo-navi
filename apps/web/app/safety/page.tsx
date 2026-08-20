@@ -32,7 +32,7 @@ export default function SafetyPage() {
         <p className="pill">安心設計</p>
         <h1 className="page-title">親の大事な情報を扱うから、やらないことを先に決める。</h1>
         <p className="lead">
-          親のもしもナビは、家族の不安を整理するためのサービスです。便利さだけを増やすのではなく、保存しない情報、断定しない判断、課金の線引きを明確にします。
+          親のもしもナビは、家族の不安を整理するためのサービスです。便利さだけを増やすのではなく、保存しない情報、断定しない判断、共有するときの守り方を明確にします。
         </p>
         <div className="actions">
           <Link className="button" href="/home">家族ボードへ戻る</Link>

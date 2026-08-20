@@ -13,8 +13,8 @@ const criticalCss = `
   .shell{min-height:100vh}
   .nav{align-items:center;background:rgba(246,247,241,.96);border-bottom:1px solid rgba(217,226,220,.82);display:flex;gap:16px;justify-content:space-between;min-height:66px;padding:14px 24px;position:sticky;top:0;z-index:20}
   .app-brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
-  .app-brand-mark{align-items:center;background:#fff;border:1px solid rgba(217,226,220,.95);border-radius:16px;box-shadow:0 8px 18px rgba(28,48,39,.08);display:inline-flex;height:44px;justify-content:center;overflow:hidden;width:44px}
-  .app-brand-logo{display:block;height:38px;width:38px}
+  .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
+  .app-brand-logo{display:block;height:44px;width:44px}
   .navlinks{color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:18px}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}

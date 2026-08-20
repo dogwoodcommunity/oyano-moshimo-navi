@@ -3428,3 +3428,63 @@ GitHubが必要な理由:
   - pushed to `origin/main`
   - Vercel production: `https://oyano-moshimo-navi.vercel.app`
   - deployment id: `dpl_ALhYr43eZgJi48QmMg262QayoLaJ`
+
+## 2026-08-20 追記 106
+
+- ユーザー指摘:
+  - 「進めてくれ。俺が言いたいことわかるやろ。全部見直してくれ」
+  - 基本方針はPWA/アプリのみで完結。`Web入口 -> アプリ` の説明や、内部の事業方針っぽい表示はいらない。
+  - 1人目登録済みなのに、また1人目登録ボタンが出る/似た導線がバラバラに出ると混乱する。
+  - 登録後はLPではなく、その人の管理手帳・マイページとして見せるべき。
+- 判断:
+  - `/home` をPWA/アプリ本体の家族ボードとして扱う。
+  - 未登録時だけ「1人目の手帳を作る」を見せる。
+  - 登録済み時は「今日見るところ」「今日の記録」「期限」「本人情報」を最初に見せ、登録導線・プロダクト説明カードは隠す。
+  - `/result/[caseId]` はサポート販売ページではなく、整理結果から管理手帳へ戻す画面にする。
+  - `/plans`、`/safety`、`/support-pack`、`/admin/cases` の古い `Web入口` / 内部方針っぽい文言をユーザー向け表現へ寄せる。
+- 対応:
+  - `apps/web/app/home/page.tsx`
+    - 登録済み状態に `has-active-case`、未登録状態に `is-empty-case` を付与。
+    - 登録済みではロゴ付き説明カードを非表示。
+    - `1人目を登録する` を `1人目の手帳を作る` に変更。
+    - 登録済みでは対象者切り替えを複数人がいる時だけ表示。
+    - 登録済みでは「今日見るところ」を数字カードより上に移動。
+    - 「今日あったことを書く」「期限」「本人情報」の3カードを最初の操作にした。
+    - 2人目以降の追加は登録済みサイドカードに移し、Plusの補助導線として表示。
+  - `apps/web/app/globals.css`
+    - 登録済みヒーローを濃緑LP風から、白い手帳カード風に変更。
+    - スマホ登録済みではヒーロー内プレビューを非表示にし、操作カードが上に来るよう調整。
+    - 先頭の緑四角に見えるロゴ枠を廃止し、鳥ロゴをそのまま表示。
+    - 今日の操作カードと健康チェックカードに押下フィードバック/touch-actionを追加。
+    - 健康チェックの漢字アイコンを廃止し、色面+小さなドットの抽象アイコンに変更。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 見つからない時は `/home` へ戻す。
+    - 「管理手帳に保存済み」「この人の手帳を開く」へ変更。
+    - 結果画面下部の発動サポートパック申込ブロックとFamily Plus帯を削除。
+  - `apps/web/app/plans/page.tsx`
+    - `無料ポータル`、`課金方針` の表現を削除。
+    - FreeのCTAを `/home` へ統一。
+  - `apps/web/app/safety/page.tsx`
+    - `課金の線引き` をユーザー向けの `共有するときの守り方` に変更。
+  - `apps/web/app/support-pack/SupportPackClient.tsx`
+    - 直接アクセス時の文言を「整理結果」起点から「この人の管理手帳」起点に変更。
+  - `apps/web/app/admin/cases/page.tsx`
+    - `Web入口` を `PWA/アプリ` に変更。
+  - `apps/web/app/start/page.tsx`
+    - 戻る先を `/home` に変更。
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - `1人目を登録する` を `1人目の手帳を作る` に変更。
+  - `apps/web/public/sw.js`
+    - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v12` に更新。
+- 確認:
+  - ローカル `http://localhost:3010/home` を起動して、登録済みスマホ幅で表示確認。
+  - 登録済み状態では、最初に `今日見るところ`、`今日あったことを書く`、`期限`、`本人情報` が見える。
+  - 登録済み状態では `1人目を登録する` や重複する大きな登録CTAは表示されない。
+  - `rg` で `1人目を登録`、`Payment boundary`、`Business policy`、`Web入口`、`この人のマイページ`、`内容を確認して申し込む`、`状況整理チェックへ`、`課金方針`、`課金の線引き`、`Web入口とExpo` が `apps/web` に残っていないことを確認。
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。
+  - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。
+- 注意:
+  - `review_exports/` は未追跡のまま残している。今回の変更には含めない。
+  - まだ本番デプロイ前。次に commit / push / Vercel production deploy を行う。

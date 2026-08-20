@@ -18,7 +18,7 @@ export function SupportPackClient() {
   async function startCheckout() {
     if (!caseId) return;
     if (!checkoutToken) {
-      setMessage("整理結果の画面から申し込みを開き直してください。");
+      setMessage("この人の管理手帳から、必要な時にもう一度開いてください。");
       return;
     }
 
@@ -53,7 +53,7 @@ export function SupportPackClient() {
       setMessage(body.error === "contact_email_and_consent_required"
         ? "連絡先メールと連絡同意を確認してください。"
         : body.error === "checkout_token_required" || body.error === "invalid_checkout_token"
-          ? "整理結果の画面から申し込みを開き直してください。"
+          ? "この人の管理手帳から、必要な時にもう一度開いてください。"
         : "申し込み画面を開けませんでした。時間をおいてもう一度お試しください。");
       return;
     }
@@ -98,10 +98,10 @@ export function SupportPackClient() {
       </label>
       <div className="actions">
         <button className="button" disabled={!caseId || !checkoutToken || submitting} onClick={startCheckout}>
-          {submitting ? "準備しています" : caseId && checkoutToken ? "Stripeの申し込み画面へ進む" : "整理結果の画面から申し込む"}
+          {submitting ? "準備しています" : caseId && checkoutToken ? "Stripeの申し込み画面へ進む" : "管理手帳から開いてください"}
         </button>
       </div>
-      {!checkoutToken ? <p className="hint">このページを直接開いた場合は、整理結果の画面に戻って「内容を確認して申し込む」から進んでください。</p> : null}
+      {!checkoutToken ? <p className="hint">このページを直接開いた場合は、この人の管理手帳に戻って、必要な時にサポートを開いてください。</p> : null}
       {message ? <p className="hint">{message}</p> : null}
     </section>
   );
