@@ -40,8 +40,17 @@
   - 確認用dev server: `http://localhost:3002/home?codexPreview=5`
   - iPhone相当390px幅で上部/中段/下部をin-app browser確認。横スクロールなし (`scrollWidth=clientWidth=390`)。
   - 登録済み状態で、表紙、今日見るところ、次に備えること、記録チップ、気づきメモ、これからの道すじ、過去の手帳、プロフィール編集、写真・資料、Plus導線が表示されることを確認。
-- まだ未実施:
-  - 最終の `typecheck` / `git diff --check` / `build` / commit / push / Vercel deploy は、このメモ更新後に実施する。
+- 最終確認/本番反映:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - 実装コミット `142f371 Make family notebook guided by mascot` を `main` へpush済み。
+  - Vercel本番deploy OK。
+    - Deployment ID: `dpl_JD451SZnbE34zB5BcJ2hgHWPQeCE`
+    - Production URL: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-lar92adjn-dogwoodcommunity1.vercel.app`
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+  - `https://oyano-moshimo-navi.vercel.app/sw.js` で `oyano-moshimo-navi-v14` を確認。
 - 2026-08-20 追加対応: 添付の `Codex実装依頼書_home刷新.md` に沿って、`/home` を「採用案5a 藍の表紙」ベースの手帳型UIへ刷新。
 - 変更ファイル:
   - `apps/web/app/home/page.tsx`
