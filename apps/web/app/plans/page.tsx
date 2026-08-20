@@ -51,13 +51,6 @@ const plans = [
   }
 ];
 
-const revenueRules = [
-  "1人目と基本の記録は無料で価値を出す",
-  "2人目以降、容量、PDF、AI相談を有料の中心にする",
-  "法律・税務判断の断定や成約課金に寄せない",
-  "保存・共有・通知・長期相談に対して課金する"
-];
-
 export default function PlansPage() {
   return (
     <main className="container">
@@ -81,17 +74,6 @@ export default function PlansPage() {
             <Link className={plan.featured ? "button" : "secondary"} href={plan.href}>{plan.cta}</Link>
           </article>
         ))}
-      </section>
-
-      <section className="panel revenue-panel">
-        <div>
-          <p className="eyebrow">Business policy</p>
-          <h2>信頼を失わずに、ちゃんと儲けるための線引き。</h2>
-        </div>
-        <ul className="list">
-          {revenueRules.map((item) => <li key={item}>{item}</li>)}
-        </ul>
-        <Link className="secondary" href="/safety">安心設計を詳しく見る</Link>
       </section>
     </main>
   );

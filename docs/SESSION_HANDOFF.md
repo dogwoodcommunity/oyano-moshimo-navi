@@ -3358,3 +3358,22 @@ GitHubが必要な理由:
 - 注意:
   - `review_exports/` は未追跡のまま残している。
   - 本番反映後、iPhone/PWAで古い表示が残る場合はService Workerキャッシュ更新のため、`?v=20260820-103` 付きURLで開く。
+
+## 2026-08-20 追記 104
+
+- ユーザー指摘:
+  - `/plans` の下部に出ていた `Business policy` / 「信頼を失わずに、ちゃんと儲けるための線引き。」カードは必要か確認。
+  - 家族向けUIに内部の収益方針が出ると、売り込み感が強く見える。
+- 判断:
+  - このカードはユーザー向け画面には不要。
+  - 料金/Plusページでは「無料で何が使えるか」「Plusで何が増えるか」「AI相談はPlus内機能」だけを見せる。
+  - 事業上の課金方針は内部資料やレビュー資料に残し、アプリ/PWA画面からは外す。
+- 対応:
+  - `apps/web/app/plans/page.tsx`
+    - `revenueRules` と `revenue-panel` セクションを削除。
+  - `apps/web/public/sw.js`
+    - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v9` に更新。
+- 次にやること:
+  - `npm run typecheck --workspace web`
+  - `git diff --check`
+  - 必要なら本番デプロイ。
