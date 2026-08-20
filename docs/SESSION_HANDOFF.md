@@ -2683,6 +2683,45 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 98
+
+- ユーザー添付:
+  - `/Users/ikedatetsuya/Downloads/ロゴ実装資料.md`
+- 内容:
+  - 採用案3c「見守り鳥」を正式ロゴとして実装する資料。
+  - SVG基本形、PWA/favicon用アプリアイコン、ロックアップ仕様、禁止事項が指定された。
+- 対応:
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - タイトル札の仮CSS鳥を、資料指定の56px viewBox SVGへ置き換え。
+    - 輪郭/目 `#33424A`、帽子 `#4A8FA6`、くちばし `#E8A15D` に統一。
+  - `apps/web/app/globals.css`
+    - 旧CSS鳥の帽子/目/くちばし用spanスタイルを削除。
+    - `.watch-bird-mark` をSVG表示用に整理。
+  - `scripts/generate-brand-assets.mjs`
+    - 旧「書類+チェック」アイコン生成を廃止。
+    - PWA/Expo/通知/スプラッシュ用PNGを見守り鳥ベースで再生成するロジックへ変更。
+  - `apps/web/public/brand/`
+    - `watch-bird-mark.svg` と `app-icon.svg` を追加。
+    - `logo-mark.png`、`pwa-icon-192.png`、`apple-touch-icon.png`、`favicon-32.png`、`favicon-16.png` を生成。
+  - `apps/mobile/assets/`
+    - `icon.png`、`adaptive-icon.png`、`splash.png`、`notification-icon.png` を見守り鳥ベースで再生成。
+  - `apps/web/public/manifest.webmanifest`
+    - 16px/32px faviconをiconsへ追加。
+  - `apps/web/public/sw.js`
+    - 新faviconをキャッシュ対象へ追加。
+  - `docs/BRAND_ASSETS.md`
+    - 正式ロゴ方針を「見守り鳥」へ更新。
+- 検証:
+  - `node scripts/generate-brand-assets.mjs` OK。
+  - `python3 -m json.tool apps/web/public/manifest.webmanifest` OK。
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - 最初に `Zen_Maru_Gothic` の900ウェイト追加でGoogle Fonts取得が必要になり、ネットワーク制限下で失敗。ビルド安定を優先し、読み込みウェイトは既存の700に戻した。
+- 注意:
+  - まだcommit/push/deploy前。この追記98以降の作業で実施すること。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 97
 
 - ユーザー添付:

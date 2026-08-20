@@ -1,15 +1,17 @@
 # ブランド資産メモ
 
-最終更新: 2026-07-06
+最終更新: 2026-08-20
 
 ## 方針
 
-「親のもしもナビ」は、派手なAI風ビジュアルではなく、家族で落ち着いて確認できる公共サービス寄りの印象に寄せる。
+「親のもしもナビ」は、採用案3c「見守り鳥」を正式ロゴとして使う。派手なAI風ビジュアルではなく、家族で落ち着いて確認できる公共サービス寄りの印象に寄せる。
 
-- 色: 深い緑を基調に、生成感の強いグラデーションは避ける
-- 形: 書類、確認チェック、家族の丸を組み合わせる
+- 色: 帽子 `#4A8FA6`、輪郭・目 `#33424A`、くちばし `#E8A15D`
+- 形: 円、上半円、角丸矩形だけで構成した見守り鳥
 - 用途: Web入口、Expoアプリ、通知、スプラッシュで同じ記号を使う
 - 印象: 高齢の家族にも不安を与えない、シンプルで読みやすい
+
+ロックアップはマーク、12px空き、テキスト2行で使う。24px未満はロックアップではなくマーク単体にする。
 
 ## 生成元
 
@@ -33,7 +35,12 @@ Expo:
 Web:
 
 - `apps/web/public/brand/logo-mark.png`
+- `apps/web/public/brand/pwa-icon-192.png`
 - `apps/web/public/brand/apple-touch-icon.png`
+- `apps/web/public/brand/favicon-32.png`
+- `apps/web/public/brand/favicon-16.png`
+- `apps/web/public/brand/watch-bird-mark.svg`
+- `apps/web/public/brand/app-icon.svg`
 
 ## 接続箇所
 

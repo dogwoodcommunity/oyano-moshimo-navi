@@ -34,7 +34,11 @@ export const metadata: Metadata = {
     telephone: false
   },
   icons: {
-    icon: "/brand/logo-mark.png",
+    icon: [
+      { url: "/brand/favicon-16.png", sizes: "16x16", type: "image/png" },
+      { url: "/brand/favicon-32.png", sizes: "32x32", type: "image/png" },
+      { url: "/brand/logo-mark.png", sizes: "512x512", type: "image/png" }
+    ],
     apple: "/brand/apple-touch-icon.png"
   }
 };

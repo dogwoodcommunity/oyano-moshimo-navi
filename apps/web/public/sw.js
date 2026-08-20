@@ -9,6 +9,8 @@ const STATIC_CACHE_URLS = [
   "/brand/logo-mark.png",
   "/brand/apple-touch-icon.png",
   "/brand/pwa-icon-192.png",
+  "/brand/favicon-32.png",
+  "/brand/favicon-16.png",
   "/images/family-documents-hero.png",
   "/manifest.webmanifest"
 ];

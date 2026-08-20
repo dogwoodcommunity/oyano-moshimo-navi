@@ -5,6 +5,9 @@ import { deflateSync } from "node:zlib";
 const root = new URL("..", import.meta.url).pathname;
 
 const colors = {
+  primary: [74, 143, 166, 255],
+  inkLogo: [51, 66, 74, 255],
+  beak: [232, 161, 93, 255],
   green: [39, 100, 71, 255],
   greenDark: [24, 63, 46, 255],
   paper: [246, 247, 241, 255],
@@ -100,17 +103,46 @@ function line(img, x1, y1, x2, y2, width, color) {
   }
 }
 
-function mark(img, cx, cy, size, bgColor = colors.green) {
-  roundedRect(img, cx - size / 2, cy - size / 2, size, size, size * 0.18, bgColor);
-  roundedRect(img, cx - size * 0.2, cy - size * 0.28, size * 0.4, size * 0.48, size * 0.035, colors.surface);
-  rect(img, cx - size * 0.13, cy - size * 0.16, size * 0.26, size * 0.035, colors.line);
-  rect(img, cx - size * 0.13, cy - size * 0.06, size * 0.22, size * 0.035, colors.line);
-  rect(img, cx - size * 0.13, cy + size * 0.04, size * 0.18, size * 0.035, colors.line);
-  line(img, cx - size * 0.25, cy + size * 0.16, cx - size * 0.08, cy + size * 0.32, size * 0.055, colors.white);
-  line(img, cx - size * 0.08, cy + size * 0.32, cx + size * 0.28, cy - size * 0.16, size * 0.055, colors.white);
-  circle(img, cx - size * 0.22, cy - size * 0.26, size * 0.08, colors.white);
-  circle(img, cx + size * 0.22, cy - size * 0.26, size * 0.08, colors.white);
-  circle(img, cx, cy - size * 0.34, size * 0.095, colors.white);
+function clippedCircle(img, cx, cy, radius, clipTop, clipBottom, color) {
+  const r2 = radius * radius;
+  for (let yy = Math.max(0, Math.floor(Math.max(cy - radius, clipTop))); yy < Math.min(img.height, Math.ceil(Math.min(cy + radius, clipBottom))); yy += 1) {
+    for (let xx = Math.max(0, Math.floor(cx - radius)); xx < Math.min(img.width, Math.ceil(cx + radius)); xx += 1) {
+      const dx = xx - cx;
+      const dy = yy - cy;
+      if (dx * dx + dy * dy <= r2) blendPixel(img, xx, yy, color);
+    }
+  }
+}
+
+function birdLogo(img, cx, cy, size, options = {}) {
+  const {
+    appIcon = false,
+    outline = true,
+    hatColor = colors.primary,
+    bgColor = colors.white
+  } = options;
+
+  if (outline) {
+    circle(img, cx, cy, size * 0.473, colors.inkLogo);
+    circle(img, cx, cy, size * 0.419, bgColor);
+  } else {
+    circle(img, cx, cy, size * 0.34, bgColor);
+  }
+
+  if (appIcon) {
+    clippedCircle(img, cx, cy - size * 0.156, size * 0.195, cy - size * 0.34, cy - size * 0.156, hatColor);
+    circle(img, cx - size * 0.145, cy - size * 0.012, size * 0.039, colors.inkLogo);
+    circle(img, cx + size * 0.145, cy - size * 0.012, size * 0.039, colors.inkLogo);
+    roundedRect(img, cx - size * 0.059, cy + size * 0.043, size * 0.117, size * 0.102, size * 0.027, colors.beak);
+    roundedRect(img, cx - size * 0.059, cy + size * 0.063, size * 0.117, size * 0.082, size * 0.041, colors.beak);
+    return;
+  }
+
+  clippedCircle(img, cx, cy - size * 0.25, size * 0.268, cy - size * 0.5, cy - size * 0.25, hatColor);
+  circle(img, cx - size * 0.196, cy - size * 0.018, size * 0.054, colors.inkLogo);
+  circle(img, cx + size * 0.196, cy - size * 0.018, size * 0.054, colors.inkLogo);
+  roundedRect(img, cx - size * 0.08, cy + size * 0.054, size * 0.161, size * 0.143, size * 0.036, colors.beak);
+  roundedRect(img, cx - size * 0.08, cy + size * 0.089, size * 0.161, size * 0.107, size * 0.054, colors.beak);
 }
 
 function writePng(filePath, img) {
@@ -139,13 +171,12 @@ function writePng(filePath, img) {
 }
 
 function iconImage(size, transparent = false) {
-  const img = createImage(size, size, transparent ? colors.transparent : colors.greenDark);
-  if (!transparent) {
-    roundedRect(img, size * 0.05, size * 0.05, size * 0.9, size * 0.9, size * 0.19, colors.green);
-    circle(img, size * 0.78, size * 0.22, size * 0.1, [255, 255, 255, 30]);
-    circle(img, size * 0.2, size * 0.82, size * 0.16, [24, 63, 46, 44]);
-  }
-  mark(img, size / 2, size / 2, size * 0.66, transparent ? colors.white : colors.greenDark);
+  const img = createImage(size, size, transparent ? colors.transparent : colors.primary);
+  birdLogo(img, size / 2, size / 2, size, {
+    appIcon: true,
+    outline: false,
+    hatColor: colors.inkLogo
+  });
   return img;
 }
 
@@ -153,7 +184,11 @@ function splashImage() {
   const img = createImage(1242, 2436, colors.paper);
   roundedRect(img, 196, 660, 850, 850, 70, [255, 253, 250, 255]);
   rect(img, 390, 642, 460, 32, [239, 230, 209, 255]);
-  mark(img, 621, 1085, 440, colors.green);
+  birdLogo(img, 621, 1085, 620, {
+    appIcon: true,
+    outline: false,
+    hatColor: colors.inkLogo
+  });
   roundedRect(img, 306, 1510, 630, 34, 17, colors.line);
   roundedRect(img, 370, 1580, 500, 22, 11, [217, 226, 220, 210]);
   roundedRect(img, 420, 1640, 400, 22, 11, [217, 226, 220, 170]);
@@ -171,6 +206,9 @@ writePng(join(mobileAssets, "adaptive-icon.png"), iconImage(1024));
 writePng(join(mobileAssets, "splash.png"), splashImage());
 writePng(join(mobileAssets, "notification-icon.png"), iconImage(96, true));
 writePng(join(webBrand, "logo-mark.png"), iconImage(512));
+writePng(join(webBrand, "pwa-icon-192.png"), iconImage(192));
+writePng(join(webBrand, "favicon-32.png"), iconImage(32));
+writePng(join(webBrand, "favicon-16.png"), iconImage(16));
 writePng(join(webBrand, "apple-touch-icon.png"), iconImage(180));
 
 console.log("Brand assets generated.");

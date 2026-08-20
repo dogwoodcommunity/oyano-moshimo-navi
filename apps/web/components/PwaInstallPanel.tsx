@@ -52,12 +52,17 @@ export function PwaInstallPanel() {
         <span className="tape" aria-hidden="true" />
         <div className="card">
           <div className="title-lockup">
-            <span className="watch-bird-mark" aria-hidden="true">
-              <span className="bird-hat" />
-              <span className="bird-eye left" />
-              <span className="bird-eye right" />
-              <span className="bird-beak" />
-            </span>
+            <svg className="watch-bird-mark" viewBox="0 0 56 56" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <circle cx="28" cy="28" r="26.5" fill="#fff" stroke="#33424A" strokeWidth="3" />
+              <clipPath id="entry-watch-bird-hat">
+                <rect x="0" y="0" width="56" height="14" />
+              </clipPath>
+              <circle cx="28" cy="14" r="15" fill="#4A8FA6" clipPath="url(#entry-watch-bird-hat)" />
+              <circle cx="17" cy="27" r="3" fill="#33424A" />
+              <circle cx="39" cy="27" r="3" fill="#33424A" />
+              <rect x="23.5" y="31" width="9" height="8" rx="2" fill="#E8A15D" />
+              <rect x="23.5" y="33" width="9" height="6" rx="3" fill="#E8A15D" />
+            </svg>
             <div>
               <strong>親のもしもナビ</strong>
               <small>MOSHIMO NAVI</small>
