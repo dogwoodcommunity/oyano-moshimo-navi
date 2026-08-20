@@ -2710,7 +2710,18 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - ビルド時に既存CSSの autoprefixer warning と Supabase Node 22 推奨警告は出るが、ビルドは成功。
 - 注意:
-  - この時点ではまだcommit/push/deploy前。
+  - commit/push/deployまで完了。
+  - commit: `c41377f Upgrade family board my page`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_2fr1piBiNTG9ged8ukxxvccamVvw`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview/deployment URL: `https://oyano-moshimo-navi-nfqn37jq1-dogwoodcommunity1.vercel.app`
+  - `npx vercel --prod --yes` を一度 `apps/web` から実行して失敗した。
+    - 原因: Vercelが `apps/web` 単体で `npm install` し、`workspace:*` を解決できなかった。
+    - 対応: repo rootから再実行し、rootの `vercel.json` を読ませて成功。
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 99
