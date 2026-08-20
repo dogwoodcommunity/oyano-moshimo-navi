@@ -40,21 +40,6 @@ const healthNotes = [
   { tone: "contact", title: "病院・介護先", note: "病院・介護先から連絡があった" }
 ];
 
-const emptyNotebookPromises = [
-  {
-    title: "1人目は無料で管理",
-    body: "まず1人だけ、プロフィール・日記・期限リストを作れます。使えると感じてから広げます。"
-  },
-  {
-    title: "日記がそのまま相談メモに",
-    body: "体調、発言、病院連絡、写真を日付つきで残し、あとから家族や相談先に説明しやすくします。"
-  },
-  {
-    title: "Plusで家族共有とAI相談",
-    body: "2人目以降、招待制の家族共有、この人の記録を踏まえたAI相談を有料で広げます。"
-  }
-];
-
 const setupPreviewItems = [
   "フルネーム・呼び名・続柄",
   "生年月日・今の状態",
@@ -202,14 +187,11 @@ function missingProfileItems(profile: PersonProfile) {
 }
 
 function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
-  const answers = caseRecord.answers;
   return [
     { label: "呼び名", value: profile.displayName || personName(caseRecord) },
-    { label: "関係", value: profile.relationship || relationshipName(caseRecord) },
-    { label: "いまの状況", value: profile.careStatus || statusLabel(caseRecord.selectedStatus) },
     { label: "生年月日", value: profile.birthDate || "未入力" },
-    { label: "家族構成", value: answers.familyStructure || "未入力" },
-    { label: "財産・書類", value: answers.knowsAssets === "mostly" ? "だいたい把握" : answers.knowsAssets === "some" ? "一部だけ把握" : "不明" }
+    { label: "病院・ケア", value: profile.hospitalOrFacility || "未入力" },
+    { label: "書類・鍵", value: profile.documentLocationNote || "未入力" }
   ];
 }
 
@@ -237,6 +219,33 @@ function groupDiaryEntries(entries: DiaryEntry[]) {
 function monthLabel(month: string) {
   const [, rawMonth] = month.split("-");
   return `${Number(rawMonth)}月の記録`;
+}
+
+function notebookTitle(name: string) {
+  const trimmed = name.trim() || "この人";
+  if (trimmed.endsWith("さん") || trimmed.startsWith("お")) return `${trimmed}の手帳`;
+  return `${trimmed}さんの手帳`;
+}
+
+function boardDateLabel() {
+  const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+  const today = new Date();
+  return `${today.getMonth() + 1}/${today.getDate()}(${weekdays[today.getDay()]})`;
+}
+
+function taskDateParts(dateString?: string) {
+  if (!dateString) return { month: "--", day: "--" };
+  const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return { month: "期限", day: dateString };
+  return {
+    month: `${date.getMonth() + 1}月`,
+    day: String(date.getDate())
+  };
+}
+
+function normalizeAlertHref(href: string) {
+  if (href === "#profile-edit-fields") return "#person-profile";
+  return href;
 }
 
 function buildNotebookInsight(
@@ -403,16 +412,11 @@ export default function FamilyBoardPage() {
   });
   const diaryGroups = groupDiaryEntries(filteredEntries);
   const notebookInsight = activeCase ? buildNotebookInsight(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : undefined;
-
-  const stats = activeCase ? [
-    { value: dueText(nextTask), label: "次の確認日", detail: nextTask?.title ?? "確認リストを作成します" },
-    { value: `${activeProfileCompletion.percent}%`, label: "プロフィール", detail: `${activeProfileCompletion.filled}/${activeProfileCompletion.total}項目 入力済み` },
-    { value: `${activeEntries.length}件`, label: "手帳の記録", detail: attachments.length > 0 ? `写真・資料 ${attachments.length}件` : "日々の変化を保存" }
-  ] : [
-    { value: "1人目", label: "無料で作成", detail: "まず1人だけ登録" },
-    { value: "日記", label: "毎日の記録", detail: "写真・PDFも一緒に保存" },
-    { value: "Plus", label: "必要なら拡張", detail: "2人目・家族共有・AI相談" }
-  ];
+  const activePersonName = activeCase ? personName(activeCase) : "";
+  const activeRelationship = activeCase ? activeProfile?.relationship || relationshipName(activeCase) : "";
+  const activeCareStatus = activeCase ? activeProfile?.careStatus || statusLabel(activeCase.selectedStatus) : "";
+  const todayRows = notebookInsight?.alerts.slice(0, 2) ?? [];
+  const recentEntries = activeEntries.slice(0, 2);
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
     setForms((current) => ({
@@ -491,175 +495,275 @@ export default function FamilyBoardPage() {
 
   return (
     <main className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
-      {!activeCase ? (
-        <section className="notebook-identity-card" aria-label="サービスの説明">
+      <section className="notebook-cover" aria-label="親のもしもナビの手帳表紙">
+        <span className="ribbon" aria-hidden="true" />
+        <div className="cover-brand">
           <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-          <div>
-            <strong>親のもしもナビ</strong>
-            <span>MOSHIMO NAVI</span>
-          </div>
-          <p>家族で進める、親・親族ごとの管理手帳</p>
-        </section>
-      ) : null}
-
-      <section className={`notebook-hero ${activeCase ? "is-person-hero" : ""}`}>
-        <div className="notebook-hero-copy">
-          <p className="pill">{activeCase ? "この人の管理手帳" : "まず1人目から"}</p>
-          <h1>{activeCase ? `${personName(activeCase)}の管理手帳` : "親の状況を、1人ずつ管理します。"}</h1>
-          <p>
-            {activeCase
-              ? "プロフィール、日々の記録、写真、資料、期限のある手続きをこの人ごとに残します。家族に説明するときも、相談するときも、この手帳が前提になります。"
-              : "父母、義父母、親戚など、まず一番気になる人を1人だけ登録します。状況を選ぶと、その人専用の手帳と確認リストができます。"}
-          </p>
-          <div className="notebook-hero-actions">
-            {activeCase ? (
-              <>
-                <a className="button" href="#today-diary">今日の記録を書く</a>
-                <a className="secondary" href="#profile-edit-fields">プロフィールを変更する</a>
-              </>
-            ) : (
-              <Link className="button" href="/start">1人目の手帳を作る</Link>
-            )}
-          </div>
+          <span>親のもしもナビ</span>
         </div>
-        <div className="notebook-hero-preview" aria-hidden="true">
-          <div className="preview-person-card">
-            <span>管理する人</span>
-            <strong>{activeCase ? personName(activeCase) : "1人目"}</strong>
-            <small>{activeCase ? statusLabel(activeCase.selectedStatus) : "入院・在宅・介護など"}</small>
+        <div className="cover-person">
+          <div className="cover-person-photo" aria-hidden="true">
+            <img src="/brand/watch-bird-mark.svg" alt="" />
           </div>
-          <div className="preview-note-row">
-            <span>今日の記録</span>
-            <strong>体調・発言・連絡を残す</strong>
+          <div className="cover-person-meta">
+            <span>{activeCase ? `${activeRelationship} · ${activeCareStatus}` : "家族で進める親の管理帳"}</span>
+            <strong>{activeCase ? notebookTitle(activePersonName) : "まず1人分の手帳から"}</strong>
           </div>
-          <div className="preview-note-row">
-            <span>次にやること</span>
-            <strong>{nextTask?.title ?? "期限と担当を表示"}</strong>
-          </div>
+          {activeCase ? (
+            <a className="cover-profile-link" href="#person-profile">プロフィール</a>
+          ) : (
+            <Link className="cover-profile-link" href="/start">作る</Link>
+          )}
         </div>
+        <nav className="cover-tabs" aria-label="手帳の切り替え">
+          {activeCase ? (
+            <>
+              {cases.map((caseRecord) => (
+                <button
+                  className={caseRecord.id === activeCase.id ? "is-active" : ""}
+                  key={caseRecord.id}
+                  type="button"
+                  onClick={() => setActiveCaseId(caseRecord.id)}
+                >
+                  {personName(caseRecord)}
+                </button>
+              ))}
+              <Link href="/plans">＋ 手帳を追加</Link>
+            </>
+          ) : (
+            <>
+              <span className="is-active">はじめる</span>
+              <Link href="/guides">読む</Link>
+              <Link href="/safety">安心</Link>
+            </>
+          )}
+        </nav>
       </section>
 
-      {cases.length > 1 ? (
-        <section className="person-switcher" aria-label="対象者を切り替える">
-          {cases.map((caseRecord, index) => (
-            <button
-              className={caseRecord.id === activeCase?.id ? "is-active" : ""}
-              key={caseRecord.id}
-              type="button"
-              onClick={() => setActiveCaseId(caseRecord.id)}
-            >
-              <span>{index === 0 ? "無料枠" : `${index + 1}人目`}</span>
-              <strong>{personName(caseRecord)}</strong>
-              <small>{statusLabel(caseRecord.selectedStatus)}</small>
-            </button>
-          ))}
-        </section>
-      ) : null}
-
-      {!activeCase ? (
-        <>
-          <section className="board-stats notebook-stats" aria-label="このアプリで始められること">
-            {stats.map((item) => (
-              <div key={item.label}>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-                <small>{item.detail}</small>
-              </div>
-            ))}
-          </section>
-
-          <section className="notebook-promise-grid" aria-label="このアプリでできること">
-            {emptyNotebookPromises.map((item) => (
-              <article key={item.title}>
-                <strong>{item.title}</strong>
-                <p>{item.body}</p>
-              </article>
-            ))}
-          </section>
-        </>
-      ) : null}
-
-      {activeCase ? (
-        <section className="today-overview-panel" aria-label={`${personName(activeCase)}の今日の管理`}>
-          <div className="section-title-row">
-            <div>
-              <p className="pill">今日見るところ</p>
-              <h2>{personName(activeCase)}の管理は、まずここだけ見れば大丈夫です。</h2>
-            </div>
-          </div>
-          <div className="today-overview-grid">
-            <a className="today-overview-card is-primary" href="#today-diary">
-              <span>記録</span>
-              <strong>今日あったことを書く</strong>
-              <p>体調、発言、病院・介護先からの連絡、家族で決めたことを1分で残します。</p>
-            </a>
-            <Link className="today-overview-card" href={`/result/${activeCase.id}`}>
-              <span>期限</span>
-              <strong>{nextTask?.title ?? "確認リストを見る"}</strong>
-              <p>{nextTask ? `${dueText(nextTask)}。忘れないように、この人のタスクとして残します。` : "状況を選ぶと、期限つきの確認リストができます。"}</p>
-            </Link>
-            <a className="today-overview-card" href="#person-profile">
-              <span>本人情報</span>
-              <strong>プロフィール {activeProfileCompletion.percent}%</strong>
-              <p>
-                {activeMissingProfileItems.length > 0
-                  ? `次は「${activeMissingProfileItems.slice(0, 2).join("」「")}」を足すと、家族に説明しやすくなります。`
-                  : "基本情報はかなり整っています。変化があれば更新してください。"}
-              </p>
-            </a>
-            <a className="today-overview-card" href="#diary-history">
-              <span>過去</span>
-              <strong>過去の記録を見る</strong>
-              <p>{activeEntries.length > 0 ? `${activeEntries.length}件の記録を月ごとに見返せます。変化や急ぎの記録も分けて確認できます。` : "まだ記録はありません。今日の一言から手帳が育ちます。"}</p>
-            </a>
-          </div>
-        </section>
-      ) : null}
-
-      {activeCase ? (
-        <section className="board-stats notebook-stats active-notebook-stats" aria-label="選択中の対象者の状況">
-          {stats.map((item) => (
-            <div key={item.label}>
-              <strong>{item.value}</strong>
-              <span>{item.label}</span>
-              <small>{item.detail}</small>
-            </div>
-          ))}
-        </section>
-      ) : null}
-
       {!loaded ? (
-        <section className="panel board-empty">
+        <section className="nb-card board-empty">
           <h2>読み込み中です</h2>
         </section>
       ) : null}
 
       {loaded && !activeCase ? (
-        <section className="panel board-empty empty-notebook-card">
-          <div>
-            <p className="pill">登録後のイメージ</p>
-            <h2>この画面が、その人専用のマイページになります。</h2>
-            <p>父母、義父母、祖父母、親戚など、まず1人だけ。あとから2人目、3人目を別の手帳として追加できます。</p>
-          </div>
-          <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
-            {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
-          </div>
-          <Link className="button empty-start-button" href="/start">1人目の手帳を作る</Link>
+        <section className="nb-section empty-notebook-section">
+          <article className="nb-card empty-notebook-card">
+            <div>
+              <p className="nb-eyebrow">はじめの一冊</p>
+              <h1>この画面が、その人専用の手帳になります。</h1>
+              <p>父母、義父母、祖父母、親戚など、まず気になる人を1人だけ登録します。状況を選ぶと、確認リストと毎日の記録欄ができます。</p>
+            </div>
+            <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
+              {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
+            </div>
+            <Link className="nb-save empty-start-button" href="/start">1人目の手帳を作る</Link>
+          </article>
         </section>
       ) : null}
 
       {activeCase ? (
-        <section className="mypage-grid" aria-label={`${personName(activeCase)}の管理ページ`}>
-          <div className="mypage-main">
-            <article className="profile-book-card profile-editor-card" id="person-profile">
-              <div className="profile-book-head">
-                <div className="profile-avatar" aria-hidden="true">
-                  {personName(activeCase).slice(0, 1)}
+        <div className="notebook-workspace" aria-label={`${activePersonName}の管理手帳`}>
+          <section className="nb-section" aria-label="今日見るところ">
+            <div className="nb-section-head">
+              <strong>今日見るところ</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">{boardDateLabel()}</span>
+            </div>
+            <div className="nb-card">
+              {todayRows.map((alert) => (
+                <a className={`nb-row is-${alert.tone}`} href={normalizeAlertHref(alert.href)} key={`${alert.title}-${alert.body}`}>
+                  <span className="lead">{alert.tone === "urgent" ? "急ぎ" : alert.tone === "warning" ? "確認" : "安心"}</span>
+                  <strong>{alert.title}</strong>
+                  <small>{alert.body}</small>
+                  <span className="chev" aria-hidden="true">›</span>
+                </a>
+              ))}
+            </div>
+          </section>
+
+          <section className="nb-section" id="today-diary">
+            <div className="nb-section-head">
+              <strong>今日の記録</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">{activeEntries.length}件</span>
+            </div>
+            <article className="nb-card today-record-card">
+              <p className="record-help">当てはまるものを押すと、下の記録欄に入ります。最後に一言だけ足して保存してください。</p>
+              <div className="record-chip-grid" aria-label="今日の記録に追加する項目">
+                {healthNotes.map((item) => (
+                  <button className={`record-chip is-${item.tone}`} key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
+                    <span aria-hidden="true" />
+                    <strong>{item.title}</strong>
+                  </button>
+                ))}
+              </div>
+              <label className="diary-label" htmlFor={`diary-${activeCase.id}`}>
+                今日あったこと
+              </label>
+              <textarea
+                id={`diary-${activeCase.id}`}
+                placeholder="例: 今日は退院後はじめて訪問看護の日。薬の飲み忘れが少しあった。次回通院は長女に相談する。"
+                value={activeForm.body}
+                onChange={(event) => updateForm(activeCase.id, { body: event.target.value })}
+              />
+              <div className="record-tool-row">
+                <div className="mood-segment" aria-label="今日の変化">
+                  {([
+                    ["stable", "通常"],
+                    ["changed", "変化あり"],
+                    ["urgent", "急ぎ"]
+                  ] as const).map(([value, label]) => (
+                    <button
+                      className={activeForm.mood === value ? "is-active" : ""}
+                      key={value}
+                      type="button"
+                      onClick={() => updateForm(activeCase.id, { mood: value })}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <label className="file-button">
+                  写真・PDF
+                  <input
+                    accept="image/*,.pdf"
+                    multiple
+                    type="file"
+                    onChange={(event) => {
+                      void attachFiles(activeCase.id, event.target.files);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              </div>
+              {activeForm.files.length > 0 ? (
+                <div className="attachment-strip">
+                  {activeForm.files.map((file) => (
+                    <span key={file.id}>
+                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
+                      {file.name}
+                    </span>
+                  ))}
+                </div>
+              ) : null}
+              <button className="nb-save" type="button" onClick={() => saveDiary(activeCase.id)}>
+                {notebookTitle(activePersonName)}に残す
+              </button>
+            </article>
+          </section>
+
+          {notebookInsight ? (
+            <section className="nb-section" aria-label="気づきメモ">
+              <article className="kizuki-card">
+                <span className="tag">気づきメモ</span>
+                <strong>{notebookInsight.patternTitle}</strong>
+                <p>{notebookInsight.patternBody}</p>
+                <div className="kizuki-question">
+                  <span>次に家族で聞くこと</span>
+                  <b>{notebookInsight.questions[0]}</b>
+                </div>
+                <small>記録から見る観点の整理です。医療・法律・税務の判断はしません。</small>
+              </article>
+            </section>
+          ) : null}
+
+          <section className="nb-section" id="diary-history">
+            <div className="nb-section-head">
+              <strong>過去の手帳</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
+            </div>
+            <article className="nb-card history-card">
+              {recentEntries.length > 0 ? (
+                recentEntries.map((entry) => (
+                  <div className="nb-row history-row" key={entry.id}>
+                    <time>{formatLongDate(entry.date)}</time>
+                    <strong>{entry.body}</strong>
+                    <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                  </div>
+                ))
+              ) : (
+                <p className="diary-empty">まだ記録はありません。今日の一言から手帳が育ちます。</p>
+              )}
+              {activeEntries.length > 0 ? (
+                <details className="history-drawer">
+                  <summary>すべて見る ›</summary>
+                  <div className="record-filter-tabs" aria-label="記録の絞り込み">
+                    {([
+                      ["all", "すべて"],
+                      ["changed", "変化・急ぎ"],
+                      ["attachments", "写真・PDF"]
+                    ] as const).map(([value, label]) => (
+                      <button
+                        className={recordFilter === value ? "is-active" : ""}
+                        key={value}
+                        type="button"
+                        onClick={() => setRecordFilter(value)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {diaryGroups.length > 0 ? (
+                    <div className="diary-timeline">
+                      {diaryGroups.map((group) => (
+                        <section className="diary-month-group" key={group.month}>
+                          <div className="diary-month-head">
+                            <h3>{monthLabel(group.month)}</h3>
+                            <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
+                          </div>
+                          {group.items.map((entry) => (
+                            <article className="diary-entry-card" key={entry.id}>
+                              <div className="diary-entry-meta">
+                                <time>{formatLongDate(entry.date)}</time>
+                                <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                              </div>
+                              <p>{entry.body}</p>
+                              {entry.attachments.length > 0 ? (
+                                <div className="entry-attachments">
+                                  {entry.attachments.slice(0, 3).map((file) => (
+                                    <span key={file.id}>
+                                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
+                                      {file.name}
+                                    </span>
+                                  ))}
+                                </div>
+                              ) : null}
+                              <div className="entry-advice">
+                                <strong>この日のメモから</strong>
+                                <ul>
+                                  {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
+                                </ul>
+                              </div>
+                            </article>
+                          ))}
+                        </section>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="diary-empty">この絞り込みに合う記録はありません。</p>
+                  )}
+                </details>
+              ) : null}
+            </article>
+          </section>
+
+          <section className="nb-section" id="person-profile">
+            <div className="nb-section-head">
+              <strong>プロフィール</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">{activeMissingProfileItems.length > 0 ? `あと${activeMissingProfileItems.length}項目` : "入力済み"}</span>
+            </div>
+            <article className="nb-card profile-summary-card">
+              <div className="profile-summary-head">
+                <div className="profile-avatar is-symbol" aria-hidden="true">
+                  <img src="/brand/watch-bird-mark.svg" alt="" />
                 </div>
                 <div>
-                  <p className="pill">{progressLabel(activeCase)}</p>
-                  <h2>{personName(activeCase)}</h2>
-                  <p>この人の基本情報を育てるほど、日記・確認リスト・相談が使いやすくなります。</p>
+                  <p>{progressLabel(activeCase)}</p>
+                  <h2>{activePersonName}</h2>
+                  <span>{activeRelationship} · {activeCareStatus}</span>
                 </div>
               </div>
               <div className="profile-completion">
@@ -672,19 +776,17 @@ export default function FamilyBoardPage() {
                 </div>
                 <small>{activeProfileCompletion.filled}/{activeProfileCompletion.total}項目 入力済み</small>
               </div>
-              <div className="profile-edit-callout">
-                <div>
-                  <strong>プロフィール変更はここでできます</strong>
-                  <p>すぐ下の入力欄をタップして、名前・生年月日・病院・薬・書類メモを更新してください。入力したら保存ボタンを押します。</p>
-                </div>
-                <a href="#profile-edit-fields">入力欄へ</a>
-              </div>
-              {activeProfile ? (
-                <>
-                  <div className="profile-edit-title">
-                    <span>編集欄</span>
-                    <strong>ここをタップして変更します</strong>
+              <div className="profile-row-grid compact-profile-rows">
+                {summarizeProfile(activeCase, activeProfile ?? {}).map((row) => (
+                  <div className={row.value === "未入力" ? "is-missing" : ""} key={row.label}>
+                    <span>{row.label}</span>
+                    <strong>{row.value}</strong>
                   </div>
+                ))}
+              </div>
+              <details className="profile-edit-drawer">
+                <summary>プロフィールを編集する</summary>
+                {activeProfile ? (
                   <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
                     <label>
                       <span>フルネーム</span>
@@ -759,275 +861,54 @@ export default function FamilyBoardPage() {
                       />
                     </label>
                   </div>
-                </>
-              ) : null}
-              <div className="profile-save-row">
-                <button className="button" type="button" onClick={() => saveProfile(activeCase.id)}>
-                  プロフィールを更新する
-                </button>
-                {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
-              </div>
-              <div className="profile-edit-title">
-                <span>登録済みの内容</span>
-                <strong>家族に説明するときの基本情報です</strong>
-              </div>
-              <div className="profile-row-grid">
-                {summarizeProfile(activeCase, activeProfile ?? {}).map((row) => (
-                  <div key={row.label}>
-                    <span>{row.label}</span>
-                    <strong>{row.value}</strong>
-                  </div>
-                ))}
-              </div>
-              {activeCase.answers.parentSituation ? (
-                <div className="profile-note">
-                  <span>最初に登録した状況</span>
-                  <p>{activeCase.answers.parentSituation}</p>
-                </div>
-              ) : null}
-            </article>
-
-            <article className="health-check-card">
-              <div>
-                <p className="pill">今日の記録</p>
-                <h2>今日あったことを、1つ押してください。</h2>
-                <p>押した内容は下の記録欄に入ります。あとから一言だけ足せば、家族に伝わる日記になります。</p>
-              </div>
-              <div className="health-chip-grid">
-                {healthNotes.map((item) => (
-                  <button className={`health-chip is-${item.tone}`} key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
-                    <span aria-hidden="true" />
-                    <div>
-                      <strong>{item.title}</strong>
-                      <small>{item.note}</small>
-                    </div>
-                    <em>記録に追加</em>
+                ) : null}
+                <p className="profile-safe-note">暗証番号・パスワード・マイナンバーの画像は保管できません。</p>
+                <div className="profile-save-row">
+                  <button className="profile-save-button" type="button" onClick={() => saveProfile(activeCase.id)}>
+                    保存する
                   </button>
-                ))}
-              </div>
+                  {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
+                </div>
+              </details>
             </article>
+          </section>
 
-            <article className="diary-panel notebook-diary-panel" id="today-diary">
-              <div className="diary-head">
-                <div>
-                  <p className="pill">手帳</p>
-                  <h3>今日の記録</h3>
-                </div>
-                <span>{activeEntries.length}件</span>
-              </div>
-              <label className="diary-label" htmlFor={`diary-${activeCase.id}`}>
-                ここに書いた内容は、下の「過去の手帳」と「記録からの気づき」に反映されます。体調、発言、病院・介護の連絡、家族で決めたことを残してください。
-              </label>
-              <textarea
-                id={`diary-${activeCase.id}`}
-                placeholder="例: 今日は退院後はじめて訪問看護の日。薬の飲み忘れが少しあった。次回通院は長女に相談する。"
-                value={activeForm.body}
-                onChange={(event) => updateForm(activeCase.id, { body: event.target.value })}
-              />
-              <div className="diary-controls">
-                <select
-                  aria-label="今日の変化"
-                  value={activeForm.mood}
-                  onChange={(event) => updateForm(activeCase.id, { mood: event.target.value as DiaryEntry["mood"] })}
-                >
-                  <option value="stable">大きな変化なし</option>
-                  <option value="changed">変化があった</option>
-                  <option value="urgent">急ぎで確認したい</option>
-                </select>
-                <label className="file-button">
-                  写真・PDFを追加
-                  <input
-                    accept="image/*,.pdf"
-                    multiple
-                    type="file"
-                    onChange={(event) => {
-                      void attachFiles(activeCase.id, event.target.files);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
-              </div>
-              {activeForm.files.length > 0 ? (
-                <div className="attachment-strip">
-                  {activeForm.files.map((file) => (
-                    <span key={file.id}>
-                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
-                      {file.name}
-                    </span>
-                  ))}
-                </div>
-              ) : null}
-              <button className="button diary-save" type="button" onClick={() => saveDiary(activeCase.id)}>
-                この人の手帳に残す
-              </button>
-            </article>
-
-            {notebookInsight ? (
-              <article className="notebook-insight-card" id="ai-note">
-                <div className="section-title-row">
-                  <div>
-                    <p className="pill">記録からの気づき</p>
-                    <h2>手帳の内容から、次に見るところを出します。</h2>
-                  </div>
-                </div>
-                <div className="insight-metrics" aria-label="記録の集計">
-                  <div>
-                    <strong>{activeEntries.length}</strong>
-                    <span>記録</span>
-                  </div>
-                  <div>
-                    <strong>{notebookInsight.changedCount + notebookInsight.urgentCount}</strong>
-                    <span>変化・急ぎ</span>
-                  </div>
-                  <div>
-                    <strong>{notebookInsight.attachmentCount}</strong>
-                    <span>写真・資料</span>
-                  </div>
-                  <div>
-                    <strong>{notebookInsight.latestDateLabel}</strong>
-                    <span>最新</span>
-                  </div>
-                </div>
-                <div className="insight-summary">
-                  <span>AIメモ</span>
-                  <strong>{notebookInsight.patternTitle}</strong>
-                  <p>{notebookInsight.patternBody}</p>
-                  <small>医療・法律・税務の判断を断定するものではありません。家族で確認する観点を整理します。</small>
-                </div>
-                <div className="forecast-card">
-                  <span>先回りメモ</span>
-                  <strong>{notebookInsight.forecastTitle}</strong>
-                  <p>{notebookInsight.forecastBody}</p>
-                </div>
-                <div className="alert-list" aria-label="確認アラート">
-                  {notebookInsight.alerts.map((alert) => (
-                    <a className={`alert-card is-${alert.tone}`} href={alert.href} key={`${alert.title}-${alert.body}`}>
-                      <span>{alert.tone === "urgent" ? "急ぎ" : alert.tone === "warning" ? "確認" : "安心"}</span>
-                      <strong>{alert.title}</strong>
-                      <p>{alert.body}</p>
-                    </a>
-                  ))}
-                </div>
-                <div className="question-list">
-                  <strong>次に聞くとよいこと</strong>
-                  <ul>
-                    {notebookInsight.questions.map((question) => <li key={question}>{question}</li>)}
-                  </ul>
-                </div>
-              </article>
-            ) : null}
-
-            <article className="diary-timeline-card" id="diary-history">
-              <div className="section-title-row">
-                <div>
-                  <p className="pill">過去の手帳</p>
-                  <h2>過去の記録はここで見返せます。</h2>
-                  <p>日ごとのメモ、写真・PDF、記録からの助言を月ごとに残します。</p>
-                </div>
-              </div>
-              <div className="record-filter-tabs" aria-label="記録の絞り込み">
-                {([
-                  ["all", "すべて"],
-                  ["changed", "変化・急ぎ"],
-                  ["attachments", "写真・PDF"]
-                ] as const).map(([value, label]) => (
-                  <button
-                    className={recordFilter === value ? "is-active" : ""}
-                    key={value}
-                    type="button"
-                    onClick={() => setRecordFilter(value)}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {diaryGroups.length > 0 ? (
-                <div className="diary-timeline">
-                  {diaryGroups.map((group) => (
-                    <section className="diary-month-group" key={group.month}>
-                      <div className="diary-month-head">
-                        <h3>{monthLabel(group.month)}</h3>
-                        <p>{group.items.length}件の記録 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
-                      </div>
-                      {group.items.map((entry) => (
-                        <article className="diary-entry-card" key={entry.id}>
-                          <div className="diary-entry-meta">
-                            <time>{formatLongDate(entry.date)}</time>
-                            <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
-                          </div>
-                          <p>{entry.body}</p>
-                          {entry.attachments.length > 0 ? (
-                            <div className="entry-attachments">
-                              {entry.attachments.slice(0, 3).map((file) => (
-                                <span key={file.id}>
-                                  {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
-                                  {file.name}
-                                </span>
-                              ))}
-                            </div>
-                          ) : null}
-                          <div className="entry-advice">
-                            <strong>この日のメモから</strong>
-                            <ul>
-                              {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
-                            </ul>
-                          </div>
-                        </article>
-                      ))}
-                    </section>
-                  ))}
-                </div>
-              ) : (
-                <p className="diary-empty">
-                  {activeEntries.length > 0 ? "この絞り込みに合う記録はありません。" : "まだ記録はありません。まずは「今日あったことを書く」から1行だけ残してください。"}
-                </p>
-              )}
-            </article>
-          </div>
-
-          <aside className="mypage-side">
-            <article className="task-calendar-card">
-              <div className="mini-calendar">
-                <span>{formatDate(nextTask?.dueDate)}</span>
-                <strong>{dueText(nextTask)}</strong>
-              </div>
-              <div>
-                <p className="pill">次にやること</p>
-                <h2>{nextTask?.title ?? "確認リストを作成します"}</h2>
-                <p>{nextTask?.description ?? "状況を選ぶと期限つきの確認リストが表示されます。"}</p>
-              </div>
-              <Link className="secondary" href={`/result/${activeCase.id}`}>確認リストを見る</Link>
-            </article>
-
-            <article className="task-stack-card">
-              <div className="section-title-row">
-                <div>
-                  <p className="pill">タスク</p>
-                  <h2>進める順番</h2>
-                </div>
-              </div>
+          <section className="nb-section">
+            <div className="nb-section-head">
+              <strong>確認リスト</strong>
+              <span className="rule" aria-hidden="true" />
+              <Link className="aside-link" href={`/result/${activeCase.id}`}>整理結果を見る</Link>
+            </div>
+            <article className="nb-card task-list-card">
               {activeTasks.length > 0 ? (
-                <ol className="task-stack">
-                  {activeTasks.slice(0, 5).map((task) => (
-                    <li key={`${task.title}-${task.dueDate}`}>
-                      <span>{formatDate(task.dueDate)}</span>
+                activeTasks.slice(0, 5).map((task) => {
+                  const dateParts = taskDateParts(task.dueDate);
+                  const dueDays = daysUntil(task.dueDate);
+                  return (
+                    <Link className="nb-row task-row" href={`/result/${activeCase.id}`} key={`${task.title}-${task.dueDate}`}>
+                      <span className={`task-date ${dueDays !== null && dueDays <= 3 ? "is-near" : ""}`}>
+                        <small>{dateParts.month}</small>
+                        <b>{dateParts.day}</b>
+                      </span>
                       <strong>{task.title}</strong>
-                      <small>優先度 {task.priority}</small>
-                    </li>
-                  ))}
-                </ol>
+                      <span className="assignee-chip">担当が決まっていません</span>
+                      <span className="chev" aria-hidden="true">›</span>
+                    </Link>
+                  );
+                })
               ) : (
                 <p className="diary-empty">まだタスクはありません。</p>
               )}
             </article>
+          </section>
 
-            <article className="media-book-card">
-              <div className="section-title-row">
-                <div>
-                  <p className="pill">写真・資料</p>
-                  <h2>この人の保管庫</h2>
-                </div>
-              </div>
+          <section className="nb-section">
+            <div className="nb-section-head">
+              <strong>写真・資料</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">{attachments.length}件</span>
+            </div>
+            <article className="nb-card media-book-card">
               {attachments.length > 0 ? (
                 <div className="media-grid">
                   {attachments.slice(0, 6).map((file) => (
@@ -1041,53 +922,12 @@ export default function FamilyBoardPage() {
                 <p className="diary-empty">日記に写真やPDFを追加すると、ここにまとまります。</p>
               )}
             </article>
+          </section>
 
-            <article className="family-share-card">
-              <div>
-                <p className="pill">Family Plus</p>
-                <h3>家族に共有して、同じ手帳を見る</h3>
-                <p>
-                  共有リンクだけで誰でも見られる形にはしません。家族共有はPlusで招待制にし、ログインした家族だけがこの人のプロフィール、日記、写真、期限を確認できます。
-                </p>
-              </div>
-              <div className="share-rule-grid">
-                <span>招待制</span>
-                <span>URLだけでは不可</span>
-                <span>Plus</span>
-              </div>
-              <Link className="secondary" href="/plans">家族共有を設定する</Link>
-            </article>
-
-            <article className="ai-consult-card notebook-ai-card" aria-label="AI相談">
-              <div>
-                <p className="pill">Plus</p>
-                <h3>この人の記録をもとにAI相談</h3>
-                <p>
-                  毎回ゼロから説明せず、プロフィール・日記・写真メモ・期限を踏まえて「次に何を確認するか」を相談できる有料機能です。
-                </p>
-              </div>
-              <Link className="secondary" href="/plans">Plusを見る</Link>
-            </article>
-
-            <article className="person-add-card side-add-person-card">
-              <span>必要になったら</span>
-              <strong>2人目・3人目を別の手帳で管理</strong>
-              <small>Plusで父母、義父母、親戚を分けて登録できます。</small>
-              <Link className="secondary" href="/plans">追加方法を見る</Link>
-            </article>
-          </aside>
-        </section>
-      ) : null}
-
-      {!activeCase ? (
-        <section className="board-plus notebook-plus">
-          <div>
-            <p className="pill">Family Plus</p>
-            <h2>無料は1人目の手帳から。必要になったらPlusで広げる。</h2>
-            <p>2人目以降の登録、家族への招待共有、この人の記録を踏まえたAI相談、PDF出力をPlusで使える設計にします。</p>
-          </div>
-          <Link className="button" href="/plans">プランを見る</Link>
-        </section>
+          <p className="nb-plus-note">
+            2人目の手帳、家族との共有、AI相談は <Link href="/plans">Plus</Link> で。
+          </p>
+        </div>
       ) : null}
     </main>
   );

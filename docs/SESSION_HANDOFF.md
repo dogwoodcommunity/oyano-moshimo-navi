@@ -17,6 +17,29 @@
 
 ## 最新状況 2026-08-20
 
+- 2026-08-20 追加対応: 添付の `Codex実装依頼書_home刷新.md` に沿って、`/home` を「採用案5a 藍の表紙」ベースの手帳型UIへ刷新。
+- 変更ファイル:
+  - `apps/web/app/home/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/app/layout.tsx`
+- 実装内容:
+  - 旧hero/LP的な見せ方、`board-stats`、`notebook-hero-preview`、大きなPlus導線を撤去。
+  - `/home` 先頭を濃紺 `#24424E` の手帳カバーに変更。鳥ロゴ、対象者名、関係/状態、プロフィール導線、対象者タブ、手帳追加導線を配置。
+  - 未登録時は「この画面が、その人専用の手帳になります。」カードと `1人目の手帳を作る` CTAに整理。
+  - 登録済み時は「今日見るところ」「今日の記録」「気づきメモ」「過去の手帳」「プロフィール」「確認リスト」「写真・資料」の1カラム構成に整理。
+  - 健康チップと日記入力を「今日の記録」カードに統合。保存ボタンを1つに集約。
+  - 「AI」表現はPlus注記に寄せ、通常画面では「気づきメモ」として表示。
+  - プロフィールは常時フォーム表示をやめ、4行サマリー + 編集detailsに圧縮。
+  - タスクのミニカレンダーをやめ、日付つき行リストに変更。
+  - 写真・資料は3列グリッドに変更。
+  - `Shippori Mincho` を追加し、見出しに手帳らしい明朝系の質感を追加。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - ローカルdevは `http://localhost:3002/home` で起動確認。375px幅で未登録状態は横スクロールなし、CTA高さ58pxを確認。
+- 注意:
+  - in-app browserのlocalStorage注入が制限され、登録済み状態のブラウザ強制再現は未実施。ただしTypeScript/buildは通過し、登録済み分岐のJSX/CSSは実装済み。
 - 現在の実装方針は、当初の「Web入口 + Expo継続アプリ」から、ユーザー判断により「PWA/アプリのみで完結する家族の手帳」へ寄せている。
 - 本番URL: `https://oyano-moshimo-navi.vercel.app`
 - GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`

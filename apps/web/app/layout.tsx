@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Noto_Sans_JP, Zen_Maru_Gothic } from "next/font/google";
+import { Noto_Sans_JP, Shippori_Mincho, Zen_Maru_Gothic } from "next/font/google";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
@@ -52,6 +52,12 @@ const zenMaru = Zen_Maru_Gothic({
   variable: "--font-rounded"
 });
 
+const shipporiMincho = Shippori_Mincho({
+  subsets: ["latin"],
+  weight: ["600", "700"],
+  variable: "--font-serif"
+});
+
 export const metadata: Metadata = {
   title: {
     default: "親のもしもナビ",
@@ -85,7 +91,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={`${notoSansJp.variable} ${zenMaru.variable}`} lang="ja">
+    <html className={`${notoSansJp.variable} ${zenMaru.variable} ${shipporiMincho.variable}`} lang="ja">
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
       </head>
