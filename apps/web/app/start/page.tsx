@@ -10,6 +10,7 @@ type TocItem = {
   key: ParentStatus;
   title: string;
   hint: string;
+  icon: string;
 };
 
 const tocGroups: Array<{ label: string; tone: "teal" | "sand"; items: TocItem[] }> = [
@@ -17,41 +18,41 @@ const tocGroups: Array<{ label: string; tone: "teal" | "sand"; items: TocItem[] 
     label: "これからに そなえる",
     tone: "teal",
     items: [
-      { num: "01", key: "preparing", title: "元気なうちに準備したい", hint: "連絡先や書類の場所をまとめる" },
-      { num: "02", key: "cognitive_decline", title: "もの忘れが心配", hint: "相談先や家族で決めることを整理" }
+      { num: "01", key: "preparing", title: "元気なうちに準備したい", hint: "連絡先や書類の場所をまとめる", icon: "準備" },
+      { num: "02", key: "cognitive_decline", title: "もの忘れが心配", hint: "相談先や家族で決めることを整理", icon: "相談" }
     ]
   },
   {
     label: "入院・退院のとき",
     tone: "teal",
     items: [
-      { num: "03", key: "hospitalized", title: "入院した", hint: "病院で聞くこと、支払い、退院後のこと" },
-      { num: "04", key: "post_discharge_home", title: "退院後、家で過ごす", hint: "通院、在宅生活、訪問サービス" }
+      { num: "03", key: "hospitalized", title: "入院した", hint: "病院で聞くこと、支払い、退院後のこと", icon: "入院" },
+      { num: "04", key: "post_discharge_home", title: "退院後、家で過ごす", hint: "通院、在宅生活、訪問サービス", icon: "在宅" }
     ]
   },
   {
     label: "介護と看取り",
     tone: "teal",
     items: [
-      { num: "05", key: "facility", title: "介護・施設のこと", hint: "介護や施設、家族の役割分担" },
-      { num: "06", key: "end_of_life", title: "看取り・終末期のこと", hint: "緊急連絡や希望を家族で確認" }
+      { num: "05", key: "facility", title: "介護・施設のこと", hint: "介護や施設、家族の役割分担", icon: "介護" },
+      { num: "06", key: "end_of_life", title: "看取り・終末期のこと", hint: "緊急連絡や希望を家族で確認", icon: "看取り" }
     ]
   },
   {
     label: "亡くなったあと",
     tone: "sand",
     items: [
-      { num: "07", key: "after_death", title: "亡くなった直後", hint: "葬儀、親族連絡、役所手続きの初動" },
-      { num: "08", key: "after_funeral", title: "葬儀が終わった後", hint: "年金、保険、名義変更など" }
+      { num: "07", key: "after_death", title: "亡くなった直後", hint: "葬儀、親族連絡、役所手続きの初動", icon: "初動" },
+      { num: "08", key: "after_funeral", title: "葬儀が終わった後", hint: "年金、保険、名義変更など", icon: "手続き" }
     ]
   },
   {
     label: "整理と かたづけ",
     tone: "sand",
     items: [
-      { num: "09", key: "inheritance", title: "相続前に整理したい", hint: "書類や専門家に相談する前の確認" },
-      { num: "10", key: "home_clearance", title: "実家を片付けたい", hint: "写真、鍵、書類、家の状態" },
-      { num: "11", key: "completed", title: "整理が終わった", hint: "家族で見返せるように保管" }
+      { num: "09", key: "inheritance", title: "相続前に整理したい", hint: "書類や専門家に相談する前の確認", icon: "相続" },
+      { num: "10", key: "home_clearance", title: "実家を片付けたい", hint: "写真、鍵、書類、家の状態", icon: "実家" },
+      { num: "11", key: "completed", title: "整理が終わった", hint: "家族で見返せるように保管", icon: "保管" }
     ]
   }
 ];
@@ -77,9 +78,9 @@ export default function StartPage() {
         <button className="toc-back" type="button" onClick={() => router.push("/install")}>
           ‹ もどる
         </button>
-        <p className="toc-kicker">状況を選ぶ</p>
-        <h1>もくじ — 親の状況</h1>
-        <p>いちばん近いものを 1つ押してください。あとから変えられます。</p>
+        <p className="toc-kicker">最初の質問</p>
+        <h1>親は今、どの状況に近いですか？</h1>
+        <p>下のカードから、いちばん近いものを1つタップしてください。カード全体を押せます。</p>
       </section>
 
       <section className="notebook-card toc-book" aria-label="親の状況を選ぶ">
@@ -98,14 +99,13 @@ export default function StartPage() {
                     onClick={() => choose(item.key)}
                   >
                     <span className="toc-num" aria-hidden="true">
-                      {isChoosing ? "✓" : item.num}
+                      {isChoosing ? "✓" : item.icon}
                     </span>
                     <span className="toc-main">
                       <strong className="toc-title">{item.title}</strong>
                       <span className="toc-hint">{item.hint}</span>
                     </span>
-                    <span className="toc-leader" aria-hidden="true" />
-                    <span className="current-chip">{isChoosing ? "いまの状況" : "選ぶ"}</span>
+                    <span className="current-chip">{isChoosing ? "開いています" : "これを選ぶ"}</span>
                     <span className="toc-arrow" aria-hidden="true">
                       →
                     </span>

@@ -72,52 +72,39 @@ export function PwaInstallPanel() {
         </div>
       </div>
 
-      <section className="notebook-card today-page-card" aria-label="今日の家族ボード">
-        <header className="today-page-head">
-          <strong>{todayLabel}のページ</strong>
-          <span>家族ボード</span>
-        </header>
-
-        <div className="polaroid-row" aria-label="対象者">
-          <figure className="polaroid">
-            <span className="portrait-placeholder mother" aria-hidden="true" />
-            <figcaption>母</figcaption>
-          </figure>
-          <figure className="polaroid">
-            <span className="portrait-placeholder father" aria-hidden="true" />
-            <figcaption>父</figcaption>
-          </figure>
-        </div>
-
-        <ul className="notebook-task-list">
-          <li>
-            <span className="checkbox" aria-hidden="true" />
-            <div>
-              <strong>退院後の通院日を確認</strong>
-              <p>
-                <span className="chip chip-urgent">期限 7/31</span>
-                <span className="chip chip-sand">担当が決まっていません</span>
-              </p>
-            </div>
-          </li>
-          <li>
-            <span className="checkbox" aria-hidden="true" />
-            <div>
-              <strong>保険証と診断書の場所</strong>
-              <small>写真で家族に共有ずみ</small>
-            </div>
-          </li>
-        </ul>
+      <section className="entry-intro-card" aria-label="親のもしもナビの始め方">
+        <p className="entry-date">{todayLabel}のページ</p>
+        <h1>親のことを、このアプリで整理します。</h1>
+        <p>
+          入院、退院後の在宅、介護、亡くなった後の手続きなど、今の状況に近いものを選ぶと確認リストを作ります。
+        </p>
+        <Link className="entry-main-button" href="/start">
+          最初の登録を始める
+          <span>親の状況を1つ選びます</span>
+        </Link>
       </section>
 
-      <div className="entry-actions-notebook" aria-label="最初に進む場所">
-        <Link className="stamp-primary" href="/home">
-          今日の家族ボードをひらく <span aria-hidden="true">›</span>
-        </Link>
-        <Link className="stamp-secondary" href="/start">
-          ＋ 親の状況を書きたす
-        </Link>
-      </div>
+      <section className="entry-how-card" aria-label="このあとできること">
+        <h2>このあとできること</h2>
+        <ol>
+          <li>
+            <strong>親の状況を選ぶ</strong>
+            <span>当てはまるカードを1つタップします。</span>
+          </li>
+          <li>
+            <strong>確認リストを見る</strong>
+            <span>支払い、書類、家族で分けることを整理します。</span>
+          </li>
+          <li>
+            <strong>家族ボードに保存</strong>
+            <span>あとで家族と見返せる形にします。</span>
+          </li>
+        </ol>
+      </section>
+
+      <Link className="entry-board-link" href="/home">
+        すでに登録済みの家族ボードを見る
+      </Link>
 
       <div className="pwa-note">
         {promptEvent ? (

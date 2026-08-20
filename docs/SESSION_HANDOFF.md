@@ -2683,6 +2683,37 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 99
+
+- ユーザー指摘:
+  - 「入口からボタンを押せない」
+  - 「全体的にわかりにくい」
+  - 「基本、アプリのみでええから」
+- 判断:
+  - Webサイトからアプリへ誘導する見せ方ではなく、PWA自体をアプリ本体として扱う方針へ変更。
+  - `/install` と `/start` はアプリ画面なので、サイトナビを見せず、最初に押す場所を1つに絞る。
+- 対応:
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - 「家族ボード」と「状況を書きたす」の2択をやめ、主CTAを「最初の登録を始める」1つに整理。
+    - 既存ユーザー向けに「すでに登録済みの家族ボードを見る」を下部に分離。
+    - 文言を「親のことを、このアプリで整理します。」へ変更。
+  - `apps/web/app/start/page.tsx`
+    - 見出しを「親は今、どの状況に近いですか？」に変更。
+    - 「カード全体を押せます」と明記。
+    - 各選択肢に短いラベルを追加し、「これを選ぶ」表示へ変更。
+  - `apps/web/app/globals.css`
+    - `.shell:has(.entry-screen)` と `.shell:has(.notebook-start-page)` でアプリ画面のサイトナビを非表示。
+    - 入口CTAに `z-index` を付け、タップできない/押しにくい問題を避ける。
+    - `/start` は点線目次よりも、押せるカードであることが分かるUIへ戻した。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - Supabase Node 20 deprecation warningは出るがビルド失敗ではない。
+- 注意:
+  - まだcommit/push/deploy前。この追記99以降で実施すること。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:
