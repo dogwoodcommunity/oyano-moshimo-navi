@@ -60,6 +60,7 @@ const tocGroups: Array<{ label: string; tone: "teal" | "sand"; items: TocItem[] 
 export default function StartPage() {
   const router = useRouter();
   const [choosingStatus, setChoosingStatus] = useState<ParentStatus | null>(null);
+  const [chooseError, setChooseError] = useState<string | null>(null);
 
   useEffect(() => {
     router.prefetch("/diagnosis");
@@ -67,9 +68,15 @@ export default function StartPage() {
 
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
+    setChooseError(null);
     setChoosingStatus(status);
-    const record = await createCase(status);
-    router.push(`/diagnosis?caseId=${record.id}&status=${status}`);
+    try {
+      const record = await createCase(status);
+      router.push(`/diagnosis?caseId=${record.id}&status=${status}`);
+    } catch {
+      setChooseError("登録画面を開けませんでした。もう一度、近い状況を押してください。");
+      setChoosingStatus(null);
+    }
   }
 
   return (
@@ -115,6 +122,7 @@ export default function StartPage() {
             </div>
           </div>
         ))}
+        {chooseError ? <p className="submit-error toc-error">{chooseError}</p> : null}
       </section>
     </main>
   );

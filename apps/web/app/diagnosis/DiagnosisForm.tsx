@@ -9,7 +9,7 @@ import {
   type ParentStatus,
   type TargetRelationship
 } from "@oyano/shared";
-import { submitDiagnosis } from "@/lib/store";
+import { createLocalId, submitDiagnosis } from "@/lib/store";
 
 const concernOptions = ["期限がある手続き", "家族の役割分担", "実家の片付け", "相続・名義変更", "相談先探し", "お金・保険の把握"];
 const targetOptions: Array<{
@@ -38,16 +38,19 @@ const statusNotes: Partial<Record<ParentStatus, string>> = {
 export function DiagnosisForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const caseId = params.get("caseId") ?? crypto.randomUUID();
+  const [fallbackCaseId] = useState(() => createLocalId("case"));
+  const caseId = params.get("caseId") ?? fallbackCaseId;
   const initialStatus = (params.get("status") ?? "preparing") as ParentStatus;
   const [selectedStatus, setSelectedStatus] = useState<ParentStatus>(initialStatus);
   const [targetRelationship, setTargetRelationship] = useState<TargetRelationship>("mother");
   const [concerns, setConcerns] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const statusLabel = useMemo(() => STATUSES.find((item) => item.key === selectedStatus)?.label, [selectedStatus]);
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setSubmitError(null);
     setSubmitting(true);
     const form = new FormData(event.currentTarget);
     const answers: DiagnosisAnswers = {
@@ -66,8 +69,13 @@ export function DiagnosisForm() {
       consentToSensitiveInfo: form.get("sensitiveInfoConsent") === "on",
       consentTextVersion: SENSITIVE_INFO_CONSENT_VERSION
     };
-    const record = await submitDiagnosis(caseId, answers);
-    router.push(`/result/${record.id}`);
+    try {
+      const record = await submitDiagnosis(caseId, answers);
+      router.push(`/result/${record.id}`);
+    } catch {
+      setSubmitError("整理結果を作れませんでした。通信状況を確認して、もう一度押してください。");
+      setSubmitting(false);
+    }
   }
 
   function toggleConcern(value: string) {
@@ -264,6 +272,7 @@ export function DiagnosisForm() {
           <div>
             <strong>入力はあとから補えます。</strong>
             <p className="hint">まずは現時点の情報で結果を作成します。</p>
+            {submitError ? <p className="submit-error">{submitError}</p> : null}
           </div>
           <button className="button" disabled={submitting} type="submit">
             {submitting ? "整理結果を作成中" : "整理結果を見る"}

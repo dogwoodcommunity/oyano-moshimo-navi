@@ -30,12 +30,51 @@ const emptyDiaryForm: DiaryFormState = {
 };
 
 const healthNotes = [
-  "体調は安定している",
-  "薬・服薬で気になることがある",
-  "食事や水分量が気になる",
-  "歩行・転倒が心配",
-  "物忘れ・発言の変化があった",
-  "病院・介護先から連絡があった"
+  { icon: "食", title: "食事・水分", note: "食事や水分量が気になる" },
+  { icon: "薬", title: "薬・服薬", note: "薬・服薬で気になることがある" },
+  { icon: "体", title: "体調", note: "体調は安定している" },
+  { icon: "歩", title: "歩行・転倒", note: "歩行・転倒が心配" },
+  { icon: "話", title: "発言・気分", note: "物忘れ・発言の変化があった" },
+  { icon: "連", title: "病院・介護先", note: "病院・介護先から連絡があった" }
+];
+
+const emptyNotebookPromises = [
+  {
+    title: "1人目は無料で管理",
+    body: "まず1人だけ、プロフィール・日記・期限リストを作れます。使えると感じてから広げます。"
+  },
+  {
+    title: "日記がそのまま相談メモに",
+    body: "体調、発言、病院連絡、写真を日付つきで残し、あとから家族や相談先に説明しやすくします。"
+  },
+  {
+    title: "Plusで家族共有とAI相談",
+    body: "2人目以降、招待制の家族共有、この人の記録を踏まえたAI相談を有料で広げます。"
+  }
+];
+
+const activeNotebookPromises = [
+  {
+    title: "この人の情報が1冊にまとまる",
+    body: "基本情報、病院・介護先、薬、書類の場所、日記、写真、PDFを人ごとに分けて残します。"
+  },
+  {
+    title: "日々の変化から相談しやすくなる",
+    body: "発言、体調、病院連絡、家族で決めたことを時系列で残すので、あとから説明し直す手間を減らせます。"
+  },
+  {
+    title: "必要になった時だけPlusで広げる",
+    body: "2人目以降、家族招待、AI相談、PDF出力はPlusで追加。まず1人目をしっかり作ります。"
+  }
+];
+
+const setupPreviewItems = [
+  "フルネーム・呼び名・続柄",
+  "生年月日・今の状態",
+  "病院・施設・主な連絡先",
+  "薬や注意点",
+  "書類・鍵の保管メモ",
+  "写真・PDF付きの日記"
 ];
 
 const relationshipLabels = {
@@ -190,14 +229,53 @@ export default function FamilyBoardPage() {
   );
 
   const stats = activeCase ? [
-    { value: activeTasks.length, label: "未完了タスク", detail: nextTask ? `次は${formatDate(nextTask.dueDate)}` : "状況登録後に表示" },
-    { value: activeEntries.length, label: "手帳の記録", detail: "日々の変化を保存" },
-    { value: attachments.length, label: "写真・資料", detail: "日記に紐づけ" }
+    { value: dueText(nextTask), label: "次の確認日", detail: nextTask?.title ?? "確認リストを作成します" },
+    { value: `${activeProfileCompletion.percent}%`, label: "プロフィール", detail: `${activeProfileCompletion.filled}/${activeProfileCompletion.total}項目 入力済み` },
+    { value: `${activeEntries.length}件`, label: "手帳の記録", detail: attachments.length > 0 ? `写真・資料 ${attachments.length}件` : "日々の変化を保存" }
   ] : [
-    { value: 0, label: "登録中の対象者", detail: "まず1人目から" },
-    { value: 0, label: "手帳の記録", detail: "写真も保存できます" },
-    { value: 0, label: "未完了タスク", detail: "自動で作成します" }
+    { value: "1人目", label: "無料で作成", detail: "まず1人だけ登録" },
+    { value: "日記", label: "毎日の記録", detail: "写真・PDFも一緒に保存" },
+    { value: "Plus", label: "必要なら拡張", detail: "2人目・家族共有・AI相談" }
   ];
+  const promiseCards = activeCase ? activeNotebookPromises : emptyNotebookPromises;
+  const controlCards = activeCase ? [
+    {
+      label: "本人情報",
+      value: `${activeProfileCompletion.percent}%`,
+      title: "プロフィールを育てる",
+      body: "フルネーム、生年月日、関係、病院・施設、薬、書類の保管場所を少しずつ埋めます。"
+    },
+    {
+      label: "日記",
+      value: "今日",
+      title: "変化を1分で残す",
+      body: "体調、発言、病院連絡、家族で決めたことを日付つきで残します。写真やPDFも一緒に置けます。"
+    },
+    {
+      label: "保管庫",
+      value: `${attachments.length}件`,
+      title: "写真・PDFをまとめる",
+      body: "診断書、保険証券、施設資料、実家の写真などを、この人の記録として見返せます。"
+    },
+    {
+      label: "期限",
+      value: dueText(nextTask),
+      title: "次にやることを見る",
+      body: nextTask?.title ?? "状況に合わせて、期限のある確認リストを表示します。"
+    },
+    {
+      label: "共有",
+      value: "Plus",
+      title: "家族に招待して共有",
+      body: "リンクを知っているだけでは見られない、ログイン制の家族共有として広げます。"
+    },
+    {
+      label: "相談",
+      value: "Plus",
+      title: "記録を踏まえてAI相談",
+      body: "この人のプロフィールと日記を前提に、次に確認することを相談できる有料機能へつなげます。"
+    }
+  ] : [];
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
     setForms((current) => ({
@@ -276,25 +354,49 @@ export default function FamilyBoardPage() {
 
   return (
     <main className="container board-page family-notebook-page">
-      <section className="notebook-hero">
+      <section className="notebook-identity-card" aria-label="サービスの説明">
+        <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
         <div>
-          <p className="pill">家族の管理手帳</p>
-          <h1>{activeCase ? `${personName(activeCase)}のマイページ` : "1人目の家族手帳を作ります。"}</h1>
+          <strong>親のもしもナビ</strong>
+          <span>MOSHIMO NAVI</span>
+        </div>
+        <p>家族で進める、親・親族ごとの管理手帳</p>
+      </section>
+
+      <section className="notebook-hero">
+        <div className="notebook-hero-copy">
+          <p className="pill">{activeCase ? "この人の管理手帳" : "まず1人目から"}</p>
+          <h1>{activeCase ? `${personName(activeCase)}の管理手帳` : "親の状況を、1人ずつ管理します。"}</h1>
           <p>
             {activeCase
-              ? "日々の変化、写真、資料、期限のある手続きをこの人ごとに残します。2人目以降は上の切り替えで別々に管理できます。"
-              : "まずは1人だけ登録します。状況を選ぶと、この人専用の手帳と確認リストができます。"}
+              ? "プロフィール、日々の記録、写真、資料、期限のある手続きをこの人ごとに残します。家族に説明するときも、相談するときも、この手帳が前提になります。"
+              : "父母、義父母、親戚など、まず一番気になる人を1人だけ登録します。状況を選ぶと、その人専用の手帳と確認リストができます。"}
           </p>
+          <div className="notebook-hero-actions">
+            {activeCase ? (
+              <>
+                <a className="button" href="#today-diary">今日の記録を書く</a>
+                <a className="secondary" href="#person-profile">プロフィールを整える</a>
+              </>
+            ) : (
+              <Link className="button" href="/start">1人目を登録する</Link>
+            )}
+          </div>
         </div>
-        <div className="notebook-hero-actions">
-          {activeCase ? (
-            <>
-              <a className="button" href="#today-diary">今日の記録を書く</a>
-              <Link className="secondary" href="/plans">別の人を追加（Plus）</Link>
-            </>
-          ) : (
-            <Link className="button" href="/start">1人目を登録する</Link>
-          )}
+        <div className="notebook-hero-preview" aria-hidden="true">
+          <div className="preview-person-card">
+            <span>管理する人</span>
+            <strong>{activeCase ? personName(activeCase) : "1人目"}</strong>
+            <small>{activeCase ? statusLabel(activeCase.selectedStatus) : "入院・在宅・介護など"}</small>
+          </div>
+          <div className="preview-note-row">
+            <span>今日の記録</span>
+            <strong>体調・発言・連絡を残す</strong>
+          </div>
+          <div className="preview-note-row">
+            <span>次にやること</span>
+            <strong>{nextTask?.title ?? "期限と担当を表示"}</strong>
+          </div>
         </div>
       </section>
 
@@ -307,7 +409,7 @@ export default function FamilyBoardPage() {
               type="button"
               onClick={() => setActiveCaseId(caseRecord.id)}
             >
-              <span>{index + 1}人目</span>
+              <span>{index === 0 ? "無料枠" : `${index + 1}人目`}</span>
               <strong>{personName(caseRecord)}</strong>
               <small>{statusLabel(caseRecord.selectedStatus)}</small>
             </button>
@@ -330,6 +432,36 @@ export default function FamilyBoardPage() {
         ))}
       </section>
 
+      <section className="notebook-promise-grid" aria-label="このアプリでできること">
+        {promiseCards.map((item) => (
+          <article key={item.title}>
+            <strong>{item.title}</strong>
+            <p>{item.body}</p>
+          </article>
+        ))}
+      </section>
+
+      {activeCase ? (
+        <section className="notebook-control-map" aria-label={`${personName(activeCase)}の手帳で管理できること`}>
+          <div className="section-title-row">
+            <div>
+              <p className="pill">この人のマイページ</p>
+              <h2>{personName(activeCase)}のことを、ここから毎日少しずつ整えます。</h2>
+            </div>
+          </div>
+          <div className="control-map-grid">
+            {controlCards.map((item) => (
+              <article key={item.title}>
+                <span>{item.label}</span>
+                <strong>{item.value}</strong>
+                <h3>{item.title}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {!loaded ? (
         <section className="panel board-empty">
           <h2>読み込み中です</h2>
@@ -338,21 +470,22 @@ export default function FamilyBoardPage() {
 
       {loaded && !activeCase ? (
         <section className="panel board-empty empty-notebook-card">
-          <h2>登録すると、この画面がその人のマイページになります。</h2>
-          <p>父母、義父母、祖父母、親戚など、まず1人だけ。プロフィール、日記、写真、期限つきタスクを人ごとに分けて残せます。</p>
-          <div className="empty-feature-grid" aria-label="登録後に使える機能">
-            <span>プロフィール</span>
-            <span>日記</span>
-            <span>写真・PDF</span>
-            <span>期限タスク</span>
+          <div>
+            <p className="pill">登録後のイメージ</p>
+            <h2>この画面が、その人専用のマイページになります。</h2>
+            <p>父母、義父母、祖父母、親戚など、まず1人だけ。あとから2人目、3人目を別の手帳として追加できます。</p>
           </div>
+          <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
+            {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
+          </div>
+          <Link className="button empty-start-button" href="/start">1人目の手帳を作る</Link>
         </section>
       ) : null}
 
       {activeCase ? (
         <section className="mypage-grid" aria-label={`${personName(activeCase)}の管理ページ`}>
           <div className="mypage-main">
-            <article className="profile-book-card profile-editor-card">
+            <article className="profile-book-card profile-editor-card" id="person-profile">
               <div className="profile-book-head">
                 <div className="profile-avatar" aria-hidden="true">
                   {personName(activeCase).slice(0, 1)}
@@ -474,14 +607,16 @@ export default function FamilyBoardPage() {
             <article className="health-check-card">
               <div>
                 <p className="pill">今日のチェック</p>
-                <h2>当てはまるものを押すと、手帳に追記できます。</h2>
-                <p>細かく書けない日でも、ボタンだけで変化の種を残せます。</p>
+                <h2>今日あったことを、1つ押してください。</h2>
+                <p>押した内容は下の記録欄に入ります。あとから一言だけ足せば、家族に伝わる日記になります。</p>
               </div>
               <div className="health-chip-grid">
-                {healthNotes.map((note) => (
-                  <button key={note} type="button" onClick={() => appendDiaryNote(activeCase.id, note)}>
-                    <span aria-hidden="true">＋</span>
-                    {note}
+                {healthNotes.map((item) => (
+                  <button key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
+                    <span aria-hidden="true">{item.icon}</span>
+                    <strong>{item.title}</strong>
+                    <small>{item.note}</small>
+                    <em>記録に入れる</em>
                   </button>
                 ))}
               </div>

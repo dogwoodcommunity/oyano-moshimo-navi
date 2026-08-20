@@ -1,29 +1,70 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import { buildDiagnosisResult, targetLabel, type DiagnosisAnswers } from "@oyano/shared";
-import { getLocalCase } from "@/lib/store";
+import { getLocalCase, type CaseRecord } from "@/lib/store";
+
+function normalizeAnswers(record: CaseRecord): DiagnosisAnswers {
+  return {
+    selectedStatus: record.selectedStatus,
+    targetRelationship: record.answers.targetRelationship ?? "mother",
+    targetName: record.answers.targetName ?? "",
+    additionalTargets: record.answers.additionalTargets ?? [],
+    parentSituation: record.answers.parentSituation ?? "",
+    familyStructure: record.answers.familyStructure ?? "",
+    hasHome: record.answers.hasHome ?? "unknown",
+    knowsAssets: record.answers.knowsAssets ?? "unknown",
+    concerns: record.answers.concerns ?? [],
+    homeClearance: record.answers.homeClearance ?? "",
+    contactName: record.answers.contactName,
+    contactEmail: record.answers.contactEmail,
+    consentToContact: record.answers.consentToContact,
+    consentToSensitiveInfo: record.answers.consentToSensitiveInfo,
+    consentTextVersion: record.answers.consentTextVersion
+  };
+}
 
 export default function ResultPage() {
   const params = useParams<{ caseId: string }>();
   const searchParams = useSearchParams();
   const supportPackResult = searchParams.get("support_pack");
-  const record = getLocalCase(params.caseId);
-  const fallbackAnswers = {
-    selectedStatus: record?.selectedStatus ?? "preparing",
-    targetRelationship: "mother",
-    targetName: "",
-    additionalTargets: [],
-    parentSituation: "",
-    familyStructure: "",
-    hasHome: "unknown",
-    knowsAssets: "unknown",
-    concerns: [],
-    homeClearance: ""
-  } satisfies DiagnosisAnswers;
-  const answers = (record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers;
-  const result = record?.result ?? buildDiagnosisResult(answers);
+  const [record, setRecord] = useState<CaseRecord | undefined>();
+  const [loaded, setLoaded] = useState(false);
+  const answers = useMemo(() => record ? normalizeAnswers(record) : undefined, [record]);
+  const result = useMemo(() => answers ? record?.result ?? buildDiagnosisResult(answers) : undefined, [answers, record?.result]);
+
+  useEffect(() => {
+    setRecord(getLocalCase(params.caseId));
+    setLoaded(true);
+  }, [params.caseId]);
+
+  if (!loaded) {
+    return (
+      <main className="container">
+        <section className="panel result-loading">
+          <p className="pill">整理結果</p>
+          <h1 className="page-title">結果を読み込んでいます。</h1>
+          <p className="lead">登録した内容を確認しています。</p>
+        </section>
+      </main>
+    );
+  }
+
+  if (!record || !answers || !result) {
+    return (
+      <main className="container">
+        <section className="panel result-missing">
+          <p className="pill">整理結果</p>
+          <h1 className="page-title">整理結果が見つかりませんでした。</h1>
+          <p className="lead">同じ端末で、もう一度「1人目の登録」から状況を選んでください。</p>
+          <Link className="button" href="/start">1人目を登録する</Link>
+        </section>
+      </main>
+    );
+  }
+
   const target = targetLabel(answers);
   const supportPackHref = record?.handoffToken
     ? `/support-pack?${new URLSearchParams({ caseId: params.caseId, checkoutToken: record.handoffToken }).toString()}`
@@ -46,6 +87,23 @@ export default function ResultPage() {
       body: "プロフィールと記録が残るので、AI相談や専門家相談で毎回ゼロから説明しなくて済みます。"
     }
   ];
+  const notebookPlanItems = [
+    {
+      label: "無料",
+      title: `${target}の管理手帳を作る`,
+      body: "この整理結果を1人目のマイページに保存します。プロフィール、日記、写真、PDF、期限リストをこの人ごとに管理できます。"
+    },
+    {
+      label: "毎日",
+      title: "日記で変化を残す",
+      body: "体調、発言、病院・介護先からの連絡、家族で決めたことを1分で記録。あとから家族や相談先に説明しやすくします。"
+    },
+    {
+      label: "Plus",
+      title: "必要になったら広げる",
+      body: "2人目以降の登録、家族招待、AI相談、家族会議用PDFは有料プランで追加します。"
+    }
+  ];
 
   return (
     <main className="container">
@@ -64,11 +122,20 @@ export default function ResultPage() {
       <section className="panel result-next-value">
         <div>
           <p className="pill">このまま続ける理由</p>
-          <h2>この結果を、{target}専用のマイページにできます。</h2>
+          <h2>この結果を、{target}の管理手帳に残せます。</h2>
           <p>
             親の状況は一度整理して終わりではありません。退院、介護、書類、家族の役割、実家の片付けは少しずつ変わります。
-            だから、この結果をこの人の「管理手帳」として残し、これからの日々の記録と一緒に育てていきます。
+            だから、この結果をこの人の「管理手帳」として残し、これからの日々の記録、写真、期限リストと一緒に育てていきます。
           </p>
+        </div>
+        <div className="result-save-panel">
+          {notebookPlanItems.map((item) => (
+            <article key={item.title}>
+              <span>{item.label}</span>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+            </article>
+          ))}
         </div>
         <div className="result-value-grid">
           {resultValueItems.map((item, index) => (
@@ -81,7 +148,7 @@ export default function ResultPage() {
         </div>
         <div className="result-notebook-preview">
           <div>
-            <strong>1人目のマイページでできること</strong>
+            <strong>{target}の手帳でできること</strong>
             <ul>
               <li>フルネーム、生年月日、続柄、連絡窓口を登録</li>
               <li>日記、写真、PDF、病院・介護先メモを保存</li>
@@ -89,7 +156,7 @@ export default function ResultPage() {
               <li>家族共有・AI相談・2人目以降はPlusで拡張</li>
             </ul>
           </div>
-          <Link className="button" href="/home">1人目のマイページを作る</Link>
+          <Link className="button" href="/home">無料でこの人の手帳を作る</Link>
         </div>
       </section>
 
@@ -165,7 +232,7 @@ export default function ResultPage() {
           </div>
         </div>
         <div className="actions">
-          <Link className="button" href="/home">この人のマイページへ進む</Link>
+          <Link className="button" href="/home">この人の管理手帳へ進む</Link>
           <Link className="secondary" href="/plans">家族共有はPlusで設定</Link>
         </div>
       </section>

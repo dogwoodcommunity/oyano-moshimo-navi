@@ -3291,3 +3291,70 @@ GitHubが必要な理由:
   - 本番Supabaseに `supabase/person_notebook_hardening.sql` を投入して、`verify_setup.sql` または `verify_compact.sql` で全true確認。
   - 日記の写真/PDFを「メモ」から実ファイルアップロードへ拡張する。
   - 1人目管理手帳の画面を実機で確認し、文字サイズ・余白・CTAのわかりやすさを磨く。
+
+## 2026-08-20 追記 102
+
+- ユーザー要望:
+  - 基本はWeb入口ではなく、PWA/アプリだけで完結する体験に寄せる。
+  - 1人目の整理結果から「この人の管理手帳を作りたい」と思える内容にする。
+  - 1人目のマイページを、プロフィール・日記・写真/PDF・期限・家族共有・AI相談の価値が伝わる画面にする。
+  - 2人目以降、家族共有、AI相談はPlus導線にしてよい。
+  - スマホで押したあと反応が遅く見える問題も確認する。
+- 対応中:
+  - `apps/web/app/diagnosis/DiagnosisForm.tsx`
+    - 診断送信後を `router.push` ではなく `window.location.assign` に変更し、スマホ/PWAでも結果ページへ確実に遷移させる。
+    - 送信失敗時のエラー表示を追加。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 結果後の導線を「この結果を、対象者の管理手帳に残す」に変更。
+    - 無料の1人目、日記で変化を残す、Plusで2人目/家族招待/AI相談へ広げる、の3カードを追加。
+    - CTAを「無料でこの人の手帳を作る」「この人の管理手帳へ進む」に変更。
+  - `apps/web/app/home/page.tsx`
+    - 登録済みの家族ボードに「この人のマイページ」カード群を追加。
+    - プロフィール、日記、写真/PDF、期限、家族共有、AI相談の管理価値を上部で説明。
+    - 登録済み時は「1人目の管理手帳」ではなく「この人の管理手帳」と表示。
+    - 対象者切替の先頭表示を「無料枠」に変更して、登録ボタンとの混同を減らす。
+  - `apps/web/app/globals.css`
+    - 管理手帳カード、結果保存カード、送信エラー表示のスタイルを追加。
+  - `apps/web/public/sw.js`
+    - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v8` に更新。
+- 次にやること:
+  - `npm run typecheck --workspace web`
+  - `git diff --check`
+  - `npm run build --workspace web`
+  - スマホ幅で `/home` と診断→結果→家族ボードの表示確認。
+
+## 2026-08-20 追記 103
+
+- ユーザー要望:
+  - 1人目登録後の誘導とマイページを、使いたくなる「管理手帳」に寄せる。
+  - 入口カードを押しても反応しない/遅く見える問題を確認する。
+  - 1人目登録済みなのに、再度「1人目を登録する」が出る状態をなくす。
+- 追加対応:
+  - `apps/web/lib/store.ts`
+    - `createLocalId()` を追加し、`crypto.randomUUID()` が使えないブラウザ/埋め込み環境でもID生成できるようにした。
+    - localStorageが使えない環境でも現在セッション内ではケース/日記を保持できるよう、メモリフォールバックを追加。
+    - `createCase()`、日記作成、ローカルデモcase作成を安全なID生成に変更。
+  - `apps/web/app/start/page.tsx`
+    - 入口カードの作成処理で例外が起きても無言で止まらないよう、エラーメッセージと状態復帰を追加。
+  - `apps/web/app/diagnosis/DiagnosisForm.tsx`
+    - `caseId` 生成を安全な `createLocalId()` に変更。
+    - 結果ページへの遷移をアプリ内遷移に戻し、PWA/スマホで押した後の体感を軽くした。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - ローカルケース読み込み前に `お母さん / 元気・準備中` へ落ちる問題を修正。
+    - ケースが読めるまでローディング、見つからない時は再登録案内を出す。
+- ローカル実機相当確認:
+  - 開発サーバーを再起動して、古い `.next` チャンク混入による `Cannot find module './9303.js'` を解消。
+  - Browserプラグインを `390x844` 幅にして `/start -> /diagnosis -> /result/[caseId] -> /home` を通した。
+  - `入院した` から診断画面に遷移することを確認。
+  - `お父さん` / `長期入院中...` で送信し、結果画面に `お父さんの整理結果` と入院系結果が出ることを確認。
+  - 結果から家族ボードへ進み、`お父さんの管理手帳`、プロフィール、日記、AI相談導線が出ることを確認。
+  - 登録済み状態で `1人目を登録する` は表示されないことを確認。
+  - `390px` 幅で横はみ出しなし。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。
+- 注意:
+  - `review_exports/` は未追跡のまま残している。
+  - 本番反映後、iPhone/PWAで古い表示が残る場合はService Workerキャッシュ更新のため、`?v=20260820-103` 付きURLで開く。

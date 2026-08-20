@@ -56,15 +56,53 @@ export type DiaryEntry = {
 
 const STORAGE_KEY = "oyano_cases_v03";
 const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
+let memoryCases: CaseRecord[] = [];
+let memoryDiaryEntries: DiaryEntry[] = [];
+
+export function createLocalId(prefix = "local"): string {
+  const randomUUID = globalThis.crypto?.randomUUID;
+  if (typeof randomUUID === "function") {
+    return randomUUID.call(globalThis.crypto);
+  }
+
+  return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getLocalStorage(): Storage | null {
+  if (typeof window === "undefined" || !window.localStorage) return null;
+
+  try {
+    const probeKey = "__oyano_storage_probe__";
+    window.localStorage.setItem(probeKey, "1");
+    window.localStorage.removeItem(probeKey);
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
 
 function readCases(): CaseRecord[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  return raw ? JSON.parse(raw) as CaseRecord[] : [];
+  const storage = getLocalStorage();
+  if (!storage) return memoryCases;
+
+  try {
+    const raw = storage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) as CaseRecord[] : [];
+  } catch {
+    return memoryCases;
+  }
 }
 
 function writeCases(cases: CaseRecord[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(cases));
+  memoryCases = [...cases];
+  const storage = getLocalStorage();
+  if (!storage) return;
+
+  try {
+    storage.setItem(STORAGE_KEY, JSON.stringify(cases));
+  } catch {
+    // Private browsing or embedded browsers can reject storage writes.
+  }
 }
 
 export function listLocalCases(): CaseRecord[] {
@@ -76,13 +114,27 @@ export function getLocalCase(caseId: string): CaseRecord | undefined {
 }
 
 function readDiaryEntries(): DiaryEntry[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(DIARY_STORAGE_KEY);
-  return raw ? JSON.parse(raw) as DiaryEntry[] : [];
+  const storage = getLocalStorage();
+  if (!storage) return memoryDiaryEntries;
+
+  try {
+    const raw = storage.getItem(DIARY_STORAGE_KEY);
+    return raw ? JSON.parse(raw) as DiaryEntry[] : [];
+  } catch {
+    return memoryDiaryEntries;
+  }
 }
 
 function writeDiaryEntries(entries: DiaryEntry[]) {
-  window.localStorage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+  memoryDiaryEntries = [...entries];
+  const storage = getLocalStorage();
+  if (!storage) return;
+
+  try {
+    storage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+  } catch {
+    // Keep the in-memory copy for the current app session.
+  }
 }
 
 export function listDiaryEntries(caseId: string): DiaryEntry[] {
@@ -94,7 +146,7 @@ export function listDiaryEntries(caseId: string): DiaryEntry[] {
 export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
   const entry: DiaryEntry = {
     ...input,
-    id: crypto.randomUUID(),
+    id: createLocalId("diary"),
     createdAt: new Date().toISOString()
   };
   writeDiaryEntries([entry, ...readDiaryEntries()]);
@@ -165,7 +217,7 @@ async function postJson<T>(path: string, body: unknown): Promise<T | null> {
 
 export async function createCase(selectedStatus: ParentStatus): Promise<CaseRecord> {
   const record: CaseRecord = {
-    id: crypto.randomUUID(),
+    id: createLocalId("case"),
     selectedStatus,
     answers: { selectedStatus },
     status: "draft",
@@ -212,7 +264,7 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
 }
 
 export function createLocalDemoCase(): CaseRecord {
-  const id = crypto.randomUUID();
+  const id = createLocalId("case");
   const answers: DiagnosisAnswers = {
     selectedStatus: "home_clearance",
     parentSituation: "実家が空き家になりそうで、家財整理と名義確認を家族で進めたい。",
