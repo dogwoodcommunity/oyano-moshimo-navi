@@ -2670,5 +2670,15 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - 初回ビルドは `next/font` が `fonts.googleapis.com` に出られず失敗したが、ネットワーク許可後に成功。
 - 注意:
-  - まだGit commit/push/deployはこの追記時点では未実施。
+  - Git commit/push/deployまで完了。
+  - commit: `cdea227 Apply notebook entry design`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_48jMWtkepYXfV6qWsNSLLaRw1Se2`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-o3ex6pnjh-dogwoodcommunity1.vercel.app`
+  - 最初の `npx vercel --prod --yes` は `Not authorized` で失敗したが、`--scope dogwoodcommunity1` を明示して成功。
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/install` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
