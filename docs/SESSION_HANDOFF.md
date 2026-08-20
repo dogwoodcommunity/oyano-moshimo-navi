@@ -2683,6 +2683,38 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 99
+
+- ユーザー指摘:
+  - スマホ側で変更がちゃんと表示されていない。
+  - ロゴが前のままに見える。
+  - デザインもまだ反映が不安定に見える。
+- 原因:
+  - `apps/web/app/layout.tsx` のcritical inline CSSに、旧ロゴ風の緑四角 `.brand::before` が残っていた。
+  - `apps/web/app/globals.css` の通常ヘッダーも、ヘッダー用途に四角背景つき `logo-mark.png` を使っていた。
+  - `apps/web/public/sw.js` が `/home` などのHTMLページをキャッシュ優先で返しており、PWA/スマホ側で古い家族ボードが残りやすかった。
+- 対応:
+  - `apps/web/app/layout.tsx`
+    - critical inline CSSの `.brand::before` を `/brand/watch-bird-mark.svg` に変更。
+    - CSSが読み込めない/遅れる場合でも旧四角ロゴが出ないようにした。
+  - `apps/web/app/globals.css`
+    - 通常ヘッダーの `.brand::before` も `/brand/watch-bird-mark.svg` に変更。
+    - ヘッダーではアプリアイコン用の四角PNGではなく、見守り鳥単体ロゴを使う方針に統一。
+  - `apps/web/public/sw.js`
+    - cache versionを `oyano-moshimo-navi-v5` に更新。
+    - `/home`、`/`、`/start` などHTMLページを静的cache-first対象から外し、ネットワーク優先に変更。
+    - `/brand/watch-bird-mark.svg` をキャッシュ対象へ追加。
+  - `apps/web/components/PwaRegister.tsx`
+    - Service Worker登録後に `registration.update()` を呼び、更新検知後の `controllerchange` で自動リロードする処理を追加。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - ビルド時に既存CSSの autoprefixer warning と Supabase Node 22 推奨警告は出るが、ビルドは成功。
+- 注意:
+  - この時点ではcommit/push/deploy前。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー指摘:

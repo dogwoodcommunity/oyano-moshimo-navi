@@ -602,14 +602,14 @@ textarea {
 }
 
 .brand::before {
-  background-image: url("/brand/logo-mark.png");
+  background-image: url("/brand/watch-bird-mark.svg");
   background-position: center;
-  background-size: cover;
-  border-radius: 8px;
+  background-repeat: no-repeat;
+  background-size: contain;
   content: "";
   display: inline-block;
-  height: 30px;
-  width: 30px;
+  height: 36px;
+  width: 36px;
 }
 
 .navlinks {

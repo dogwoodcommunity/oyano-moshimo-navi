@@ -13,7 +13,7 @@ const criticalCss = `
   .shell{min-height:100vh}
   .nav{align-items:center;background:rgba(246,247,241,.96);border-bottom:1px solid rgba(217,226,220,.82);display:flex;gap:16px;justify-content:space-between;min-height:66px;padding:14px 24px;position:sticky;top:0;z-index:20}
   .brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
-  .brand::before{background:#0f6b45;border-radius:8px;content:"";display:inline-block;height:30px;width:30px}
+  .brand::before{background:url("/brand/watch-bird-mark.svg") center/contain no-repeat;content:"";display:inline-block;height:36px;width:36px}
   .navlinks{color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:18px}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}
