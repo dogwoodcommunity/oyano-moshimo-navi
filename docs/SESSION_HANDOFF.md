@@ -2711,7 +2711,17 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - Supabase Node 20 deprecation warningは出るがビルド失敗ではない。
 - 注意:
-  - まだcommit/push/deploy前。この追記99以降で実施すること。
+  - Git commit/push/deployまで完了。
+  - commit: `b8ad4d1 Clarify app-first entry flow`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_9Yoa8pV6X32pqaSApXKEr2iusNCs`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-lkt4v89cc-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/install` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+    - `/install` のHTMLに `最初の登録を始める` が反映済み。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 98
