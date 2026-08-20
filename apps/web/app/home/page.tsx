@@ -23,6 +23,7 @@ type DiaryFormState = {
 };
 
 type TaskWithDue = NonNullable<CaseRecord["result"]>["tasks"][number];
+type RecordFilter = "all" | "changed" | "attachments";
 
 const emptyDiaryForm: DiaryFormState = {
   body: "",
@@ -89,12 +90,27 @@ function formatDate(dateString?: string) {
   return `${date.getMonth() + 1}/${date.getDate()}`;
 }
 
+function formatLongDate(dateString?: string) {
+  if (!dateString) return "日付なし";
+  const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateString;
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
 function daysUntil(dateString?: string) {
   if (!dateString) return null;
   const today = new Date(todayInputValue()).getTime();
   const due = new Date(`${dateString}T00:00:00`).getTime();
   if (Number.isNaN(due)) return null;
   return Math.ceil((due - today) / 86400000);
+}
+
+function daysSince(dateString?: string) {
+  if (!dateString) return null;
+  const today = new Date(`${todayInputValue()}T00:00:00`).getTime();
+  const target = new Date(`${dateString}T00:00:00`).getTime();
+  if (Number.isNaN(target)) return null;
+  return Math.max(0, Math.floor((today - target) / 86400000));
 }
 
 function dueText(task?: TaskWithDue) {
@@ -197,6 +213,155 @@ function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
   ];
 }
 
+function moodLabel(mood: DiaryEntry["mood"]) {
+  if (mood === "urgent") return "急ぎ";
+  if (mood === "changed") return "変化あり";
+  return "通常";
+}
+
+function groupDiaryEntries(entries: DiaryEntry[]) {
+  const groups = new Map<string, DiaryEntry[]>();
+  entries.forEach((entry) => {
+    const key = entry.date.slice(0, 7);
+    groups.set(key, [...(groups.get(key) ?? []), entry]);
+  });
+
+  return Array.from(groups.entries()).map(([month, items]) => ({
+    month,
+    items,
+    changedCount: items.filter((entry) => entry.mood === "changed" || entry.mood === "urgent").length,
+    attachmentCount: items.reduce((sum, entry) => sum + entry.attachments.length, 0)
+  }));
+}
+
+function monthLabel(month: string) {
+  const [, rawMonth] = month.split("-");
+  return `${Number(rawMonth)}月の記録`;
+}
+
+function buildNotebookInsight(
+  caseId: string,
+  entries: DiaryEntry[],
+  profile: PersonProfile | undefined,
+  tasks: TaskWithDue[],
+  completion: ReturnType<typeof profileCompletion>
+) {
+  const text = entries.slice(0, 12).map((entry) => entry.body).join("\n");
+  const urgentCount = entries.filter((entry) => entry.mood === "urgent").length;
+  const changedCount = entries.filter((entry) => entry.mood === "changed").length;
+  const attachmentCount = entries.reduce((sum, entry) => sum + entry.attachments.length, 0);
+  const latestEntry = entries[0];
+  const daysFromLastEntry = daysSince(latestEntry?.date);
+  const nextTask = tasks[0];
+  const nextTaskDays = daysUntil(nextTask?.dueDate);
+  const alerts: { tone: "urgent" | "warning" | "good"; title: string; body: string; href: string }[] = [];
+
+  if (urgentCount > 0) {
+    alerts.push({
+      tone: "urgent",
+      title: "急ぎの記録があります",
+      body: "急な変化として残した日があります。家族の連絡順と相談先を確認してください。",
+      href: "#diary-history"
+    });
+  }
+
+  if (nextTask && nextTaskDays !== null && nextTaskDays <= 3) {
+    alerts.push({
+      tone: nextTaskDays < 0 ? "urgent" : "warning",
+      title: nextTaskDays < 0 ? "期限を過ぎた確認があります" : "近い期限があります",
+      body: `${nextTask.title} は ${dueText(nextTask)} です。担当者を決めて進めましょう。`,
+      href: `/result/${caseId}`
+    });
+  }
+
+  if (completion.percent < 70) {
+    alerts.push({
+      tone: "warning",
+      title: "本人情報がまだ薄いです",
+      body: "フルネーム、生年月日、病院・施設、薬の注意点を足すと、相談時に説明しやすくなります。",
+      href: "#profile-edit-fields"
+    });
+  }
+
+  if (entries.length === 0) {
+    alerts.push({
+      tone: "warning",
+      title: "まだ記録がありません",
+      body: "まずは今日あったことを1行だけ残してください。あとから振り返る土台になります。",
+      href: "#today-diary"
+    });
+  } else if (daysFromLastEntry !== null && daysFromLastEntry >= 7) {
+    alerts.push({
+      tone: "warning",
+      title: "記録が少し空いています",
+      body: `${formatLongDate(latestEntry?.date)}から記録が止まっています。変化なしでも一言残すと安心です。`,
+      href: "#today-diary"
+    });
+  }
+
+  if (alerts.length === 0) {
+    alerts.push({
+      tone: "good",
+      title: "今日見るところは整っています",
+      body: "記録、本人情報、期限がひと通り残っています。変化があった日だけ追加すれば大丈夫です。",
+      href: "#today-diary"
+    });
+  }
+
+  let patternTitle = "まだ傾向を見るには記録が少なめです";
+  let patternBody = "1日1行でいいので、体調・発言・連絡・家族で決めたことを残すと、あとから流れが見えます。";
+  let forecastTitle = "次に困りそうなことを、少しずつ見える化します";
+  let forecastBody = "記録が増えるほど、期限・家族確認・写真で残すべきことを手帳内で拾いやすくなります。";
+  if (/退院|在宅|訪問|通院/.test(text)) {
+    patternTitle = "退院後・在宅の確認が続いています";
+    patternBody = "通院、訪問サービス、薬、家族の役割を同じ日記に残すと、次の調整がしやすくなります。";
+    forecastTitle = "退院後は、予定と役割の抜け漏れが起きやすいです";
+    forecastBody = "次回通院、訪問サービス、薬の変更、送迎担当を同じ画面で確認できるようにしましょう。";
+  } else if (/薬|服薬|飲み忘れ/.test(text)) {
+    patternTitle = "薬・服薬の記録が出ています";
+    patternBody = "薬の変更日、飲み忘れ、誰が確認したかを残すと、医療・介護の相談で説明しやすくなります。";
+    forecastTitle = "薬の変化は、あとから説明に困りやすいです";
+    forecastBody = "薬名そのものより、変更日・飲み忘れ・誰に相談したかを短く残すと振り返りやすくなります。";
+  } else if (/忘れ|認知|怒|混乱|徘徊|発言/.test(text)) {
+    patternTitle = "発言や記憶の変化が記録されています";
+    patternBody = "事実、日時、場面を短く残しておくと、家族間の共有や専門窓口への相談に役立ちます。";
+    forecastTitle = "発言や様子の変化は、事実メモが助けになります";
+    forecastBody = "判断名を決めつけず、日時・場所・実際の発言を残すと、家族で話す材料になります。";
+  } else if (/家|実家|鍵|片付|写真|荷物|書類/.test(text)) {
+    patternTitle = "実家・書類まわりの整理が始まっています";
+    patternBody = "部屋ごとの写真、鍵、ライフライン、重要書類の場所をセットで残すと後から困りにくくなります。";
+    forecastTitle = "実家まわりは、写真と場所メモが後で効きます";
+    forecastBody = "鍵、書類、ライフライン、部屋ごとの状態を写真つきで残すと、家族で同じ前提を持てます。";
+  } else if (entries.length >= 3) {
+    patternTitle = "記録の習慣ができ始めています";
+    patternBody = "このペースで残すと、家族会議や相談時に「最近どうだったか」を説明しやすくなります。";
+    forecastTitle = "次は、記録を家族で見返す段階です";
+    forecastBody = "変化があった日だけでなく、変化がなかった日も少し残すと、流れが分かりやすくなります。";
+  }
+
+  const questions = new Set<string>();
+  if (!profile?.birthDate) questions.add("生年月日や年齢は確認できていますか？");
+  if (!profile?.hospitalOrFacility) questions.add("病院・施設・ケア先の名前と窓口は分かりますか？");
+  if (!profile?.medicationNote) questions.add("薬の変更や飲み忘れで気になることはありますか？");
+  if (/退院|在宅|訪問|通院/.test(text)) questions.add("次回通院や訪問サービスの日付は決まっていますか？");
+  if (/支払|請求|保険|年金/.test(text)) questions.add("支払い・保険・年金の書類の場所は分かりますか？");
+  if (/家|実家|鍵|片付|写真|荷物|書類/.test(text)) questions.add("鍵、重要書類、ライフラインの状態を写真で残しましたか？");
+  if (questions.size === 0) questions.add("次に家族へ確認したいことを1つだけ書いておきますか？");
+
+  return {
+    urgentCount,
+    changedCount,
+    attachmentCount,
+    latestDateLabel: latestEntry ? formatLongDate(latestEntry.date) : "未記録",
+    patternTitle,
+    patternBody,
+    forecastTitle,
+    forecastBody,
+    alerts: alerts.slice(0, 3),
+    questions: Array.from(questions).slice(0, 4)
+  };
+}
+
 export default function FamilyBoardPage() {
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
@@ -204,6 +369,7 @@ export default function FamilyBoardPage() {
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
+  const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -230,6 +396,13 @@ export default function FamilyBoardPage() {
   const attachments = activeEntries.flatMap((entry) =>
     entry.attachments.map((file) => ({ ...file, entryDate: entry.date }))
   );
+  const filteredEntries = activeEntries.filter((entry) => {
+    if (recordFilter === "changed") return entry.mood === "changed" || entry.mood === "urgent";
+    if (recordFilter === "attachments") return entry.attachments.length > 0;
+    return true;
+  });
+  const diaryGroups = groupDiaryEntries(filteredEntries);
+  const notebookInsight = activeCase ? buildNotebookInsight(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : undefined;
 
   const stats = activeCase ? [
     { value: dueText(nextTask), label: "次の確認日", detail: nextTask?.title ?? "確認リストを作成します" },
@@ -342,7 +515,7 @@ export default function FamilyBoardPage() {
             {activeCase ? (
               <>
                 <a className="button" href="#today-diary">今日の記録を書く</a>
-                <a className="secondary" href="#person-profile">プロフィールを整える</a>
+                <a className="secondary" href="#profile-edit-fields">プロフィールを変更する</a>
               </>
             ) : (
               <Link className="button" href="/start">1人目の手帳を作る</Link>
@@ -434,6 +607,11 @@ export default function FamilyBoardPage() {
                   : "基本情報はかなり整っています。変化があれば更新してください。"}
               </p>
             </a>
+            <a className="today-overview-card" href="#diary-history">
+              <span>過去</span>
+              <strong>過去の記録を見る</strong>
+              <p>{activeEntries.length > 0 ? `${activeEntries.length}件の記録を月ごとに見返せます。変化や急ぎの記録も分けて確認できます。` : "まだ記録はありません。今日の一言から手帳が育ちます。"}</p>
+            </a>
           </div>
         </section>
       ) : null}
@@ -494,6 +672,105 @@ export default function FamilyBoardPage() {
                 </div>
                 <small>{activeProfileCompletion.filled}/{activeProfileCompletion.total}項目 入力済み</small>
               </div>
+              <div className="profile-edit-callout">
+                <div>
+                  <strong>プロフィール変更はここでできます</strong>
+                  <p>すぐ下の入力欄をタップして、名前・生年月日・病院・薬・書類メモを更新してください。入力したら保存ボタンを押します。</p>
+                </div>
+                <a href="#profile-edit-fields">入力欄へ</a>
+              </div>
+              {activeProfile ? (
+                <>
+                  <div className="profile-edit-title">
+                    <span>編集欄</span>
+                    <strong>ここをタップして変更します</strong>
+                  </div>
+                  <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
+                    <label>
+                      <span>フルネーム</span>
+                      <input
+                        placeholder="例: 山田 太郎"
+                        value={activeProfile.fullName ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { fullName: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>呼び名</span>
+                      <input
+                        placeholder="例: お父さん、太郎さん"
+                        value={activeProfile.displayName ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { displayName: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>関係</span>
+                      <input
+                        placeholder="例: 父、義母、叔父"
+                        value={activeProfile.relationship ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { relationship: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>生年月日</span>
+                      <input
+                        type="date"
+                        value={activeProfile.birthDate ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { birthDate: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>いまの状態</span>
+                      <input
+                        placeholder="例: 退院後・在宅療養"
+                        value={activeProfile.careStatus ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { careStatus: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>主な連絡窓口</span>
+                      <input
+                        placeholder="例: 長女が病院連絡、長男が支払い"
+                        value={activeProfile.keyContact ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { keyContact: event.target.value })}
+                      />
+                    </label>
+                    <label className="profile-wide-field">
+                      <span>病院・施設・ケア先</span>
+                      <textarea
+                        placeholder="例: 〇〇病院 退院支援窓口、訪問看護ステーション名など"
+                        value={activeProfile.hospitalOrFacility ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { hospitalOrFacility: event.target.value })}
+                      />
+                    </label>
+                    <label className="profile-wide-field">
+                      <span>薬・注意点</span>
+                      <textarea
+                        placeholder="例: 飲み忘れ注意、薬の変更があった日、避けたい対応など"
+                        value={activeProfile.medicationNote ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { medicationNote: event.target.value })}
+                      />
+                    </label>
+                    <label className="profile-wide-field">
+                      <span>書類・鍵などの保管メモ</span>
+                      <textarea
+                        placeholder="暗証番号やパスワードは書かず、存在と保管場所だけを残します。"
+                        value={activeProfile.documentLocationNote ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { documentLocationNote: event.target.value })}
+                      />
+                    </label>
+                  </div>
+                </>
+              ) : null}
+              <div className="profile-save-row">
+                <button className="button" type="button" onClick={() => saveProfile(activeCase.id)}>
+                  プロフィールを更新する
+                </button>
+                {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
+              </div>
+              <div className="profile-edit-title">
+                <span>登録済みの内容</span>
+                <strong>家族に説明するときの基本情報です</strong>
+              </div>
               <div className="profile-row-grid">
                 {summarizeProfile(activeCase, activeProfile ?? {}).map((row) => (
                   <div key={row.label}>
@@ -501,88 +778,6 @@ export default function FamilyBoardPage() {
                     <strong>{row.value}</strong>
                   </div>
                 ))}
-              </div>
-              {activeProfile ? (
-                <div className="profile-form-grid" aria-label="対象者プロフィール編集">
-                  <label>
-                    <span>フルネーム</span>
-                    <input
-                      placeholder="例: 山田 太郎"
-                      value={activeProfile.fullName ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { fullName: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>呼び名</span>
-                    <input
-                      placeholder="例: お父さん、太郎さん"
-                      value={activeProfile.displayName ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { displayName: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>関係</span>
-                    <input
-                      placeholder="例: 父、義母、叔父"
-                      value={activeProfile.relationship ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { relationship: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>生年月日</span>
-                    <input
-                      type="date"
-                      value={activeProfile.birthDate ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { birthDate: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>いまの状態</span>
-                    <input
-                      placeholder="例: 退院後・在宅療養"
-                      value={activeProfile.careStatus ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { careStatus: event.target.value })}
-                    />
-                  </label>
-                  <label>
-                    <span>主な連絡窓口</span>
-                    <input
-                      placeholder="例: 長女が病院連絡、長男が支払い"
-                      value={activeProfile.keyContact ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { keyContact: event.target.value })}
-                    />
-                  </label>
-                  <label className="profile-wide-field">
-                    <span>病院・施設・ケア先</span>
-                    <textarea
-                      placeholder="例: 〇〇病院 退院支援窓口、訪問看護ステーション名など"
-                      value={activeProfile.hospitalOrFacility ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { hospitalOrFacility: event.target.value })}
-                    />
-                  </label>
-                  <label className="profile-wide-field">
-                    <span>薬・注意点</span>
-                    <textarea
-                      placeholder="例: 飲み忘れ注意、薬の変更があった日、避けたい対応など"
-                      value={activeProfile.medicationNote ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { medicationNote: event.target.value })}
-                    />
-                  </label>
-                  <label className="profile-wide-field">
-                    <span>書類・鍵などの保管メモ</span>
-                    <textarea
-                      placeholder="暗証番号やパスワードは書かず、存在と保管場所だけを残します。"
-                      value={activeProfile.documentLocationNote ?? ""}
-                      onChange={(event) => updateProfileForm(activeCase.id, { documentLocationNote: event.target.value })}
-                    />
-                  </label>
-                </div>
-              ) : null}
-              <div className="profile-save-row">
-                <button className="button" type="button" onClick={() => saveProfile(activeCase.id)}>
-                  プロフィールを更新する
-                </button>
-                {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
               </div>
               {activeCase.answers.parentSituation ? (
                 <div className="profile-note">
@@ -594,7 +789,7 @@ export default function FamilyBoardPage() {
 
             <article className="health-check-card">
               <div>
-                <p className="pill">今日のチェック</p>
+                <p className="pill">今日の記録</p>
                 <h2>今日あったことを、1つ押してください。</h2>
                 <p>押した内容は下の記録欄に入ります。あとから一言だけ足せば、家族に伝わる日記になります。</p>
               </div>
@@ -621,7 +816,7 @@ export default function FamilyBoardPage() {
                 <span>{activeEntries.length}件</span>
               </div>
               <label className="diary-label" htmlFor={`diary-${activeCase.id}`}>
-                体調、発言、病院・介護の連絡、家族で決めたこと、写真やPDFを残せます。
+                ここに書いた内容は、下の「過去の手帳」と「記録からの気づき」に反映されます。体調、発言、病院・介護の連絡、家族で決めたことを残してください。
               </label>
               <textarea
                 id={`diary-${activeCase.id}`}
@@ -667,37 +862,125 @@ export default function FamilyBoardPage() {
               </button>
             </article>
 
-            <article className="diary-timeline-card">
+            {notebookInsight ? (
+              <article className="notebook-insight-card" id="ai-note">
+                <div className="section-title-row">
+                  <div>
+                    <p className="pill">記録からの気づき</p>
+                    <h2>手帳の内容から、次に見るところを出します。</h2>
+                  </div>
+                </div>
+                <div className="insight-metrics" aria-label="記録の集計">
+                  <div>
+                    <strong>{activeEntries.length}</strong>
+                    <span>記録</span>
+                  </div>
+                  <div>
+                    <strong>{notebookInsight.changedCount + notebookInsight.urgentCount}</strong>
+                    <span>変化・急ぎ</span>
+                  </div>
+                  <div>
+                    <strong>{notebookInsight.attachmentCount}</strong>
+                    <span>写真・資料</span>
+                  </div>
+                  <div>
+                    <strong>{notebookInsight.latestDateLabel}</strong>
+                    <span>最新</span>
+                  </div>
+                </div>
+                <div className="insight-summary">
+                  <span>AIメモ</span>
+                  <strong>{notebookInsight.patternTitle}</strong>
+                  <p>{notebookInsight.patternBody}</p>
+                  <small>医療・法律・税務の判断を断定するものではありません。家族で確認する観点を整理します。</small>
+                </div>
+                <div className="forecast-card">
+                  <span>先回りメモ</span>
+                  <strong>{notebookInsight.forecastTitle}</strong>
+                  <p>{notebookInsight.forecastBody}</p>
+                </div>
+                <div className="alert-list" aria-label="確認アラート">
+                  {notebookInsight.alerts.map((alert) => (
+                    <a className={`alert-card is-${alert.tone}`} href={alert.href} key={`${alert.title}-${alert.body}`}>
+                      <span>{alert.tone === "urgent" ? "急ぎ" : alert.tone === "warning" ? "確認" : "安心"}</span>
+                      <strong>{alert.title}</strong>
+                      <p>{alert.body}</p>
+                    </a>
+                  ))}
+                </div>
+                <div className="question-list">
+                  <strong>次に聞くとよいこと</strong>
+                  <ul>
+                    {notebookInsight.questions.map((question) => <li key={question}>{question}</li>)}
+                  </ul>
+                </div>
+              </article>
+            ) : null}
+
+            <article className="diary-timeline-card" id="diary-history">
               <div className="section-title-row">
                 <div>
-                  <p className="pill">これまで</p>
-                  <h2>最近の記録</h2>
+                  <p className="pill">過去の手帳</p>
+                  <h2>過去の記録はここで見返せます。</h2>
+                  <p>日ごとのメモ、写真・PDF、記録からの助言を月ごとに残します。</p>
                 </div>
               </div>
-              {activeEntries.length > 0 ? (
+              <div className="record-filter-tabs" aria-label="記録の絞り込み">
+                {([
+                  ["all", "すべて"],
+                  ["changed", "変化・急ぎ"],
+                  ["attachments", "写真・PDF"]
+                ] as const).map(([value, label]) => (
+                  <button
+                    className={recordFilter === value ? "is-active" : ""}
+                    key={value}
+                    type="button"
+                    onClick={() => setRecordFilter(value)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {diaryGroups.length > 0 ? (
                 <div className="diary-timeline">
-                  {activeEntries.slice(0, 4).map((entry) => (
-                    <section className="diary-entry-card" key={entry.id}>
-                      <time>{formatDate(entry.date)}</time>
-                      <p>{entry.body}</p>
-                      {entry.attachments.length > 0 ? (
-                        <div className="entry-attachments">
-                          {entry.attachments.slice(0, 3).map((file) => (
-                            <span key={file.id}>
-                              {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
-                              {file.name}
-                            </span>
-                          ))}
-                        </div>
-                      ) : null}
-                      <ul>
-                        {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
-                      </ul>
+                  {diaryGroups.map((group) => (
+                    <section className="diary-month-group" key={group.month}>
+                      <div className="diary-month-head">
+                        <h3>{monthLabel(group.month)}</h3>
+                        <p>{group.items.length}件の記録 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
+                      </div>
+                      {group.items.map((entry) => (
+                        <article className="diary-entry-card" key={entry.id}>
+                          <div className="diary-entry-meta">
+                            <time>{formatLongDate(entry.date)}</time>
+                            <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                          </div>
+                          <p>{entry.body}</p>
+                          {entry.attachments.length > 0 ? (
+                            <div className="entry-attachments">
+                              {entry.attachments.slice(0, 3).map((file) => (
+                                <span key={file.id}>
+                                  {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
+                                  {file.name}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null}
+                          <div className="entry-advice">
+                            <strong>この日のメモから</strong>
+                            <ul>
+                              {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
+                            </ul>
+                          </div>
+                        </article>
+                      ))}
                     </section>
                   ))}
                 </div>
               ) : (
-                <p className="diary-empty">まだ記録はありません。まずは「今日のチェック」を押すだけでも大丈夫です。</p>
+                <p className="diary-empty">
+                  {activeEntries.length > 0 ? "この絞り込みに合う記録はありません。" : "まだ記録はありません。まずは「今日あったことを書く」から1行だけ残してください。"}
+                </p>
               )}
             </article>
           </div>
