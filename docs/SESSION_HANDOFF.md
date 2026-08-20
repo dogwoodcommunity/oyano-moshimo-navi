@@ -2724,6 +2724,43 @@ GitHubが必要な理由:
     - `/install` のHTMLに `最初の登録を始める` が反映済み。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 100
+
+- ユーザー指摘:
+  - 「アプリ入口いらんやろ」
+  - 「基本、アプリのみでええから」
+- 判断:
+  - `/install` の中間入口ページは廃止。
+  - PWA/アプリの最初の画面は `/start` の状況選択に寄せる。
+  - 既存リンク・古いブックマーク対策として `/install` は残すが、中身は表示せず `/start` へリダイレクトする。
+- 対応:
+  - `apps/web/app/page.tsx`
+    - LP内容を削除し、`/` から `/start` へリダイレクト。
+  - `apps/web/app/install/page.tsx`
+    - `PwaInstallPanel` 表示をやめ、`/start` へリダイレクト。
+  - `apps/web/app/layout.tsx`
+    - ナビから「アプリを開く」「料金」「チェックリスト」を外し、「親を登録」「家族ボード」「読む」「安心」に整理。
+    - ブランドリンクを `/start` に変更。
+    - フッター末尾を「親を登録する」に変更。
+  - `apps/web/app/start/page.tsx`
+    - 戻る先を `/install` から `/home` に変更。
+  - `apps/web/public/manifest.webmanifest`
+    - PWAの `id` と `start_url` を `/start` に変更。
+    - ショートカットから `/install` を外し、「親を登録する」へ変更。
+  - `apps/web/public/sw.js`
+    - 静的キャッシュから `/install` を外し `/start` を追加。
+    - キャッシュバージョンを `oyano-moshimo-navi-v3` に更新。
+  - `apps/web/app/sitemap.ts`
+    - sitemapから `/install` を除外。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `python3 -m json.tool apps/web/public/manifest.webmanifest` OK。
+  - `apps/web`: `next build` OK。
+- 注意:
+  - この時点ではまだcommit/push/deploy前。この追記100以降で実施すること。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:

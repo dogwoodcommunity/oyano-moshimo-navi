@@ -1,7 +1,7 @@
-const CACHE_VERSION = "oyano-moshimo-navi-v2";
+const CACHE_VERSION = "oyano-moshimo-navi-v3";
 const STATIC_CACHE_URLS = [
   "/home",
-  "/install",
+  "/start",
   "/offline",
   "/guides",
   "/checklists",

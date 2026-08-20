@@ -75,7 +75,7 @@ export default function StartPage() {
   return (
     <main className="paper-bg notebook-start-page">
       <section className="toc-header">
-        <button className="toc-back" type="button" onClick={() => router.push("/install")}>
+        <button className="toc-back" type="button" onClick={() => router.push("/home")}>
           ‹ もどる
         </button>
         <p className="toc-kicker">最初の質問</p>

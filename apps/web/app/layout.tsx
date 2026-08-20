@@ -53,13 +53,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="shell">
           <header className="nav">
-            <Link className="brand" href="/">親のもしもナビ</Link>
+            <Link className="brand" href="/start">親のもしもナビ</Link>
             <nav className="navlinks" aria-label="main">
+              <Link href="/start">親を登録</Link>
+              <Link href="/home">家族ボード</Link>
               <Link href="/guides">読む</Link>
-              <Link href="/checklists">チェックリスト</Link>
               <Link href="/safety">安心</Link>
-              <Link href="/install">アプリを開く</Link>
-              <Link href="/plans">料金</Link>
             </nav>
           </header>
           {children}
@@ -69,7 +68,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
-            <Link href="/install">親のもしもナビを開く</Link>
+            <Link href="/start">親を登録する</Link>
           </footer>
         </div>
         <PwaRegister />
