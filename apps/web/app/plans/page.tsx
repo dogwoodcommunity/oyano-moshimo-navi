@@ -45,7 +45,7 @@ const plans = [
       "今聞くべき質問の提案",
       "専門判断は断定しない安全設計"
     ],
-    cta: "安心設計を見る",
+    cta: "安全方針を見る",
     href: "/safety",
     featured: false
   }

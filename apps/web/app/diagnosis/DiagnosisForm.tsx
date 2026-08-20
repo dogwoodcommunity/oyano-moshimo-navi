@@ -16,13 +16,14 @@ const targetOptions: Array<{
   key: TargetRelationship;
   label: string;
   note: string;
+  tone: string;
 }> = [
-  { key: "mother", label: "母", note: "お母さんのこと" },
-  { key: "father", label: "父", note: "お父さんのこと" },
-  { key: "mother_in_law", label: "義母", note: "配偶者のお母さん" },
-  { key: "father_in_law", label: "義父", note: "配偶者のお父さん" },
-  { key: "grandparent", label: "祖父母", note: "祖父・祖母のこと" },
-  { key: "other", label: "その他", note: "叔父叔母など" }
+  { key: "mother", label: "母", note: "お母さんのこと", tone: "rose" },
+  { key: "father", label: "父", note: "お父さんのこと", tone: "blue" },
+  { key: "mother_in_law", label: "義母", note: "配偶者のお母さん", tone: "mint" },
+  { key: "father_in_law", label: "義父", note: "配偶者のお父さん", tone: "sand" },
+  { key: "grandparent", label: "祖父母", note: "祖父・祖母のこと", tone: "lavender" },
+  { key: "other", label: "その他", note: "叔父叔母など", tone: "gray" }
 ];
 const statusNotes: Partial<Record<ParentStatus, string>> = {
   hospitalized: "入院中・退院調整中",
@@ -117,7 +118,9 @@ export function DiagnosisForm() {
                 role="radio"
                 type="button"
               >
-                <span className="target-avatar" aria-hidden="true">{item.label.slice(0, 1)}</span>
+                <span className={`target-avatar ${item.tone}`} aria-hidden="true">
+                  <img src="/brand/watch-bird-mark.svg" alt="" />
+                </span>
                 <span>
                   <strong>{item.label}</strong>
                   <small>{item.note}</small>

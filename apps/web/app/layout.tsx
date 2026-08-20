@@ -107,12 +107,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="navlinks" aria-label="main">
               <Link href="/home">家族ボード</Link>
               <Link href="/guides">読む</Link>
-              <Link href="/safety">安心</Link>
             </nav>
           </header>
           {children}
           <footer className="footer">
-            <Link href="/safety">安心設計</Link>
+            <Link href="/safety">安全方針</Link>
             <Link href="/legal/privacy">プライバシー</Link>
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>

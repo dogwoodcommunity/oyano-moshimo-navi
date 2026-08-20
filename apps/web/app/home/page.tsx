@@ -751,7 +751,6 @@ export default function FamilyBoardPage() {
             <>
               <span className="is-active">はじめる</span>
               <Link href="/guides">読む</Link>
-              <Link href="/safety">安心</Link>
             </>
           )}
         </nav>

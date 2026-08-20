@@ -28,6 +28,10 @@ export default function GuideDetailPage({ params }: { params: { slug: string } }
           <p className="pill">{guide.category}</p>
           <h1 className="page-title">{guide.title}</h1>
           <p className="lead">{guide.summary}</p>
+          <div className="guide-detail-meta" aria-label="記事情報">
+            <span>{guide.readTime}で読めます</span>
+            {guide.tags.map((tag) => <span key={tag}>{tag}</span>)}
+          </div>
         </section>
 
         <section className="panel guide-intro">

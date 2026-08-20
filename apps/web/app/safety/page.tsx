@@ -2,8 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "安心設計",
-  description: "親のもしもナビが保存しない情報、断定しない判断、家族で安心して使うための考え方をまとめています。"
+  title: "安全方針",
+  description: "親のもしもナビが保存しない情報、断定しない判断、家族で安全に使うための考え方をまとめています。"
 };
 
 const safetyPrinciples = [
@@ -29,8 +29,8 @@ export default function SafetyPage() {
   return (
     <main className="container">
       <section className="result-summary safety-hero">
-        <p className="pill">安心設計</p>
-        <h1 className="page-title">親の大事な情報を扱うから、やらないことを先に決める。</h1>
+        <p className="pill">安全方針</p>
+        <h1 className="page-title">親の大事な情報を扱うから、保存しないものを先に決める。</h1>
         <p className="lead">
           親のもしもナビは、家族の不安を整理するためのサービスです。便利さだけを増やすのではなく、保存しない情報、断定しない判断、共有するときの守り方を明確にします。
         </p>

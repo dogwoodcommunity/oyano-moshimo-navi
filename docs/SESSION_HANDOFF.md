@@ -17,6 +17,38 @@
 
 ## 最新状況 2026-08-20
 
+- 2026-08-20 追加対応3: ユーザー要望「安心設計ページの意味が薄い」「読む記事を100本程度へ増やして検索絞り込み」「先頭の漢字アイコンがダサい」に対応中。
+- 判断:
+  - `安心設計` は削除せず、プライバシー/免責/App Store審査/要配慮情報の説明として残す。ただし通常ユーザーの主導線ではないため、ヘッダーナビからは外し、フッターの `安全方針` に下げる。
+  - `読む` は少数記事の一覧では価値が弱いため、100本の無料ガイド + 検索 + カテゴリ絞り込みへ変更。
+  - 診断対象者選択の丸い漢字アイコンは廃止し、キャラマーク + 色ドットへ変更。
+- 変更ファイル:
+  - `apps/web/lib/guides.ts`
+  - `apps/web/components/GuideSearch.tsx`
+  - `apps/web/app/guides/page.tsx`
+  - `apps/web/app/guides/[slug]/page.tsx`
+  - `apps/web/app/diagnosis/DiagnosisForm.tsx`
+  - `apps/web/app/home/page.tsx`
+  - `apps/web/app/layout.tsx`
+  - `apps/web/app/plans/page.tsx`
+  - `apps/web/app/safety/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/public/sw.js`
+- 実装内容:
+  - ガイド記事を100本生成する構造へ変更。入院、退院後在宅、介護、看取り、死亡直後、葬儀後、相続前、実家じまいなどのステージと、連絡先、支払い、保険/年金、薬/通院、鍵/ライフライン、書類、役割分担、本人希望、写真/持ち物、親族連絡、専門家相談準備などのテーマを組み合わせる。
+  - `/guides` をクライアント検索つきに変更。検索語、カテゴリチップ、表示件数、空状態を追加。
+  - ガイド詳細に読了目安とタグを表示。
+  - ヘッダーナビとホーム内の上部タブから `安心` を削除。フッター表示は `安全方針` に変更。
+  - `/safety` は削除せず、利用者の主導線から下げたうえで、要配慮情報・免責・保存しない情報の説明ページとして残す。ページ名も `安心設計` から `安全方針` に変更。
+  - 診断フォームの対象者アイコンを漢字から `/brand/watch-bird-mark.svg` ベースへ変更。
+  - Service Worker cache versionを `oyano-moshimo-navi-v16` に更新。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。`/guides/[slug]` は100本分生成されることを確認。
+  - 注意: Supabase JSからNode 20非推奨警告あり。動作には影響なし。後日Node 22へ上げる。
+- これから実施:
+  - commit / push / deploy / 本番smoke。
 - 2026-08-20 追加対応2: ユーザー要望「キャラを全面的に存在感出す」「家族が亡くなるまで使って良かったと思える機能性を補う」に対応し、`/home` をさらに手帳/伴走型へ強化。
 - 変更ファイル:
   - `apps/web/app/home/page.tsx`
