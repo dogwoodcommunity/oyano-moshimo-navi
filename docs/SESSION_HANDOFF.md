@@ -2752,13 +2752,17 @@ GitHubが必要な理由:
     - キャッシュバージョンを `oyano-moshimo-navi-v3` に更新。
   - `apps/web/app/sitemap.ts`
     - sitemapから `/install` を除外。
+  - `apps/web/next.config.mjs`
+    - 古い `/` → `/home` リダイレクトが優先されていたため、`/` → `/start` に変更。
 - 検証:
   - `apps/web`: `tsc --noEmit` OK。
   - `git diff --check` OK。
   - `python3 -m json.tool apps/web/public/manifest.webmanifest` OK。
   - `apps/web`: `next build` OK。
 - 注意:
-  - この時点ではまだcommit/push/deploy前。この追記100以降で実施すること。
+  - 最初に `apps/web` 直下から `npx vercel --prod --yes --scope dogwoodcommunity1` を実行したところ、誤って別Vercelプロジェクト `web` にデプロイされ、`npm install` で失敗した。
+  - 正しい本番はリポジトリルートの `.vercel/project.json` に紐づく `oyano-moshimo-navi`。以後デプロイは必ずリポジトリルートから実行する。
+  - この時点では `next.config.mjs` 修正のcommit/push/deploy前。この追記100以降で実施すること。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 98
