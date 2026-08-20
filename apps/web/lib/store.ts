@@ -33,6 +33,10 @@ export type PersonProfile = {
   hospitalOrFacility?: string;
   medicationNote?: string;
   documentLocationNote?: string;
+  familyStructureNote?: string;
+  emergencyContact?: string;
+  carePreference?: string;
+  importantPeopleNote?: string;
   updatedAt?: string;
 };
 
@@ -153,7 +157,7 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
   return entry;
 }
 
-export function updateCaseProfile(caseId: string, patch: PersonProfile): CaseRecord | undefined {
+export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>): CaseRecord | undefined {
   const cases = readCases();
   const existing = cases.find((item) => item.id === caseId);
   if (!existing) return undefined;

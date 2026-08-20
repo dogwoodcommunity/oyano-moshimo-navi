@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { statusLabel, targetLabel } from "@oyano/shared";
 import {
@@ -47,6 +47,57 @@ const setupPreviewItems = [
   "薬や注意点",
   "書類・鍵の保管メモ",
   "写真・PDF付きの日記"
+];
+
+const journeyCopy = {
+  status: {
+    label: "最初",
+    title: "いまの状況を1人分にまとめる",
+    body: "入院、退院後の在宅、介護、亡くなった後など、まずはこの人だけの手帳を作ります。"
+  },
+  diary: {
+    label: "日々",
+    title: "変化を1行ずつ残す",
+    body: "体調、発言、病院・介護先からの連絡、家族で決めたことを日付つきで残します。"
+  },
+  care: {
+    label: "連絡",
+    title: "病院・介護・家族の窓口を決める",
+    body: "誰が病院へ聞くか、誰が支払いを見るかを決めて、家族の連絡迷子を減らします。"
+  },
+  documents: {
+    label: "保管",
+    title: "書類・鍵・写真を探せる状態にする",
+    body: "暗証番号は預からず、存在と保管場所だけを残します。実家の写真も日記にまとめます。"
+  },
+  wishes: {
+    label: "希望",
+    title: "大事にしたいことを家族で共有する",
+    body: "本人の希望、会わせたい人、避けたい対応などを、断定ではなく家族の確認メモとして残します。"
+  }
+} as const;
+
+const continuationFeatures = [
+  {
+    label: "共有",
+    title: "家族にも同じ手帳を見せる",
+    body: "病院へ聞く人、支払いを見る人、写真を残す人を分けて、同じ状況を見ながら進められます。"
+  },
+  {
+    label: "複数",
+    title: "2人目以降も切り替えて管理する",
+    body: "父、母、義母、親戚など、1人ずつ状態が違っても手帳を分けて残せます。"
+  },
+  {
+    label: "相談",
+    title: "記録を踏まえてAIに相談する",
+    body: "毎回ゼロから説明せず、プロフィールと日々の記録を前提に、次に聞くことを整理します。"
+  },
+  {
+    label: "月次",
+    title: "家族会議用にまとめる",
+    body: "1か月の変化、写真、未確認リストをまとめて、家族や支援者に説明しやすくします。"
+  }
 ];
 
 const relationshipLabels = {
@@ -145,7 +196,11 @@ function profileSeed(caseRecord: CaseRecord): PersonProfile {
     keyContact: profile.keyContact ?? "",
     hospitalOrFacility: profile.hospitalOrFacility ?? "",
     medicationNote: profile.medicationNote ?? "",
-    documentLocationNote: profile.documentLocationNote ?? ""
+    documentLocationNote: profile.documentLocationNote ?? "",
+    familyStructureNote: profile.familyStructureNote ?? caseRecord.answers.familyStructure ?? "",
+    emergencyContact: profile.emergencyContact ?? "",
+    carePreference: profile.carePreference ?? "",
+    importantPeopleNote: profile.importantPeopleNote ?? ""
   };
 }
 
@@ -159,7 +214,11 @@ function profileCompletion(profile: PersonProfile) {
     profile.keyContact,
     profile.hospitalOrFacility,
     profile.medicationNote,
-    profile.documentLocationNote
+    profile.documentLocationNote,
+    profile.familyStructureNote,
+    profile.emergencyContact,
+    profile.carePreference,
+    profile.importantPeopleNote
   ];
   const filled = fields.filter((item) => item?.trim()).length;
   const total = fields.length;
@@ -180,7 +239,11 @@ function missingProfileItems(profile: PersonProfile) {
     ["主な連絡窓口", profile.keyContact],
     ["病院・施設・ケア先", profile.hospitalOrFacility],
     ["薬・注意点", profile.medicationNote],
-    ["書類・鍵の保管メモ", profile.documentLocationNote]
+    ["書類・鍵の保管メモ", profile.documentLocationNote],
+    ["家族構成", profile.familyStructureNote],
+    ["緊急連絡先", profile.emergencyContact],
+    ["ケアで大事にしたいこと", profile.carePreference],
+    ["会わせたい人・伝えたいこと", profile.importantPeopleNote]
   ] as const;
 
   return items.filter(([, value]) => !value?.trim()).map(([label]) => label);
@@ -191,6 +254,8 @@ function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
     { label: "呼び名", value: profile.displayName || personName(caseRecord) },
     { label: "生年月日", value: profile.birthDate || "未入力" },
     { label: "病院・ケア", value: profile.hospitalOrFacility || "未入力" },
+    { label: "緊急連絡", value: profile.emergencyContact || profile.keyContact || "未入力" },
+    { label: "大事な希望", value: profile.carePreference || "未入力" },
     { label: "書類・鍵", value: profile.documentLocationNote || "未入力" }
   ];
 }
@@ -246,6 +311,151 @@ function taskDateParts(dateString?: string) {
 function normalizeAlertHref(href: string) {
   if (href === "#profile-edit-fields") return "#person-profile";
   return href;
+}
+
+function MascotNote({
+  label,
+  title,
+  body,
+  children
+}: {
+  label: string;
+  title: string;
+  body: string;
+  children?: ReactNode;
+}) {
+  return (
+    <aside className="mascot-note" aria-label={label}>
+      <div className="mascot-note-face" aria-hidden="true">
+        <img src="/brand/watch-bird-mark.svg" alt="" />
+      </div>
+      <div className="mascot-note-body">
+        <span>{label}</span>
+        <strong>{title}</strong>
+        <p>{body}</p>
+        {children}
+      </div>
+    </aside>
+  );
+}
+
+function buildJourneyCards(entries: DiaryEntry[], profile: PersonProfile | undefined) {
+  const hasDiary = entries.length > 0;
+  const hasCareContact = Boolean(profile?.keyContact?.trim() || profile?.hospitalOrFacility?.trim() || profile?.emergencyContact?.trim());
+  const hasDocuments = Boolean(profile?.documentLocationNote?.trim());
+  const hasWishes = Boolean(profile?.carePreference?.trim() || profile?.importantPeopleNote?.trim());
+
+  return [
+    { ...journeyCopy.status, state: "done" },
+    { ...journeyCopy.diary, state: hasDiary ? "done" : "now" },
+    { ...journeyCopy.care, state: hasCareContact ? "done" : hasDiary ? "now" : "next" },
+    { ...journeyCopy.documents, state: hasDocuments ? "done" : hasCareContact ? "now" : "next" },
+    { ...journeyCopy.wishes, state: hasWishes ? "done" : hasDocuments ? "now" : "next" }
+  ] as const;
+}
+
+function buildSupportActions(
+  caseId: string,
+  entries: DiaryEntry[],
+  profile: PersonProfile | undefined,
+  tasks: TaskWithDue[],
+  completion: ReturnType<typeof profileCompletion>
+) {
+  const actions: { title: string; body: string; href: string; label: string }[] = [];
+  const text = entries.slice(0, 10).map((entry) => entry.body).join("\n");
+  const hasUnassignedTasks = tasks.length > 0;
+
+  if (entries.length === 0) {
+    actions.push({
+      title: "まず今日の様子を1行残す",
+      body: "変化がなくても大丈夫です。あとで家族に説明する時の起点になります。",
+      href: "#today-diary",
+      label: "書く"
+    });
+  }
+
+  if (completion.percent < 85) {
+    actions.push({
+      title: "プロフィールを少し足す",
+      body: "生年月日、緊急連絡先、病院・ケア先が入ると、相談や共有が一気に楽になります。",
+      href: "#person-profile",
+      label: "足す"
+    });
+  }
+
+  if (!profile?.carePreference?.trim() && !profile?.importantPeopleNote?.trim()) {
+    actions.push({
+      title: "本人の希望をメモする",
+      body: "好きな呼ばれ方、会わせたい人、避けたい対応などを断定せずに残しておきます。",
+      href: "#person-profile",
+      label: "残す"
+    });
+  }
+
+  if (!profile?.documentLocationNote?.trim() || /家|実家|鍵|書類|片付|保険|年金|支払/.test(text)) {
+    actions.push({
+      title: "書類・鍵・支払いの場所を確認する",
+      body: "暗証番号は書かず、どこに何があるかだけを家族で分かる形にします。",
+      href: "#person-profile",
+      label: "確認"
+    });
+  }
+
+  if (hasUnassignedTasks) {
+    actions.push({
+      title: "確認リストの担当を決める",
+      body: "期限つきの項目は、誰が見るか決めるだけで家族の不安が減ります。",
+      href: `/result/${caseId}`,
+      label: "見る"
+    });
+  }
+
+  actions.push({
+    title: "家族共有とAI相談を検討する",
+    body: "2人目の管理、家族招待、この人の記録を踏まえた相談はPlusで広げます。",
+    href: "/plans",
+    label: "Plus"
+  });
+
+  return actions.slice(0, 4);
+}
+
+function buildRecordDigest(entries: DiaryEntry[], profile: PersonProfile | undefined) {
+  const urgentCount = entries.filter((entry) => entry.mood === "urgent").length;
+  const changedCount = entries.filter((entry) => entry.mood === "changed").length;
+  const attachmentCount = entries.reduce((sum, entry) => sum + entry.attachments.length, 0);
+  const text = entries.slice(0, 12).map((entry) => entry.body).join("\n");
+  const tags = [
+    [/退院|在宅|訪問|通院/, "退院後・在宅"],
+    [/薬|服薬|飲み忘れ/, "薬・服薬"],
+    [/忘れ|認知|混乱|徘徊|発言/, "発言・記憶"],
+    [/家|実家|鍵|片付|書類/, "実家・書類"],
+    [/支払|請求|保険|年金/, "支払い"]
+  ] as const;
+  const concernTags = tags.filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
+  const latestEntry = entries[0];
+  const latestLabel = latestEntry ? formatLongDate(latestEntry.date) : "まだ記録なし";
+
+  let summary = "まだ記録が少ないので、まずは今日の様子を1行だけ残す段階です。";
+  if (entries.length >= 1) {
+    summary = `${latestLabel}までに${entries.length}件の記録があります。変化や急ぎの記録を中心に、家族で見返せます。`;
+  }
+  if (urgentCount > 0) {
+    summary = `急ぎの記録が${urgentCount}件あります。連絡先、受診先、家族の担当を先に確認してください。`;
+  } else if (changedCount > 0) {
+    summary = `変化の記録が${changedCount}件あります。次の通院や家族会議で説明しやすい状態です。`;
+  }
+
+  return {
+    latestLabel,
+    summary,
+    stats: [
+      { label: "記録", value: `${entries.length}` },
+      { label: "変化", value: `${changedCount + urgentCount}` },
+      { label: "写真・PDF", value: `${attachmentCount}` }
+    ],
+    tags: concernTags.length > 0 ? concernTags.slice(0, 4) : [profile?.careStatus || "日々の様子"]
+  };
 }
 
 function buildNotebookInsight(
@@ -417,6 +627,9 @@ export default function FamilyBoardPage() {
   const activeCareStatus = activeCase ? activeProfile?.careStatus || statusLabel(activeCase.selectedStatus) : "";
   const todayRows = notebookInsight?.alerts.slice(0, 2) ?? [];
   const recentEntries = activeEntries.slice(0, 2);
+  const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
+  const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
+  const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
     setForms((current) => ({
@@ -515,6 +728,10 @@ export default function FamilyBoardPage() {
             <Link className="cover-profile-link" href="/start">作る</Link>
           )}
         </div>
+        <div className="cover-mascot-line">
+          <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+          <span>{activeCase ? "今日は、記録・気づき・確認リストの順に見れば大丈夫です。" : "まず1人だけ登録すると、その人専用の手帳ができます。"}</span>
+        </div>
         <nav className="cover-tabs" aria-label="手帳の切り替え">
           {activeCase ? (
             <>
@@ -554,6 +771,11 @@ export default function FamilyBoardPage() {
               <h1>この画面が、その人専用の手帳になります。</h1>
               <p>父母、義父母、祖父母、親戚など、まず気になる人を1人だけ登録します。状況を選ぶと、確認リストと毎日の記録欄ができます。</p>
             </div>
+            <MascotNote
+              label="ナビから"
+              title="最初は細かく入力しなくて大丈夫です。"
+              body="いま一番近い状況を選ぶだけで、あとからプロフィール、日記、写真、確認リストを育てられます。"
+            />
             <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
               {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
             </div>
@@ -580,7 +802,34 @@ export default function FamilyBoardPage() {
                 </a>
               ))}
             </div>
+            <MascotNote
+              label="今日の見方"
+              title="全部見なくて大丈夫。まず上の2つだけ。"
+              body="手帳は毎日長く触るものではなく、必要な日に迷わず戻れる場所として使います。"
+            />
           </section>
+
+          {supportActions.length > 0 ? (
+            <section className="nb-section" aria-label="次に備えること">
+              <div className="nb-section-head">
+                <strong>次に備えること</strong>
+                <span className="rule" aria-hidden="true" />
+                <span className="aside">おすすめ順</span>
+              </div>
+              <div className="support-action-list">
+                {supportActions.map((action) => (
+                  <a className="support-action-card" href={action.href} key={action.title}>
+                    <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                    <span>{action.label}</span>
+                    <div>
+                      <strong>{action.title}</strong>
+                      <p>{action.body}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            </section>
+          ) : null}
 
           <section className="nb-section" id="today-diary">
             <div className="nb-section-head">
@@ -589,7 +838,10 @@ export default function FamilyBoardPage() {
               <span className="aside">{activeEntries.length}件</span>
             </div>
             <article className="nb-card today-record-card">
-              <p className="record-help">当てはまるものを押すと、下の記録欄に入ります。最後に一言だけ足して保存してください。</p>
+              <div className="record-guide">
+                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                <p className="record-help">当てはまるものを押すと、下の記録欄に入ります。最後に一言だけ足して保存してください。</p>
+              </div>
               <div className="record-chip-grid" aria-label="今日の記録に追加する項目">
                 {healthNotes.map((item) => (
                   <button className={`record-chip is-${item.tone}`} key={item.title} type="button" onClick={() => appendDiaryNote(activeCase.id, item.note)}>
@@ -656,14 +908,54 @@ export default function FamilyBoardPage() {
           {notebookInsight ? (
             <section className="nb-section" aria-label="気づきメモ">
               <article className="kizuki-card">
+                <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <span className="tag">気づきメモ</span>
                 <strong>{notebookInsight.patternTitle}</strong>
                 <p>{notebookInsight.patternBody}</p>
+                <div className="kizuki-forecast">
+                  <span>次に備えること</span>
+                  <b>{notebookInsight.forecastTitle}</b>
+                  <p>{notebookInsight.forecastBody}</p>
+                </div>
                 <div className="kizuki-question">
                   <span>次に家族で聞くこと</span>
                   <b>{notebookInsight.questions[0]}</b>
+                  {notebookInsight.questions.length > 1 ? (
+                    <ul className="kizuki-question-list">
+                      {notebookInsight.questions.slice(1).map((question) => <li key={question}>{question}</li>)}
+                    </ul>
+                  ) : null}
                 </div>
                 <small>記録から見る観点の整理です。医療・法律・税務の判断はしません。</small>
+              </article>
+            </section>
+          ) : null}
+
+          {journeyCards.length > 0 ? (
+            <section className="nb-section" aria-label="これからの道すじ">
+              <div className="nb-section-head">
+                <strong>これからの道すじ</strong>
+                <span className="rule" aria-hidden="true" />
+                <span className="aside">手帳の流れ</span>
+              </div>
+              <article className="nb-card journey-card">
+                <MascotNote
+                  label="この先の見方"
+                  title="状態が変わっても、この順で足せば大丈夫です。"
+                  body="入院中、退院後、介護、亡くなった後、実家じまいまで、同じ人の手帳に記録を重ねます。"
+                />
+                <ol className="journey-list">
+                  {journeyCards.map((item) => (
+                    <li className={`is-${item.state}`} key={item.label}>
+                      <span className="journey-state">{item.state === "done" ? "済" : item.state === "now" ? "今" : "次"}</span>
+                      <div>
+                        <small>{item.label}</small>
+                        <strong>{item.title}</strong>
+                        <p>{item.body}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
               </article>
             </section>
           ) : null}
@@ -675,6 +967,29 @@ export default function FamilyBoardPage() {
               <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
             </div>
             <article className="nb-card history-card">
+              {recordDigest ? (
+                <div className="record-digest-card">
+                  <div className="record-digest-head">
+                    <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                    <div>
+                      <span>最近のまとめ</span>
+                      <strong>{recordDigest.latestLabel}</strong>
+                    </div>
+                  </div>
+                  <p>{recordDigest.summary}</p>
+                  <div className="record-digest-stats" aria-label="記録の集計">
+                    {recordDigest.stats.map((item) => (
+                      <div key={item.label}>
+                        <strong>{item.value}</strong>
+                        <span>{item.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="record-tags" aria-label="記録から見えるテーマ">
+                    {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                  </div>
+                </div>
+              ) : null}
               {recentEntries.length > 0 ? (
                 recentEntries.map((entry) => (
                   <div className="nb-row history-row" key={entry.id}>
@@ -784,7 +1099,7 @@ export default function FamilyBoardPage() {
                   </div>
                 ))}
               </div>
-              <details className="profile-edit-drawer">
+              <details className="profile-edit-drawer" open={activeProfileCompletion.percent < 85}>
                 <summary>プロフィールを編集する</summary>
                 {activeProfile ? (
                   <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
@@ -836,6 +1151,22 @@ export default function FamilyBoardPage() {
                         onChange={(event) => updateProfileForm(activeCase.id, { keyContact: event.target.value })}
                       />
                     </label>
+                    <label>
+                      <span>家族構成</span>
+                      <input
+                        placeholder="例: 長男、長女、同居なし"
+                        value={activeProfile.familyStructureNote ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { familyStructureNote: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>緊急連絡先</span>
+                      <input
+                        placeholder="例: 夜間は長男、病院からは長女"
+                        value={activeProfile.emergencyContact ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { emergencyContact: event.target.value })}
+                      />
+                    </label>
                     <label className="profile-wide-field">
                       <span>病院・施設・ケア先</span>
                       <textarea
@@ -858,6 +1189,22 @@ export default function FamilyBoardPage() {
                         placeholder="暗証番号やパスワードは書かず、存在と保管場所だけを残します。"
                         value={activeProfile.documentLocationNote ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { documentLocationNote: event.target.value })}
+                      />
+                    </label>
+                    <label className="profile-wide-field">
+                      <span>ケアで大事にしたいこと</span>
+                      <textarea
+                        placeholder="例: できるだけ自宅で過ごしたい。強い言い方は避けたい。"
+                        value={activeProfile.carePreference ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { carePreference: event.target.value })}
+                      />
+                    </label>
+                    <label className="profile-wide-field">
+                      <span>会わせたい人・伝えたいこと</span>
+                      <textarea
+                        placeholder="例: 孫に会うと元気になる。昔の友人〇〇さんに連絡したい。"
+                        value={activeProfile.importantPeopleNote ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { importantPeopleNote: event.target.value })}
                       />
                     </label>
                   </div>
@@ -921,6 +1268,33 @@ export default function FamilyBoardPage() {
               ) : (
                 <p className="diary-empty">日記に写真やPDFを追加すると、ここにまとまります。</p>
               )}
+              <MascotNote
+                label="写真の使い方"
+                title="実家や書類は、場所が分かる写真が後で効きます。"
+                body="鍵、保険証券、部屋の状態、施設からの書類などは、日記に添付しておくと家族で同じ前提を持てます。"
+              />
+            </article>
+          </section>
+
+          <section className="nb-section" aria-label="この手帳を家族で続ける">
+            <article className="nb-card companion-panel">
+              <MascotNote
+                label="続けるなら"
+                title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
+                body="まず無料で1人分を使い、必要になった時だけ家族招待、2人目以降、AI相談、月まとめを広げます。"
+              />
+              <div className="companion-feature-grid">
+                {continuationFeatures.map((feature) => (
+                  <div className="companion-feature" key={feature.title}>
+                    <span>{feature.label}</span>
+                    <strong>{feature.title}</strong>
+                    <p>{feature.body}</p>
+                  </div>
+                ))}
+              </div>
+              <Link className="companion-plan-link" href="/plans">
+                Plusでできることを見る
+              </Link>
             </article>
           </section>
 

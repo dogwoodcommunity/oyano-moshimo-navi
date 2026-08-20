@@ -3,7 +3,7 @@
   "short_name": "親のもしも",
   "description": "親の入院、介護、亡くなった後の手続き、実家の片付けを家族で整理する家族ボード。",
   "id": "/",
-  "start_url": "/?source=pwa",
+  "start_url": "/home?source=pwa",
   "scope": "/",
   "display": "standalone",
   "orientation": "portrait",
