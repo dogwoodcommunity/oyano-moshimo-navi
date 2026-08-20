@@ -2719,7 +2719,17 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - 最初に `Zen_Maru_Gothic` の900ウェイト追加でGoogle Fonts取得が必要になり、ネットワーク制限下で失敗。ビルド安定を優先し、読み込みウェイトは既存の700に戻した。
 - 注意:
-  - まだcommit/push/deploy前。この追記98以降の作業で実施すること。
+  - Git commit/push/deployまで完了。
+  - commit: `e4a4a6a Implement watch bird logo assets`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_CFGrU2Co3CcYMbib92RuzZUhErPK`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-7hjtelfja-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/install` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/brand/logo-mark.png` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/brand/favicon-32.png` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 97
