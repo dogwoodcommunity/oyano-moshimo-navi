@@ -3539,4 +3539,10 @@ GitHubが必要な理由:
   - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。
 - 注意:
   - `review_exports/` は未追跡のまま残している。今回の変更には含めない。
-  - まだ本番deploy前。次はcommit、push、Vercel production deploy。
+  - 実装commit: `d203712 Improve family notebook records and profile editing`
+  - `origin/main` へpush済み。
+  - Vercel production deploy済み。
+    - Production: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-o5injjh2y-dogwoodcommunity1.vercel.app`
+    - Deployment ID: `dpl_A5iRS1uMFcFT9dFu3so5GZujphHS`
+  - `curl -I https://oyano-moshimo-navi.vercel.app/home` でHTTP 200確認済み。
