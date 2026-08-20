@@ -2682,3 +2682,35 @@ GitHubが必要な理由:
     - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
+
+## 2026-08-20 追記 97
+
+- ユーザー添付:
+  - `/Users/ikedatetsuya/Downloads/Codex実装依頼書-2.md`
+- 内容:
+  - 追記96の「家族の手帳」デザインをさらに細かく詰める依頼。
+  - 追加の重点:
+    - 入口タイトル札に「見守り鳥」ロゴマークを入れる。
+    - グラデーションや漢字1文字アイコンを避ける。
+    - `/start` はカード感を弱め、章タブ + 点線リーダーの「もくじ」感を強める。
+    - 主ボタンは `--primary` のみ、押すと沈む。
+    - PWA案内は補助の一文だけに留める。
+- 対応:
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - タイトル札へCSS図形の `watch-bird-mark` を追加。
+    - ロックアップに `MOSHIMO NAVI` を追加。
+  - `apps/web/app/globals.css`
+    - `.paper-bg` を単純な罫線紙背景に変更。
+    - タイトル札、テープ、鳥マークを依頼書2寄りに調整。
+    - ポラロイドの人物プレースホルダーをグラデーションなしの色地 + 人型シルエットに変更。
+    - 主/副ボタンの影とactive沈み込みを調整。
+    - `/start` の `toc-row` を枠付きカードから、点線リーダー付きのもくじ行へ調整。
+    - 章タブを左に食い込む栞タブ風へ変更。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - ローカル `next start -p 3005` は `listen EPERM` で起動不可。この環境のポート権限問題で、コード/ビルドはOK。
+- 注意:
+  - この追記時点ではcommit/push/deploy前。
+  - `review_exports/` は未追跡のまま残っている。

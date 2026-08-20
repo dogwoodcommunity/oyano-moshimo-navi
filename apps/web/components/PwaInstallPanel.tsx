@@ -51,7 +51,18 @@ export function PwaInstallPanel() {
       <div className="title-card">
         <span className="tape" aria-hidden="true" />
         <div className="card">
-          <strong>親のもしもナビ</strong>
+          <div className="title-lockup">
+            <span className="watch-bird-mark" aria-hidden="true">
+              <span className="bird-hat" />
+              <span className="bird-eye left" />
+              <span className="bird-eye right" />
+              <span className="bird-beak" />
+            </span>
+            <div>
+              <strong>親のもしもナビ</strong>
+              <small>MOSHIMO NAVI</small>
+            </div>
+          </div>
           <span>家 族 の た め の 備 え 手 帳</span>
         </div>
       </div>
