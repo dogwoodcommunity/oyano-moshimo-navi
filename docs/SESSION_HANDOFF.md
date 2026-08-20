@@ -3387,3 +3387,34 @@ GitHubが必要な理由:
   - pushed to `origin/main`
   - Vercel production: `https://oyano-moshimo-navi.vercel.app`
   - deployment id: `dpl_4pvoYBYpDAZon37Czt1R6gV795zG`
+
+## 2026-08-20 追記 105
+
+- ユーザー指摘:
+  - 1人目登録済みなのに、`読む` や `安心` 画面に似たような「状況整理チェックへ」ボタンがあり、飛び先も `/start`、`/diagnosis`、`/home` でバラバラに見える。
+  - `安心` 画面末尾の `Payment boundary` / `Web入口とExpoアプリの役割を分ける` は、ユーザー向け画面には不要ではないか。
+- 判断:
+  - 登録後の体験は `家族ボード` を本体にする。
+  - `読む` と `安心` は補助情報ページにし、新規診断へ戻すCTAは置かない。
+  - 内部設計・決済境界・Web/Expo分担の説明はレビュー資料や内部メモに残し、PWAの通常画面からは外す。
+- 対応:
+  - `apps/web/app/guides/page.tsx`
+    - 下部の `読むだけで終わらせず...` CTA帯を削除。
+  - `apps/web/app/checklists/page.tsx`
+    - ヒーローCTAを `家族ボードへ戻る` に変更。
+    - 各チェックリストカードの `この状況でリスト化する` を削除。
+    - 下部の保存/共有CTA帯を削除。
+  - `apps/web/app/guides/[slug]/page.tsx`
+    - 詳細ページ末尾CTAを `家族ボードへ戻る` に統一。
+    - `/diagnosis?status=...` へ戻す導線を削除。
+  - `apps/web/app/safety/page.tsx`
+    - ヒーローCTAを `家族ボードへ戻る` に変更。
+    - `Payment boundary` セクションとWeb/Expo分担の説明を削除。
+    - 収益方針っぽい文言を、ユーザー向けの「必要になってから機能を増やす」に変更。
+  - `apps/web/public/sw.js`
+    - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v10` に更新。
+- 次にやること:
+  - `npm run typecheck --workspace web`
+  - `git diff --check`
+  - `npm run build --workspace web`
+  - 本番デプロイとスマホ確認。

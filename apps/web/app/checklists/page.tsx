@@ -14,10 +14,10 @@ export default function ChecklistsPage() {
         <p className="pill">無料チェックリスト</p>
         <h1 className="page-title">家族でそのまま使える、親のもしも準備リスト。</h1>
         <p className="lead">
-          まずは登録なしで確認できます。印刷して家族会議に持っていく、LINEで共有する、後でアプリに引き継ぐ。そんな使い方を想定しています。
+          家族ボードで管理している人の状況に合わせて、確認漏れがないか見直すための一覧です。
         </p>
         <div className="actions">
-          <Link className="button" href="/start">自分の状況に合わせて整理する</Link>
+          <Link className="button" href="/home">家族ボードへ戻る</Link>
           <Link className="secondary" href="/guides">準備ガイドを読む</Link>
         </div>
       </section>
@@ -42,24 +42,8 @@ export default function ChecklistsPage() {
               <strong>家族メモ</strong>
               <p>{checklist.familyNote}</p>
             </div>
-            <Link className="secondary" href={`/diagnosis?status=${checklist.ctaStatus}`}>
-              この状況でリスト化する
-            </Link>
           </article>
         ))}
-      </section>
-
-      <section className="portal-band guide-bottom-band">
-        <div className="container portal-band-inner">
-          <div>
-            <p className="eyebrow">Save and share</p>
-            <h2>チェックした内容を、家族ボードと期限通知へつなげる。</h2>
-            <p>
-              無料チェックリストで全体像をつかんだ後、状況整理チェックに進むと、タスク・期限・相談先カテゴリを保存しやすい形に変換できます。
-            </p>
-          </div>
-          <Link className="button" href="/start">状況整理チェックへ</Link>
-        </div>
       </section>
     </main>
   );

@@ -68,12 +68,12 @@ export default function GuideDetailPage({ params }: { params: { slug: string } }
 
         <section className="panel handoff-band guide-cta">
           <div>
-            <p className="eyebrow">Next</p>
-            <h2>この状況で、家族用のやることリストを作る。</h2>
-            <p>ログイン前に整理結果を表示します。保存・共有・通知が必要な時だけアプリへ引き継げます。</p>
+            <p className="eyebrow">家族ボードへ</p>
+            <h2>読んだ内容は、対象者の手帳で確認する。</h2>
+            <p>期限、担当、日々の記録は家族ボードに集めます。新しく診断を増やさず、いま登録している人のページに戻れます。</p>
           </div>
           <div className="actions">
-            <Link className="button" href={`/diagnosis?status=${guide.ctaStatus}`}>状況整理チェックへ</Link>
+            <Link className="button" href="/home">家族ボードへ戻る</Link>
             <Link className="secondary" href="/guides">他のガイドを見る</Link>
           </div>
         </section>

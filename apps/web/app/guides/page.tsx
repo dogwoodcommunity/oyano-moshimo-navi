@@ -28,17 +28,6 @@ export default function GuidesPage() {
           </Link>
         ))}
       </section>
-
-      <section className="portal-band guide-bottom-band">
-        <div className="container portal-band-inner">
-          <div>
-            <p className="eyebrow">Checklist</p>
-            <h2>読むだけで終わらせず、家族の状況に合わせてリスト化する。</h2>
-            <p>ガイドで全体像を見た後、いま近い状況を選ぶと、期限タスクと家族に聞くことへ整理できます。</p>
-          </div>
-          <Link className="button" href="/start">状況整理チェックへ</Link>
-        </div>
-      </section>
     </main>
   );
 }
