@@ -91,12 +91,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="shell">
           <header className="nav">
-            <Link className="app-brand" href="/">
+            <Link className="app-brand" href="/home">
               <img className="app-brand-logo" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
               <span>親のもしもナビ</span>
             </Link>
             <nav className="navlinks" aria-label="main">
-              <Link href="/">はじめる</Link>
               <Link href="/home">家族ボード</Link>
               <Link href="/guides">読む</Link>
               <Link href="/safety">安心</Link>
@@ -109,7 +108,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
-            <Link href="/start">1人目を登録する</Link>
+            <Link href="/home">家族ボード</Link>
           </footer>
         </div>
         <PwaRegister />

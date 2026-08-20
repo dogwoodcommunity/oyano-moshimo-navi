@@ -8,9 +8,11 @@ import {
   diaryAdvice,
   listDiaryEntries,
   listLocalCases,
+  updateCaseProfile,
   type CaseRecord,
   type DiaryAttachment,
-  type DiaryEntry
+  type DiaryEntry,
+  type PersonProfile
 } from "@/lib/store";
 
 type DiaryFormState = {
@@ -35,6 +37,15 @@ const healthNotes = [
   "物忘れ・発言の変化があった",
   "病院・介護先から連絡があった"
 ];
+
+const relationshipLabels = {
+  mother: "母",
+  father: "父",
+  mother_in_law: "義母",
+  father_in_law: "義父",
+  grandparent: "祖父母",
+  other: "親族・その他"
+} as const;
 
 function progressLabel(caseRecord: CaseRecord) {
   if (caseRecord.status === "result_ready" || caseRecord.status === "converted") return "管理中";
@@ -81,6 +92,9 @@ function readFileAsDataUrl(file: File): Promise<string | undefined> {
 }
 
 function personName(caseRecord: CaseRecord) {
+  const displayName = caseRecord.personProfile?.displayName?.trim();
+  if (displayName) return displayName;
+
   return targetLabel({
     targetRelationship: caseRecord.answers.targetRelationship,
     targetName: caseRecord.answers.targetName,
@@ -88,12 +102,56 @@ function personName(caseRecord: CaseRecord) {
   });
 }
 
-function summarizeProfile(caseRecord: CaseRecord) {
+function relationshipName(caseRecord: CaseRecord) {
+  const relationship = caseRecord.answers.targetRelationship ?? "mother";
+  return relationshipLabels[relationship] ?? "家族";
+}
+
+function profileSeed(caseRecord: CaseRecord): PersonProfile {
+  const profile = caseRecord.personProfile ?? {};
+  const targetName = caseRecord.answers.targetName?.trim() ?? "";
+  return {
+    fullName: profile.fullName ?? targetName,
+    displayName: profile.displayName ?? personName(caseRecord),
+    relationship: profile.relationship ?? relationshipName(caseRecord),
+    birthDate: profile.birthDate ?? "",
+    careStatus: profile.careStatus ?? statusLabel(caseRecord.selectedStatus),
+    keyContact: profile.keyContact ?? "",
+    hospitalOrFacility: profile.hospitalOrFacility ?? "",
+    medicationNote: profile.medicationNote ?? "",
+    documentLocationNote: profile.documentLocationNote ?? ""
+  };
+}
+
+function profileCompletion(profile: PersonProfile) {
+  const fields = [
+    profile.fullName,
+    profile.displayName,
+    profile.relationship,
+    profile.birthDate,
+    profile.careStatus,
+    profile.keyContact,
+    profile.hospitalOrFacility,
+    profile.medicationNote,
+    profile.documentLocationNote
+  ];
+  const filled = fields.filter((item) => item?.trim()).length;
+  const total = fields.length;
+  return {
+    filled,
+    total,
+    percent: Math.round((filled / total) * 100)
+  };
+}
+
+function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
   const answers = caseRecord.answers;
   return [
-    { label: "いまの状況", value: statusLabel(caseRecord.selectedStatus) },
+    { label: "呼び名", value: profile.displayName || personName(caseRecord) },
+    { label: "関係", value: profile.relationship || relationshipName(caseRecord) },
+    { label: "いまの状況", value: profile.careStatus || statusLabel(caseRecord.selectedStatus) },
+    { label: "生年月日", value: profile.birthDate || "未入力" },
     { label: "家族構成", value: answers.familyStructure || "未入力" },
-    { label: "実家・住まい", value: answers.hasHome === "yes" ? "確認が必要" : answers.hasHome === "no" ? "なし" : "不明" },
     { label: "財産・書類", value: answers.knowsAssets === "mostly" ? "だいたい把握" : answers.knowsAssets === "some" ? "一部だけ把握" : "不明" }
   ];
 }
@@ -103,6 +161,8 @@ export default function FamilyBoardPage() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<Record<string, DiaryEntry[]>>({});
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
+  const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
+  const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -110,6 +170,7 @@ export default function FamilyBoardPage() {
     setCases(localCases);
     setActiveCaseId((current) => current ?? localCases[0]?.id ?? null);
     setDiaryEntries(Object.fromEntries(localCases.map((item) => [item.id, listDiaryEntries(item.id)])));
+    setProfileForms(Object.fromEntries(localCases.map((item) => [item.id, profileSeed(item)])));
     setLoaded(true);
   }, []);
 
@@ -122,6 +183,8 @@ export default function FamilyBoardPage() {
   const activeTasks = activeCase?.result?.tasks ?? [];
   const nextTask = activeTasks[0];
   const activeForm = activeCase ? forms[activeCase.id] ?? emptyDiaryForm : emptyDiaryForm;
+  const activeProfile = activeCase ? profileForms[activeCase.id] ?? profileSeed(activeCase) : undefined;
+  const activeProfileCompletion = activeProfile ? profileCompletion(activeProfile) : { filled: 0, total: 0, percent: 0 };
   const attachments = activeEntries.flatMap((entry) =>
     entry.attachments.map((file) => ({ ...file, entryDate: entry.date }))
   );
@@ -150,6 +213,32 @@ export default function FamilyBoardPage() {
     const current = forms[caseId] ?? emptyDiaryForm;
     const body = current.body.trim() ? `${current.body.trim()}\n・${note}` : `・${note}`;
     updateForm(caseId, { body });
+  }
+
+  function updateProfileForm(caseId: string, patch: PersonProfile) {
+    setProfileSavedCaseId(null);
+    setProfileForms((current) => ({
+      ...current,
+      [caseId]: {
+        ...(current[caseId] ?? {}),
+        ...patch
+      }
+    }));
+  }
+
+  function saveProfile(caseId: string) {
+    const profile = profileForms[caseId];
+    if (!profile) return;
+
+    const updated = updateCaseProfile(caseId, profile);
+    if (!updated) return;
+
+    setCases((current) => [updated, ...current.filter((item) => item.id !== caseId)]);
+    setProfileForms((current) => ({
+      ...current,
+      [caseId]: profileSeed(updated)
+    }));
+    setProfileSavedCaseId(caseId);
   }
 
   async function attachFiles(caseId: string, fileList: FileList | null) {
@@ -201,7 +290,7 @@ export default function FamilyBoardPage() {
           {activeCase ? (
             <>
               <a className="button" href="#today-diary">今日の記録を書く</a>
-              <Link className="secondary" href="/start">別の人を追加</Link>
+              <Link className="secondary" href="/plans">別の人を追加（Plus）</Link>
             </>
           ) : (
             <Link className="button" href="/start">1人目を登録する</Link>
@@ -223,7 +312,11 @@ export default function FamilyBoardPage() {
               <small>{statusLabel(caseRecord.selectedStatus)}</small>
             </button>
           ))}
-          <Link className="person-add-card" href="/start">＋ 追加</Link>
+          <Link className="person-add-card" href="/plans">
+            <span>Plus</span>
+            <strong>＋ 追加</strong>
+            <small>2人目以降</small>
+          </Link>
         </section>
       ) : null}
 
@@ -245,16 +338,21 @@ export default function FamilyBoardPage() {
 
       {loaded && !activeCase ? (
         <section className="panel board-empty empty-notebook-card">
-          <h2>まだ対象者が登録されていません。</h2>
-          <p>父母、義父母、祖父母、親戚など、まず1人だけ登録してください。登録後はこの画面がその人のマイページになります。</p>
-          <Link className="button" href="/start">1人目を登録する</Link>
+          <h2>登録すると、この画面がその人のマイページになります。</h2>
+          <p>父母、義父母、祖父母、親戚など、まず1人だけ。プロフィール、日記、写真、期限つきタスクを人ごとに分けて残せます。</p>
+          <div className="empty-feature-grid" aria-label="登録後に使える機能">
+            <span>プロフィール</span>
+            <span>日記</span>
+            <span>写真・PDF</span>
+            <span>期限タスク</span>
+          </div>
         </section>
       ) : null}
 
       {activeCase ? (
         <section className="mypage-grid" aria-label={`${personName(activeCase)}の管理ページ`}>
           <div className="mypage-main">
-            <article className="profile-book-card">
+            <article className="profile-book-card profile-editor-card">
               <div className="profile-book-head">
                 <div className="profile-avatar" aria-hidden="true">
                   {personName(activeCase).slice(0, 1)}
@@ -262,16 +360,108 @@ export default function FamilyBoardPage() {
                 <div>
                   <p className="pill">{progressLabel(activeCase)}</p>
                   <h2>{personName(activeCase)}</h2>
-                  <p>{statusLabel(activeCase.selectedStatus)}</p>
+                  <p>この人の基本情報を育てるほど、日記・確認リスト・相談が使いやすくなります。</p>
                 </div>
               </div>
+              <div className="profile-completion">
+                <div>
+                  <span>プロフィール充実度</span>
+                  <strong>{activeProfileCompletion.percent}%</strong>
+                </div>
+                <div className="profile-progress-track" aria-hidden="true">
+                  <span style={{ width: `${activeProfileCompletion.percent}%` }} />
+                </div>
+                <small>{activeProfileCompletion.filled}/{activeProfileCompletion.total}項目 入力済み</small>
+              </div>
               <div className="profile-row-grid">
-                {summarizeProfile(activeCase).map((row) => (
+                {summarizeProfile(activeCase, activeProfile ?? {}).map((row) => (
                   <div key={row.label}>
                     <span>{row.label}</span>
                     <strong>{row.value}</strong>
                   </div>
                 ))}
+              </div>
+              {activeProfile ? (
+                <div className="profile-form-grid" aria-label="対象者プロフィール編集">
+                  <label>
+                    <span>フルネーム</span>
+                    <input
+                      placeholder="例: 山田 太郎"
+                      value={activeProfile.fullName ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { fullName: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>呼び名</span>
+                    <input
+                      placeholder="例: お父さん、太郎さん"
+                      value={activeProfile.displayName ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { displayName: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>関係</span>
+                    <input
+                      placeholder="例: 父、義母、叔父"
+                      value={activeProfile.relationship ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { relationship: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>生年月日</span>
+                    <input
+                      type="date"
+                      value={activeProfile.birthDate ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { birthDate: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>いまの状態</span>
+                    <input
+                      placeholder="例: 退院後・在宅療養"
+                      value={activeProfile.careStatus ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { careStatus: event.target.value })}
+                    />
+                  </label>
+                  <label>
+                    <span>主な連絡窓口</span>
+                    <input
+                      placeholder="例: 長女が病院連絡、長男が支払い"
+                      value={activeProfile.keyContact ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { keyContact: event.target.value })}
+                    />
+                  </label>
+                  <label className="profile-wide-field">
+                    <span>病院・施設・ケア先</span>
+                    <textarea
+                      placeholder="例: 〇〇病院 退院支援窓口、訪問看護ステーション名など"
+                      value={activeProfile.hospitalOrFacility ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { hospitalOrFacility: event.target.value })}
+                    />
+                  </label>
+                  <label className="profile-wide-field">
+                    <span>薬・注意点</span>
+                    <textarea
+                      placeholder="例: 飲み忘れ注意、薬の変更があった日、避けたい対応など"
+                      value={activeProfile.medicationNote ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { medicationNote: event.target.value })}
+                    />
+                  </label>
+                  <label className="profile-wide-field">
+                    <span>書類・鍵などの保管メモ</span>
+                    <textarea
+                      placeholder="暗証番号やパスワードは書かず、存在と保管場所だけを残します。"
+                      value={activeProfile.documentLocationNote ?? ""}
+                      onChange={(event) => updateProfileForm(activeCase.id, { documentLocationNote: event.target.value })}
+                    />
+                  </label>
+                </div>
+              ) : null}
+              <div className="profile-save-row">
+                <button className="button" type="button" onClick={() => saveProfile(activeCase.id)}>
+                  プロフィールを更新する
+                </button>
+                {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
               </div>
               {activeCase.answers.parentSituation ? (
                 <div className="profile-note">
@@ -444,11 +634,29 @@ export default function FamilyBoardPage() {
               )}
             </article>
 
+            <article className="family-share-card">
+              <div>
+                <p className="pill">Family Plus</p>
+                <h3>家族に共有して、同じ手帳を見る</h3>
+                <p>
+                  共有リンクだけで誰でも見られる形にはしません。家族共有はPlusで招待制にし、ログインした家族だけがこの人のプロフィール、日記、写真、期限を確認できます。
+                </p>
+              </div>
+              <div className="share-rule-grid">
+                <span>招待制</span>
+                <span>URLだけでは不可</span>
+                <span>Plus</span>
+              </div>
+              <Link className="secondary" href="/plans">家族共有を設定する</Link>
+            </article>
+
             <article className="ai-consult-card notebook-ai-card" aria-label="AI相談">
               <div>
                 <p className="pill">Plus</p>
                 <h3>この人の記録をもとにAI相談</h3>
-                <p>毎回ゼロから説明せず、家族構成・日々の記録・期限を踏まえて相談できる有料機能として設計します。</p>
+                <p>
+                  毎回ゼロから説明せず、プロフィール・日記・写真メモ・期限を踏まえて「次に何を確認するか」を相談できる有料機能です。
+                </p>
               </div>
               <Link className="secondary" href="/plans">Plusを見る</Link>
             </article>
@@ -459,8 +667,8 @@ export default function FamilyBoardPage() {
       <section className="board-plus notebook-plus">
         <div>
           <p className="pill">Family Plus</p>
-          <h2>2人目以降は、それぞれのマイページを分けて管理。</h2>
-          <p>父母・義父母・親戚を切り替え、手帳、写真、確認リスト、AI相談を人ごとに残せる形にします。</p>
+          <h2>無料は1人目の手帳から。必要になったらPlusで広げる。</h2>
+          <p>2人目以降の登録、家族への招待共有、この人の記録を踏まえたAI相談、PDF出力をPlusで使える設計にします。</p>
         </div>
         <Link className="button" href="/plans">プランを見る</Link>
       </section>

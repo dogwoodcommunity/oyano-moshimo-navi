@@ -3152,3 +3152,72 @@ GitHubが必要な理由:
     - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
+
+## 2026-08-20 追記 98
+
+- ユーザー要望:
+  - Web診断サイトより、基本はPWA/アプリだけで完結する「家族の管理手帳」に寄せたい。
+  - 整理結果が浅く、1人目のマイページ作成を押したくなる価値説明が弱い。
+  - 1人目マイページに、対象者のフルネーム、呼び名、関係、生年月日、状態、連絡窓口、病院・施設、薬、書類保管メモなどを入力できるようにしたい。
+  - 家族共有はURLだけで誰でも見られる形にせず、招待制/ログイン前提にしたい。2人目以降、家族共有、AI相談はPlus導線にしたい。
+- 対応:
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 結果画面に「このまま続ける理由」「1人目のマイページでできること」を追加。
+    - 結果を単なる診断ではなく、この人専用の管理手帳へつなげる導線に変更。
+    - CTAを「1人目のマイページを作る」「この人のマイページへ進む」に寄せた。
+  - `apps/web/lib/store.ts`
+    - `PersonProfile` を追加。
+    - `CaseRecord.personProfile` と `updateCaseProfile()` を追加し、localStorage上でプロフィール更新できるようにした。
+  - `apps/web/app/home/page.tsx`
+    - 1人目登録後は「お母さん/お父さん等のマイページ」として表示。
+    - プロフィール充実度、概要、編集フォーム、今日のチェック、日記、写真/PDF添付、最近の記録、次にやること、家族共有、AI相談を1人ごとにまとめた。
+    - 登録済み状態では「1人目を登録する」を出さず、「今日の記録を書く」と「別の人を追加（Plus）」に切り替える。
+    - 家族共有カードを「Plus」「招待制」「URLだけでは不可」と明記。
+  - `apps/web/app/globals.css`
+    - マイページ/結果導線用のスタイルを追加。
+    - AIっぽく見える装飾丸を削除し、家族手帳ヒーローのCTAを白系に変更して落ち着かせた。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - ローカル `http://127.0.0.1:3000/home` をスマホ幅で確認。
+  - `/admin` のローカルデモcase作成を使って、登録済みマイページ表示もスマホ幅で確認。
+- 注意:
+  - 現時点のプロフィール/日記はPWAローカル保存中心。次に本格化するならSupabase `people` / `diary_entries` / `attachments` へ同期する。
+  - 家族共有はUI上Plus導線に寄せたが、実際の招待/権限制御の本番接続は次工程で詰める。
+  - AI相談は有料機能の位置づけをUIに出した段階。実AI連携は未実装。
+
+## 2026-08-20 追記 99
+
+- ユーザー要望:
+  - 「基本アプリのみで完結管理」に寄せる。Web入口/PWA案内っぽい画面はいらない。
+  - 1人目の登録後に、もう一度「1人目を登録する」が出るのは混乱する。
+  - 2人目以降、家族共有、AI相談は有料プランにしてよい。
+  - 家族共有はURLを知っていれば誰でも見られる形ではなく、招待制/ログイン制にする前提。
+- 対応:
+  - `apps/web/app/page.tsx`
+    - `/` をPWA案内ではなく `/home` へリダイレクトするよう変更。
+  - `apps/web/app/layout.tsx`
+    - ブランドリンクを `/home` に変更。
+    - ナビから「はじめる」を削除し、「家族ボード / 読む / 安心」に整理。
+    - footer の「1人目を登録する」を「家族ボード」に変更。
+  - `apps/web/app/home/page.tsx`
+    - 登録済み時の対象者追加カードを `/plans` へ変更し、`Plus / 2人目以降` と明記。
+    - 未登録時の空カードから重複する「1人目を登録する」ボタンを削除。
+    - 登録後に使える機能を「プロフィール / 日記 / 写真・PDF / 期限タスク」として表示。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 家族共有ボタンを直接共有ではなく「家族共有はPlusで設定」へ変更。
+  - `apps/web/app/globals.css`
+    - Plus追加カードと未登録機能チップの見た目を調整。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - `node scripts/smoke-web.mjs http://127.0.0.1:3005` OK。
+  - `/` は `307` で `/home` に寄ることを確認。
+  - Browserプラグインで `390x844` 幅の `/home` を確認。
+    - 登録済み状態で `1人目を登録する` の表示は0件。
+    - ナビに「はじめる」は出ない。
+    - 2人目追加は `Plus + 追加 2人目以降` として表示。
+- 注意:
+  - まだSupabase同期ではなくローカル保存のPWAプロトタイプ。次は `people` / `diary_entries` / `attachments` のDB保存と、Plus判定を本番実装する。

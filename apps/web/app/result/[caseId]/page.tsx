@@ -25,13 +25,27 @@ export default function ResultPage() {
   const answers = (record?.answers as DiagnosisAnswers | undefined) ?? fallbackAnswers;
   const result = record?.result ?? buildDiagnosisResult(answers);
   const target = targetLabel(answers);
-  const appScheme = process.env.NEXT_PUBLIC_APP_SCHEME ?? "oyanomoshimo";
-  const appUrl = record?.handoffToken
-    ? `${appScheme}://handoff?${new URLSearchParams({ caseId: params.caseId, token: record.handoffToken }).toString()}`
-    : "";
   const supportPackHref = record?.handoffToken
     ? `/support-pack?${new URLSearchParams({ caseId: params.caseId, checkoutToken: record.handoffToken }).toString()}`
     : `/support-pack?caseId=${params.caseId}`;
+  const resultValueItems = [
+    {
+      title: "日々の変化を残す",
+      body: "体調、発言、病院や介護先からの連絡、家族で決めたことを日記として残せます。写真やPDFも一緒に置けます。"
+    },
+    {
+      title: "期限と担当を見失わない",
+      body: "今やること、あとで確認すること、担当未定のことをこの人ごとに分けて確認できます。"
+    },
+    {
+      title: "家族に同じ前提を共有する",
+      body: "本格共有は招待制で進めます。リンクだけで誰でも見られる形にせず、家族ごとに安全に共有します。"
+    },
+    {
+      title: "相談が早くなる",
+      body: "プロフィールと記録が残るので、AI相談や専門家相談で毎回ゼロから説明しなくて済みます。"
+    }
+  ];
 
   return (
     <main className="container">
@@ -42,8 +56,40 @@ export default function ResultPage() {
         <div className="meta-row">
           <span className="meta-chip">対象者 {target}</span>
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
-          <span className="meta-chip">家族ボードに保存済み</span>
+          <span className="meta-chip">管理手帳に保存済み</span>
           <span className="meta-chip">専門判断は断定しません</span>
+        </div>
+      </section>
+
+      <section className="panel result-next-value">
+        <div>
+          <p className="pill">このまま続ける理由</p>
+          <h2>この結果を、{target}専用のマイページにできます。</h2>
+          <p>
+            親の状況は一度整理して終わりではありません。退院、介護、書類、家族の役割、実家の片付けは少しずつ変わります。
+            だから、この結果をこの人の「管理手帳」として残し、これからの日々の記録と一緒に育てていきます。
+          </p>
+        </div>
+        <div className="result-value-grid">
+          {resultValueItems.map((item, index) => (
+            <article key={item.title}>
+              <span>{index + 1}</span>
+              <strong>{item.title}</strong>
+              <p>{item.body}</p>
+            </article>
+          ))}
+        </div>
+        <div className="result-notebook-preview">
+          <div>
+            <strong>1人目のマイページでできること</strong>
+            <ul>
+              <li>フルネーム、生年月日、続柄、連絡窓口を登録</li>
+              <li>日記、写真、PDF、病院・介護先メモを保存</li>
+              <li>期限のある確認リストと担当未定を表示</li>
+              <li>家族共有・AI相談・2人目以降はPlusで拡張</li>
+            </ul>
+          </div>
+          <Link className="button" href="/home">1人目のマイページを作る</Link>
         </div>
       </section>
 
@@ -100,28 +146,28 @@ export default function ResultPage() {
 
       <section className="panel handoff-band" style={{ marginTop: 18 }}>
         <p className="pill">次にすること</p>
-        <h2>この整理結果を、1人目として管理します。</h2>
+        <h2>{target}の管理手帳として続けます。</h2>
         <p>
-          期限のあるタスク、担当未定、家族に聞くことをこのまま家族ボードで進めます。あとから状況が変わったら、同じ対象者として更新できます。
+          期限のあるタスク、担当未定、家族に聞くこと、日々の記録をこの人のマイページで進めます。
+          あとから状況が変わったら、同じ対象者として更新できます。
         </p>
         <p className="hint">
-          父母・義父母など複数人を管理する場合は、家族ボードから1人ずつ追加します。人ごとに状態、期限、担当を分けて管理します。
+          父母・義父母・親戚など複数人を管理する場合も、1人ずつ登録して、人ごとに状態、期限、担当、日記を分けます。
         </p>
         <div className="handoff-choice-grid" aria-label="家族ボードで続けること">
           <div>
-            <strong>今やること</strong>
-            <span>期限が近いこと、担当未定、家族への確認</span>
+            <strong>無料で始める</strong>
+            <span>1人目のプロフィール、日記、写真、確認リスト</span>
           </div>
           <div>
-            <strong>あとで更新すること</strong>
-            <span>状況の変化、完了した作業、追加メモ</span>
+            <strong>Plusで広げる</strong>
+            <span>2人目以降、家族共有、AI相談、PDF出力</span>
           </div>
         </div>
         <div className="actions">
-          <Link className="button" href="/home">家族ボードで進捗を見る</Link>
-          <Link className="secondary" href={`/result/${params.caseId}/share`}>家族に共有する</Link>
+          <Link className="button" href="/home">この人のマイページへ進む</Link>
+          <Link className="secondary" href="/plans">家族共有はPlusで設定</Link>
         </div>
-        {appUrl ? <p className="hint">ネイティブアプリ連携用リンクも内部的に作成済みです。</p> : null}
       </section>
 
       <section className="board-plus" style={{ marginTop: 18 }}>

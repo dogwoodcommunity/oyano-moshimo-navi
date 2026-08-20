@@ -13,6 +13,7 @@ export type CaseRecord = {
   id: string;
   selectedStatus: ParentStatus;
   answers: Partial<DiagnosisAnswers>;
+  personProfile?: PersonProfile;
   contactName?: string;
   contactEmail?: string;
   status: "draft" | "submitted" | "result_ready" | "converted";
@@ -20,6 +21,19 @@ export type CaseRecord = {
   result?: DiagnosisResult;
   handoffToken?: string;
   supportPackStatus?: "none" | "requested" | "paid" | "reviewing" | "report_ready";
+};
+
+export type PersonProfile = {
+  fullName?: string;
+  displayName?: string;
+  relationship?: string;
+  birthDate?: string;
+  careStatus?: string;
+  keyContact?: string;
+  hospitalOrFacility?: string;
+  medicationNote?: string;
+  documentLocationNote?: string;
+  updatedAt?: string;
 };
 
 export type DiaryAttachment = {
@@ -85,6 +99,24 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
   };
   writeDiaryEntries([entry, ...readDiaryEntries()]);
   return entry;
+}
+
+export function updateCaseProfile(caseId: string, patch: PersonProfile): CaseRecord | undefined {
+  const cases = readCases();
+  const existing = cases.find((item) => item.id === caseId);
+  if (!existing) return undefined;
+
+  const record: CaseRecord = {
+    ...existing,
+    personProfile: {
+      ...(existing.personProfile ?? {}),
+      ...patch,
+      updatedAt: new Date().toISOString()
+    }
+  };
+
+  writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
+  return record;
 }
 
 export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] {

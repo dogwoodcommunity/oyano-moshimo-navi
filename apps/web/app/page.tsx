@@ -1,5 +1,5 @@
-import { PwaInstallPanel } from "@/components/PwaInstallPanel";
+import { redirect } from "next/navigation";
 
 export default function HomePage() {
-  return <PwaInstallPanel />;
+  redirect("/home");
 }
