@@ -2941,6 +2941,17 @@ GitHubが必要な理由:
 - 次:
   - commit/push/deploy後、本番URLを再確認する。
   - ユーザー側ではiPhoneの共有ブラウザ/アプリ内ブラウザで再読み込み、必要ならタブを閉じて開き直す。
+- 反映:
+  - 変更コミット: `eec767c Add critical inline styles for PWA entry`
+  - `git push origin main` OK。
+  - Vercel production deploy OK。
+    - Deployment ID: `dpl_7sjHaStTitCvXjJEwbQKDSiQBv7a`
+    - Production URL: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-p78x23kk7-dogwoodcommunity1.vercel.app`
+  - `curl -I https://oyano-moshimo-navi.vercel.app/` 200。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+  - `curl -L https://oyano-moshimo-navi.vercel.app/ -o /tmp/oyano-root.html` OK。
+  - `/tmp/oyano-root.html` 内に `watch-bird-mark{display:block;height:64px` が存在することを確認。
 
 ## 2026-08-20 追記 98
 
