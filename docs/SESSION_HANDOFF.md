@@ -2849,7 +2849,17 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - build時にSupabase JSのNode 22推奨警告が出るが、ビルド自体は成功。
 - 注意:
-  - この追記時点ではcommit/push/deploy前。
+  - Git commit/push/deployまで完了。
+  - commit: `ad35d04 Reframe PWA as app-first family board`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_7fC58AaNLDQy6RX2zTEqGqVkfwTP`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-ksg1e7kro-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
 ## 2026-08-20 追記 98
