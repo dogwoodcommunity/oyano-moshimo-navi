@@ -3546,3 +3546,28 @@ GitHubが必要な理由:
     - Deployment URL: `https://oyano-moshimo-navi-o5injjh2y-dogwoodcommunity1.vercel.app`
     - Deployment ID: `dpl_A5iRS1uMFcFT9dFu3so5GZujphHS`
   - `curl -I https://oyano-moshimo-navi.vercel.app/home` でHTTP 200確認済み。
+
+## 2026-08-20 追記 108
+
+- ユーザー依頼:
+  - 「ちょっとclaudデザインにデザイン見直してもらうから資料くれ」
+- 対応:
+  - Claudeに渡す最新版のデザインレビュー依頼書を作成。
+  - ファイル: `docs/CLAUDE_DESIGN_REVIEW_REQUEST_2026-08-20.md`
+  - Claudeアップロード用ZIPも作成。
+  - ZIP: `review_exports/claude-design-review-oyano-2026-08-20.zip`
+- 資料の前提:
+  - 旧方針のWeb入口/診断LPではなく、PWA/アプリ本体の `/home` をレビュー対象にした。
+  - 「1人ずつ管理手帳」「プロフィール編集」「今日の記録」「過去の手帳」「AIメモ/先回りメモ」「確認リスト」「写真/PDF」「有料導線」を中心に整理。
+  - ユーザー不満として、AIテンプレ感、しょぼさ、ボタン/導線の不整合、プロフィール変更の分かりにくさ、過去記録の見返しにくさを明記。
+  - Petterの「私のうちの子ログ」のように、日々の記録がマイページ価値になる方向を明記。
+- ZIPに含めたもの:
+  - `docs/CLAUDE_DESIGN_REVIEW_REQUEST_2026-08-20.md`
+  - `apps/web/app/home/page.tsx`
+  - `apps/web/app/globals.css`
+  - `apps/web/public/brand/watch-bird-mark.svg`
+  - `apps/web/public/brand/app-icon.svg`
+  - `apps/web/public/brand/logo-mark.png`
+- 次の想定:
+  - ユーザーがClaudeに資料/ZIPを渡す。
+  - Claudeから返ってきたデザイン指示または実装依頼書を受け取り、Codexが `/home` を再実装する。
