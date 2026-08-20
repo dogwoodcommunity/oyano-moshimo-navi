@@ -46,9 +46,20 @@
   - `npm run typecheck --workspace web` OK。
   - `git diff --check` OK。
   - `npm run build --workspace web` OK。`/guides/[slug]` は100本分生成されることを確認。
+  - ローカル `http://localhost:3002/guides` / `http://localhost:3002/guides/hospital-care-window` / `http://localhost:3002/safety` はHTTP 200。
   - 注意: Supabase JSからNode 20非推奨警告あり。動作には影響なし。後日Node 22へ上げる。
-- これから実施:
-  - commit / push / deploy / 本番smoke。
+- GitHub:
+  - 実装コミット `9cf3ccb Improve guide library and simplify safety entry` を `main` へpush済み。
+- 本番反映:
+  - 最初に `apps/web` 直下で `npx vercel --prod --yes` を実行したところ、Vercel側の `npm install` が `Unsupported URL Type "workspace:"` で失敗。monorepo rootではないため。
+  - リポジトリrootから `npx vercel --prod --yes` を再実行して成功。
+  - Deployment ID: `dpl_DFaNCC6R23DC39LV3VrjwwFKLjt1`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-bw8pz8zgc-dogwoodcommunity1.vercel.app`
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+  - `npx vercel curl https://oyano-moshimo-navi.vercel.app/sw.js` で `oyano-moshimo-navi-v16` を確認。
+- 次に見るなら:
+  - iPhoneで `https://oyano-moshimo-navi.vercel.app/home?fresh=20260820` を開き、古いService Worker表示が残らないか確認。
 - 2026-08-20 追加対応2: ユーザー要望「キャラを全面的に存在感出す」「家族が亡くなるまで使って良かったと思える機能性を補う」に対応し、`/home` をさらに手帳/伴走型へ強化。
 - 変更ファイル:
   - `apps/web/app/home/page.tsx`
