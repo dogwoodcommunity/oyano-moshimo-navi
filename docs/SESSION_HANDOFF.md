@@ -3414,7 +3414,17 @@ GitHubが必要な理由:
   - `apps/web/public/sw.js`
     - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v10` に更新。
 - 次にやること:
-  - `npm run typecheck --workspace web`
-  - `git diff --check`
-  - `npm run build --workspace web`
-  - 本番デプロイとスマホ確認。
+  - 次は、1人目マイページの中身を商品価値ある画面へ磨く。
+  - プロフィール、日記、写真/PDF、期限、家族共有、AI相談の見せ方と編集導線を強化する。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - 本番ブラウザで `/guides`、`/checklists`、`/safety`、`/guides/hospitalized` を確認。
+  - `状況整理チェックへ`、`無料で状況を整理する`、`この状況でリスト化する`、`自分の状況に合わせて整理する`、`Payment boundary`、`Web入口とExpo` が表示されないことを確認。
+  - `/checklists`、`/safety`、guide詳細は `家族ボードへ戻る` に統一。
+- GitHub/Vercel:
+  - commit: `e140a64 Unify registered user content navigation`
+  - pushed to `origin/main`
+  - Vercel production: `https://oyano-moshimo-navi.vercel.app`
+  - deployment id: `dpl_ALhYr43eZgJi48QmMg262QayoLaJ`
