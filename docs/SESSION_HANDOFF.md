@@ -2712,5 +2712,14 @@ GitHubが必要な理由:
   - `apps/web`: `next build` OK。
   - ローカル `next start -p 3005` は `listen EPERM` で起動不可。この環境のポート権限問題で、コード/ビルドはOK。
 - 注意:
-  - この追記時点ではcommit/push/deploy前。
+  - Git commit/push/deployまで完了。
+  - commit: `90df502 Refine notebook visual system`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_9wzoQfiNA4o7i3pqVTnVPjbA8WfJ`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-2bv1dthg2-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/install` 200。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
