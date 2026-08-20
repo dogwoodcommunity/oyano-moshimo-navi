@@ -75,10 +75,10 @@ export default function StartPage() {
   return (
     <main className="paper-bg notebook-start-page">
       <section className="toc-header">
-        <button className="toc-back" type="button" onClick={() => router.push("/home")}>
+        <button className="toc-back" type="button" onClick={() => router.push("/")}>
           ‹ もどる
         </button>
-        <p className="toc-kicker">最初の質問</p>
+        <p className="toc-kicker">1人目の登録</p>
         <h1>親は今、どの状況に近いですか？</h1>
         <p>当てはまるカードを1つだけ選んでください。文字の上でも、余白でも、カード全体をタップできます。</p>
       </section>

@@ -68,54 +68,61 @@ export function PwaInstallPanel() {
               <small>MOSHIMO NAVI</small>
             </div>
           </div>
-          <span>家 族 の た め の 備 え 手 帳</span>
+          <span>家 族 で 進 め る 親 の 管 理 帳</span>
         </div>
       </div>
 
       <section className="entry-intro-card" aria-label="親のもしもナビの始め方">
-        <p className="entry-date">{todayLabel}のページ</p>
-        <h1>親のことを、このアプリで整理します。</h1>
+        <p className="entry-date">{todayLabel}の家族ボード</p>
+        <h1>親の状況を、1人ずつ管理します。</h1>
         <p>
-          入院、退院後の在宅、介護、亡くなった後の手続きなど、今の状況に近いものを選ぶと確認リストを作ります。
+          入院、退院後の在宅、介護、亡くなった後の手続き、実家の片付け。親ごとに状況を登録して、今やることを家族で確認できます。
         </p>
         <Link className="entry-main-button" href="/start">
-          最初の登録を始める
-          <span>親の状況を1つ選びます</span>
+          1人目を登録する
+          <span>親の状況を選んで、確認リストを作ります</span>
         </Link>
       </section>
 
       <section className="entry-how-card" aria-label="このあとできること">
-        <h2>このあとできること</h2>
+        <h2>このアプリで続けてできること</h2>
         <ol>
           <li>
-            <strong>親の状況を選ぶ</strong>
-            <span>当てはまるカードを1つタップします。</span>
+            <strong>1人目の状況を登録</strong>
+            <span>まずは1人だけ。あとから2人目、3人目を追加できます。</span>
           </li>
           <li>
-            <strong>確認リストを見る</strong>
-            <span>支払い、書類、家族で分けることを整理します。</span>
+            <strong>今やることを表示</strong>
+            <span>期限のある手続き、担当未定、家族に聞くことを分けます。</span>
           </li>
           <li>
-            <strong>家族ボードに保存</strong>
-            <span>あとで家族と見返せる形にします。</span>
+            <strong>進捗を更新</strong>
+            <span>完了、進行中、変化ありを見ながら次の確認へ進みます。</span>
           </li>
         </ol>
       </section>
 
       <Link className="entry-board-link" href="/home">
-        すでに登録済みの家族ボードを見る
+        登録済みの家族ボードを見る
       </Link>
+
+      <section className="entry-plus-card" aria-label="有料プランの案内">
+        <p className="pill">Family Plus</p>
+        <h2>親が2人以上いる家族、履歴を残したい家族へ。</h2>
+        <p>無料では1人目の整理と基本の確認から始められます。複数の親、家族会議用PDF、写真容量、履歴保存が必要になったらPlusを提案します。</p>
+        <Link className="secondary" href="/plans">有料プランを見る</Link>
+      </section>
 
       <div className="pwa-note">
         {promptEvent ? (
           <>
-            <span>よく使う場合は、あとでホーム画面に置けます。</span>
+            <span>よく使う場合は、ホーム画面に置くとすぐ開けます。</span>
             <button type="button" onClick={install}>
               ホーム画面に置く
             </button>
           </>
         ) : (
-          <p>よく使う場合は、あとでホーム画面に置けます。</p>
+          <p>よく使う場合は、ホーム画面に置くとすぐ開けます。</p>
         )}
         {message ? <strong>{message}</strong> : null}
       </div>

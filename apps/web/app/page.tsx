@@ -1,5 +1,5 @@
-import { redirect } from "next/navigation";
+import { PwaInstallPanel } from "@/components/PwaInstallPanel";
 
 export default function HomePage() {
-  redirect("/start");
+  return <PwaInstallPanel />;
 }

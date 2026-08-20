@@ -2804,6 +2804,54 @@ GitHubが必要な理由:
   - この時点ではまだcommit/push/deploy前。この追記101以降で実施すること。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 102
+
+- ユーザー方針:
+  - 「Web入口」ではなく、PWA/アプリを開いた最初の画面から完結する体験に寄せる。
+  - まず1人目を登録し、整理結果をそのまま家族ボードの対象者として管理する。
+  - 複数対象者は1回の診断で混ぜず、2人目・3人目として1人ずつ追加する。
+  - 今後の進捗更新、変化確認、今やるべきことの提示、有料プラン提案までアプリ内で見せる。
+- 対応:
+  - `apps/web/app/page.tsx`
+    - `/` の `/start` 強制リダイレクトを廃止し、PWA/アプリの初期画面を表示するよう変更。
+  - `apps/web/next.config.mjs`
+    - `/` → `/start` redirect を削除。
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - LP/インストール前提の文言から、「親の状況を1人ずつ管理」「1人目を登録する」へ変更。
+    - 進捗更新、家族ボード、複数対象者管理、有料プラン導線を追加。
+  - `apps/web/app/home/page.tsx`
+    - 既存の `../page` 再利用を廃止し、登録済みケースを localStorage から読む家族ボードへ作り直し。
+    - 未登録時は「1人目を登録する」。
+    - 登録済み時は「1人目/2人目」、状況、確認リスト件数、担当未定件数、次にやること、変化登録導線を表示。
+    - Family Plus提案を追加。
+  - `apps/web/app/result/[caseId]/page.tsx`
+    - 「アプリに保存する」中心の表現をやめ、整理結果を「1人目として家族ボードで管理」する導線へ変更。
+    - 結果後に `/home` へ戻って進捗確認できるCTAを追加。
+    - 有料プラン提案を追加。
+  - `apps/web/app/start/page.tsx`
+    - 戻る先を `/home` から `/` に変更。
+    - 見出しを「1人目の登録」に変更。
+  - `apps/web/app/layout.tsx`
+    - ブランドリンクを `/` に変更。
+    - ナビ文言を「はじめる」「家族ボード」に整理。
+  - `apps/web/app/install/page.tsx`
+    - `/install` は `/` へリダイレクト。
+  - `apps/web/public/manifest.webmanifest`
+    - PWAの `id` と `start_url` を `/` に変更。
+  - `apps/web/public/sw.js`
+    - cache versionを `v4` に更新し、`/` を静的キャッシュ対象へ追加。
+  - `apps/web/app/globals.css`
+    - アプリ初期画面のPlus案内、家族ボード、対象者カード、月1確認、モバイル調整を追加。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `python3 -m json.tool apps/web/public/manifest.webmanifest` OK。
+  - `apps/web`: `next build` OK。
+  - build時にSupabase JSのNode 22推奨警告が出るが、ビルド自体は成功。
+- 注意:
+  - この追記時点ではcommit/push/deploy前。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:

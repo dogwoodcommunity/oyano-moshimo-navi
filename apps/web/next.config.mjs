@@ -1,14 +1,5 @@
 const nextConfig = {
-  transpilePackages: ["@oyano/shared"],
-  async redirects() {
-    return [
-      {
-        source: "/",
-        destination: "/start",
-        permanent: false
-      }
-    ];
-  }
+  transpilePackages: ["@oyano/shared"]
 };
 
 export default nextConfig;

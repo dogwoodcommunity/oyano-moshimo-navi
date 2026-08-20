@@ -42,7 +42,7 @@ export default function ResultPage() {
         <div className="meta-row">
           <span className="meta-chip">対象者 {target}</span>
           <span className="meta-chip">case {params.caseId.slice(0, 8)}</span>
-          <span className="meta-chip">保存すると家族で見られます</span>
+          <span className="meta-chip">家族ボードに保存済み</span>
           <span className="meta-chip">専門判断は断定しません</span>
         </div>
       </section>
@@ -65,7 +65,7 @@ export default function ResultPage() {
       <section className="panel" style={{ marginTop: 18 }}>
         <div className="section-head">
           <h2>期限のあるタスク</h2>
-          <span className="hint">この画面で確認できます。あとで見返す場合はアプリに保存します。</span>
+          <span className="hint">この内容は家族ボードからあとで見返せます。</span>
         </div>
         <div className="task-list">
           {result.tasks.map((task) => (
@@ -100,32 +100,37 @@ export default function ResultPage() {
 
       <section className="panel handoff-band" style={{ marginTop: 18 }}>
         <p className="pill">次にすること</p>
-        <h2>この結果を残して、家族で見るならアプリへ。</h2>
+        <h2>この整理結果を、1人目として管理します。</h2>
         <p>
-          最初はアプリを入れなくても大丈夫です。まずWebで整理し、あとで見返したい時、家族と共有したい時、期限通知や写真管理が必要な時だけアプリに保存します。
+          期限のあるタスク、担当未定、家族に聞くことをこのまま家族ボードで進めます。あとから状況が変わったら、同じ対象者として更新できます。
         </p>
         <p className="hint">
-          父母・義父母など複数人を管理する場合は、保存後にアプリの家族ボードから1人ずつ追加できます。人ごとに状態、期限、担当を分けて管理します。
+          父母・義父母など複数人を管理する場合は、家族ボードから1人ずつ追加します。人ごとに状態、期限、担当を分けて管理します。
         </p>
-        <div className="handoff-choice-grid" aria-label="Webとアプリの役割">
+        <div className="handoff-choice-grid" aria-label="家族ボードで続けること">
           <div>
-            <strong>Webでできること</strong>
-            <span>状況を選ぶ、5分で整理する、結果を見る</span>
+            <strong>今やること</strong>
+            <span>期限が近いこと、担当未定、家族への確認</span>
           </div>
           <div>
-            <strong>アプリで続けること</strong>
-            <span>家族ボード、期限通知、写真、タイムライン</span>
+            <strong>あとで更新すること</strong>
+            <span>状況の変化、完了した作業、追加メモ</span>
           </div>
         </div>
         <div className="actions">
-          {appUrl ? (
-            <a className="button" href={appUrl}>アプリに保存する</a>
-          ) : (
-            <Link className="button" href="/start">もう一度整理して保存する</Link>
-          )}
+          <Link className="button" href="/home">家族ボードで進捗を見る</Link>
           <Link className="secondary" href={`/result/${params.caseId}/share`}>家族に共有する</Link>
         </div>
-        <p className="hint">アプリを使わない場合も、この画面で結果を確認できます。</p>
+        {appUrl ? <p className="hint">ネイティブアプリ連携用リンクも内部的に作成済みです。</p> : null}
+      </section>
+
+      <section className="board-plus" style={{ marginTop: 18 }}>
+        <div>
+          <p className="pill">Family Plus</p>
+          <h2>2人目以降、PDF、履歴保存が必要なら。</h2>
+          <p>父母・義父母を分けて管理したい、家族会議用PDFを出したい、写真や履歴を残したい場合に有料プランを案内します。</p>
+        </div>
+        <Link className="button" href="/plans">有料プランを見る</Link>
       </section>
 
       <section className="panel" style={{ marginTop: 18 }}>
