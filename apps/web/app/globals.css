@@ -3124,34 +3124,52 @@ textarea {
 
 .toc-row {
   align-items: stretch;
-  background: #fff;
-  border: 1.5px solid rgba(154, 174, 159, 0.62);
-  border-radius: 18px;
-  box-shadow: 0 3px 0 rgba(154, 174, 159, 0.34);
+  background: linear-gradient(180deg, #fff 0%, #fbfcf8 100%);
+  border: 2px solid rgba(154, 174, 159, 0.5);
+  border-radius: 22px;
+  box-shadow: 0 4px 0 rgba(154, 174, 159, 0.28), 0 14px 34px rgba(39, 100, 71, 0.08);
   color: var(--ink);
   cursor: pointer;
   display: grid;
-  gap: 12px;
-  grid-template-columns: 62px minmax(0, 1fr) auto;
-  min-height: 112px;
-  padding: 14px;
+  gap: 14px;
+  grid-template-columns: 70px minmax(0, 1fr) auto;
+  min-height: 126px;
+  overflow: hidden;
+  padding: 16px;
+  position: relative;
   text-align: left;
   transition: background 120ms ease, border-color 120ms ease, box-shadow 120ms ease, transform 120ms ease;
   width: 100%;
 }
 
+.toc-row::before {
+  background: var(--primary);
+  border-radius: 999px;
+  content: "";
+  inset: 12px auto 12px 0;
+  position: absolute;
+  width: 6px;
+}
+
 .toc-row.teal {
-  border-top: 5px solid var(--primary);
+  border-color: rgba(39, 100, 71, 0.28);
 }
 
 .toc-row.sand {
-  border-top: 5px solid #b08d4a;
+  border-color: rgba(176, 141, 74, 0.36);
+}
+
+.toc-row.sand::before {
+  background: #b08d4a;
 }
 
 .toc-row:hover,
 .toc-row:focus-visible {
-  background: var(--row-active);
+  background: #fff;
+  border-color: rgba(39, 100, 71, 0.7);
+  box-shadow: 0 3px 0 rgba(39, 100, 71, 0.32), 0 16px 34px rgba(39, 100, 71, 0.14);
   outline: none;
+  transform: translateY(-1px);
 }
 
 .toc-row:disabled {
@@ -3161,27 +3179,29 @@ textarea {
 
 .toc-row.is-opening {
   background: var(--row-active);
+  border-color: var(--primary);
   opacity: 1;
 }
 
 .toc-num {
   align-items: center;
-  background: var(--primary-tint);
-  border: 1px solid rgba(74, 143, 166, 0.28);
-  border-radius: 18px;
+  background: #eef7f1;
+  border: 1px solid rgba(39, 100, 71, 0.18);
+  border-radius: 22px;
   color: var(--primary-deep);
   display: inline-flex;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
   font-size: 13px;
   font-weight: 700;
-  height: 58px;
+  height: 68px;
   justify-content: center;
   line-height: 1.15;
-  width: 58px;
+  position: relative;
+  width: 68px;
 }
 
 .toc-row.sand .toc-num {
-  background: var(--tab-sand);
+  background: #fbf3df;
   border-color: rgba(176, 141, 74, 0.24);
   color: var(--tab-sand-ink);
 }
@@ -3196,15 +3216,263 @@ textarea {
   color: #fff;
 }
 
+.toc-symbol,
+.toc-symbol::before,
+.toc-symbol::after {
+  box-sizing: border-box;
+  display: block;
+  position: absolute;
+}
+
+.toc-symbol {
+  color: var(--primary-deep);
+  height: 34px;
+  width: 34px;
+}
+
+.toc-row.sand .toc-symbol {
+  color: #8a6424;
+}
+
+.toc-symbol::before,
+.toc-symbol::after {
+  content: "";
+}
+
+.toc-icon.note .toc-symbol {
+  background: #fff;
+  border: 2px solid currentColor;
+  border-radius: 7px;
+  height: 34px;
+  width: 28px;
+}
+
+.toc-icon.note .toc-symbol::before {
+  background: currentColor;
+  border-radius: 999px;
+  box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor;
+  height: 2px;
+  left: 7px;
+  top: 9px;
+  width: 14px;
+}
+
+.toc-icon.chat .toc-symbol {
+  border: 2px solid currentColor;
+  border-radius: 13px;
+  height: 28px;
+  width: 34px;
+}
+
+.toc-icon.chat .toc-symbol::after {
+  border-bottom: 8px solid currentColor;
+  border-left: 7px solid transparent;
+  bottom: -5px;
+  height: 0;
+  left: 7px;
+  transform: rotate(-18deg);
+  width: 0;
+}
+
+.toc-icon.bed .toc-symbol::before {
+  background: currentColor;
+  border-radius: 6px;
+  bottom: 7px;
+  height: 12px;
+  left: 3px;
+  width: 29px;
+}
+
+.toc-icon.bed .toc-symbol::after {
+  border: 3px solid currentColor;
+  border-bottom: 0;
+  border-radius: 9px 9px 0 0;
+  bottom: 19px;
+  height: 12px;
+  left: 5px;
+  width: 14px;
+}
+
+.toc-icon.home .toc-symbol::before {
+  border-bottom: 18px solid currentColor;
+  border-left: 17px solid transparent;
+  border-right: 17px solid transparent;
+  height: 0;
+  left: 0;
+  top: 1px;
+  width: 0;
+}
+
+.toc-icon.home .toc-symbol::after {
+  background: currentColor;
+  border-radius: 0 0 5px 5px;
+  height: 18px;
+  left: 6px;
+  top: 17px;
+  width: 22px;
+}
+
+.toc-icon.care .toc-symbol::before {
+  background: currentColor;
+  border-radius: 999px;
+  box-shadow: 14px 0 0 currentColor;
+  height: 13px;
+  left: 3px;
+  top: 4px;
+  width: 13px;
+}
+
+.toc-icon.care .toc-symbol::after {
+  border: 3px solid currentColor;
+  border-radius: 16px 16px 10px 10px;
+  height: 19px;
+  left: 0;
+  top: 15px;
+  width: 31px;
+}
+
+.toc-icon.heart .toc-symbol {
+  height: 30px;
+  transform: rotate(-45deg);
+  width: 30px;
+}
+
+.toc-icon.heart .toc-symbol::before,
+.toc-icon.heart .toc-symbol::after {
+  background: currentColor;
+  border-radius: 999px 999px 0 0;
+  height: 27px;
+  width: 18px;
+}
+
+.toc-icon.heart .toc-symbol::before {
+  left: 6px;
+  top: 0;
+  transform: rotate(45deg);
+}
+
+.toc-icon.heart .toc-symbol::after {
+  left: 0;
+  top: 6px;
+  transform: rotate(135deg);
+}
+
+.toc-icon.bell .toc-symbol::before {
+  border: 3px solid currentColor;
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  height: 24px;
+  left: 6px;
+  top: 4px;
+  width: 22px;
+}
+
+.toc-icon.bell .toc-symbol::after {
+  background: currentColor;
+  border-radius: 999px;
+  box-shadow: 0 -5px 0 currentColor;
+  height: 4px;
+  left: 9px;
+  top: 28px;
+  width: 16px;
+}
+
+.toc-icon.paper .toc-symbol {
+  background: #fff;
+  border: 2px solid currentColor;
+  border-radius: 7px;
+  height: 34px;
+  width: 28px;
+}
+
+.toc-icon.paper .toc-symbol::before {
+  background: currentColor;
+  border-radius: 999px;
+  box-shadow: 0 7px 0 currentColor, 0 14px 0 currentColor;
+  height: 2px;
+  left: 7px;
+  top: 9px;
+  width: 13px;
+}
+
+.toc-icon.tree .toc-symbol::before {
+  background: currentColor;
+  border-radius: 50% 50% 48% 48%;
+  height: 25px;
+  left: 6px;
+  top: 1px;
+  width: 22px;
+}
+
+.toc-icon.tree .toc-symbol::after {
+  background: currentColor;
+  border-radius: 999px;
+  height: 14px;
+  left: 15px;
+  top: 22px;
+  width: 5px;
+}
+
+.toc-icon.box .toc-symbol::before {
+  border: 3px solid currentColor;
+  border-radius: 8px;
+  height: 25px;
+  left: 3px;
+  top: 8px;
+  width: 28px;
+}
+
+.toc-icon.box .toc-symbol::after {
+  background: currentColor;
+  border-radius: 999px;
+  height: 3px;
+  left: 8px;
+  top: 15px;
+  width: 18px;
+}
+
+.toc-icon.check .toc-symbol {
+  border: 3px solid currentColor;
+  border-radius: 999px;
+  height: 34px;
+  width: 34px;
+}
+
+.toc-icon.check .toc-symbol::after {
+  border-bottom: 4px solid currentColor;
+  border-left: 4px solid currentColor;
+  height: 8px;
+  left: 9px;
+  top: 10px;
+  transform: rotate(-45deg);
+  width: 15px;
+}
+
+.toc-checkmark {
+  font-size: 24px;
+  line-height: 1;
+}
+
 .toc-main {
   display: grid;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
   place-content: center;
 }
 
+.toc-helper {
+  color: var(--primary-deep);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.toc-row.sand .toc-helper {
+  color: #8a6424;
+}
+
 .toc-title {
-  font-size: clamp(20px, 5.2vw, 24px);
+  font-size: clamp(21px, 5.4vw, 25px);
   line-height: 1.35;
 }
 
@@ -3216,10 +3484,11 @@ textarea {
 }
 
 .current-chip {
-  background: var(--primary-tint);
+  background: var(--primary);
   border-radius: 999px;
-  color: var(--primary-deep);
+  color: #fff;
   font-size: 12.5px;
+  font-weight: 900;
   justify-self: end;
   min-height: 34px;
   padding: 8px 11px;
@@ -3228,8 +3497,8 @@ textarea {
 }
 
 .toc-row.sand .current-chip {
-  background: var(--tab-sand);
-  color: var(--tab-sand-ink);
+  background: #b08d4a;
+  color: #fff;
 }
 
 .toc-arrow {
@@ -3557,14 +3826,15 @@ textarea {
 
   .toc-row {
     gap: 10px;
-    grid-template-columns: 56px minmax(0, 1fr) 34px;
-    min-height: 118px;
+    grid-template-columns: 58px minmax(0, 1fr) 34px;
+    min-height: 128px;
     padding: 13px;
   }
 
   .toc-num {
-    height: 54px;
-    width: 54px;
+    border-radius: 19px;
+    height: 58px;
+    width: 58px;
   }
 
   .current-chip {
@@ -3578,10 +3848,14 @@ textarea {
   }
 
   .toc-main {
-    gap: 5px;
+    gap: 6px;
   }
 
   .toc-hint {
     font-size: 12.5px;
+  }
+
+  .toc-helper {
+    font-size: 11.5px;
   }
 }

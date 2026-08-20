@@ -2777,6 +2777,33 @@ GitHubが必要な理由:
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 101
+
+- ユーザー指摘:
+  - 「先頭の漢字アイコンやめてほしい」
+  - 「選択項目のデザイン変えて」
+- 判断:
+  - `/start` の選択カード左側に出していた「入院」「在宅」などの漢字ラベルは硬く、タップ対象としても分かりにくい。
+  - 画像を増やすより、表示が軽く崩れにくいCSSピクトで、押せるカード感を強める。
+- 対応:
+  - `apps/web/app/start/page.tsx`
+    - `TocItem.icon` を漢字文字列から `note/chat/bed/home/care/heart/bell/paper/tree/box/check` の種別へ変更。
+    - カード説明文を「カード全体をタップできます」とより具体化。
+    - 各カード内に小さく「このカードを押す」を追加。
+    - 右上チップを「これを選ぶ」から短い「選択」へ変更。
+  - `apps/web/app/globals.css`
+    - 選択カードを白背景の大きなボタン風に再設計。
+    - 左側の漢字アイコンを廃止し、CSSだけで描く簡単なピクトアイコンに変更。
+    - カード左端に色バー、影、hover/focus/activeの反応を追加。
+    - スマホ幅でもアイコンとタイトルが詰まらないよう寸法を調整。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+- 注意:
+  - この時点ではまだcommit/push/deploy前。この追記101以降で実施すること。
+  - `review_exports/` は未追跡のまま残っている。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:
