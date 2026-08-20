@@ -3221,3 +3221,13 @@ GitHubが必要な理由:
     - 2人目追加は `Plus + 追加 2人目以降` として表示。
 - 注意:
   - まだSupabase同期ではなくローカル保存のPWAプロトタイプ。次は `people` / `diary_entries` / `attachments` のDB保存と、Plus判定を本番実装する。
+  - Git commit/push/deployまで完了。
+  - commit: `d9b9c7b Refine family notebook onboarding`
+  - push: `main -> origin/main`
+  - Vercel production deployment id: `dpl_J315ZmW4xQfPLoJHSkCc3uUbdxvd`
+  - production URL: `https://oyano-moshimo-navi.vercel.app`
+  - preview URL: `https://oyano-moshimo-navi-hdxbj6pfx-dogwoodcommunity1.vercel.app`
+  - 本番確認:
+    - `curl -I https://oyano-moshimo-navi.vercel.app/` 307。
+    - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
+    - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
