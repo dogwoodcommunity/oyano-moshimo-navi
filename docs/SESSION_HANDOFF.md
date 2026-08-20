@@ -15,6 +15,38 @@
 - Expoアプリ内には外部Web決済CTAを置かない
 - Family Plus等のアプリ内デジタル課金はIAP余地を残す
 
+## 最新状況 2026-08-20
+
+- 現在の実装方針は、当初の「Web入口 + Expo継続アプリ」から、ユーザー判断により「PWA/アプリのみで完結する家族の手帳」へ寄せている。
+- 本番URL: `https://oyano-moshimo-navi.vercel.app`
+- GitHub: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+- 直近のユーザー指摘:
+  - スマホで変更がちゃんと表示されない。
+  - ロゴが前のままに見える。
+  - デザイン反映が不安定。
+- 直近対応:
+  - ヘッダーの旧四角ロゴを廃止し、critical CSSと通常CSSの両方で `/brand/watch-bird-mark.svg` を使うよう統一。
+  - Service Workerを `oyano-moshimo-navi-v5` に更新。
+  - `/home` などHTMLページをcache-firstから外し、network-firstに変更。
+  - PWA登録時に `registration.update()` と `controllerchange` 自動リロードを追加。
+- 直近コミット:
+  - `89e79d9 Fix PWA logo and stale page cache`
+- 直近本番デプロイ:
+  - Deployment ID: `dpl_BeiHaTjnqV9qqYb26QcoEqBxqJJm`
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-n90oajfc0-dogwoodcommunity1.vercel.app`
+- 直近検証:
+  - `npm run typecheck --workspace apps/web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace apps/web` OK。
+  - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
+  - `curl -L https://oyano-moshimo-navi.vercel.app/sw.js` で `oyano-moshimo-navi-v5` を確認。
+  - `curl -L https://oyano-moshimo-navi.vercel.app/` で critical CSS が `/brand/watch-bird-mark.svg` を参照していることを確認。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+- 注意:
+  - iPhone/PWA側で古いService Workerが残っている場合、タブまたはホーム画面PWAを一度閉じて開き直すと更新される。
+  - `review_exports/` は未追跡のまま残っている。今回も触っていない。
+
 ## 現在地
 
 Step 1: 現状棚卸し 完了。
