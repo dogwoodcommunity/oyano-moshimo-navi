@@ -3374,6 +3374,16 @@ GitHubが必要な理由:
   - `apps/web/public/sw.js`
     - PWAキャッシュ更新用に `CACHE_VERSION` を `oyano-moshimo-navi-v9` に更新。
 - 次にやること:
-  - `npm run typecheck --workspace web`
-  - `git diff --check`
-  - 必要なら本番デプロイ。
+  - 次は、1人目マイページをさらに商品価値のある画面へ磨く。
+  - プロフィール編集、日記、写真/PDF、期限、家族共有、AI相談導線の深さを上げる。
+- 検証:
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - 本番 `/plans?v=20260820-104` で `Business policy` と「信頼を失わずに」文言が消えていることをブラウザ確認。
+  - 本番 `sw.js` が `oyano-moshimo-navi-v9` になっていることを確認。
+- GitHub/Vercel:
+  - commit: `17ce26f Remove internal policy copy from plans`
+  - pushed to `origin/main`
+  - Vercel production: `https://oyano-moshimo-navi.vercel.app`
+  - deployment id: `dpl_4pvoYBYpDAZon37Czt1R6gV795zG`
