@@ -2915,6 +2915,33 @@ GitHubが必要な理由:
   - 本格AI相談はまだUI/設計導線。OpenAI API連携・課金ゲート・要配慮情報同意の再確認が必要。
   - `review_exports/` は未追跡のまま残っている。
 
+## 2026-08-20 追記 104
+
+- ユーザー報告:
+  - 本番URL `https://oyano-moshimo-navi.vercel.app` をiPhoneで開くと、トップ画面が素のリンク表示になり、ロゴSVGが巨大表示されて「ちゃんと開かない」状態になった。
+  - スクリーンショット上は外部CSSが当たっていない時の表示に見える。
+- 調査:
+  - `curl -L https://oyano-moshimo-navi.vercel.app/` でHTML内にNext.jsのCSSリンク3本が存在することを確認。
+  - 実際のCSS URL:
+    - `/_next/static/css/5a114f8ec335e992.css` 200。
+    - `/_next/static/css/578954d430ecd175.css` 200。
+    - `/_next/static/css/ca0f0e5ebfef9fd8.css` 200。
+  - サーバ配信自体は正常。iPhone側のWebView/キャッシュ/一時的なCSS読み込み失敗でもトップが破綻しない対策が必要と判断。
+- 対応:
+  - `apps/web/app/layout.tsx`
+    - `criticalCss` を追加。
+    - root layoutの`<head>`に最低限の重要スタイルをインライン出力。
+    - body/nav/entry screen/title card/watch bird mark/CTA/footerなどを、外部CSSが遅延・欠落しても読める表示にする。
+    - 特に `.watch-bird-mark` を `54-64px` に制限し、巨大SVG表示を防ぐ。
+- 検証:
+  - `npm run typecheck --workspace apps/web` OK。
+  - `git diff --check` OK。
+  - `npm run build --workspace apps/web` OK。
+  - build時にSupabase JSのNode 22推奨警告が出るが、ビルド自体は成功。
+- 次:
+  - commit/push/deploy後、本番URLを再確認する。
+  - ユーザー側ではiPhoneの共有ブラウザ/アプリ内ブラウザで再読み込み、必要ならタブを閉じて開き直す。
+
 ## 2026-08-20 追記 98
 
 - ユーザー添付:
