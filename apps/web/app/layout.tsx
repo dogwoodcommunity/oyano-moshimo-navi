@@ -1,7 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { Noto_Sans_JP, Zen_Maru_Gothic } from "next/font/google";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
+
+const notoSansJp = Noto_Sans_JP({
+  subsets: ["latin"],
+  weight: ["400", "700"],
+  variable: "--font-body"
+});
+
+const zenMaru = Zen_Maru_Gothic({
+  subsets: ["latin"],
+  weight: ["700"],
+  variable: "--font-rounded"
+});
 
 export const metadata: Metadata = {
   title: {
@@ -32,7 +45,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
+    <html className={`${notoSansJp.variable} ${zenMaru.variable}`} lang="ja">
       <body>
         <div className="shell">
           <header className="nav">

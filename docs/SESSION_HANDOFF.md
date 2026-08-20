@@ -2606,3 +2606,69 @@ GitHubが必要な理由:
   - `curl -I https://oyano-moshimo-navi.vercel.app/install` は 200。
   - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
   - `/install` は 200、主要導線・manifest・service workerもOK。
+
+## 2026-08-20 追記 95
+
+- ユーザー相談:
+  - 「Claudeでデザインを作ってもらうからコード？か何かくれへんか」
+- 対応:
+  - Claudeにそのまま渡せるデザイン依頼書を作成。
+  - ファイル: `review_exports/CLAUDE_DESIGN_REQUEST_oyano_moshimo_navi.md`
+- 内容:
+  - 親のもしもナビのプロダクト前提。
+  - 低頻度・高重要度、家族ボード、対象者ごと管理という設計方針。
+  - 改善対象画面:
+    - `https://oyano-moshimo-navi.vercel.app/install`
+    - `https://oyano-moshimo-navi.vercel.app/start`
+  - 現在の `PwaInstallPanel.tsx` のコード。
+  - 状況選択画面の主なカード構成。
+  - Claudeに求める成果物:
+    - デザイン指示書
+    - JSX/CSS/React案
+  - 守る制約:
+    - 高齢者にも分かりやすい
+    - AIテンプレ感を避ける
+    - どこを押すか迷わない
+  - PWA説明を主役にしない
+  - 医療/法律/税務判断を断定しない
+
+## 2026-08-20 追記 96
+
+- ユーザー添付:
+  - `/Users/ikedatetsuya/Downloads/Codex実装依頼書.md`
+- 内容:
+  - Claude作成の「家族の手帳」デザイン実装依頼。
+  - 対象は `/install` と `/start`。
+  - 入口はPWA説明ではなく、アプリを開いた最初の手帳画面として見せる。
+  - 状況選択はカード一覧ではなく「もくじ」型にして、行全体を押せることが分かるUIへ寄せる。
+- 対応:
+  - `apps/web/app/layout.tsx`
+    - `next/font/google` で `Noto_Sans_JP` と `Zen_Maru_Gothic` を導入。
+    - body font用CSS変数 `--font-body`、見出し/ボタン用 `--font-rounded` を追加。
+  - `apps/web/components/PwaInstallPanel.tsx`
+    - インストール済み判定で古い完了カードを出す分岐を削除。
+    - 「親のもしもナビ / 家族のための備え手帳」のタイトルカードへ変更。
+    - 今日のページ、母/父のポラロイド風表示、手帳タスク行、家族ボードCTA、状況追加CTAへ変更。
+    - PWA追加説明は補助の一文だけに弱めた。
+  - `apps/web/app/start/page.tsx`
+    - 古いヒーロー、キャラ、カードグリッドを削除。
+    - 「もくじ — 親の状況」形式に変更。
+    - 章:
+      - これからに そなえる
+      - 入院・退院のとき
+      - 介護と看取り
+      - 亡くなったあと
+      - 整理と かたづけ
+    - 各行は番号、タイトル、ヒント、選ぶチップ、矢印で構成し、行全体を押す設計。
+    - 既存の `createCase(status)` → `/diagnosis?caseId=...&status=...` の処理は維持。
+  - `apps/web/app/globals.css`
+    - 手帳用トークンを追加。
+    - 罫線紙背景、マスキングテープ、破線カード、ポラロイド、押した感、もくじ行、スマホ幅の折り返しを追加。
+- 検証:
+  - `apps/web`: `tsc --noEmit` OK。
+  - `git diff --check` OK。
+  - `apps/web`: `next build` OK。
+  - 初回ビルドは `next/font` が `fonts.googleapis.com` に出られず失敗したが、ネットワーク許可後に成功。
+- 注意:
+  - まだGit commit/push/deployはこの追記時点では未実施。
+  - `review_exports/` は未追跡のまま残っている。

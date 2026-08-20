@@ -2,70 +2,59 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { STATUSES, type ParentStatus } from "@oyano/shared";
+import { type ParentStatus } from "@oyano/shared";
 import { createCase } from "@/lib/store";
 
-const statusDescriptions: Record<ParentStatus, string> = {
-  preparing: "元気なうちに、連絡先や書類の場所をまとめます。",
-  hospitalized: "病院で聞くこと、支払い、退院後のことを整理します。",
-  post_discharge_home: "退院後の在宅生活、通院、訪問サービスを整理します。",
-  facility: "介護や施設のこと、家族の役割を整理します。",
-  cognitive_decline: "もの忘れや判断が心配な時に、相談先を整理します。",
-  end_of_life: "看取りや緊急連絡について、家族で確認します。",
-  after_death: "葬儀、親族連絡、役所手続きの初動を整理します。",
-  after_funeral: "年金、保険、名義変更などを確認します。",
-  inheritance: "相続前に、書類や相談先を整理します。",
-  home_clearance: "実家の写真、鍵、書類、片付けを整理します。",
-  completed: "完了した情報を保管し、家族で見返せる状態にします。"
+type TocItem = {
+  num: string;
+  key: ParentStatus;
+  title: string;
+  hint: string;
 };
 
-const statusDisplayLabels: Record<ParentStatus, string> = {
-  preparing: "元気なうちに準備したい",
-  hospitalized: "入院した",
-  post_discharge_home: "退院後、家で過ごす",
-  facility: "介護・施設のこと",
-  cognitive_decline: "もの忘れが心配",
-  end_of_life: "看取り・終末期のこと",
-  after_death: "亡くなった直後",
-  after_funeral: "葬儀が終わった後",
-  inheritance: "相続前に整理したい",
-  home_clearance: "実家を片付けたい",
-  completed: "整理が終わった"
-};
-
-const statusVisuals: Record<ParentStatus, { icon: string; tone: string }> = {
-  preparing: { icon: "書", tone: "leaf" },
-  hospitalized: { icon: "病", tone: "rose" },
-  post_discharge_home: { icon: "家", tone: "blue" },
-  facility: { icon: "介", tone: "blue" },
-  cognitive_decline: { icon: "心", tone: "gold" },
-  end_of_life: { icon: "話", tone: "leaf" },
-  after_death: { icon: "届", tone: "rose" },
-  after_funeral: { icon: "役", tone: "blue" },
-  inheritance: { icon: "家", tone: "gold" },
-  home_clearance: { icon: "鍵", tone: "leaf" },
-  completed: { icon: "済", tone: "blue" }
-};
-
-const statusGroups: Array<{ title: string; lead: string; keys: ParentStatus[] }> = [
+const tocGroups: Array<{ label: string; tone: "teal" | "sand"; items: TocItem[] }> = [
   {
-    title: "当てはまるものを1つ選んでください",
-    lead: "カード全体が押せます。迷ったら一番近いものを選んでください。",
-    keys: ["hospitalized", "post_discharge_home", "facility", "cognitive_decline", "end_of_life", "after_death"]
+    label: "これからに そなえる",
+    tone: "teal",
+    items: [
+      { num: "01", key: "preparing", title: "元気なうちに準備したい", hint: "連絡先や書類の場所をまとめる" },
+      { num: "02", key: "cognitive_decline", title: "もの忘れが心配", hint: "相談先や家族で決めることを整理" }
+    ]
   },
   {
-    title: "前もって準備する",
-    lead: "元気なうちの準備、相続前、実家の整理はこちらです。",
-    keys: ["preparing", "inheritance", "home_clearance"]
+    label: "入院・退院のとき",
+    tone: "teal",
+    items: [
+      { num: "03", key: "hospitalized", title: "入院した", hint: "病院で聞くこと、支払い、退院後のこと" },
+      { num: "04", key: "post_discharge_home", title: "退院後、家で過ごす", hint: "通院、在宅生活、訪問サービス" }
+    ]
   },
   {
-    title: "葬儀の後の手続き",
-    lead: "役所、年金、保険、名義変更などを整理します。",
-    keys: ["after_funeral"]
+    label: "介護と看取り",
+    tone: "teal",
+    items: [
+      { num: "05", key: "facility", title: "介護・施設のこと", hint: "介護や施設、家族の役割分担" },
+      { num: "06", key: "end_of_life", title: "看取り・終末期のこと", hint: "緊急連絡や希望を家族で確認" }
+    ]
+  },
+  {
+    label: "亡くなったあと",
+    tone: "sand",
+    items: [
+      { num: "07", key: "after_death", title: "亡くなった直後", hint: "葬儀、親族連絡、役所手続きの初動" },
+      { num: "08", key: "after_funeral", title: "葬儀が終わった後", hint: "年金、保険、名義変更など" }
+    ]
+  },
+  {
+    label: "整理と かたづけ",
+    tone: "sand",
+    items: [
+      { num: "09", key: "inheritance", title: "相続前に整理したい", hint: "書類や専門家に相談する前の確認" },
+      { num: "10", key: "home_clearance", title: "実家を片付けたい", hint: "写真、鍵、書類、家の状態" },
+      { num: "11", key: "completed", title: "整理が終わった", hint: "家族で見返せるように保管" }
+    ]
   }
 ];
-
-const statusByKey = new Map(STATUSES.map((item) => [item.key, item]));
 
 export default function StartPage() {
   const router = useRouter();
@@ -83,73 +72,43 @@ export default function StartPage() {
   }
 
   return (
-    <main className="container start-page">
-      <section className="start-hero">
-        <div>
-          <p className="eyebrow">入口</p>
-          <h1 className="page-title">親はいま、どの状況に近いですか？</h1>
-          <p className="lead">
-            下のカードから、当てはまるものを1つ押してください。ぴったり合わなくても大丈夫です。
-            近いものを選ぶと、次に確認することを分かりやすく整理します。
-          </p>
-          <div className="start-steps" aria-label="利用の流れ">
-            <span>1. カードを押す</span>
-            <span>2. 少し入力</span>
-            <span>3. リストを見る</span>
-          </div>
-        </div>
-        <aside className="start-guide-card" aria-label="案内">
-          <div className="start-mascot" aria-hidden="true">
-            <span className="mascot-face">
-              <span className="mascot-eye left" />
-              <span className="mascot-eye right" />
-              <span className="mascot-smile" />
-            </span>
-            <span className="mascot-paper paper-one" />
-            <span className="mascot-paper paper-two" />
-          </div>
-          <p className="pill">迷ったら近いものを</p>
-          <h2>家族で確認することを、短いリストにします。</h2>
-          <p>入院、介護、亡くなった後の手続きも、まずは1つ選ぶだけで大丈夫です。</p>
-        </aside>
+    <main className="paper-bg notebook-start-page">
+      <section className="toc-header">
+        <button className="toc-back" type="button" onClick={() => router.push("/install")}>
+          ‹ もどる
+        </button>
+        <p className="toc-kicker">状況を選ぶ</p>
+        <h1>もくじ — 親の状況</h1>
+        <p>いちばん近いものを 1つ押してください。あとから変えられます。</p>
       </section>
 
-      <section className="start-select-guide" aria-label="選び方">
-        <div className="select-guide-icon" aria-hidden="true">押</div>
-        <div>
-          <p className="eyebrow">選び方</p>
-          <h2>下のカードから、近いものを1つ選びます。</h2>
-          <p>文字の部分でも余白でも、カード全体を押せます。選ぶと3分ほどの確認画面へ進みます。</p>
-        </div>
-      </section>
-
-      <section className="start-groups" aria-label="親の状態">
-        {statusGroups.map((group) => (
-          <div className="start-group panel" key={group.title}>
-            <div className="start-group-head">
-              <h2>{group.title}</h2>
-              <p>{group.lead}</p>
-            </div>
-            <div className="grid status-grid">
-              {group.keys.map((key) => {
-                const item = statusByKey.get(key);
-                if (!item) return null;
-                const isChoosing = choosingStatus === key;
+      <section className="notebook-card toc-book" aria-label="親の状況を選ぶ">
+        {tocGroups.map((group) => (
+          <div className="toc-chapter" key={group.label}>
+            <h2 className={`chapter-tab ${group.tone}`}>{group.label}</h2>
+            <div className="toc-list">
+              {group.items.map((item) => {
+                const isChoosing = choosingStatus === item.key;
                 return (
                   <button
-                    className={`status-button ${isChoosing ? "is-opening" : ""}`}
+                    className={`toc-row ${group.tone} ${isChoosing ? "is-opening" : ""}`}
                     disabled={Boolean(choosingStatus)}
-                    key={key}
-                    onClick={() => choose(key)}
+                    key={item.key}
+                    type="button"
+                    onClick={() => choose(item.key)}
                   >
-                    <span className="status-card-top">
-                      <span className={`status-visual ${statusVisuals[key].tone}`} aria-hidden="true">
-                        {statusVisuals[key].icon}
-                      </span>
+                    <span className="toc-num" aria-hidden="true">
+                      {isChoosing ? "✓" : item.num}
                     </span>
-                    <strong>{statusDisplayLabels[key] ?? item.label}</strong>
-                    <span>{statusDescriptions[key]}</span>
-                    <em>{isChoosing ? "開いています" : "このカードを選ぶ"} <b aria-hidden="true">→</b></em>
+                    <span className="toc-main">
+                      <strong className="toc-title">{item.title}</strong>
+                      <span className="toc-hint">{item.hint}</span>
+                    </span>
+                    <span className="toc-leader" aria-hidden="true" />
+                    <span className="current-chip">{isChoosing ? "いまの状況" : "選ぶ"}</span>
+                    <span className="toc-arrow" aria-hidden="true">
+                      →
+                    </span>
                   </button>
                 );
               })}
