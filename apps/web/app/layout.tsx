@@ -12,8 +12,8 @@ const criticalCss = `
   button,input,select,textarea{font:inherit}
   .shell{min-height:100vh}
   .nav{align-items:center;background:rgba(246,247,241,.96);border-bottom:1px solid rgba(217,226,220,.82);display:flex;gap:16px;justify-content:space-between;min-height:66px;padding:14px 24px;position:sticky;top:0;z-index:20}
-  .brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
-  .brand::before{background:url("/brand/watch-bird-mark.svg") center/contain no-repeat;content:"";display:inline-block;height:36px;width:36px}
+  .app-brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
+  .app-brand-logo{display:block;height:38px;width:38px}
   .navlinks{color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:18px}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}
@@ -91,7 +91,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <div className="shell">
           <header className="nav">
-            <Link className="brand" href="/">親のもしもナビ</Link>
+            <Link className="app-brand" href="/">
+              <img className="app-brand-logo" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+              <span>親のもしもナビ</span>
+            </Link>
             <nav className="navlinks" aria-label="main">
               <Link href="/">はじめる</Link>
               <Link href="/home">家族ボード</Link>

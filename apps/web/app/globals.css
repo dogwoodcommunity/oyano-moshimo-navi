@@ -594,20 +594,15 @@ textarea {
   z-index: 20;
 }
 
-.brand {
+.app-brand {
   align-items: center;
   display: inline-flex;
   font-weight: 900;
   gap: 10px;
 }
 
-.brand::before {
-  background-image: url("/brand/watch-bird-mark.svg");
-  background-position: center;
-  background-repeat: no-repeat;
-  background-size: contain;
-  content: "";
-  display: inline-block;
+.app-brand-logo {
+  display: block;
   height: 36px;
   width: 36px;
 }

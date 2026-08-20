@@ -24,13 +24,18 @@
   - スマホで変更がちゃんと表示されない。
   - ロゴが前のままに見える。
   - デザイン反映が不安定。
+  - その後、iPhoneスクリーンショットでヘッダー左の旧ロゴ残骸らしい緑四角がまだ表示されていると指摘。
 - 直近対応:
   - ヘッダーの旧四角ロゴを廃止し、critical CSSと通常CSSの両方で `/brand/watch-bird-mark.svg` を使うよう統一。
   - Service Workerを `oyano-moshimo-navi-v5` に更新。
   - `/home` などHTMLページをcache-firstから外し、network-firstに変更。
   - PWA登録時に `registration.update()` と `controllerchange` 自動リロードを追加。
+  - 追加対応として、ヘッダーロゴをCSS疑似要素 `.brand::before` ではなく、実DOMの `<img src="/brand/watch-bird-mark.svg">` へ変更。
+  - ヘッダーclassも `.brand` から `.app-brand` に変更し、古いCSSキャッシュの `.brand::before` が当たらないようにした。
+  - Service Workerをさらに `oyano-moshimo-navi-v6` に更新。
 - 直近コミット:
   - `89e79d9 Fix PWA logo and stale page cache`
+  - ヘッダー緑四角の追加修正はcommit/push/deploy前。
 - 直近本番デプロイ:
   - Deployment ID: `dpl_BeiHaTjnqV9qqYb26QcoEqBxqJJm`
   - Production URL: `https://oyano-moshimo-navi.vercel.app`
