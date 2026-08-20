@@ -2900,8 +2900,17 @@ GitHubが必要な理由:
   - `git diff --check` OK。
   - `apps/web`: `next build` OK。
   - build時にSupabase JSのNode 22推奨警告が出るが、ビルド自体は成功。
+  - 変更コミット: `2dd159d Add family diary and paid AI consultation framing`
+  - `git push origin main` OK。
+  - Vercel production deploy OK。
+    - Deployment ID: `dpl_2i6V83Xr9zwcFrmRn2pQYLUpZHpP`
+    - Production URL: `https://oyano-moshimo-navi.vercel.app`
+    - Deployment URL: `https://oyano-moshimo-navi-lm1haq10a-dogwoodcommunity1.vercel.app`
+  - `curl -I https://oyano-moshimo-navi.vercel.app/` 200。
+  - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
+  - `curl -I https://oyano-moshimo-navi.vercel.app/start` 200。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
 - 注意:
-  - この追記時点ではcommit/push/deploy前。
   - 写真/PDF保存はまずPWA内localStorage MVP。Supabase Storage永続化は次フェーズ。
   - 本格AI相談はまだUI/設計導線。OpenAI API連携・課金ゲート・要配慮情報同意の再確認が必要。
   - `review_exports/` は未追跡のまま残っている。
