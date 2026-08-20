@@ -7,6 +7,7 @@ create index if not exists idx_family_invites_family_status on family_invites(fa
 create unique index if not exists idx_family_invites_token_unique on family_invites(token);
 create index if not exists idx_people_family_id on people(family_id);
 create index if not exists idx_people_current_status on people(current_status);
+create index if not exists idx_people_profile_updated_at on people(profile_updated_at);
 create index if not exists idx_person_status_events_person_id on person_status_events(person_id);
 create index if not exists idx_task_templates_status on task_templates(status);
 create index if not exists idx_tasks_person_id on tasks(person_id);
@@ -14,6 +15,7 @@ create index if not exists idx_tasks_due_date on tasks(due_date);
 create index if not exists idx_tasks_status on tasks(status);
 create index if not exists idx_asset_items_person_id on asset_items(person_id);
 create index if not exists idx_timeline_events_person_id on timeline_events(person_id);
+create index if not exists idx_timeline_events_person_date on timeline_events(person_id, event_date desc, created_at desc);
 create index if not exists idx_homes_person_id on homes(person_id);
 create index if not exists idx_home_photos_home_id on home_photos(home_id);
 create index if not exists idx_cases_status on cases(status);

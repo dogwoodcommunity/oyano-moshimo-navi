@@ -125,13 +125,25 @@ begin
     family_id,
     display_name,
     relationship_to_family,
-    current_status
+    current_status,
+    profile,
+    profile_updated_at
   )
   values (
     v_family_id,
     v_primary_name,
     v_primary_relationship,
-    coalesce(v_case.selected_status, 'preparing')
+    coalesce(v_case.selected_status, 'preparing'),
+    jsonb_strip_nulls(jsonb_build_object(
+      'displayName', v_primary_name,
+      'relationship', v_primary_relationship,
+      'careStatus', coalesce(v_case.selected_status, 'preparing'),
+      'familyStructure', nullif(v_case.answers ->> 'familyStructure', ''),
+      'firstSituation', nullif(v_case.answers ->> 'parentSituation', ''),
+      'documentKnowledge', nullif(v_case.answers ->> 'knowsAssets', ''),
+      'createdFrom', 'web_handoff'
+    )),
+    now()
   )
   returning id into v_person_id;
 
@@ -194,13 +206,22 @@ begin
       family_id,
       display_name,
       relationship_to_family,
-      current_status
+      current_status,
+      profile,
+      profile_updated_at
     )
     values (
       v_family_id,
       v_additional_name,
       v_additional_relationship,
-      v_additional_status
+      v_additional_status,
+      jsonb_strip_nulls(jsonb_build_object(
+        'displayName', v_additional_name,
+        'relationship', v_additional_relationship,
+        'careStatus', v_additional_status,
+        'createdFrom', 'web_handoff_additional'
+      )),
+      now()
     )
     returning id into v_additional_person_id;
 

@@ -27,11 +27,18 @@ with checks as (
   union all select 'rls_enabled', 'public_api_rate_limits', coalesce((select relrowsecurity from pg_class where oid = to_regclass('public.public_api_rate_limits')), false)
   union all select 'storage_bucket', 'home-photos', exists(select 1 from storage.buckets where id = 'home-photos')
   union all select 'column_exists', 'case_results.app_handoff_consumed_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'case_results' and column_name = 'app_handoff_consumed_at')
+  union all select 'column_exists', 'people.profile', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'people' and column_name = 'profile')
+  union all select 'column_exists', 'people.profile_updated_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'people' and column_name = 'profile_updated_at')
+  union all select 'column_exists', 'timeline_events.mood', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'timeline_events' and column_name = 'mood')
+  union all select 'column_exists', 'timeline_events.attachments', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'timeline_events' and column_name = 'attachments')
+  union all select 'column_exists', 'timeline_events.metadata', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'timeline_events' and column_name = 'metadata')
   union all select 'column_exists', 'cases.consent_to_sensitive_info', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'cases' and column_name = 'consent_to_sensitive_info')
   union all select 'column_exists', 'cases.sensitive_info_consent_version', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'cases' and column_name = 'sensitive_info_consent_version')
   union all select 'column_exists', 'cases.sensitive_info_consented_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'cases' and column_name = 'sensitive_info_consented_at')
   union all select 'index_exists', 'idx_case_results_handoff_valid', to_regclass('public.idx_case_results_handoff_valid') is not null
   union all select 'index_exists', 'idx_consent_logs_case_type', to_regclass('public.idx_consent_logs_case_type') is not null
+  union all select 'index_exists', 'idx_people_profile_updated_at', to_regclass('public.idx_people_profile_updated_at') is not null
+  union all select 'index_exists', 'idx_timeline_events_person_date', to_regclass('public.idx_timeline_events_person_date') is not null
   union all select 'function_exists', 'generate_tasks_for_status_event', to_regproc('public.generate_tasks_for_status_event') is not null
   union all select 'function_exists', 'schedule_notifications_for_task', to_regproc('public.schedule_notifications_for_task') is not null
   union all select 'function_exists', 'claim_due_scheduled_notifications', to_regproc('public.claim_due_scheduled_notifications') is not null

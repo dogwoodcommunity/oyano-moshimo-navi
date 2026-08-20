@@ -19,6 +19,7 @@
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
+- [ ] 個別実行する場合のみ `supabase/person_notebook_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
 - [ ] アプリ単体開始用 `supabase/create_initial_family_person.sql` を実行

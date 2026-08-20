@@ -36,10 +36,39 @@ using (user_id = auth.uid());
 alter table case_results
   add column if not exists app_handoff_consumed_at timestamptz;
 
+alter table people
+  add column if not exists profile jsonb not null default '{}'::jsonb,
+  add column if not exists profile_updated_at timestamptz;
+
+alter table timeline_events
+  add column if not exists mood text,
+  add column if not exists attachments jsonb not null default '[]'::jsonb,
+  add column if not exists metadata jsonb not null default '{}'::jsonb;
+
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_constraint
+    where conname = 'timeline_events_mood_check'
+  ) then
+    alter table timeline_events
+      add constraint timeline_events_mood_check
+      check (mood is null or mood in ('stable', 'changed', 'urgent'));
+  end if;
+end;
+$$;
+
 create index if not exists idx_case_results_handoff_valid
 on case_results(case_id, app_handoff_token, created_at)
 where app_handoff_token is not null
   and app_handoff_consumed_at is null;
+
+create index if not exists idx_people_profile_updated_at
+on people(profile_updated_at);
+
+create index if not exists idx_timeline_events_person_date
+on timeline_events(person_id, event_date desc, created_at desc);
 
 create or replace function public.consume_case_handoff(
   p_case_id uuid,
@@ -165,13 +194,25 @@ begin
     family_id,
     display_name,
     relationship_to_family,
-    current_status
+    current_status,
+    profile,
+    profile_updated_at
   )
   values (
     v_family_id,
     v_primary_name,
     v_primary_relationship,
-    coalesce(v_case.selected_status, 'preparing')
+    coalesce(v_case.selected_status, 'preparing'),
+    jsonb_strip_nulls(jsonb_build_object(
+      'displayName', v_primary_name,
+      'relationship', v_primary_relationship,
+      'careStatus', coalesce(v_case.selected_status, 'preparing'),
+      'familyStructure', nullif(v_case.answers ->> 'familyStructure', ''),
+      'firstSituation', nullif(v_case.answers ->> 'parentSituation', ''),
+      'documentKnowledge', nullif(v_case.answers ->> 'knowsAssets', ''),
+      'createdFrom', 'web_handoff'
+    )),
+    now()
   )
   returning id into v_person_id;
 
@@ -234,13 +275,22 @@ begin
       family_id,
       display_name,
       relationship_to_family,
-      current_status
+      current_status,
+      profile,
+      profile_updated_at
     )
     values (
       v_family_id,
       v_additional_name,
       v_additional_relationship,
-      v_additional_status
+      v_additional_status,
+      jsonb_strip_nulls(jsonb_build_object(
+        'displayName', v_additional_name,
+        'relationship', v_additional_relationship,
+        'careStatus', v_additional_status,
+        'createdFrom', 'web_handoff_additional'
+      )),
+      now()
     )
     returning id into v_additional_person_id;
 

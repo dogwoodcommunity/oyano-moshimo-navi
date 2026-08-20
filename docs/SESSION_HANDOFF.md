@@ -3231,3 +3231,46 @@ GitHubが必要な理由:
     - `curl -I https://oyano-moshimo-navi.vercel.app/` 307。
     - `curl -I https://oyano-moshimo-navi.vercel.app/home` 200。
     - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。
+
+## 2026-08-20 追記 100
+
+- ユーザー要望:
+  - 1人目の登録後に「これは使える」と思えるマイページにしたい。
+  - 対象者ごとにプロフィール、日記、写真/PDFメモ、タスク、家族共有、AI相談導線を持たせたい。
+  - 父母に固定せず、義父母・親戚なども1人ずつ管理できる前提にしたい。
+  - 日々の記録を蓄積し、将来AI相談の文脈として使えるようにしたい。
+- 対応:
+  - `supabase/schema.sql`
+    - `people.profile jsonb` と `profile_updated_at` を追加。
+    - `timeline_events.mood` / `attachments jsonb` / `metadata jsonb` を追加。
+  - `supabase/person_notebook_hardening.sql`
+    - 既存DB向けに上記カラム、mood check制約、indexを追加する個別SQLを新規作成。
+  - `supabase/create_initial_family_person.sql`
+    - アプリ単体で1人目を作るRPCに `profile` 初期値を保存するよう変更。
+  - `supabase/handoff_consume_rpc.sql`
+    - Web診断から引き継いだケースも `people.profile` に初期情報を保存。
+  - `supabase/production_pending_hardening.sql`
+    - 本番一括hardeningにもプロフィール/日記カラム、index、consume RPC更新を反映。
+  - `supabase/indexes.sql` / `verify_setup.sql` / `verify_compact.sql`
+    - person notebook系のindex/column確認を追加。
+  - `docs/PRODUCTION_CHECKLIST.md`
+    - 個別投入SQLとして `supabase/person_notebook_hardening.sql` を追加。
+  - `apps/mobile/lib/mobileData.ts`
+    - `MobilePersonProfile`、`MobileTimelineEntry`、プロフィール更新、日記取得/追加関数を追加。
+    - Supabase接続時は空データにデモデータを混ぜないよう変更。
+  - `apps/mobile/app/people/[id]/index.tsx`
+    - 対象者詳細を「管理手帳」に刷新。
+    - プロフィール編集、充実度、今日の記録、未完了/担当未定/記録数、Plus導線、各機能への入口を追加。
+  - `apps/mobile/app/people/[id]/timeline.tsx`
+    - デモ表示のみから、今日の記録を保存できる日記帳へ変更。
+    - 変化なし/変化あり/急ぎの印、定型メモ、写真/PDFメモ、過去記録一覧を追加。
+  - `apps/mobile/app/people/new.tsx`
+    - 登録後の遷移先をタスク一覧ではなく、その人の管理手帳に変更。
+  - `apps/mobile/app/(tabs)/dashboard.tsx`
+    - 対象者カードの遷移先をタスク一覧から管理手帳へ変更。
+- 検証:
+  - `npm run typecheck --workspace mobile` OK。
+- 注意:
+  - 写真/PDFは今回「日記上の添付メモ」まで。実ファイル選択/アップロードは次工程で `expo-image-picker` / `expo-document-picker` 等を入れて実装する。
+  - 本番Supabaseへは新規DB差分の投入が必要。個別なら `supabase/person_notebook_hardening.sql`、一括なら更新済み `supabase/production_pending_hardening.sql`。
+  - `review_exports/` は未追跡のまま残っている。

@@ -37,7 +37,7 @@ export default function NewPersonScreen() {
       return;
     }
 
-    router.replace(result.warning ? `/people/${result.person.id}/status` : `/people/${result.person.id}/tasks`);
+    router.replace(`/people/${result.person.id}`);
   }
 
   return (
@@ -47,11 +47,11 @@ export default function NewPersonScreen() {
           <MascotMark size={48} />
           <Text style={styles.kicker}>{isFirstPerson ? "最初の登録" : "対象者を追加"}</Text>
         </View>
-        <Text style={styles.title}>{isFirstPerson ? "親を1人登録して、家族ボードを作ります。" : "2人目以降は、1人ずつ登録します。"}</Text>
+        <Text style={styles.title}>{isFirstPerson ? "親を1人登録して、管理手帳を作ります。" : "2人目以降は、1人ずつ登録します。"}</Text>
         <Text style={styles.lead}>
           {isFirstPerson
-            ? "まず呼び名と今の状態だけ入れてください。期限と担当を分けるためのタスクボードを作ります。"
-            : "状態や期限は人によって変わります。まず呼び名と今の状態だけ入れると、その人専用のタスクボードを作ります。"}
+            ? "まず呼び名と今の状態だけ入れてください。プロフィール、日記、期限、書類メモをまとめる手帳を作ります。"
+            : "状態や期限は人によって変わります。まず呼び名と今の状態だけ入れると、その人専用の管理手帳を作ります。"}
         </Text>
       </View>
 

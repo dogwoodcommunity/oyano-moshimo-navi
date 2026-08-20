@@ -4,7 +4,18 @@ export const demoPerson = {
   id: "00000000-0000-4000-8000-000000000101",
   displayName: "母",
   relationship: "親",
-  currentStatus: "hospitalized" as ParentStatus
+  currentStatus: "hospitalized" as ParentStatus,
+  profile: {
+    fullName: "山田 花子",
+    displayName: "母",
+    relationship: "母",
+    birthDate: "1948-04-12",
+    careStatus: "長期入院",
+    keyContact: "長男が病院、長女が書類を担当",
+    hospitalOrFacility: "〇〇病院 退院支援窓口",
+    medicationNote: "薬の変更があったら日付つきで記録",
+    documentLocationNote: "保険証券と年金書類は実家の茶色い封筒"
+  }
 };
 
 const answers: DiagnosisAnswers = {

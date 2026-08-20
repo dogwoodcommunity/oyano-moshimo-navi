@@ -147,7 +147,7 @@ export default function DashboardScreen() {
         </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.personList}>
           {data.people.map((person) => (
-            <Link href={`/people/${person.id}/tasks`} key={person.id} style={styles.personCard}>
+            <Link href={`/people/${person.id}`} key={person.id} style={styles.personCard}>
               <Text style={styles.personName}>{person.displayName}</Text>
               <Text style={styles.personMeta}>{person.relationship ?? "対象者"}</Text>
               <Text style={styles.personStatus}>{statusLabel(person.currentStatus)}</Text>

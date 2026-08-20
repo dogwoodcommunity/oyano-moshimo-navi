@@ -1,12 +1,29 @@
 import type { DiagnosisResult, ParentStatus } from "@oyano/shared";
-import { demoPerson, demoResult } from "./demoData";
+import { demoPerson, demoResult, demoTimeline } from "./demoData";
 import { getSupabase } from "./supabase";
+
+export type MobilePersonProfile = {
+  fullName?: string;
+  displayName?: string;
+  relationship?: string;
+  birthDate?: string;
+  careStatus?: string;
+  keyContact?: string;
+  hospitalOrFacility?: string;
+  medicationNote?: string;
+  documentLocationNote?: string;
+  familyStructure?: string;
+  firstSituation?: string;
+  documentKnowledge?: string;
+  updatedAt?: string;
+};
 
 export type MobilePerson = {
   id: string;
   displayName: string;
   relationship?: string;
   currentStatus: ParentStatus;
+  profile?: MobilePersonProfile;
 };
 
 export type MobileTask = {
@@ -45,6 +62,28 @@ export type AcceptFamilyInviteResult = {
   error?: string;
 };
 
+export type MobileDiaryMood = "stable" | "changed" | "urgent";
+
+export type MobileTimelineAttachment = {
+  name: string;
+  type?: string;
+  size?: number;
+  storagePath?: string;
+  uri?: string;
+};
+
+export type MobileTimelineEntry = {
+  id: string;
+  personId: string;
+  eventType: string;
+  date: string;
+  title: string;
+  body?: string;
+  mood?: MobileDiaryMood;
+  attachments: MobileTimelineAttachment[];
+  createdAt?: string;
+};
+
 export type CreatePersonResult = {
   source: "supabase" | "demo";
   person?: MobilePerson;
@@ -72,6 +111,8 @@ type PersonRow = {
   display_name: string;
   relationship_to_family: string | null;
   current_status: ParentStatus;
+  profile?: unknown;
+  profile_updated_at?: string | null;
 };
 
 type TaskRow = {
@@ -94,6 +135,18 @@ type FamilyMemberRow = {
 
 type PersonFamilyRow = {
   family_id: string | null;
+};
+
+type TimelineRow = {
+  id: string;
+  person_id: string;
+  event_type: string;
+  event_date: string | null;
+  title: string;
+  body: string | null;
+  mood?: MobileDiaryMood | null;
+  attachments?: unknown;
+  created_at: string | null;
 };
 
 const demoFamilyMembers: FamilyMember[] = [
@@ -129,6 +182,67 @@ function demoTasksFromResult(result: DiagnosisResult): MobileTask[] {
   }));
 }
 
+function isProfile(value: unknown): value is MobilePersonProfile {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value));
+}
+
+function normalizeProfile(row: PersonRow): MobilePersonProfile {
+  const rawProfile = isProfile(row.profile) ? row.profile : {};
+  return {
+    ...rawProfile,
+    displayName: rawProfile.displayName ?? row.display_name,
+    relationship: rawProfile.relationship ?? row.relationship_to_family ?? undefined,
+    careStatus: rawProfile.careStatus ?? row.current_status,
+    updatedAt: rawProfile.updatedAt ?? row.profile_updated_at ?? undefined
+  };
+}
+
+function personFromRow(row: PersonRow): MobilePerson {
+  const profile = normalizeProfile(row);
+  return {
+    id: row.id,
+    displayName: profile.displayName || row.display_name,
+    relationship: profile.relationship ?? row.relationship_to_family ?? undefined,
+    currentStatus: row.current_status,
+    profile
+  };
+}
+
+function normalizeAttachments(value: unknown): MobileTimelineAttachment[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is MobileTimelineAttachment =>
+    Boolean(item && typeof item === "object" && "name" in item)
+  );
+}
+
+function timelineFromRow(row: TimelineRow): MobileTimelineEntry {
+  return {
+    id: row.id,
+    personId: row.person_id,
+    eventType: row.event_type,
+    date: row.event_date ?? "",
+    title: row.title,
+    body: row.body ?? undefined,
+    mood: row.mood ?? undefined,
+    attachments: normalizeAttachments(row.attachments),
+    createdAt: row.created_at ?? undefined
+  };
+}
+
+function demoTimelineEntries(personId: string): MobileTimelineEntry[] {
+  return demoTimeline.map((item) => ({
+    id: item.id,
+    personId,
+    eventType: "diary",
+    date: item.date,
+    title: item.title,
+    body: item.body,
+    mood: "changed",
+    attachments: [],
+    createdAt: item.date
+  }));
+}
+
 export function demoDashboardData(): DashboardData {
   return {
     person: demoPerson,
@@ -159,29 +273,28 @@ export async function fetchDashboardData(): Promise<DashboardData> {
   const supabase = getSupabase();
   if (!supabase) return demoDashboardData();
 
-  const { data: people } = await supabase
+  const { data: peopleWithProfile, error: peopleError } = await supabase
     .from("people")
-    .select("id, display_name, relationship_to_family, current_status")
+    .select("id, display_name, relationship_to_family, current_status, profile, profile_updated_at")
     .order("created_at", { ascending: true });
+  let people = peopleWithProfile as PersonRow[] | null;
+
+  if (peopleError) {
+    const fallback = await supabase
+      .from("people")
+      .select("id, display_name, relationship_to_family, current_status")
+      .order("created_at", { ascending: true });
+    people = fallback.data as PersonRow[] | null;
+  }
 
   const personRow = (people?.[0] ?? null) as PersonRow | null;
   if (!personRow) return emptyDashboardData();
 
   const tasks = await fetchTasks(personRow.id);
-  const personList = ((people ?? []) as PersonRow[]).map((row) => ({
-    id: row.id,
-    displayName: row.display_name,
-    relationship: row.relationship_to_family ?? undefined,
-    currentStatus: row.current_status
-  }));
+  const personList = ((people ?? []) as PersonRow[]).map(personFromRow);
 
   return {
-    person: {
-      id: personRow.id,
-      displayName: personRow.display_name,
-      relationship: personRow.relationship_to_family ?? undefined,
-      currentStatus: personRow.current_status
-    },
+    person: personFromRow(personRow),
     people: personList,
     tasks,
     registryItems: demoResult.registryItems,
@@ -194,21 +307,26 @@ export async function fetchPerson(personId: string): Promise<MobilePerson> {
   const supabase = getSupabase();
   if (!supabase) return demoPerson;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("people")
-    .select("id, display_name, relationship_to_family, current_status")
+    .select("id, display_name, relationship_to_family, current_status, profile, profile_updated_at")
     .eq("id", personId)
     .single();
+  let personData = data as PersonRow | null;
 
-  const row = data as PersonRow | null;
+  if (error) {
+    const fallback = await supabase
+      .from("people")
+      .select("id, display_name, relationship_to_family, current_status")
+      .eq("id", personId)
+      .single();
+    personData = fallback.data as PersonRow | null;
+  }
+
+  const row = personData;
   if (!row) return demoPerson;
 
-  return {
-    id: row.id,
-    displayName: row.display_name,
-    relationship: row.relationship_to_family ?? undefined,
-    currentStatus: row.current_status
-  };
+  return personFromRow(row);
 }
 
 export async function fetchTasks(personId: string): Promise<MobileTask[]> {
@@ -225,7 +343,7 @@ export async function fetchTasks(personId: string): Promise<MobileTask[]> {
     .order("due_date", { ascending: true });
 
   const rows = (data ?? []) as TaskRow[];
-  if (rows.length === 0) return demoTasksFromResult(demoResult);
+  if (rows.length === 0) return [];
 
   return rows.map((row) => ({
     id: row.id,
@@ -315,16 +433,42 @@ export async function createPersonForFamily({
   const familyId = await fetchFamilyId(anchorPersonId);
   if (!familyId) return { source: "supabase", error: "家族ボードが見つかりませんでした。" };
 
-  const { data: insertedPerson, error: insertError } = await supabase
+  const profile: MobilePersonProfile = {
+    displayName: normalizedName,
+    relationship: relationship?.trim() || undefined,
+    careStatus: currentStatus,
+    updatedAt: new Date().toISOString()
+  };
+
+  const primaryInsert = await supabase
     .from("people")
     .insert({
       family_id: familyId,
       display_name: normalizedName,
       relationship_to_family: relationship?.trim() || null,
-      current_status: currentStatus
+      current_status: currentStatus,
+      profile,
+      profile_updated_at: new Date().toISOString()
     })
-    .select("id, display_name, relationship_to_family, current_status")
+    .select("id, display_name, relationship_to_family, current_status, profile, profile_updated_at")
     .single();
+  let insertedPerson = primaryInsert.data as PersonRow | null;
+  let insertError = primaryInsert.error;
+
+  if (insertError) {
+    const fallback = await supabase
+      .from("people")
+      .insert({
+        family_id: familyId,
+        display_name: normalizedName,
+        relationship_to_family: relationship?.trim() || null,
+        current_status: currentStatus
+      })
+      .select("id, display_name, relationship_to_family, current_status")
+      .single();
+    insertedPerson = fallback.data as PersonRow | null;
+    insertError = fallback.error;
+  }
 
   if (insertError) return { source: "supabase", error: insertError.message };
 
@@ -342,12 +486,7 @@ export async function createPersonForFamily({
 
   return {
     source: "supabase",
-    person: {
-      id: row.id,
-      displayName: row.display_name,
-      relationship: row.relationship_to_family ?? undefined,
-      currentStatus: row.current_status
-    },
+    person: personFromRow(row),
     warning: eventError ? "対象者は追加できましたが、初期タスクの作成に失敗しました。ステータス変更画面でもう一度保存してください。" : undefined
   };
 }
@@ -517,6 +656,175 @@ export async function updatePersonStatus(
 
   if (error) return { source: "demo", error: error.message };
   return { source: "supabase" };
+}
+
+export async function updatePersonProfile(
+  personId: string,
+  profile: MobilePersonProfile
+): Promise<{ source: "supabase" | "demo"; person?: MobilePerson; error?: string }> {
+  const supabase = getSupabase();
+  const nextProfile: MobilePersonProfile = {
+    ...profile,
+    updatedAt: new Date().toISOString()
+  };
+
+  if (!supabase) {
+    return {
+      source: "demo",
+      person: {
+        ...demoPerson,
+        displayName: nextProfile.displayName || demoPerson.displayName,
+        relationship: nextProfile.relationship || demoPerson.relationship,
+        profile: nextProfile
+      }
+    };
+  }
+
+  const primaryUpdate = await supabase
+    .from("people")
+    .update({
+      display_name: nextProfile.displayName || nextProfile.fullName || undefined,
+      relationship_to_family: nextProfile.relationship || null,
+      profile: nextProfile,
+      profile_updated_at: nextProfile.updatedAt,
+      updated_at: nextProfile.updatedAt
+    })
+    .eq("id", personId)
+    .select("id, display_name, relationship_to_family, current_status, profile, profile_updated_at")
+    .single();
+  let updatedPerson = primaryUpdate.data as PersonRow | null;
+  let updateError = primaryUpdate.error;
+
+  if (updateError) {
+    const fallback = await supabase
+      .from("people")
+      .update({
+        display_name: nextProfile.displayName || nextProfile.fullName || undefined,
+        relationship_to_family: nextProfile.relationship || null,
+        updated_at: nextProfile.updatedAt
+      })
+      .eq("id", personId)
+      .select("id, display_name, relationship_to_family, current_status")
+      .single();
+    updatedPerson = fallback.data as PersonRow | null;
+    updateError = fallback.error;
+  }
+
+  if (updateError) return { source: "supabase", error: updateError.message };
+  const row = updatedPerson;
+  return { source: "supabase", person: row ? personFromRow(row) : undefined };
+}
+
+export async function fetchTimelineEntries(personId: string): Promise<MobileTimelineEntry[]> {
+  const supabase = getSupabase();
+  if (!supabase) return demoTimelineEntries(personId);
+
+  const timelineResult = await supabase
+    .from("timeline_events")
+    .select("id, person_id, event_type, event_date, title, body, mood, attachments, created_at")
+    .eq("person_id", personId)
+    .order("event_date", { ascending: false })
+    .order("created_at", { ascending: false })
+    .limit(30);
+  let timelineData = timelineResult.data as TimelineRow[] | null;
+
+  if (timelineResult.error) {
+    const fallback = await supabase
+      .from("timeline_events")
+      .select("id, person_id, event_type, event_date, title, body, created_at")
+      .eq("person_id", personId)
+      .order("event_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .limit(30);
+    timelineData = fallback.data as TimelineRow[] | null;
+  }
+
+  const rows = timelineData ?? [];
+  if (rows.length === 0) return [];
+  return rows.map(timelineFromRow);
+}
+
+export async function addTimelineEntry({
+  attachments = [],
+  body,
+  date,
+  mood,
+  personId,
+  title
+}: {
+  attachments?: MobileTimelineAttachment[];
+  body: string;
+  date?: string;
+  mood: MobileDiaryMood;
+  personId: string;
+  title?: string;
+}): Promise<{ source: "supabase" | "demo"; entry?: MobileTimelineEntry; error?: string }> {
+  const normalizedBody = body.trim();
+  if (!normalizedBody && attachments.length === 0) {
+    return { source: "demo", error: "記録する内容を入力してください。" };
+  }
+
+  const entryTitle = title?.trim() || (
+    mood === "urgent" ? "急ぎで確認したいこと" : mood === "changed" ? "変化があった記録" : "今日の記録"
+  );
+  const entryDate = date || new Date().toISOString().slice(0, 10);
+  const supabase = getSupabase();
+
+  if (!supabase) {
+    return {
+      source: "demo",
+      entry: {
+        id: `demo-timeline-${Date.now()}`,
+        personId,
+        eventType: "diary",
+        date: entryDate,
+        title: entryTitle,
+        body: normalizedBody || "写真・資料を追加しました。",
+        mood,
+        attachments
+      }
+    };
+  }
+
+  const { data: userResult } = await supabase.auth.getUser();
+  const primaryEntryInsert = await supabase
+    .from("timeline_events")
+    .insert({
+      person_id: personId,
+      event_type: "diary",
+      event_date: entryDate,
+      title: entryTitle,
+      body: normalizedBody || "写真・資料を追加しました。",
+      mood,
+      attachments,
+      metadata: { source: "mobile_notebook" },
+      created_by: userResult.user?.id ?? null
+    })
+    .select("id, person_id, event_type, event_date, title, body, mood, attachments, created_at")
+    .single();
+  let insertedEntry = primaryEntryInsert.data as TimelineRow | null;
+  let entryError = primaryEntryInsert.error;
+
+  if (entryError) {
+    const fallback = await supabase
+      .from("timeline_events")
+      .insert({
+        person_id: personId,
+        event_type: "diary",
+        event_date: entryDate,
+        title: entryTitle,
+        body: normalizedBody || "写真・資料を追加しました。",
+        created_by: userResult.user?.id ?? null
+      })
+      .select("id, person_id, event_type, event_date, title, body, created_at")
+      .single();
+    insertedEntry = fallback.data as TimelineRow | null;
+    entryError = fallback.error;
+  }
+
+  if (entryError) return { source: "supabase", error: entryError.message };
+  const row = insertedEntry;
+  return { source: "supabase", entry: row ? timelineFromRow(row) : undefined };
 }
 
 export async function updateTaskStatus(

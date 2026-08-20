@@ -54,13 +54,22 @@ begin
     family_id,
     display_name,
     relationship_to_family,
-    current_status
+    current_status,
+    profile,
+    profile_updated_at
   )
   values (
     v_family_id,
     v_display_name,
     v_relationship,
-    v_status
+    v_status,
+    jsonb_strip_nulls(jsonb_build_object(
+      'displayName', v_display_name,
+      'relationship', v_relationship,
+      'careStatus', v_status,
+      'createdFrom', 'mobile_initial'
+    )),
+    now()
   )
   returning id into v_person_id;
 

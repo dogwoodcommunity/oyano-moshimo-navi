@@ -146,6 +146,11 @@ select
 with required_columns(table_name, column_name) as (
   values
     ('case_results', 'app_handoff_consumed_at'),
+    ('people', 'profile'),
+    ('people', 'profile_updated_at'),
+    ('timeline_events', 'mood'),
+    ('timeline_events', 'attachments'),
+    ('timeline_events', 'metadata'),
     ('cases', 'consent_to_sensitive_info'),
     ('cases', 'sensitive_info_consent_version'),
     ('cases', 'sensitive_info_consented_at')
@@ -166,7 +171,9 @@ order by target;
 with required_indexes(name) as (
   values
     ('idx_case_results_handoff_valid'),
-    ('idx_consent_logs_case_type')
+    ('idx_consent_logs_case_type'),
+    ('idx_people_profile_updated_at'),
+    ('idx_timeline_events_person_date')
 )
 select
   'index_exists' as check_type,

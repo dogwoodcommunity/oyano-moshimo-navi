@@ -49,6 +49,8 @@ create table if not exists people (
   age_band text,
   residence_area text,
   current_status text not null default 'preparing',
+  profile jsonb not null default '{}'::jsonb,
+  profile_updated_at timestamptz,
   notes text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
@@ -131,6 +133,9 @@ create table if not exists timeline_events (
   event_date date default current_date,
   title text not null,
   body text,
+  mood text,
+  attachments jsonb not null default '[]'::jsonb,
+  metadata jsonb not null default '{}'::jsonb,
   created_by uuid references profiles(id) on delete set null,
   created_at timestamptz default now()
 );
