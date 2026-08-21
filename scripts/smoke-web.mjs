@@ -8,6 +8,12 @@ const checks = [
   { path: "/guides", label: "guides" },
   { path: "/guides/hospitalized", label: "guide detail" },
   { path: "/checklists", label: "checklists" },
+  { path: "/crisis", label: "crisis index" },
+  { path: "/crisis/hospital-night", label: "crisis hospital night" },
+  { path: "/crisis/critical", label: "crisis critical" },
+  { path: "/crisis/just-died", label: "crisis just died" },
+  { path: "/consult", label: "consult" },
+  { path: "/family", label: "family share" },
   { path: "/safety", label: "safety" },
   { path: "/plans", label: "plans" },
   { path: "/install", label: "pwa install" },
@@ -29,6 +35,14 @@ const checks = [
   { path: "/api/health", label: "health api" },
   { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatuses: [200, 401] },
   { path: "/api/notification-preferences", label: "notification preferences api requires auth", expectStatus: 401 },
+  { path: "/api/family", label: "family api requires auth", expectStatuses: [401, 503] },
+  {
+    path: "/api/consult",
+    label: "consult api rejects empty question",
+    method: "POST",
+    body: { question: "" },
+    expectStatuses: [400, 503]
+  },
   {
     path: "/api/push-tokens/register",
     label: "push token api requires auth",

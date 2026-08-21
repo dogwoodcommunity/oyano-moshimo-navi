@@ -3923,3 +3923,30 @@ GitHubが必要な理由:
 - 注意:
   - 実際のSupabaseでの疎通は未実施。この環境にSupabaseが無いためモックでの検証にとどまる。本番キー設定後に、実DBでの招待・参加の確認が必要。
   - Next.jsのData Cacheの件は、既存の `/api/notebook/sync` のGET（クラウド復元）にも同じ影響があったはずで、今回の修正で一緒に直っている。
+
+## 2026-08-21 追記 113
+
+- 経緯:
+  - 未完了リストの `本番でのクラウド控えの実機確認` に着手した。本番へアクセスできないため、確認を実行できる形にして渡す。
+- 対応:
+  - `scripts/smoke-notebook-sync.mjs` を追加。
+    - 既定は読み取りのみ。`--write` を付けた時だけ、確認用の手帳を1件書き込んで往復を検証する。
+    - トークン無しGETが401、トークン付きGETが200、POSTの同期件数、プロフィール・確認リスト・日記が戻ること、2回目のPOSTで重複しないことを確認する。
+    - 本番で `--write` した場合に残るデータの目印（`profile->>localCaseId`）と削除方法を最後に表示する。
+  - `package.json` に `smoke:notebook-sync` を追加。
+  - `docs/CLOUD_BACKUP_VERIFICATION.md` を追加。
+    - 前提の環境変数とSupabaseのRedirect URL設定。
+    - アクセストークンの取り方。
+    - 自動チェックの実行方法。
+    - 手で確認する9項目。特に「Safariのサイトデータ消去後に復元できること」を最重要とした。ここが通らない限り、記録が消えないとは言えない。
+    - 家族共有の確認6項目。
+    - 確認用データの削除SQL。
+    - 既知の注意点（localCaseIdでの突き合わせ、添付のデータURL同期、Data Cacheを外していること）。
+  - `scripts/smoke-web.mjs` に `/crisis` 3ページ、`/crisis`、`/consult`、`/family`、`/api/family`、`/api/consult` を追加。
+- 確認:
+  - PostgREST互換モックを `people` / `tasks` / `timeline_events` / `profiles` とPATCH・upsert・`in`・`->>`フィルタまで拡張し、`smoke-notebook-sync` を `--write` で実行して12/12成功。
+    - クラウド控えの往復（対象者、プロフィール、確認リスト、日記の本文）が一致することを確認。
+    - 2回目のPOSTで対象者も日記も増えないことを確認。
+  - `scripts/smoke-web.mjs` をローカルに対して実行し、37件すべて成功、失敗0。
+- 未確認:
+  - 本番Supabaseに対する実行は未実施。上記手順書に沿って、本番キーを持っている人の実行が必要。

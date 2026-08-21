@@ -21,6 +21,7 @@
     "lint": "pnpm --filter web run lint",
     "review:zip": "node scripts/create-review-zip.mjs",
     "smoke:web": "node scripts/smoke-web.mjs",
+    "smoke:notebook-sync": "node scripts/smoke-notebook-sync.mjs",
     "smoke:production-consent": "node scripts/smoke-production-consent.mjs",
     "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"
   },
