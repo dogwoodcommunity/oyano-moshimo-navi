@@ -3820,3 +3820,17 @@ GitHubが必要な理由:
   - 家族共有2名無料のUXと招待導線の最終調整は未実装。
   - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
   - Vercelのproduction反映は `Not authorized` のまま。Vercel再ログインまたは `VERCEL_TOKEN` 設定が必要。今回の危機モードも本番未反映。
+## 2026-08-21 追記 111（危機モード先行ブランチ）
+
+- このブランチ `claude/crisis-mode-only` は、危機モードだけを先に出すために切ったもの。
+- `claude/codex-implementation-handoff-n7td51`（PR #1）から、危機モードに関わる2コミットだけを取り出している。
+  - `4d4a79f` Web版の危機モード
+  - `827b202` 共有パッケージへの移動とアプリ版の危機モード
+- 長期相談、家族共有、計測、Plusの課金導線は**含まれていない**。それらはPR #1 側にある。
+- 追記番号はPR #1 側と重複する。統合時はPR #1 の履歴を正とすること。
+- 危機モードの内容と確認の詳細は、PR #1 側の追記110と追記115を参照。
+
+- このブランチで確認したこと:
+  - `pnpm --filter web run typecheck` / `--filter mobile run typecheck` / `--filter web run build`
+  - `scripts/smoke-web.mjs`
+

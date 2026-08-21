@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios } from "@/lib/crisis";
+import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios } from "@oyano/shared";
 
 export const metadata: Metadata = {
   title: "急なときに開く",

@@ -1,4 +1,4 @@
-import type { ParentStatus } from "@oyano/shared";
+import type { ParentStatus } from "./index";
 
 export type CrisisStep = {
   id: string;

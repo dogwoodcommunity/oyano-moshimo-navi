@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
-import { ImageBackground, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
@@ -29,6 +29,23 @@ function dueLabel(value?: string) {
   return `${days}日後`;
 }
 
+function CrisisBanner() {
+  return (
+    <Link asChild href="/crisis">
+      <Pressable style={({ pressed }) => [styles.crisisBanner, pressed && styles.crisisBannerPressed]}>
+        <View style={styles.crisisBadge}>
+          <Text style={styles.crisisBadgeText}>急なとき</Text>
+        </View>
+        <View style={styles.crisisBody}>
+          <Text style={styles.crisisTitle}>いま、急なことが起きている</Text>
+          <Text style={styles.crisisHint}>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</Text>
+        </View>
+        <MaterialCommunityIcons color={colors.clay} name="chevron-right" size={24} />
+      </Pressable>
+    </Link>
+  );
+}
+
 export default function DashboardScreen() {
   const [data, setData] = useState<DashboardData>(demoDashboardData());
   const activeTasks = data.tasks.filter((task) => task.status !== "done" && task.status !== "skipped");
@@ -51,6 +68,7 @@ export default function DashboardScreen() {
   if (data.source === "empty") {
     return (
       <ScrollView contentContainerStyle={styles.screen}>
+        <CrisisBanner />
         <View style={[styles.card, styles.emptyHero]}>
           <View style={styles.emptyHeroTop}>
             <MascotMark size={58} />
@@ -90,6 +108,7 @@ export default function DashboardScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.screen}>
+      <CrisisBanner />
       <ImageBackground
         imageStyle={styles.heroImage}
         resizeMode="cover"
@@ -231,6 +250,23 @@ function TaskSection({
 }
 
 const styles = StyleSheet.create({
+  crisisBanner: {
+    alignItems: "center",
+    backgroundColor: "#f7e7e2",
+    borderColor: "#e2c7b6",
+    borderRadius: radius.card,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+    padding: 14
+  },
+  crisisBannerPressed: { backgroundColor: "#f2dbd2" },
+  crisisBadge: { backgroundColor: "#a94e28", borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
+  crisisBadgeText: { color: "#fff", fontSize: 11.5, fontWeight: "900" },
+  crisisBody: { flex: 1, gap: 3 },
+  crisisTitle: { color: colors.ink, fontSize: 15.5, fontWeight: "900" },
+  crisisHint: { color: "#8d6a58", fontSize: 12, lineHeight: 19 },
   screen: { backgroundColor: colors.paper, gap: 14, padding: 16, paddingBottom: 28 },
   hero: { borderRadius: 18, gap: 10, minHeight: 240, justifyContent: "flex-end", overflow: "hidden", padding: 18, ...shadow },
   heroImage: { borderRadius: 18 },

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import type { CrisisScenario } from "@/lib/crisis";
+import type { CrisisScenario } from "@oyano/shared";
 import { addDiaryEntry, listLocalCases, type CaseRecord } from "@/lib/store";
 
 const PROGRESS_STORAGE_KEY = "oyano_crisis_progress_v01";
