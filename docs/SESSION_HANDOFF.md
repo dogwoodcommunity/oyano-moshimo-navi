@@ -3748,9 +3748,14 @@ GitHubが必要な理由:
   - `npm run typecheck --workspace web` OK。
   - `npm run build --workspace web` OK。
   - `git diff --check` OK。
+  - 実装commit: `1c85bc3 Add cloud backup for family notebook`
+  - `origin/main` へpush済み。
+  - GitHub CI: run `32438702418` success。
   - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。後日Node 22へ上げる。
 - 未完了:
   - 本物のLLM相談は未実装。Plusの本命として別フェーズで実装する。
   - 危機モード（入院した夜・危篤と言われた・亡くなった直後の即答体験）は未実装。
   - 家族共有2名無料のUXと招待導線の最終調整は未実装。
   - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
+  - Vercel CLIで `npx vercel --prod --yes` を実行したが、`Not authorized` で失敗。`~/.vercel` と `VERCEL_TOKEN` も無いため、production反映にはVercel再ログインまたはtoken設定が必要。
+  - `https://oyano-moshimo-navi.vercel.app/home` はHTTP 200だが、確認時点では古いVercel cacheが返っており、今回のクラウド控えUIはまだ本番未反映。
