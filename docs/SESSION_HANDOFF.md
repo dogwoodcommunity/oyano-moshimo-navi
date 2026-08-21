@@ -4338,3 +4338,24 @@ GitHubが必要な理由:
   - 時間を食っているのは出力の生成（日本語1,800文字×6項目）。effortや入力量では変わらないことを実測で確認済み。
   - 利用者が増えてから速度に投資する順番でよい。
 - 残り: `supabase/funnel_events.sql` の本番適用。
+
+## 2026-08-21 追記 130
+
+- `supabase/funnel_events.sql` を本番Supabaseへ適用した。
+  - プロジェクト: `dogwoodcommunity's Project`（`ypnuxyfirlvbsqujocuy`）、Northeast Asia (Tokyo)。
+  - SQL Editorで実行し `Success. No rows returned`。
+  - `select public.funnel_summary(30);` で動作確認。`days: 30` と各項目0、`eventTotals: {}` が返ることを確認した。テーブルと集計関数の両方が正しく入っている。
+- **これで本番の設定は完了。** 以後、危機モードを開く・対象者を登録する・記録を書く・相談する、の4つが記録され、数字が溜まっていく。
+  - 適用前は `/api/events` のinsertが黙って失敗していた（`stored: false` を返すだけで利用者の操作は止めない設計）。今後は記録される。
+- 本番の最終状態:
+  - `https://oyano-moshimo-navi.vercel.app` に全機能を反映済み。smoke 37件成功。
+  - `ANTHROPIC_API_KEY` 設定済み。実応答をHTTP 200 / 28秒で確認。
+  - `CONSULT_DAILY_LIMIT=30`。最大でも1日$1.5程度。
+  - `funnel_events` テーブルと `funnel_summary` 関数を適用済み。
+- 残っている作業:
+  - **Supabase の Authentication > URL Configuration に本番URLをRedirect URLとして追加する。** 未実施。無いと家族招待の確認メールから戻れない。
+  - `/admin/funnel` を開くには `ADMIN_ACCESS_TOKEN` が必要。46日前に設定された値がVercelにあるが、値が不明なら設定し直す。
+  - アプリ（Expo）の実機表示確認。バンドルが通ることまでは確認済み、画面は未確認。
+  - Plusを売るかの判断。売るならiOSはApp内課金が必要（`docs/IN_APP_PURCHASE_PLAN.md`）。
+- 次に見る数字:
+  - `/admin/funnel` の「7日以内に2件目を書いた」割合。数%なら良い無料ツール、20%を超えるなら賭けてよい。この数字が出るまで価格は決めない。
