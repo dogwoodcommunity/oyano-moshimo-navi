@@ -1,5 +1,6 @@
 import * as Linking from "expo-linking";
 import { getSupabase } from "./supabase";
+import { authErrorMessage } from "@oyano/shared";
 
 const DEFAULT_REDIRECT_PATH = "/(tabs)/dashboard";
 
@@ -51,7 +52,8 @@ export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRE
   });
 
   if (error) {
-    return { sent: false, demo: false, message: error.message };
+    // Supabaseのエラーは英語で返る。そのまま出すと利用者には読めないので日本語へ直す。
+    return { sent: false, demo: false, message: authErrorMessage(error) };
   }
 
   return { sent: true, demo: false, message: "Magic Linkを送信しました。メールを確認してください。" };

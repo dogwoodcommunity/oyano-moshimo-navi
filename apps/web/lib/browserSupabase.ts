@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
+import { authErrorMessage } from "@oyano/shared";
 
 let browserClient: SupabaseClient | null = null;
 
@@ -85,7 +86,8 @@ export async function sendMagicLink(email: string, redirectPath: string): Promis
     }
   });
 
-  return error ? { ok: false, error: error.message } : { ok: true };
+  // Supabaseのエラーは英語で返る。そのまま出すと利用者には読めないので日本語へ直す。
+  return error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
 }
 
 function stripAuthParamsFromUrl(url: URL) {
