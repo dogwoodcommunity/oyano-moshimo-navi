@@ -112,7 +112,7 @@ export default function FamilyScreen() {
         </View>
         <View style={styles.policyText}>
           <Text style={styles.policyTitle}>無料招待枠</Text>
-          <Text style={styles.body}>残り目安 {freeSlotsLeft}名。3人目以降や複数の親を管理する場合はFamily Plusで扱います。</Text>
+          <Text style={styles.body}>残り目安 {freeSlotsLeft}名。もう1人ふやす場合や、2人目の親を登録する場合はFamily Plusで扱います。</Text>
         </View>
       </View>
 

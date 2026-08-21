@@ -4575,3 +4575,50 @@ SMTPの設定（`mail86.onamae.ne.jp:465` / `親のもしもナビ <info@bee-ch.
 
 文面を直したくなったら `supabase/auth-emails/` を編集して
 `node scripts/setup-auth-email.mjs --templates-only` を実行し直す。
+
+## 2026-08-21 追記 141
+
+無料の範囲を狭めた。**2冊目の手帳と、2人目の共有からPlus。**
+
+数字の定義を `packages/shared/src/plan.ts` に1か所へ集めた。
+
+```
+FREE_PLAN_NOTEBOOK_LIMIT = 1   無料で作れる手帳（対象者）
+FREE_PLAN_MEMBER_LIMIT   = 1   無料で招待できる人数（本人は数えない）
+```
+
+画面には「2人目から有料」と出るのにサーバーは3人まで通す、というずれが起きると
+利用者は理由の分からない拒否に当たる。3層すべてを同じ値に揃えてある。
+
+- `packages/shared/src/plan.ts`（Web・アプリ・サーバーが参照）
+- `supabase/family_invite_rpc.sql` と `supabase/admin_auth_hardening.sql` の `v_limit`
+- `apps/web/lib/family.ts` は shared を再輸出するだけにした
+
+### 手帳の上限をどこで止めるか
+
+Webの手帳は端末のlocalStorageにある。作成そのものは画面側でしか止められない。
+**本当の線引きはクラウドに上げるところ**に置いた。
+
+- 画面（`/start`）: 開いた時点で埋まっていれば、11択を押せなくして先に伝える。
+  押してから断られるのがいちばん徒労になるため。Plusへの導線を出す。
+- サーバー（`/api/notebook/sync` POST）: 上限を超える**新しい**手帳はクラウドへ上げない。
+  すでにある手帳の更新は上限に関係なく通す。端末の中のデータは消さない。
+- アプリ（`createPersonForFamily`）: 同じ基準で止める。
+  Webでは断られアプリでは通る、という食い違いを作らない。
+
+`plan` は `/api/notebook/sync` の応答に含めてlocalStorageへ控える
+（`oyano_plan_v01`）。一度もクラウドに触っていない人は free として扱う。
+
+### 断り方
+
+「上限です」で終わらせず、いま持っているものは無事だと必ず添えている。
+
+```
+無料で作れる手帳は1冊です。もう1人分をつくるにはPlusが要ります。
+いまの手帳はこれまで通り使えます。
+```
+
+### 未適用
+
+**SQLの変更は本番へ未適用。** `supabase/family_invite_rpc.sql` を
+Supabaseのエディタで流し直す必要がある。流すまで、招待は2人まで通る。

@@ -1,5 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { buildDiagnosisResult, type DiagnosisAnswers, type ParentStatus } from "@oyano/shared";
+import {
+  buildDiagnosisResult,
+  canCreateNotebook,
+  NOTEBOOK_LIMIT_MESSAGE,
+  type DiagnosisAnswers,
+  type ParentStatus
+} from "@oyano/shared";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type AnyRecord = Record<string, any>;
@@ -162,6 +168,15 @@ async function getOrCreateFamily(supabase: NonNullable<ReturnType<typeof getServ
   return family.id as string;
 }
 
+/** 参加している家族のうち、どれか1つでもPlusならPlusとして扱う。 */
+async function planForFamilies(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  familyIds: string[]
+): Promise<"free" | "plus"> {
+  const { data } = await supabase.from("families").select("plan").in("id", familyIds);
+  return asArray<AnyRecord>(data).some((row) => row.plan === "plus") ? "plus" : "free";
+}
+
 export async function GET(request: NextRequest) {
   const authorized = await authorize(request);
   if ("error" in authorized) return authorized.error;
@@ -174,7 +189,11 @@ export async function GET(request: NextRequest) {
 
   if (membershipError) return jsonError(membershipError.message, 500);
   const familyIds = asArray<AnyRecord>(memberships).map((item) => item.family_id).filter(Boolean);
-  if (familyIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [] });
+  if (familyIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [], plan: "free" });
+
+  // 手帳を何冊まで作れるかの判定に使うため、planも返す。
+  // これが無いと、クライアントは上限を知らないまま2冊目を作らせてしまう。
+  const plan = await planForFamilies(supabase, familyIds);
 
   const { data: people, error: peopleError } = await supabase
     .from("people")
@@ -185,7 +204,7 @@ export async function GET(request: NextRequest) {
   if (peopleError) return jsonError(peopleError.message, 500);
 
   const personIds = asArray<AnyRecord>(people).map((person) => person.id).filter(Boolean);
-  if (personIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [] });
+  if (personIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [], plan });
 
   const [{ data: tasks, error: tasksError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from("tasks").select("*").in("person_id", personIds).order("due_date", { ascending: true }),
@@ -291,9 +310,21 @@ export async function POST(request: NextRequest) {
     return jsonError(error instanceof Error ? error.message : "家族データの準備に失敗しました。", 500);
   }
 
+  // 無料プランで作れる手帳の数を、クラウド側でも止める。
+  // 画面側の判定だけでは、古い端末や直接呼び出しをすり抜けてしまう。
+  // すでにクラウドにある手帳の更新は、上限に関係なく通す。止めるのは新しく増えるぶんだけ。
+  const plan = await planForFamilies(supabase, [familyId]);
+  const { data: currentPeople, error: currentPeopleError } = await supabase
+    .from("people")
+    .select("id")
+    .eq("family_id", familyId);
+  if (currentPeopleError) return jsonError(currentPeopleError.message, 500);
+  let peopleInCloud = asArray<AnyRecord>(currentPeople).length;
+
   let syncedPeople = 0;
   let syncedTasks = 0;
   let syncedEntries = 0;
+  let skippedPeople = 0;
 
   for (const localCase of localCases) {
     const localCaseId = String(localCase.id);
@@ -321,10 +352,19 @@ export async function POST(request: NextRequest) {
       updated_at: now
     };
 
-    const personId = existingPeople?.[0]?.id
-      ? await updatePerson(supabase, existingPeople[0].id, personRow)
+    const existingPersonId = existingPeople?.[0]?.id;
+
+    if (!existingPersonId && !canCreateNotebook(plan, peopleInCloud)) {
+      // 上限を超える新しい手帳は、クラウドへ上げない。端末の中には残る。
+      skippedPeople += 1;
+      continue;
+    }
+
+    const personId = existingPersonId
+      ? await updatePerson(supabase, existingPersonId, personRow)
       : await insertPerson(supabase, personRow);
 
+    if (!existingPersonId) peopleInCloud += 1;
     syncedPeople += 1;
 
     const { data: existingTasks, error: existingTasksError } = await supabase
@@ -397,7 +437,16 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  return NextResponse.json({ ok: true, familyId, syncedPeople, syncedTasks, syncedEntries });
+  return NextResponse.json({
+    ok: true,
+    familyId,
+    plan,
+    syncedPeople,
+    syncedTasks,
+    syncedEntries,
+    skippedPeople,
+    ...(skippedPeople > 0 ? { notice: NOTEBOOK_LIMIT_MESSAGE } : {})
+  });
 }
 
 async function updatePerson(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, id: string, row: AnyRecord) {

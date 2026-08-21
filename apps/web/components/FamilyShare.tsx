@@ -199,7 +199,7 @@ export function FamilyShare() {
             <p className="family-quota">
               {summary.plan === "plus"
                 ? "Plusのため、人数の制限はありません。"
-                : `あなたのほかに${summary.limit}人まで無料です。残り${remaining}人分。`}
+                : `無料で一緒に見られるのは、あなたのほかに${summary.limit}人までです。残り${remaining}人分。`}
             </p>
             <ul className="family-members">
               {summary.members.map((member, index) => (

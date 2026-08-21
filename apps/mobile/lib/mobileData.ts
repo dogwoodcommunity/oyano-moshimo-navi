@@ -2,6 +2,7 @@ import type { DiagnosisResult, ParentStatus } from "@oyano/shared";
 import { trackFunnel } from "@/lib/funnel";
 import { demoPerson, demoResult, demoTimeline } from "./demoData";
 import { getSupabase } from "./supabase";
+import { canCreateNotebook, NOTEBOOK_LIMIT_MESSAGE } from "@oyano/shared";
 
 export type MobilePersonProfile = {
   fullName?: string;
@@ -433,6 +434,17 @@ export async function createPersonForFamily({
 
   const familyId = await fetchFamilyId(anchorPersonId);
   if (!familyId) return { source: "supabase", error: "家族ボードが見つかりませんでした。" };
+
+  // 無料で作れる手帳の数を、Webと同じ基準で止める。
+  // Webでは断られてアプリでは通る、という食い違いを作らない。
+  const [{ data: familyRow }, { data: existingPeople }] = await Promise.all([
+    supabase.from("families").select("plan").eq("id", familyId).single(),
+    supabase.from("people").select("id").eq("family_id", familyId)
+  ]);
+  const plan = (familyRow as { plan?: string } | null)?.plan === "plus" ? "plus" : "free";
+  if (!canCreateNotebook(plan, Array.isArray(existingPeople) ? existingPeople.length : 0)) {
+    return { source: "supabase", error: NOTEBOOK_LIMIT_MESSAGE };
+  }
 
   const profile: MobilePersonProfile = {
     displayName: normalizedName,

@@ -91,7 +91,8 @@ begin
     return v_invite;
   end if;
 
-  v_limit := case when v_plan = 'plus' then null else 2 end;
+  -- 無料で招待できる人数。packages/shared/src/plan.ts の FREE_PLAN_MEMBER_LIMIT と揃えること。
+  v_limit := case when v_plan = 'plus' then null else 1 end;
 
   if v_limit is not null then
     select

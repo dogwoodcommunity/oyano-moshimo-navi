@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
-import { createCase } from "@/lib/store";
+import { createCase, notebookQuota, NotebookLimitError } from "@/lib/store";
 
 type TocItem = {
   num: string;
@@ -41,6 +41,17 @@ export default function StartPage() {
   const router = useRouter();
   const [choosingStatus, setChoosingStatus] = useState<ParentStatus | null>(null);
   const [chooseError, setChooseError] = useState<string | null>(null);
+  const [limitReached, setLimitReached] = useState(false);
+
+  // 開いた時点で埋まっているなら、選ばせる前に伝える。
+  // 11個の選択肢を読んで押してから断られるのは、いちばん徒労になる。
+  useEffect(() => {
+    const quota = notebookQuota();
+    if (!quota.canCreate) {
+      setChooseError(quota.message);
+      setLimitReached(true);
+    }
+  }, []);
 
   useEffect(() => {
     router.prefetch("/diagnosis");
@@ -53,8 +64,15 @@ export default function StartPage() {
     try {
       const record = await createCase(status);
       router.push(`/diagnosis?caseId=${record.id}&status=${status}`);
-    } catch {
-      setChooseError("登録画面を開けませんでした。もう一度、近い状況を押してください。");
+    } catch (error) {
+      // 上限に当たったときは、失敗ではなく案内として見せる。
+      // 押した人は何も間違えていないので、原因と次の一手だけを出す。
+      setChooseError(
+        error instanceof NotebookLimitError
+          ? error.message
+          : "登録画面を開けませんでした。もう一度、近い状況を押してください。"
+      );
+      setLimitReached(error instanceof NotebookLimitError);
       setChoosingStatus(null);
     }
   }
@@ -90,6 +108,7 @@ export default function StartPage() {
           <div className="toc-list">
             {primaryItems.map((item) => (
               <StatusRow
+                disabled={limitReached}
                 choosingStatus={choosingStatus}
                 item={item}
                 key={item.key}
@@ -105,6 +124,7 @@ export default function StartPage() {
           <div className="toc-list">
             {moreItems.map((item) => (
               <StatusRow
+                disabled={limitReached}
                 choosingStatus={choosingStatus}
                 item={item}
                 key={item.key}
@@ -115,7 +135,17 @@ export default function StartPage() {
           </div>
         </details>
 
-        {chooseError ? <p className="toc-error" role="status">{chooseError}</p> : null}
+        {chooseError ? (
+          <div className="toc-error" role="status">
+            <p>{chooseError}</p>
+            {limitReached ? (
+              <p className="toc-error-actions">
+                <Link href="/plans#plus">Plusを見る</Link>
+                <Link className="secondary" href="/home">いまの手帳へ戻る</Link>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </section>
     </main>
   );
@@ -124,10 +154,12 @@ export default function StartPage() {
 function StatusRow({
   choosingStatus,
   item,
+  disabled,
   onChoose,
   tone
 }: {
   choosingStatus: ParentStatus | null;
+  disabled?: boolean;
   item: TocItem;
   onChoose: (status: ParentStatus) => void;
   tone: "teal" | "sand";
@@ -136,7 +168,7 @@ function StatusRow({
   return (
     <button
       className={`toc-row ${tone} ${isChoosing ? "is-opening" : ""}`}
-      disabled={Boolean(choosingStatus)}
+      disabled={Boolean(choosingStatus) || Boolean(disabled)}
       onClick={() => onChoose(item.key)}
       type="button"
     >

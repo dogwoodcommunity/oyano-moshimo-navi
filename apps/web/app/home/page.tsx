@@ -13,6 +13,7 @@ import {
   listLocalCases,
   replaceLocalNotebook,
   updateCaseProfile,
+  writePlan,
   type CaseRecord,
   type DiaryAttachment,
   type DiaryEntry,
@@ -825,8 +826,13 @@ export default function FamilyBoardPage() {
       return;
     }
 
+    writePlan(result.plan);
     setCloudStatus("synced");
-    setCloudMessage(`クラウドに控え保存しました。対象者${result.syncedPeople ?? cases.length}人、記録${result.syncedEntries ?? allDiaryEntriesForSync().length}件。`);
+    // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
+    const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
+    setCloudMessage(
+      `クラウドに控え保存しました。対象者${result.syncedPeople ?? cases.length}人、記録${result.syncedEntries ?? allDiaryEntriesForSync().length}件。${notice}`
+    );
   }
 
   async function restoreNotebookFromCloud() {
@@ -845,6 +851,7 @@ export default function FamilyBoardPage() {
       return;
     }
 
+    writePlan(result.plan);
     replaceLocalNotebook({
       cases: Array.isArray(result.cases) ? result.cases : [],
       diaryEntries: Array.isArray(result.diaryEntries) ? result.diaryEntries : []

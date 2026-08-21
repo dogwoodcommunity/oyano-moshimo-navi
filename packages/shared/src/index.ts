@@ -1,3 +1,4 @@
+export * from "./plan";
 export * from "./authErrors";
 export * from "./funnel";
 export * from "./consult";

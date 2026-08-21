@@ -9697,6 +9697,32 @@ textarea {
   padding: 12px 14px;
 }
 
+.toc-error p { margin: 0; }
+
+/* 上限に当たった人に、次の一手を2つだけ出す。 */
+.toc-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 10px !important;
+}
+
+.toc-error-actions a {
+  background: #276447;
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 800;
+  padding: 10px 16px;
+  text-decoration: none;
+}
+
+.toc-error-actions a.secondary {
+  background: transparent;
+  border: 1px solid rgba(141, 63, 30, 0.35);
+  color: #8d3f1e;
+}
+
 .app-band {
   background: var(--surface);
   border: 1px solid rgba(224, 215, 196, 0.8);

@@ -4,7 +4,7 @@ import { FamilyShare } from "@/components/FamilyShare";
 
 export const metadata: Metadata = {
   title: "家族共有",
-  description: "同じ手帳を家族で見られるようにします。あなたのほかに2人まで無料です。"
+  description: "同じ手帳を家族で見られるようにします。あなたのほかに1人までは無料です。"
 };
 
 export default function FamilyPage() {

@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
+import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
 import { getServerSupabase, getUserSupabase } from "@/lib/serverSupabase";
 
-/** 無料プランで、オーナー以外に受け入れられる人数。SQL側の create_family_invite と同じ値。 */
-export const FREE_PLAN_MEMBER_LIMIT = 2;
+// 数字の定義は packages/shared/src/plan.ts にある。SQLの create_family_invite も同じ値。
+export { FREE_PLAN_MEMBER_LIMIT };
 
 type ServiceClient = NonNullable<ReturnType<typeof getServerSupabase>>;
 type UserClient = NonNullable<ReturnType<typeof getUserSupabase>>;
@@ -97,11 +98,11 @@ const rpcMessages: Record<string, string> = {
   invite_requires_family_admin: "招待できるのは、手帳を作った人だけです。",
   admin_invite_requires_owner: "管理者として招待できるのは、手帳を作った人だけです。",
   family_not_found: "家族の情報が見つかりませんでした。",
-  free_plan_limit_reached: `無料で共有できるのは、あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人までです。3人目以降はPlusで広げられます。`,
+  free_plan_limit_reached: `無料で一緒に見られるのは、あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人までです。もう1人ふやすにはPlusが要ります。`,
   invite_invalid_or_expired: "この招待は使えなくなっています。招待した家族に、もう一度送ってもらってください。",
   invite_has_reserved_role: "この招待は使えません。もう一度送ってもらってください。",
   invite_email_mismatch: "招待されたメールアドレスと、いまログインしているアドレスが違います。招待メールが届いたアドレスで確認してください。",
-  family_limit_reached: `この手帳は、無料で共有できる${FREE_PLAN_MEMBER_LIMIT}人分が埋まっています。招待した家族にPlusを検討してもらってください。`
+  family_limit_reached: `この手帳の無料の枠（あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人）は埋まっています。招待した家族にPlusを検討してもらってください。`
 };
 
 export function messageForRpcError(error: { message?: string } | null | undefined): string {

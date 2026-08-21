@@ -3,8 +3,11 @@
 import { trackFunnel } from "@/lib/funnel";
 import {
   buildDiagnosisResult,
+  canCreateNotebook,
   createHandoffToken,
+  NOTEBOOK_LIMIT_MESSAGE,
   SENSITIVE_INFO_CONSENT_VERSION,
+  type FamilyPlan,
   type DiagnosisAnswers,
   type DiagnosisResult,
   type ParentStatus
@@ -67,6 +70,7 @@ export type NotebookExport = {
 };
 
 const STORAGE_KEY = "oyano_cases_v03";
+const PLAN_STORAGE_KEY = "oyano_plan_v01";
 const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
 let memoryCases: CaseRecord[] = [];
 let memoryDiaryEntries: DiaryEntry[] = [];
@@ -242,7 +246,48 @@ async function postJson<T>(path: string, body: unknown): Promise<T | null> {
   }
 }
 
+/**
+ * いまのプラン。サーバーから返ってきた値を控えてある。
+ * 一度もクラウドに触っていない人は分からないので free として扱う。
+ */
+export function readPlan(): FamilyPlan {
+  const storage = getLocalStorage();
+  return storage?.getItem(PLAN_STORAGE_KEY) === "plus" ? "plus" : "free";
+}
+
+export function writePlan(plan: string | null | undefined) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(PLAN_STORAGE_KEY, plan === "plus" ? "plus" : "free");
+  } catch {
+    // 保存できなくても free 扱いで動く。
+  }
+}
+
+/** 2冊目の手帳を作れるか。作れない理由も返す。 */
+export function notebookQuota(): { canCreate: boolean; message: string; count: number } {
+  const count = readCases().length;
+  return {
+    canCreate: canCreateNotebook(readPlan(), count),
+    message: NOTEBOOK_LIMIT_MESSAGE,
+    count
+  };
+}
+
+/** 無料の上限に当たったことを、呼び出し側が見分けられるようにする。 */
+export class NotebookLimitError extends Error {
+  constructor() {
+    super(NOTEBOOK_LIMIT_MESSAGE);
+    this.name = "NotebookLimitError";
+  }
+}
+
 export async function createCase(selectedStatus: ParentStatus): Promise<CaseRecord> {
+  if (!notebookQuota().canCreate) {
+    throw new NotebookLimitError();
+  }
+
   const record: CaseRecord = {
     id: createLocalId("case"),
     selectedStatus,
