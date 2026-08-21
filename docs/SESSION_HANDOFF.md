@@ -4302,3 +4302,18 @@ GitHubが必要な理由:
   - fast modeが使えない環境（研究プレビューのため利用可否がある）では `BadRequestError` を捕まえて通常速度へ自動で落とす。速さのために機能ごと止めない。
 - 未確認:
   - fast mode を有効にしたときの実測時間。有効化して同じリクエストで比較する必要がある。
+
+## 2026-08-21 追記 128
+
+- 本番で `429 consult_busy` が出た。これは自前の1日上限（`rate_limit_exceeded`）ではなく、**Anthropic側のレート制限**（`Anthropic.RateLimitError`）。
+- 原因の候補:
+  - 高速モードの枠。fast modeは通常枠とは別にレート制限が数えられる。
+  - Anthropicアカウントの利用枠（Tier）。作成直後のアカウントは1分あたりのトークン数が低い。
+- 見つけた不備:
+  - 追記127のfast mode実装は `BadRequestError`（使えない）だけを通常速度へ落としていた。
+  - **`RateLimitError`（高速枠が混んでいる）では落ちずにそのまま失敗していた。** 高速枠は別枠なので、ここで諦めると通常枠なら通る相談まで失敗する。
+- 対応:
+  - `RateLimitError` も通常速度へのフォールバック対象に加えた。
+- 残る確認:
+  - fast modeを有効にしていた場合、フォールバックが効いて通るようになったか。
+  - 有効にしていなかった場合は、Anthropicのアカウント利用枠の問題。https://console.anthropic.com/settings/limits で確認する。

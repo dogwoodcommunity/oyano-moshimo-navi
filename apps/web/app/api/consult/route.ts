@@ -116,8 +116,10 @@ export async function POST(request: NextRequest) {
           betas: ["fast-mode-2026-02-01"],
           speed: "fast"
         }).catch((error: unknown) => {
-          if (error instanceof Anthropic.BadRequestError) {
-            console.warn("[consult] fast mode unavailable, falling back to standard speed");
+          // 使えない場合（BadRequest）だけでなく、高速枠が混んでいる場合（RateLimit）も落とす。
+          // 高速枠は通常枠と別に数えられるため、ここで諦めると通常なら通る相談まで失敗する。
+          if (error instanceof Anthropic.BadRequestError || error instanceof Anthropic.RateLimitError) {
+            console.warn("[consult] fast mode unavailable or busy, falling back to standard speed");
             return client.messages.create(params);
           }
           throw error;
