@@ -15,7 +15,7 @@ export default function FamilyPage() {
         <h1>一人で抱えないために、同じ手帳を見てもらう。</h1>
         <p className="family-lead">
           病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。
-          あなたのほかに2人まで、無料で招待できます。
+          あなたのほかに1人まで、無料で招待できます。
         </p>
         <div className="family-hero-actions">
           <Link className="secondary" href="/home">手帳へ戻る</Link>
