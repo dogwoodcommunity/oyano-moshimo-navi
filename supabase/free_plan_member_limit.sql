@@ -1,19 +1,14 @@
--- Family invite RPC with free-plan limit enforcement.
--- Run after schema.sql and production_rls.sql.
-
-create extension if not exists "pgcrypto";
-
-alter table family_invites
-  add column if not exists relationship text;
-
-alter table family_invites
-  add column if not exists created_by uuid references profiles(id) on delete set null;
-
-alter table family_invites
-  add column if not exists accepted_at timestamptz;
-
-create unique index if not exists idx_family_invites_token_unique
-on family_invites(token);
+-- 無料プランの人数上限を1人に下げる。
+--
+-- 招待を作る側（create_family_invite）と、受け取る側（accept_family_invite）の
+-- 両方に上限が書かれている。片方だけ直すと、招待は作れないのに受け取りは通る、
+-- あるいはその逆になる。必ず一緒に流すこと。
+--
+-- 数字の元は packages/shared/src/plan.ts の FREE_PLAN_MEMBER_LIMIT。
+--
+-- この2つの関数定義は supabase/family_invite_rpc.sql と
+-- supabase/admin_auth_hardening.sql の内容と同一。差し替えても
+-- 管理者まわりの保護（app_admins のポリシー）には触れない。
 
 create or replace function public.create_family_invite(
   p_family_id uuid,

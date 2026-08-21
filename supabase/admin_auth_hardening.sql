@@ -212,7 +212,9 @@ begin
         from family_members fm
         where fm.family_id = f.id
           and fm.user_id is distinct from f.owner_user_id
-      ) < 2
+      -- 無料で受け入れられる人数。packages/shared/src/plan.ts の
+      -- FREE_PLAN_MEMBER_LIMIT および create_family_invite の v_limit と揃えること。
+      ) < 1
     );
 
   if not found then

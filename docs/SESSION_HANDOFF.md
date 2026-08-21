@@ -4678,3 +4678,52 @@ CSSで描いている。プロジェクトの他のアイコン（`.toc-icon`）
 読み上げには `role="img"` と `aria-label`（済み／いま／このあと）で言葉を渡す。
 丸の中のテキストが空であること、本文に漢字1文字が残っていないこと、
 バッジ中心と見出し中心が一致したままであることを実測で確認した。
+
+## 2026-08-21 追記 144
+
+### accept 側の上限を見落としていた
+
+追記141で `create_family_invite` の `v_limit` だけを1に変えたが、
+**`accept_family_invite` の中に別の上限が直書きされていた**（`) < 2`）。
+招待を作る側だけ直しても、受け取る側で2人目が通ってしまう。両方1にした。
+
+無料プランの人数上限が書かれている場所は、いま4か所:
+
+1. `packages/shared/src/plan.ts` の `FREE_PLAN_MEMBER_LIMIT`（Web・アプリ・サーバー）
+2. `create_family_invite` の `v_limit`
+3. `accept_family_invite` の `) < 1`
+4. （手帳の冊数は `FREE_PLAN_NOTEBOOK_LIMIT` の1か所のみ）
+
+SQL側の2つには、1を参照するようコメントを入れてある。
+
+### SQLをターミナルから流せるようにした
+
+`supabase/free_plan_member_limit.sql` と `scripts/run-sql.mjs`。
+
+Supabase Management API の `POST /v1/projects/{ref}/database/query` を使う。
+画面のSQLエディタを開かなくてよい。
+
+```
+printf "トークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
+export SUPABASE_ACCESS_TOKEN
+node scripts/run-sql.mjs --check                        いまの上限を見るだけ
+node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
+```
+
+`--check` は本番の関数定義そのものから上限を読み取って表示する。
+流す前と後で数字が変わったことを目で確認できる。
+
+移行ファイルは関数2つの差し替えと権限付与だけ。テーブルもポリシーも触らない。
+2つの関数定義は `family_invite_rpc.sql` と `admin_auth_hardening.sql` の
+どちらとも同一なので、管理者まわりの保護を巻き戻すことはない（diffで確認済み）。
+模擬サーバーで通しの動作を確認した。
+
+### この作業環境からは本番へ出せない
+
+```
+api.vercel.com   403
+vercel.com       403
+api.supabase.com 403
+```
+
+いずれもネットワークポリシーによる遮断。利用者自身のパソコンで実行する。
