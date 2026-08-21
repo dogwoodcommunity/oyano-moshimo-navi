@@ -3759,3 +3759,64 @@ GitHubが必要な理由:
   - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
   - Vercel CLIで `npx vercel --prod --yes` を実行したが、`Not authorized` で失敗。`~/.vercel` と `VERCEL_TOKEN` も無いため、production反映にはVercel再ログインまたはtoken設定が必要。
   - `https://oyano-moshimo-navi.vercel.app/home` はHTTP 200だが、確認時点では古いVercel cacheが返っており、今回のクラウド控えUIはまだ本番未反映。
+
+## 2026-08-21 追記 110
+
+- 経緯:
+  - Codexが利用制限に達したため、Claude Code側で実装を引き継いだ。
+  - 追記109の未完了リストのうち、ユーザー選択により `危機モード` を最優先で実装した。
+- 判断:
+  - 危機モードは「読み物」ではなく「即答」にする。登録・入力・ログインなしで、いま必要な手順だけを順番に出す。
+  - パニック時に効くのは、やることの提示だけでなく `いまはやらなくていいこと` の明示だと考え、全シナリオに入れた。
+  - 深夜の病院・葬儀の場で通信が不安定でも開ける必要があるため、PWAでプリキャッシュする対象にした。
+  - 医療・法律・税務の結論は断定しない方針を維持。相続放棄3か月・相続税10か月・死亡届7日は「一般的な目安」として示し、個別判断は専門家へ寄せた。
+- 対応:
+  - `apps/web/lib/crisis.ts` を追加。
+    - 3シナリオを定義。`hospital-night`（救急・入院になった）、`critical`（危篤・看取りと言われた）、`just-died`（亡くなった直後）。
+    - 各シナリオを `いま5分でやること` / `今夜・今日のうちに` / `明日以降で間に合うこと` の3段に分割。
+    - `いまはやらなくていいこと`、`病院・葬儀社・役所から聞かれやすいこと`、`捨てない・消さないもの`、`家族への第一報テンプレート` を追加。
+    - `CRISIS_EMERGENCY_NOTE`（命に関わる状態なら119番）と `CRISIS_SAFETY_NOTE`（断定しない旨）を共通定数化。
+  - `apps/web/app/crisis/page.tsx` を追加。
+    - 119番の案内を最上部に置き、3つの状況を大きなボタンで選ばせる入口。
+  - `apps/web/app/crisis/[key]/page.tsx` を追加。
+    - `generateStaticParams` / `generateMetadata` 対応。ビルド時に3ページを静的生成。
+    - ステップ、第一報テンプレート、やらなくていいこと、聞かれること、捨てないもの、関連ガイド導線を表示。
+  - `apps/web/components/CrisisSteps.tsx` を追加。
+    - ステップのチェック状態を `oyano_crisis_progress_v01` としてlocalStorageに保持。
+    - `いますぐの項目 n / m 済み` を表示し、全部済んだら「ここから先は明日でも間に合います」に切り替え。
+    - `今日の記録に残す` で、済んだこと／まだのことを本文にした日記エントリ（mood: urgent）を手帳へ追加。
+    - 手帳未作成の場合は `/start` への導線に切り替え。
+    - 第一報テンプレートのコピー。クリップボードAPIが使えない端末では長押し選択を案内する。
+  - `apps/web/app/home/page.tsx`
+    - 手帳表紙の直下に `いま、急なことが起きている` の緊急バナーを追加（手帳あり・なし両方で表示）。
+  - `apps/web/app/layout.tsx`
+    - ヘッダーnavに `急なとき` を追加。critical CSSにも `.nav-crisis` を入れて初期表示の崩れを防止。
+  - `apps/web/public/sw.js`
+    - `CACHE_VERSION` を `oyano-moshimo-navi-v18` に更新。
+    - `PRECACHE_PAGE_URLS` を追加し、危機モード4URLをinstall時に先読みキャッシュ。未訪問でもオフラインで開ける。
+    - オフライン時のフォールバックを修正。従来は常に `/offline` を返していたが、まずリクエスト自身のキャッシュを返すようにした。
+  - `apps/web/app/sitemap.ts`
+    - `/crisis` と3シナリオを追加。
+  - `apps/web/app/globals.css`
+    - `.crisis-*` を追加。片手・大きめタップ領域・390px幅前提。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。
+  - `pnpm --filter web run build` OK。`/crisis/[key]` が3ページSSGされることを確認。
+  - `next start -p 3010` + Chromium 390x844 で確認。
+    - `/crisis`、`/crisis/hospital-night`、`/crisis/critical`、`/crisis/just-died` が200、存在しないkeyは404。
+    - ステップのチェックがリロード後も保持されることを確認。
+    - 手帳なし → `まず手帳を作る`、手帳あり → `今日の記録に残す` に切り替わることを確認。
+    - 記録実行後、`oyano_diary_entries_v01` に mood=urgent のエントリが1件入り、本文に済んだこと／まだのことが入ることを確認。
+    - 第一報テンプレートのコピーが成功し、ボタンが `コピーしました` に変わることを確認。
+    - `/home` の緊急バナーが表示され、タップで `/crisis` へ遷移することを確認。
+    - 3ページとも横スクロールが発生しないことを確認。
+    - JSエラー・consoleエラーなし。
+  - オフライン確認:
+    - `/home` でSW（v18）がactiveになった後にネットワークを切り、未訪問の `/crisis/just-died` と `/crisis` が実コンテンツで開くことを確認。
+- 注意:
+  - `pnpm --filter web run lint` は ESLint未設定の対話プロンプトが出て失敗する。今回の変更とは無関係の既存状態。typecheckとbuildで代替した。
+- 未完了（追記109から継続）:
+  - 本物のLLM相談は未実装。
+  - 家族共有2名無料のUXと招待導線の最終調整は未実装。
+  - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
+  - Vercelのproduction反映は `Not authorized` のまま。Vercel再ログインまたは `VERCEL_TOKEN` 設定が必要。今回の危機モードも本番未反映。

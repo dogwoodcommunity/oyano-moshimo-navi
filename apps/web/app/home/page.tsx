@@ -915,6 +915,15 @@ export default function FamilyBoardPage() {
         </nav>
       </section>
 
+      <Link className="crisis-banner" href="/crisis">
+        <span className="crisis-banner-badge">急なとき</span>
+        <span className="crisis-banner-body">
+          <strong>いま、急なことが起きている</strong>
+          <small>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</small>
+        </span>
+        <span className="crisis-banner-chev" aria-hidden="true">›</span>
+      </Link>
+
       {!loaded ? (
         <section className="nb-card board-empty">
           <h2>読み込み中です</h2>
