@@ -4399,3 +4399,32 @@ GitHubが必要な理由:
   - `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
   - Plusを売るかの判断。売るならiOSはApp内課金が必要（`docs/IN_APP_PURCHASE_PLAN.md`）。
 - 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
+
+## 2026-08-21 追記 133
+
+認証メールの文面を直そうとして、**それより重い問題**に当たった。
+
+- Supabaseは、独自SMTPを設定していないプロジェクトのメールテンプレートを
+  編集させない。画面に貼ろうとしても入力できない。
+- さらに重いのはこちら。標準のメール送信では
+  **「Supabaseの組織メンバーとして登録されたアドレス」にしかメールが届かない。**
+  それ以外は `Email address cannot be used as it is not authorized` で拒否される。
+- つまり **いまの本番は、開発者本人以外は誰もログインできない。**
+  家族を招待しても、招待された人は参加できない。
+  昨日までの検証が全部通っていたのは、使ったアドレスが組織メンバーだったから。
+- これは「配る前にやること」ではなく、**配れない理由**にあたる。
+
+出典: https://github.com/orgs/supabase/discussions/29370
+
+### 先に直したこと
+
+`sendMagicLink` はSupabaseのエラーをそのまま画面に出していた。上の拒否も
+英語のまま表示される。組織外の人が触ると、英語のエラーだけを見て終わる。
+`packages/shared/src/authErrors.ts` を足し、Web・アプリの送信口で日本語へ直した。
+利用者の入力が悪いと読める書き方は避け、こちらの準備不足だと分かる文言にした。
+
+### 次にやること
+
+Resendで `bee-ch.co.jp` を認証し、SupabaseにSMTPを設定する。
+手順は `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md`。
+SMTPが入ると、テンプレートの編集も同時に解ける。

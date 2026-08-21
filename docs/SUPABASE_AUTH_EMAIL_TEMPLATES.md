@@ -5,6 +5,11 @@ Supabase Dashboard に貼る認証メールの文面。
 貼る場所: **Authentication → Emails → Templates**
 https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/templates
 
+## いまの状態
+
+**まだ貼れない。** 独自SMTPを設定するまで、Supabaseがテンプレートを編集させない。
+先に「先に独自SMTPが要る」の節をやること。
+
 ## 貼るのは2つだけ
 
 このアプリが Supabase に送らせているメールは、マジックリンクだけ。
@@ -110,31 +115,53 @@ Body:
 
 ---
 
-## 差出人と送信数の制限（文面より先に効いてくる話）
+## 先に独自SMTPが要る（2026-08-21 に判明）
 
-文面を直しても、**Supabaseの標準のメール送信は本番で使えない。**
+**文面を貼ろうとしても入力できない。** Supabaseが標準のメール送信のままでは
+テンプレートを編集させない仕様に変わっているため。文面より先にSMTPを設定する。
 
-- 差出人は `noreply@mail.app.supabase.io` 固定。`親のもしもナビ` にはできない。
-- 送信数に上限がある（既定で1時間あたり数通）。上限を超えると**黙って届かなくなる**。
-  エラーは画面に出ず、利用者は「メールが来ない」としか分からない。
-- Supabase自身が、標準の送信は開発用であり本番では使うなと書いている。
+そして、止まっているのは文面だけではない。
 
-利用者が増える前に、独自SMTPへ切り替える必要がある。
+> emails can only be sent to email addresses in your project's organization
 
-貼る場所: **Authentication → Emails → SMTP Settings**
+標準の送信では、**Supabaseの組織メンバーとして登録されたアドレスにしかメールが届かない。**
+それ以外の人が入れると `Email address cannot be used as it is not authorized` で弾かれる。
+
+つまり **いまの本番は、開発者本人以外は誰もログインできない。**
+家族を招待しても、招待された人はログインできないので参加できない。
+これは「人に配る前にやること」ではなく、**人に配れない理由**にあたる。
+
+出典:
+- https://github.com/orgs/supabase/discussions/29370
+- https://supabase.com/docs/guides/auth/auth-smtp
+
+### 手順
+
+1. Resend でアカウントを作る（https://resend.com）
+2. Domains → Add Domain → `bee-ch.co.jp`
+3. 表示された **MX / TXT（SPF）/ TXT（DKIM）** を `bee-ch.co.jp` のDNSへ追加する
+4. Resend の画面で Verified になるまで待つ（数分〜数時間）
+5. API Keys → Create API Key（Sending access）
+6. Supabase の **Authentication → Emails → SMTP Settings** で Enable にして入れる
 
 | 項目 | 値 |
 | --- | --- |
 | Sender email | `info@bee-ch.co.jp` |
 | Sender name | `親のもしもナビ` |
-| Host / Port / User / Pass | 使うサービスの値 |
+| Host | `smtp.resend.com` |
+| Port | `465` |
+| Username | `resend` |
+| Password | ResendのAPIキー |
 
-送信サービスは Resend / SendGrid / Amazon SES など。
-どれも `bee-ch.co.jp` のDNSに SPF / DKIM を足す作業が要る。
-これをやらないと、Gmailで迷惑メール扱いになりやすい。
+7. 保存すると **Templates が編集できるようになる。** そこで上の2つを貼る。
 
-**判断**: いまは自分ひとりで試している段階なので、標準のままでよい。
-人に配る前に必ずやる。忘れると、届かない原因が一番分かりにくい形で出る。
+DNSにSPF / DKIMを入れないと、Gmailで迷惑メール扱いになりやすい。
+入院直後の家族が受け取るメールが迷惑メールに入ると、気づかれずに終わる。
+
+### 送信数
+
+Resendの無料枠は1日100通・月3,000通。いまの規模なら足りる。
+足りなくなるのは、それが良い知らせのときだけ。
 
 ## 貼ったあとの確認
 
