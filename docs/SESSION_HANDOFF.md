@@ -15,6 +15,37 @@
 - Expoアプリ内には外部Web決済CTAを置かない
 - Family Plus等のアプリ内デジタル課金はIAP余地を残す
 
+## 最新状況 2026-08-21
+
+- ユーザー要望: 「レビューしてもらうから資料だして」。
+- 直近のプロダクト判断:
+  - 初期の `Web入口 + Expo継続アプリ` 方針から、現在は **PWA/アプリのみで完結する家族の手帳** へ寄せている。
+  - 1人目は無料でしっかり価値を出す。2人目以降、家族共有、写真/PDF容量、AI相談、月次まとめを有料候補にする。
+  - 対象者は父母固定ではなく、義父母、親戚、その他も1人ずつ管理する。
+  - 1人目登録後は、その人専用のマイページ/手帳で、プロフィール、日々の記録、写真/PDF、確認リスト、過去のまとめ、アラート、AI相談へつなげる。
+- 直近の強い未解決要望:
+  - `/home` の「確認リスト」項目、特に「緊急連絡先と看取り方針を共有する」のような1件を編集できるようにしたい。
+  - プロフィールの変更方法、過去の記録の見方が分かりにくい。
+  - 日々の記録からAI診断/予測、過去記録まとめ、アラート、確認リスト追加へつながる“本当の手帳”体験が必要。
+  - Petterの「私のうちの子ログ」のように、日々の変化を蓄積して見返せる体験を参考にする。
+- レビュー用資料を作成済み:
+  - フォルダ: `review_exports/oyano_moshimo_review_2026-08-21/`
+  - `review_exports/oyano_moshimo_review_2026-08-21/README_REVIEW_2026-08-21.md`
+  - `review_exports/oyano_moshimo_review_2026-08-21/ENGINEER_REVIEW_BRIEF_2026-08-21.md`
+  - `review_exports/oyano_moshimo_review_2026-08-21/PRODUCT_UX_REVIEW_BRIEF_2026-08-21.md`
+  - `review_exports/oyano_moshimo_review_2026-08-21/REVIEW_CHECKLIST_2026-08-21.md`
+  - ソースZIP: `review_exports/oyano_moshimo_review_2026-08-21/oyano-moshimo-navi-source-2026-08-21-38e65f3.zip`
+- ZIP作成:
+  - `git archive --format=zip -o review_exports/oyano_moshimo_review_2026-08-21/oyano-moshimo-navi-source-2026-08-21-38e65f3.zip HEAD`
+  - `unzip -l ... | grep -Ei '(^|/)(\\.env|\\.env\\.local|env\\.local|secret|service_role|SUPABASE_SERVICE_ROLE_KEY)' || true`
+  - 結果: `.env.example` 以外の秘密系ファイルは検出なし。
+- 次に実装するなら:
+  1. 確認リスト1件の詳細/編集画面を追加。
+  2. プロフィールに明確な「編集する」導線を追加。
+  3. 過去の記録タイムライン/検索/まとめを強化。
+  4. 日記から確認リスト・アラート候補を作る。
+  5. Plus候補としてAI相談の情報参照範囲と安全文言を設計。
+
 ## 最新状況 2026-08-20
 
 - 2026-08-20 追加対応3: ユーザー要望「安心設計ページの意味が薄い」「読む記事を100本程度へ増やして検索絞り込み」「先頭の漢字アイコンがダサい」に対応中。
