@@ -1193,7 +1193,13 @@ export default function FamilyBoardPage() {
                 <ol className="journey-list">
                   {journeyCards.map((item) => (
                     <li className={`is-${item.state}`} key={item.label}>
-                      <span className="journey-state">{item.state === "done" ? "済" : item.state === "now" ? "今" : "次"}</span>
+                      <span
+                        className="journey-state"
+                        role="img"
+                        aria-label={item.state === "done" ? "済み" : item.state === "now" ? "いま" : "このあと"}
+                      >
+                        <i className="journey-mark" aria-hidden="true" />
+                      </span>
                       <div>
                         <small>{item.label}</small>
                         <strong>{item.title}</strong>

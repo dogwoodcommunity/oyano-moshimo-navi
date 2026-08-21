@@ -7765,6 +7765,39 @@ textarea {
   color: #fff;
 }
 
+/* 丸の中は形だけにする。
+   「済／今／次」の漢字は、小さく潰れるうえ、隣の見出しと同じ字面なので
+   一覧にすると読む文字が増えるだけで、状態の違いが一目で分からない。
+   済み＝チェック、いま＝塗った丸、このあと＝輪郭だけ、で並べれば
+   読まなくても進み具合が分かる。読み上げには aria-label で言葉を渡している。 */
+.journey-mark {
+  display: block;
+}
+
+.journey-list li.is-done .journey-mark {
+  border-bottom: 2.5px solid currentColor;
+  border-left: 2.5px solid currentColor;
+  height: 7px;
+  margin-top: -3px;
+  transform: rotate(-45deg);
+  width: 13px;
+}
+
+.journey-list li.is-now .journey-mark {
+  background: currentColor;
+  border-radius: 999px;
+  height: 11px;
+  width: 11px;
+}
+
+.journey-list li.is-next .journey-mark {
+  border: 2.5px solid currentColor;
+  border-radius: 999px;
+  height: 11px;
+  opacity: 0.5;
+  width: 11px;
+}
+
 .journey-list small {
   color: #2f6e82;
   display: block;
