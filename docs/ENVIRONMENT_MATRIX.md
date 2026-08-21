@@ -19,6 +19,7 @@
 | `NEXT_PUBLIC_ANDROID_APP_URL` | 公開後 | no | 同上（Google Play） |
 | `STRIPE_PLUS_PRICE_ID` | Plus提供時 | no | 継続課金のprice。未設定なら `/api/stripe/plus-checkout` は503 |
 | `NEXT_PUBLIC_PLUS_PRICE_LABEL` | Plus提供時 | no | `/plans` の価格表示。未設定なら「準備中」 |
+| `REVENUECAT_WEBHOOK_SECRET` | App内課金時 | no | `/api/revenuecat/webhook` の認証。未設定なら501 |
 | `NEXT_PUBLIC_APP_SCHEME` | yes | yes | アプリ引き継ぎURL |
 | `NEXT_PUBLIC_WEB_BASE_URL` | yes | yes | Web本番URL |
 

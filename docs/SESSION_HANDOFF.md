@@ -4143,3 +4143,45 @@ GitHubが必要な理由:
   - 実際のStripeでの決済は未実施。price ID設定後にテストモードでの確認が必要。
   - webhookの `customer.subscription.*` はStripe側でイベントを有効にする必要がある。
   - **iOSのApp内課金は未対応**。アプリ内からPlusを売るなら `expo-in-app-purchases` か RevenueCat の導入が必要で、手数料15〜30%がかかる。画面には「iPhoneのアプリの中からは、Appleの規約により同じ手続きはご利用いただけません」と明記してある。
+
+## 2026-08-21 追記 121
+
+- 経緯:
+  - 本体がアプリになったため、Plusをアプリ内で売るならApp内課金（IAP）が必要になる件。
+  - これはコードより先に事業と規約の判断が要る話なので、判断材料を文書にし、コード側は「どの経路から来ても最後は1か所で決まる」形だけ先に用意した。
+- 判断:
+  - iOSアプリ内でデジタル機能のサブスクを売る場合、原則IAPが必須。手数料は原則30%、Small Business Programで15%。
+  - 「Webで契約してアプリで解放」自体は可能だが、**アプリ内からWeb決済へ誘導すること**が禁止されている。現在の `PlusUpgrade` の注意書きはWeb画面にのみ置き、アプリ側には入れていない。
+  - `expo-in-app-purchases` は非推奨のため採用しない。入れるならRevenueCat。
+  - 課金経路が増えても、Plusかどうかを決めるのは `families.plan` の1か所に保つ。
+- 対応:
+  - `docs/IN_APP_PURCHASE_PLAN.md` を追加。選択肢A（Webのみ）/ B（RevenueCat）/ C（非推奨）と、必要な作業、判断が必要なことを整理。
+  - `apps/web/app/api/revenuecat/webhook/route.ts` を追加。
+    - `REVENUECAT_WEBHOOK_SECRET` で認証。未設定なら501。
+    - `app_user_id` からSupabaseのユーザー → 家族を引く。家族idが直接来た場合も受ける。
+    - 解約と期限切れを分ける。`CANCELLATION` では失効させず、期限到来または `EXPIRATION` で `free` に戻す。ここを一緒にすると、解約した瞬間に使えなくなり返金対応が増える。
+    - `subscriptions` への記録に失敗しても権利の反映は続けるが、警告ログは残す。
+  - 環境変数に `REVENUECAT_WEBHOOK_SECRET` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - モックSupabaseで検証。
+    - 誤ったsecret → 401。
+    - `INITIAL_PURCHASE`（期限は未来）→ `plan: plus`。
+    - `CANCELLATION`（期限は未来）→ `plus` のまま。
+    - `EXPIRATION`（期限は過去）→ `free`。
+    - 家族が見つからない `app_user_id` → `applied: false`（500にはしない）。
+    - 同じ利用者から2回送っても `subscriptions` は1行のまま。
+- 未対応:
+  - アプリ側の `react-native-purchases` は未導入。入れるとExpo Goでは動かなくなり、development buildへの移行が必要になる。
+  - App Store Connect の商品作成、RevenueCatのアカウント設定は未着手。
+
+## 2026-08-21 追記 122
+
+- アプリのバンドル検証:
+  - シミュレータが無いため実機表示は確認できないが、`expo export --platform ios` でバンドルが通ることを確認した。型チェックでは見つからない、Metroの解決エラーの有無を見るため。
+  - iOSバンドル 3.3MB の生成に成功。
+  - バンドル内に新画面が含まれることを確認。`oyano_crisis_progress_v01`、`oyano_consult_consent_v01`、`crisis_opened`、`consult_asked`、`person_created`、`hospital-night`、`just-died` を検出。
+  - 日本語文言はHermesがUTF-16で格納するため、UTF-16でバイト検索して `いまはやらなくていいこと`、`急なとき`、`死亡診断書` を検出。
+  - つまり `@oyano/shared` の crisis / consult / funnel、`@/lib/funnel`、`@/lib/consult` はいずれもMetroで解決できている。
+- 残る未確認:
+  - 画面の見た目、タップ操作、`Share` シート、AsyncStorageの保持は未確認。`expo start` かEAS buildでの目視が必要。
