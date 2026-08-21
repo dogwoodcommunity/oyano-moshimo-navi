@@ -4511,3 +4511,10 @@ Googleがアプリパスワードを "abcd efgh ijkl mnop" と空白入りで表
 - 空白入りのアプリパスワードが16桁・空白なしで送られる
 - 2つの文面が別々に送られ（初回と2回目以降で1行違う）、
   `{{ .ConfirmationURL }}` が壊れずに残る
+
+## 2026-08-21 追記 138
+
+macOSの標準シェルはzsh。bashの `read -s -p "..." VAR` はzshでは通らず、
+`read: -p: no coprocess` になる（zshの `-p` はコプロセスからの読み取り）。
+資料とスクリプトの案内を `printf "..."; read -s VAR; echo` に統一した。
+これはbash/zshどちらでも動く。

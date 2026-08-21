@@ -12,8 +12,8 @@
 // パスワードとトークンは、引数ではなく環境変数で受け取る。
 // 引数に書くと、シェルの履歴と ps の出力に残ってしまうため。
 //
-//   read -s -p "トークン: " SUPABASE_ACCESS_TOKEN; echo
-//   read -s -p "パスワード: " SMTP_PASS; echo
+//   printf "トークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
+//   printf "パスワード: "; read -s SMTP_PASS; echo
 //   export SUPABASE_ACCESS_TOKEN SMTP_PASS
 //
 // 受け取った値は画面に出さないし、どこにも保存しない。
@@ -104,7 +104,7 @@ function smtpSettings() {
     fail(
       "SMTP_PASS が設定されていません。次のように渡してください。",
       "",
-      '  read -s -p "パスワード: " SMTP_PASS; echo',
+      '  printf "パスワード: "; read -s SMTP_PASS; echo',
       "  export SMTP_PASS",
       "",
       "引数ではなく環境変数にするのは、シェルの履歴に残さないためです。"
@@ -159,7 +159,7 @@ async function main() {
       "SUPABASE_ACCESS_TOKEN が設定されていません。",
       "トークンは https://supabase.com/dashboard/account/tokens で作れます。",
       "",
-      '  read -s -p "トークン: " SUPABASE_ACCESS_TOKEN; echo',
+      '  printf "トークン: "; read -s SUPABASE_ACCESS_TOKEN; echo',
       "  export SUPABASE_ACCESS_TOKEN"
     );
   }

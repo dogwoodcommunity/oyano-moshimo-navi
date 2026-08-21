@@ -24,14 +24,15 @@ https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/templates
 ```
 cd ~/Desktop/oyano-moshimo-navi && git pull origin main
 
-read -s -p "Supabaseのトークン: " SUPABASE_ACCESS_TOKEN; echo
-read -s -p "アプリパスワード: " SMTP_PASS; echo
+printf "Supabaseのトークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
+printf "アプリパスワード: "; read -s SMTP_PASS; echo
 export SUPABASE_ACCESS_TOKEN SMTP_PASS
 
 node scripts/setup-auth-email.mjs --gmail --user じぶんのアドレス@gmail.com
 ```
 
-`read -s` は入力を画面に出さない。`--yes` を付けると確認を飛ばせる。
+`read -s` は入力を画面に出さない。macOSの標準シェルはzshで、bashの `read -p` は
+通らない（`no coprocess` になる）。`printf` で促してから `read -s` にすれば両方で動く。`--yes` を付けると確認を飛ばせる。
 
 先に `node scripts/setup-auth-email.mjs --check` を実行すると、
 何も変えずにいまの状態だけ見られる。
