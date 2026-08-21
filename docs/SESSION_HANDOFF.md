@@ -3879,3 +3879,47 @@ GitHubが必要な理由:
 - 未確認:
   - 実際のClaude APIへの疎通は未実施。この環境に `ANTHROPIC_API_KEY` が無いため、モックでの検証にとどまる。本番キー設定後に、実際の応答品質と所要時間の確認が必要。
   - `output_config.effort` を `medium` にしているが、実応答を見て `high` へ上げるか判断する。
+
+## 2026-08-21 追記 112
+
+- 経緯:
+  - 追記111に続き、未完了リストの `家族共有2名無料のUXと招待導線` を実装した。
+- 判断:
+  - SQL側には `create_family_invite` / `accept_family_invite` が既にあり、無料枠（オーナー以外に2人）とメール一致チェックも実装済みだった。欠けていたのはWeb側の導線だけだったので、RPCはそのまま使い、Web APIとUIを足す方針にした。
+  - 招待系RPCは `auth.uid()` を見る `security definer` のため、service roleクライアントでは通らない。利用者のアクセストークンで動くクライアントを別に用意した。
+  - コピーは実装に合わせて `あなたのほかに2人まで無料` とした。SQLが数えているのはオーナー以外の人数なので、`家族2人まで` という言い方だと実際の挙動とずれる。
+- 対応:
+  - `apps/web/lib/serverSupabase.ts`
+    - `getUserSupabase(accessToken)` を追加。anon key + `Authorization: Bearer` で作り、RPCの `auth.uid()` を効かせる。
+    - **バグ修正**: Next.jsのData CacheがRoute Handler内のGET fetchを既定でキャッシュしていた。Supabaseクライアントに `cache: "no-store"` の fetch を差し込んで無効化。
+  - `apps/web/lib/family.ts` を追加。
+    - `resolveFamilyContext()` でトークン検証とクライアント生成。
+    - `getOrCreateFamilyId()` はクラウド控えと同じ考え方で家族を1つに決める。
+    - RPCの例外名を日本語メッセージへ変換する `messageForRpcError()`。
+  - `apps/web/app/api/family/route.ts`（GET）。メンバー、招待中、残り枠、プランを返す。
+  - `apps/web/app/api/family/invite/route.ts`（POST）。メール形式、自分あて招待を弾く。枠オーバーは402。
+  - `apps/web/app/api/family/invite/accept/route.ts`（POST）。
+  - `apps/web/components/FamilyShare.tsx`、`apps/web/app/family/page.tsx` を追加。
+  - `apps/web/components/InviteAccept.tsx` を追加し、`/invite/[token]` を実際に受け取れるページへ変更。従来はアプリへのdeep linkだけで、Webからは参加できなかった。
+  - `apps/web/lib/browserSupabase.ts` に `sendMagicLink(email, redirectPath)` を追加。招待ページへ戻す確認メールを送れるようにした。
+  - `apps/web/app/home/page.tsx` に `家族共有` セクションを追加。`apps/web/app/sitemap.ts` に `/family` を追加。
+  - `apps/web/app/globals.css` に `.family-*` と `.invite-card` を追加。プレースホルダが入力済みに見えないよう色も調整。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。`pnpm --filter web run build` OK。
+  - Supabaseが無い環境では、API 3本が503、`/family` と `/invite/[token]` は `家族共有はまだ使えません` を表示することを確認。
+  - PostgREST/GoTrue互換のモックを立てて、SQLのRPC挙動（無料枠2人、メール一致、オーナーのみ招待可）を再現し、以下を確認。
+    - `/api/family` を2回叩いても家族が1つしか作られない（Data Cacheのバグ修正後）。修正前は毎回新しい家族が作られていた。
+    - 招待作成 → 残り枠が2→1へ、招待中として表示。
+    - 招待されていない人が受け取ろうとすると拒否。招待された本人は参加でき、メンバーに追加される。
+    - 3人目の招待は402で `無料で共有できるのは、あなたのほかに2人までです`。
+    - オーナー以外が招待しようとすると `招待できるのは、手帳を作った人だけです`。
+    - 自分あて招待、メール形式不正、トークン無しをそれぞれ400/401で拒否。
+  - Chromium 390x844 で確認。
+    - 未ログイン時は確認メール送信フォーム。
+    - ログイン時はメンバー一覧、残り枠、招待フォームを表示。招待作成後にリンクとコピーボタンが出て、枠表示が更新される。
+    - 枠が埋まっている時は招待ボタンが無効になり、Plusへの案内が出る。
+    - `/invite/[token]` で、違うアドレスの人はエラー、招待された本人は `参加しました` まで到達。
+    - 横スクロールなし、JSエラーなし。
+- 注意:
+  - 実際のSupabaseでの疎通は未実施。この環境にSupabaseが無いためモックでの検証にとどまる。本番キー設定後に、実DBでの招待・参加の確認が必要。
+  - Next.jsのData Cacheの件は、既存の `/api/notebook/sync` のGET（クラウド復元）にも同じ影響があったはずで、今回の修正で一緒に直っている。

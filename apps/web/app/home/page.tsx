@@ -1048,6 +1048,17 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
+          <section className="nb-section" aria-label="家族共有">
+            <article className="nb-card family-entry-card">
+              <div>
+                <p className="nb-eyebrow">家族共有</p>
+                <h2>同じ手帳を家族にも見せる</h2>
+                <p>病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに2人まで無料です。</p>
+              </div>
+              <Link className="nb-save" href="/family">家族を招待する</Link>
+            </article>
+          </section>
+
           <section className="nb-section" aria-label="長期相談">
             <article className="nb-card consult-entry-card">
               <div>
