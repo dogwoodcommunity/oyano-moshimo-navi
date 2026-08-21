@@ -135,23 +135,50 @@ Body:
 - https://github.com/orgs/supabase/discussions/29370
 - https://supabase.com/docs/guides/auth/auth-smtp
 
+### 送信サービスの選定（2026-08-21 に判明）
+
+**Resendは使えない。**
+
+`bee-ch.co.jp` はお名前.comで取得しているが、**ネームサーバーはWixに向いている**
+（Wixでサイトを作ると切り替わる）。ResendはWixを検出して弾く。
+
+理由は、Resendが送信用サブドメイン `send.bee-ch.co.jp` への
+**MXレコードを必須**にしているため（AWS SESのバウンス受信に使う）。
+**Wixはサブドメインに対するMXレコードを作れない。** 仕様上どうにもならない。
+
+MXをルートに置く逃げ方は取れない。`bee-ch.co.jp` は会社のメールで使っており、
+既存のMXを壊すと会社のメールが止まる。
+
+出典:
+- https://resend.com/docs/add-a-domain
+- https://support.wix.com/en/article/managing-dns-records-in-your-wix-account
+
+**Brevo を使う。** ドメイン認証がTXTレコードだけで済み、MXを要求しない。
+WixのDNSのままで通る。無料枠は1日300通。
+
+> there is no need to set up an SPF record for Brevo …
+> DKIM alone is sufficient to pass DMARC
+
+出典: https://help.brevo.com/hc/en-us/articles/12163873383186
+
 ### 手順
 
-1. Resend でアカウントを作る（https://resend.com）
-2. Domains → Add Domain → `bee-ch.co.jp`
-3. 表示された **MX / TXT（SPF）/ TXT（DKIM）** を `bee-ch.co.jp` のDNSへ追加する
-4. Resend の画面で Verified になるまで待つ（数分〜数時間）
-5. API Keys → Create API Key（Sending access）
+1. Brevo でアカウントを作る（https://www.brevo.com）
+2. Senders, Domains & Dedicated IPs → Domains → Add a domain → `bee-ch.co.jp`
+3. 表示された **TXT（Brevo code）と TXT（DKIM）** を、WixのDNS画面で追加する
+   （Wixは会社サイトのDNSを持っている。既存のMXやAレコードには触らない）
+4. Brevo の画面で Verified になるまで待つ（数分〜数時間）
+5. SMTP & API → SMTP → Create a new SMTP key
 6. Supabase の **Authentication → Emails → SMTP Settings** で Enable にして入れる
 
 | 項目 | 値 |
 | --- | --- |
 | Sender email | `info@bee-ch.co.jp` |
 | Sender name | `親のもしもナビ` |
-| Host | `smtp.resend.com` |
-| Port | `465` |
-| Username | `resend` |
-| Password | ResendのAPIキー |
+| Host | `smtp-relay.brevo.com` |
+| Port | `587` |
+| Username | Brevoに表示されるログイン用アドレス |
+| Password | BrevoのSMTPキー |
 
 7. 保存すると **Templates が編集できるようになる。** そこで上の2つを貼る。
 
@@ -160,8 +187,19 @@ DNSにSPF / DKIMを入れないと、Gmailで迷惑メール扱いになりや�
 
 ### 送信数
 
-Resendの無料枠は1日100通・月3,000通。いまの規模なら足りる。
+Brevoの無料枠は1日300通。いまの規模なら足りる。
 足りなくなるのは、それが良い知らせのときだけ。
+
+### 将来やること
+
+いまは会社ドメイン `bee-ch.co.jp` から送る形にしている。
+本来は、このサービス自身のドメインを取って、そこから送るほうがよい。
+
+- 受け取る人が知らない会社名より、サービス名のドメインのほうが信用される
+- Webの入口が `oyano-moshimo-navi.vercel.app` のままになっている
+- WixのDNSに縛られなくなる
+
+ドメイン代は年1,000〜4,000円程度。急ぎではないが、人に配る規模になる前に。
 
 ## 貼ったあとの確認
 

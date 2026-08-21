@@ -4428,3 +4428,21 @@ GitHubが必要な理由:
 Resendで `bee-ch.co.jp` を認証し、SupabaseにSMTPを設定する。
 手順は `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md`。
 SMTPが入ると、テンプレートの編集も同時に解ける。
+
+## 2026-08-21 追記 134
+
+Resendは使えないと判明。送信サービスをBrevoに変更する。
+
+- `bee-ch.co.jp` はお名前.comで取得しているが、**ネームサーバーはWixに向いている。**
+  Wixでサイトを作った時点で切り替わっている。ResendはWixを検出して拒否する。
+- 根拠は、Resendが送信用サブドメイン `send.bee-ch.co.jp` へのMXを必須にしていること。
+  **Wixはサブドメインに対するMXを作れない。** 設定でどうにかなる話ではない。
+- MXをルートに置いて回避することはできない。`bee-ch.co.jp` は会社のメールで
+  使っており、既存のMXを壊すと会社のメールが止まる。
+- **Brevoはドメイン認証がTXTだけで済み、MXを要求しない。** WixのDNSのまま通る。
+  無料枠は1日300通。いまの規模では足りる。
+
+手順は `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md` に反映済み。
+
+将来: このサービス自身のドメインを取るほうがよい。会社ドメインから送るより
+信用されるし、Web入口が `*.vercel.app` のままなのも直る。急ぎではない。
