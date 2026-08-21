@@ -3950,3 +3950,22 @@ GitHubが必要な理由:
   - `scripts/smoke-web.mjs` をローカルに対して実行し、37件すべて成功、失敗0。
 - 未確認:
   - 本番Supabaseに対する実行は未実施。上記手順書に沿って、本番キーを持っている人の実行が必要。
+
+## 2026-08-21 追記 114
+
+- 経緯:
+  - 未完了リストの `Vercel production反映` について、この環境からはVercelの認証情報が無いため実行できない。代わりに、反映手段を選べる形にした。
+- 判断:
+  - 追記109で `npx vercel --prod --yes` が `Not authorized` になったのは、CLIのログインが切れていたため。VercelのGit連携が有効なら、そもそもCLIは要らず `main` へのpushで反映される。
+  - 自動デプロイのワークフローをpushトリガーで足すのは、本番へ勝手に反映されることになるので避けた。手動実行（workflow_dispatch）だけにしている。
+- 対応:
+  - `.github/workflows/deploy-vercel.yml` を追加。
+    - `workflow_dispatch` のみ。preview / production を選んで実行する。
+    - `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` が無い場合は、最初のステップで理由を出して止まる。
+    - デプロイ後に `scripts/smoke-web.mjs` を自動で流す。
+  - `docs/DEPLOYMENT.md` に「本番へ反映する3つの方法」を追加。Git連携、手動Actions、ローカルCLIの順。
+    - PWAのService Workerキャッシュで古く見える場合の対処（`CACHE_VERSION` を上げる）も明記。
+- 未完了:
+  - 本番反映そのものは未実施。次のいずれかが必要。
+    - VercelのGit連携が有効なら、このブランチをmainへマージする。
+    - 有効でないなら、`VERCEL_TOKEN` などのシークレットを設定して手動ワークフローを実行する。

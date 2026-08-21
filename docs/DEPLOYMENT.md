@@ -28,6 +28,37 @@ NEXT_PUBLIC_WEB_BASE_URL=
 
 詳細は `docs/ENVIRONMENT_MATRIX.md` を参照。
 
+### 本番へ反映する3つの方法
+
+1. **VercelのGit連携（推奨）**
+   Vercelでrepoをimportしてあれば、`main` への push で自動的にproduction deployが走る。
+   通常はこれだけでよい。反映されない場合は、Vercel > Project > Settings > Git で連携先ブランチを確認する。
+
+2. **手動のGitHub Actions**
+   `.github/workflows/deploy-vercel.yml` を Actions タブから手動実行する（pushでは動かない）。
+   先に次のリポジトリシークレットを設定する。
+
+   | Secret | 取得元 |
+   | --- | --- |
+   | `VERCEL_TOKEN` | https://vercel.com/account/tokens |
+   | `VERCEL_ORG_ID` | `.vercel/project.json` の `orgId`、または Vercel の Settings |
+   | `VERCEL_PROJECT_ID` | `.vercel/project.json` の `projectId` |
+
+   デプロイ後に `scripts/smoke-web.mjs` が自動で走る。
+
+3. **ローカルのVercel CLI**
+
+   ```bash
+   npx vercel login
+   npx vercel --prod --yes
+   ```
+
+   `Not authorized` が出る場合はログインが切れている。`VERCEL_TOKEN` を環境変数に置いて
+   `npx vercel --prod --yes --token=$VERCEL_TOKEN` でも通る。
+
+反映が古いまま見える場合は、PWAのService Workerキャッシュが残っている可能性がある。
+`apps/web/public/sw.js` の `CACHE_VERSION` を上げてから再デプロイする。
+
 Vercel Cronから `/api/cron/send-due-notifications` を実行する。HobbyプランではCron頻度に制限があるため、初期は1日1回で公開し、通知運用を始める段階でPro化または外部cronを検討する。`CRON_SECRET` を設定する場合、手動確認では以下のように叩く。
 
 ```bash
