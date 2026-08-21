@@ -20,6 +20,15 @@ const PER_CLIENT_DAILY_LIMIT = Number(process.env.CONSULT_CLIENT_DAILY_LIMIT ?? 
 const SERVICE_DAILY_LIMIT = Number(process.env.CONSULT_DAILY_LIMIT ?? 200);
 const ONE_DAY_SECONDS = 86_400;
 
+/**
+ * 時間を食っているのは推論ではなく出力の生成（日本語で約1,800文字）。
+ * effortを下げても29秒台のままだったため、出力速度そのものを上げる設定を用意する。
+ *
+ * 同じモデル・同じ品質のまま最大2.5倍速になる代わりに、料金が2倍になる。
+ * 料金が変わるので既定では使わない。CONSULT_FAST_MODE=1 で有効になる。
+ */
+const FAST_MODE = process.env.CONSULT_FAST_MODE === "1";
+
 function badRequest(message: string) {
   return NextResponse.json({ error: "invalid_request", message }, { status: 400 });
 }
@@ -87,17 +96,33 @@ export async function POST(request: NextRequest) {
   const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 1 });
 
   try {
-    const response = await client.messages.create({
+    const params = {
       model: MODEL,
       max_tokens: 5000,
       // 本番で29〜49秒かかり、48秒台では空で返った。60秒の実行上限に近すぎる。
       // 出力の形はシステムプロンプトとstrict schemaで固定してあるので、
       // 推論の深さを下げても崩れにくいと判断してlowにする。
-      output_config: { effort: "low" },
+      // 実測では low でも medium と質は変わらず、時間も変わらなかった。
+      output_config: { effort: "low" as const },
       system: CONSULT_SYSTEM_PROMPT,
       tools: [CONSULT_TOOL],
-      messages: [{ role: "user", content: buildConsultPrompt({ ...payload, question }) }]
-    });
+      messages: [{ role: "user" as const, content: buildConsultPrompt({ ...payload, question }) }]
+    };
+
+    // 高速版が使えない環境では黙って通常版へ落とす。速さのために機能ごと止めない。
+    const response = FAST_MODE
+      ? await client.beta.messages.create({
+          ...params,
+          betas: ["fast-mode-2026-02-01"],
+          speed: "fast"
+        }).catch((error: unknown) => {
+          if (error instanceof Anthropic.BadRequestError) {
+            console.warn("[consult] fast mode unavailable, falling back to standard speed");
+            return client.messages.create(params);
+          }
+          throw error;
+        })
+      : await client.messages.create(params);
 
     if (response.stop_reason === "refusal") {
       return NextResponse.json(
