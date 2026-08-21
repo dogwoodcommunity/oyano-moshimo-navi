@@ -3709,3 +3709,48 @@ GitHubが必要な理由:
 - 次の想定:
   - ユーザーがClaudeに資料/ZIPを渡す。
   - Claudeから返ってきたデザイン指示または実装依頼書を受け取り、Codexが `/home` を再実装する。
+
+## 2026-08-21 追記 109
+
+- ユーザー共有レビュー:
+  - 「今の設計では課金しない。親の一生の記録を預けていい信頼の器がまだ無い」
+  - 最重要指摘は `localStorage` 単独保存の危険性。Safariデータ削除、ITP、機種変更で手帳が消えると、この領域では信頼が戻らない。
+  - 「AI相談」が実体としてキーワードマッチなら、課金の柱としてAIと呼ぶべきではない。
+  - 家族共有をPlusの壁に置くと、無料ユーザーが価値を体験する前に課金要求になり、招待による拡散も殺す。
+- 判断:
+  - デザイン磨きより先に「記録が消えない」土台を優先。
+  - 当面は「AI相談」という売り文句を封印し、画面では `相談メモ` / `長期相談` と表現する。
+  - 家族共有は無料枠を残す前提のコピーに戻し、Plusの課金理由は `2人目以降の対象者`、`容量拡張`、`月まとめ/PDF`、`本物の長期相談` に寄せる。
+- 対応:
+  - `apps/web/lib/browserSupabase.ts` を追加。
+    - ブラウザ側Supabase clientを作成。
+    - Magic Link / PKCE callbackを `/home?cloud=1` で完了できるようにした。
+    - 本人確認メール送信を `sendNotebookMagicLink(email)` に集約。
+  - `apps/web/app/api/notebook/sync/route.ts` を追加。
+    - Supabase access tokenを `Authorization: Bearer ...` で受け、`supabase.auth.getUser(token)` で本人確認。
+    - `profiles` / `families` / `family_members` を準備し、端末内の手帳をSupabaseへ同期。
+    - `people` に対象者、`tasks` に確認リスト、`timeline_events` に日記を保存。
+    - GETでクラウド控えを端末へ復元できる形に再構成。
+  - `apps/web/lib/store.ts`
+    - `exportNotebookData()` を追加し、手帳データをJSON控えとしてダウンロード可能にした。
+    - `replaceLocalNotebook()` を追加し、クラウド復元時にローカル手帳へ戻せるようにした。
+  - `apps/web/app/home/page.tsx`
+    - `大事な記録を消さない` セクションを追加。
+    - メール確認、クラウド保存、クラウド復元、JSON控えダウンロードを追加。
+    - 「AI相談」表現を `相談メモ` / `長期相談` に変更。
+    - 家族2人まで無料共有の前提に合わせてPlusコピーを修正。
+  - `apps/web/app/plans/page.tsx` / `apps/web/app/result/[caseId]/page.tsx` / `apps/web/app/safety/page.tsx`
+    - AI相談の売り文句を削除。
+    - 家族共有をPlus専用に見せる文言を緩和。
+  - `apps/web/public/sw.js`
+    - PWAキャッシュ更新のため `CACHE_VERSION` を `oyano-moshimo-navi-v17` に更新。
+- 確認:
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。
+  - `git diff --check` OK。
+  - build時にSupabase JSのNode 20非推奨警告は出るが、ビルド自体は成功。後日Node 22へ上げる。
+- 未完了:
+  - 本物のLLM相談は未実装。Plusの本命として別フェーズで実装する。
+  - 危機モード（入院した夜・危篤と言われた・亡くなった直後の即答体験）は未実装。
+  - 家族共有2名無料のUXと招待導線の最終調整は未実装。
+  - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。

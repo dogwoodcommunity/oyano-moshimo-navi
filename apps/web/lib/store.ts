@@ -58,6 +58,13 @@ export type DiaryEntry = {
   createdAt: string;
 };
 
+export type NotebookExport = {
+  version: 1;
+  exportedAt: string;
+  cases: CaseRecord[];
+  diaryEntries: DiaryEntry[];
+};
+
 const STORAGE_KEY = "oyano_cases_v03";
 const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
 let memoryCases: CaseRecord[] = [];
@@ -145,6 +152,20 @@ export function listDiaryEntries(caseId: string): DiaryEntry[] {
   return readDiaryEntries()
     .filter((item) => item.caseId === caseId)
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+
+export function exportNotebookData(): NotebookExport {
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    cases: listLocalCases(),
+    diaryEntries: readDiaryEntries()
+  };
+}
+
+export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
+  writeCases(input.cases);
+  writeDiaryEntries(input.diaryEntries);
 }
 
 export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {

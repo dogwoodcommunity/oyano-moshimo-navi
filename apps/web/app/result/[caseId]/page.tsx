@@ -79,7 +79,7 @@ export default function ResultPage() {
     },
     {
       title: "相談が早くなる",
-      body: "プロフィールと記録が残るので、AI相談や専門家相談で毎回ゼロから説明しなくて済みます。"
+      body: "プロフィールと記録が残るので、長期相談や専門家相談で毎回ゼロから説明しなくて済みます。"
     }
   ];
   const notebookPlanItems = [
@@ -96,7 +96,7 @@ export default function ResultPage() {
     {
       label: "Plus",
       title: "必要になったら広げる",
-      body: "2人目以降の登録、家族招待、AI相談、家族会議用PDFは有料プランで追加します。"
+      body: "2人目以降の登録、容量拡張、長期相談、家族会議用PDFは有料プランで追加します。"
     }
   ];
 
@@ -148,7 +148,7 @@ export default function ResultPage() {
               <li>フルネーム、生年月日、続柄、連絡窓口を登録</li>
               <li>日記、写真、PDF、病院・介護先メモを保存</li>
               <li>期限のある確認リストと担当未定を表示</li>
-              <li>家族共有・AI相談・2人目以降はPlusで拡張</li>
+              <li>家族共有の無料枠、長期相談、2人目以降は必要に応じて拡張</li>
             </ul>
           </div>
           <Link className="button" href="/home">この人の手帳を開く</Link>
@@ -223,12 +223,12 @@ export default function ResultPage() {
           </div>
           <div>
             <strong>Plusで広げる</strong>
-            <span>2人目以降、家族共有、AI相談、PDF出力</span>
+            <span>2人目以降、容量拡張、長期相談、PDF出力</span>
           </div>
         </div>
         <div className="actions">
           <Link className="button" href="/home">この人の管理手帳へ進む</Link>
-          <Link className="secondary" href="/plans">家族共有はPlusで設定</Link>
+          <Link className="secondary" href="/plans">Plusで広げる項目を見る</Link>
         </div>
       </section>
 

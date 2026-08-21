@@ -3,12 +3,15 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { statusLabel, targetLabel } from "@oyano/shared";
+import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import {
   addDiaryEntry,
   createLocalId,
   diaryAdvice,
+  exportNotebookData,
   listDiaryEntries,
   listLocalCases,
+  replaceLocalNotebook,
   updateCaseProfile,
   type CaseRecord,
   type DiaryAttachment,
@@ -24,6 +27,7 @@ type DiaryFormState = {
 
 type TaskWithDue = NonNullable<CaseRecord["result"]>["tasks"][number];
 type RecordFilter = "all" | "changed" | "attachments";
+type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
 
 const emptyDiaryForm: DiaryFormState = {
   body: "",
@@ -90,7 +94,7 @@ const continuationFeatures = [
   },
   {
     label: "相談",
-    title: "記録を踏まえてAIに相談する",
+    title: "記録を踏まえて相談メモを作る",
     body: "毎回ゼロから説明せず、プロフィールと日々の記録を前提に、次に聞くことを整理します。"
   },
   {
@@ -411,8 +415,8 @@ function buildSupportActions(
   }
 
   actions.push({
-    title: "家族共有とAI相談を検討する",
-    body: "2人目の管理、家族招待、この人の記録を踏まえた相談はPlusで広げます。",
+    title: "家族共有と長期相談を検討する",
+    body: "2人目の管理、家族招待、この人の記録を踏まえた相談メモはPlusで広げます。",
     href: "/plans",
     label: "Plus"
   });
@@ -590,6 +594,10 @@ export default function FamilyBoardPage() {
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [loaded, setLoaded] = useState(false);
+  const [cloudEmail, setCloudEmail] = useState("");
+  const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
+  const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
+  const [cloudMessage, setCloudMessage] = useState("この端末だけにある記録を、あとからクラウドに控え保存できます。");
 
   useEffect(() => {
     const localCases = listLocalCases();
@@ -598,6 +606,41 @@ export default function FamilyBoardPage() {
     setDiaryEntries(Object.fromEntries(localCases.map((item) => [item.id, listDiaryEntries(item.id)])));
     setProfileForms(Object.fromEntries(localCases.map((item) => [item.id, profileSeed(item)])));
     setLoaded(true);
+  }, []);
+
+  useEffect(() => {
+    const client = getBrowserSupabase();
+    if (!client) {
+      setCloudStatus("error");
+      setCloudMessage("クラウド保存の環境設定がまだありません。控えのダウンロードは使えます。");
+      return;
+    }
+
+    let mounted = true;
+    void completeBrowserSupabaseAuthFromUrl().then(({ handled, session, error }) => {
+      if (!mounted) return;
+      if (error) {
+        setCloudStatus("error");
+        setCloudMessage(`メール確認に失敗しました: ${error}`);
+        return;
+      }
+      setCloudUserEmail(session?.user.email ?? null);
+      setCloudEmail((current) => current || session?.user.email || "");
+      setCloudStatus("idle");
+      if (handled && session) {
+        setCloudMessage("メール確認できました。下の「今すぐクラウドに保存」で、この手帳を控え保存できます。");
+      }
+    });
+
+    const { data } = client.auth.onAuthStateChange((_event, session) => {
+      setCloudUserEmail(session?.user.email ?? null);
+      setCloudEmail((current) => current || session?.user.email || "");
+    });
+
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
   }, []);
 
   const activeCase = useMemo(() => {
@@ -704,6 +747,122 @@ export default function FamilyBoardPage() {
       ...current,
       [caseId]: emptyDiaryForm
     }));
+  }
+
+  function reloadNotebookState(nextCases = listLocalCases()) {
+    setCases(nextCases);
+    setActiveCaseId((current) => current && nextCases.some((item) => item.id === current) ? current : nextCases[0]?.id ?? null);
+    setDiaryEntries(Object.fromEntries(nextCases.map((item) => [item.id, listDiaryEntries(item.id)])));
+    setProfileForms(Object.fromEntries(nextCases.map((item) => [item.id, profileSeed(item)])));
+  }
+
+  function allDiaryEntriesForSync() {
+    return Object.values(diaryEntries).flat();
+  }
+
+  async function getAccessToken() {
+    const client = getBrowserSupabase();
+    if (!client) {
+      setCloudStatus("error");
+      setCloudMessage("クラウド保存の環境設定がまだありません。");
+      return null;
+    }
+
+    const { data } = await client.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) {
+      setCloudStatus("error");
+      setCloudMessage("先にメール確認をしてください。確認後、この画面に戻ると保存できます。");
+      return null;
+    }
+
+    return token;
+  }
+
+  async function requestCloudLink() {
+    const email = cloudEmail.trim();
+    if (!email) {
+      setCloudStatus("error");
+      setCloudMessage("控え保存に使うメールアドレスを入力してください。");
+      return;
+    }
+
+    setCloudStatus("sending");
+    setCloudMessage("本人確認メールを送っています。");
+    const result = await sendNotebookMagicLink(email);
+    if (!result.ok) {
+      setCloudStatus("error");
+      setCloudMessage(result.error ?? "本人確認メールを送れませんでした。");
+      return;
+    }
+
+    setCloudStatus("sent");
+    setCloudMessage("本人確認メールを送りました。メール内のリンクを開くと、この手帳をクラウドへ保存できます。");
+  }
+
+  async function syncNotebookToCloud() {
+    const token = await getAccessToken();
+    if (!token) return;
+
+    setCloudStatus("syncing");
+    setCloudMessage("クラウドに控え保存しています。");
+    const response = await fetch("/api/notebook/sync", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        cases,
+        diaryEntries: allDiaryEntriesForSync()
+      })
+    });
+
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setCloudStatus("error");
+      setCloudMessage(result.error ?? "クラウド保存に失敗しました。");
+      return;
+    }
+
+    setCloudStatus("synced");
+    setCloudMessage(`クラウドに控え保存しました。対象者${result.syncedPeople ?? cases.length}人、記録${result.syncedEntries ?? allDiaryEntriesForSync().length}件。`);
+  }
+
+  async function restoreNotebookFromCloud() {
+    const token = await getAccessToken();
+    if (!token) return;
+
+    setCloudStatus("syncing");
+    setCloudMessage("クラウドの控えを読み込んでいます。");
+    const response = await fetch("/api/notebook/sync", {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setCloudStatus("error");
+      setCloudMessage(result.error ?? "クラウドから復元できませんでした。");
+      return;
+    }
+
+    replaceLocalNotebook({
+      cases: Array.isArray(result.cases) ? result.cases : [],
+      diaryEntries: Array.isArray(result.diaryEntries) ? result.diaryEntries : []
+    });
+    reloadNotebookState();
+    setCloudStatus("synced");
+    setCloudMessage("クラウドの控えをこの端末に戻しました。");
+  }
+
+  function downloadNotebookExport() {
+    const data = exportNotebookData();
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `oyano-moshimo-notebook-${todayInputValue()}.json`;
+    anchor.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -829,6 +988,56 @@ export default function FamilyBoardPage() {
               </div>
             </section>
           ) : null}
+
+          <section className="nb-section" aria-label="記録の控え保存">
+            <article className={`nb-card cloud-backup-card is-${cloudStatus}`}>
+              <div className="cloud-backup-head">
+                <div className="cloud-backup-icon" aria-hidden="true">
+                  <img src="/brand/watch-bird-mark.svg" alt="" />
+                </div>
+                <div>
+                  <p className="nb-eyebrow">大事な記録を消さない</p>
+                  <h2>この手帳のクラウド控えを作る</h2>
+                  <p>今はこの端末にも保存されています。メール確認をして控えを作ると、機種変更や履歴削除に備えられます。</p>
+                </div>
+              </div>
+              {cloudUserEmail ? (
+                <div className="cloud-linked-box">
+                  <span>控え保存先</span>
+                  <strong>{cloudUserEmail}</strong>
+                </div>
+              ) : (
+                <div className="cloud-form">
+                  <label>
+                    <span>メールアドレス</span>
+                    <input
+                      inputMode="email"
+                      placeholder="例: family@example.com"
+                      type="email"
+                      value={cloudEmail}
+                      onChange={(event) => setCloudEmail(event.target.value)}
+                    />
+                  </label>
+                  <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
+                    本人確認メールを送る
+                  </button>
+                </div>
+              )}
+              <p className="cloud-message">{cloudMessage}</p>
+              <div className="cloud-action-row">
+                <button type="button" onClick={syncNotebookToCloud} disabled={!cloudUserEmail || cloudStatus === "syncing"}>
+                  今すぐクラウドに保存
+                </button>
+                <button type="button" onClick={restoreNotebookFromCloud} disabled={!cloudUserEmail || cloudStatus === "syncing"}>
+                  クラウドから復元
+                </button>
+                <button type="button" onClick={downloadNotebookExport}>
+                  控えをダウンロード
+                </button>
+              </div>
+              <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
+            </article>
+          </section>
 
           <section className="nb-section" id="today-diary">
             <div className="nb-section-head">
@@ -1277,11 +1486,11 @@ export default function FamilyBoardPage() {
 
           <section className="nb-section" aria-label="この手帳を家族で続ける">
             <article className="nb-card companion-panel">
-              <MascotNote
-                label="続けるなら"
-                title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
-                body="まず無料で1人分を使い、必要になった時だけ家族招待、2人目以降、AI相談、月まとめを広げます。"
-              />
+	              <MascotNote
+	                label="続けるなら"
+	                title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
+	                body="まず無料で1人分を使い、家族2人までは一緒に見られる設計にします。2人目以降の対象者、容量、月まとめ、長期相談をPlusで広げます。"
+	              />
               <div className="companion-feature-grid">
                 {continuationFeatures.map((feature) => (
                   <div className="companion-feature" key={feature.title}>
@@ -1297,9 +1506,9 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <p className="nb-plus-note">
-            2人目の手帳、家族との共有、AI相談は <Link href="/plans">Plus</Link> で。
-          </p>
+	          <p className="nb-plus-note">
+	            2人目以降の手帳、容量、月まとめ、長期相談は <Link href="/plans">Plus</Link> で。
+	          </p>
         </div>
       ) : null}
     </main>

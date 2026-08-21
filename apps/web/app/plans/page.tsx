@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "料金と使い方",
-  description: "1人目の管理手帳、家族共有、AI相談。親のもしもナビでできることをまとめています。"
+  description: "1人目の管理手帳、家族共有、長期相談。親のもしもナビでできることをまとめています。"
 };
 
 const plans = [
@@ -36,12 +36,12 @@ const plans = [
     featured: true
   },
   {
-    name: "AI相談",
+    name: "長期相談",
     price: "Plus内機能",
     audience: "毎回説明せずに相談したい人",
     items: [
       "対象者プロフィールを参照",
-      "日々の記録を踏まえた助言",
+      "日々の記録を踏まえた相談メモ",
       "今聞くべき質問の提案",
       "専門判断は断定しない安全設計"
     ],
@@ -56,9 +56,9 @@ export default function PlansPage() {
     <main className="container">
       <section className="result-summary">
         <p className="pill">料金と使い方</p>
-        <h1 className="page-title">1人目は無料。複数管理とAI相談は有料へ。</h1>
+        <h1 className="page-title">1人目は無料。複数管理と長期相談は有料へ。</h1>
         <p className="lead">
-          親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人分の記録を整え、必要になった時だけ家族共有やAI相談を追加できます。
+          親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人分の記録を整え、必要になった時だけ複数管理や長期相談を追加できます。家族共有は最初の価値体験として無料枠を残します。
         </p>
       </section>
 
