@@ -4185,3 +4185,26 @@ GitHubが必要な理由:
   - つまり `@oyano/shared` の crisis / consult / funnel、`@/lib/funnel`、`@/lib/consult` はいずれもMetroで解決できている。
 - 残る未確認:
   - 画面の見た目、タップ操作、`Share` シート、AsyncStorageの保持は未確認。`expo start` かEAS buildでの目視が必要。
+
+## 2026-08-21 追記 123
+
+- マージ:
+  - PR #1 `危機モードと長期相談をアプリへ、Webを入口に。計測と課金導線も通す` を main へマージした。
+  - マージコミット: `1f4b9d1`。main のCI run `32461824687` success。
+  - PR #2 `危機モードだけを先に出す`（`claude/crisis-mode-only`）は、内容がPR #1に含まれるためクローズした。cherry-pickでSHAが変わっているため自動クローズはされない。
+- マージ前に実施したセキュリティレビュー:
+  - HIGH / MEDIUM の指摘なし。
+  - 確認した範囲: 家族API3本の認可（トークンをサーバー検証し、家族はボディではなく検証済みuserIdから解決）、招待トークンが応答に含まれないこと、RevenueCat webhookの署名検証、Stripe webhookの分岐が署名検証後であること、`/api/events` の許可リストとパラメータ化、`funnel_events` のRLSと`funnel_summary`のEXECUTE revoke、`dangerouslySetInnerHTML` の新規追加なし、デプロイworkflowの入力が`choice`型で制約されること。
+  - 記録として: このPRの `cache: "no-store"` 修正は、Next.jsのData CacheがRoute Handler内のSupabase GETをキャッシュしていた問題を塞いでいる。キャッシュキーにAuthorizationヘッダが含まれない条件では、利用者間で応答が混ざる可能性があった。
+- 本番反映の状況:
+  - **Vercelへの反映は未確認。** マージコミットにデプロイのcommit statusが1件も付いていない（`total_count: 0`）。VercelのGit連携がこのリポジトリに接続されていない可能性が高い。
+  - この実行環境からはVercelへ到達できない（ネットワークポリシーで403）ため、こちらからは確認も実行もできない。
+  - 反映されていない場合は、`docs/DEPLOYMENT.md` の手順に従い、Git連携を接続するか `VERCEL_TOKEN` を設定して `.github/workflows/deploy-vercel.yml` を手動実行する。
+- 本番で必要な作業（未実施）:
+  - `supabase/funnel_events.sql` を本番Supabaseへ適用する。未適用だと `/admin/funnel` は「適用してください」を出す。
+  - `ANTHROPIC_API_KEY` を設定する。未設定でも他機能は動くが、`/consult` は503を返す。
+  - Supabase の Authentication > URL Configuration に本番URLをRedirect URLとして追加する。無いと招待の確認メールから戻れない。
+  - Plusを売る場合は `STRIPE_PLUS_PRICE_ID` と `NEXT_PUBLIC_PLUS_PRICE_LABEL`。未設定の間は受付を開かない設計。
+- 未確認（引き続き）:
+  - 実Claude API / 実Supabase / 実Stripe への疎通。
+  - アプリの実機表示。`expo export` でiOSバンドルが通ることまでは確認済みだが、画面の見た目・タップ・Shareシート・AsyncStorageの保持は未確認。
