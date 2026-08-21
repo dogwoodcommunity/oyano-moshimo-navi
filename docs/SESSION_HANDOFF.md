@@ -4727,3 +4727,55 @@ api.supabase.com 403
 ```
 
 いずれもネットワークポリシーによる遮断。利用者自身のパソコンで実行する。
+
+## 2026-08-21 追記 145 — いますぐやる作業（未反映）
+
+コードは全部 main にある。**残っているのは本番へ反映する操作だけ。**
+クラウド上の実行環境からは `vercel.com` も `api.supabase.com` も
+ネットワークポリシーで遮断されている（403）ため、利用者のパソコンで実行する。
+
+### 1. Webを反映
+
+```
+cd ~/Desktop/oyano-moshimo-navi
+git pull origin main
+npx vercel --prod
+```
+
+含まれる変更:
+- 2冊目の手帳・2人目の共有からPlus（追記141）
+- ヘッダーの段差、カードの余白、バッジの位置（追記142）
+- 丸の中の漢字を形に置き換え（追記143）
+
+反映後の確認:
+```
+node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app
+```
+
+### 2. SQLを反映
+
+```
+printf "Supabaseのトークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
+export SUPABASE_ACCESS_TOKEN
+
+node scripts/run-sql.mjs --check
+node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
+```
+
+`--check` は本番の関数定義そのものから上限を読む。
+流す前は `2人`、流したあとは `1人` になるのが正しい。
+
+流すのは関数2つの差し替えと権限付与だけ。テーブルもポリシーも触らない。
+
+### 3. 反映後に見ておくこと
+
+- `/start` で2冊目を作ろうとすると、選択肢が押せずPlusへの案内が出るか
+- `/family` で「無料で一緒に見られるのは、あなたのほかに1人まで」と出るか
+- 招待を2人目に出そうとして断られるか（SQLを流したあと）
+
+### そのあとに残るもの
+
+- アプリ（Expo）の実機表示。バンドルは通るが画面は未確認。
+- `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
+- プレミアプランを作るかどうか。中身が決まっていない。
+- 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
