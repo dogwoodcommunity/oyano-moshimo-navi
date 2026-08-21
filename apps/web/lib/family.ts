@@ -58,6 +58,20 @@ export async function getOrCreateFamilyId(context: FamilyContext): Promise<strin
   const existing = Array.isArray(memberships) ? memberships[0]?.family_id : undefined;
   if (existing) return existing as string;
 
+  // families.owner_user_id は profiles を参照する。profiles を自動で作るトリガーは無いため、
+  // 先に用意しないと外部キー違反で家族を作れない。
+  // クラウド控えを一度も使っていない利用者が /family を先に開く経路がこれに当たる。
+  const { error: profileError } = await context.service
+    .from("profiles")
+    .upsert({
+      id: context.userId,
+      email: context.email,
+      display_name: context.email?.split("@")[0] ?? "利用者",
+      updated_at: new Date().toISOString()
+    });
+
+  if (profileError) throw profileError;
+
   const familyName = context.email ? `${context.email.split("@")[0]}さんの家族` : "親のもしもナビの家族";
   const { data: family, error } = await context.service
     .from("families")

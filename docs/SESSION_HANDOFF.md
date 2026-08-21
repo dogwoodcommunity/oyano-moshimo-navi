@@ -4359,3 +4359,24 @@ GitHubが必要な理由:
   - Plusを売るかの判断。売るならiOSはApp内課金が必要（`docs/IN_APP_PURCHASE_PLAN.md`）。
 - 次に見る数字:
   - `/admin/funnel` の「7日以内に2件目を書いた」割合。数%なら良い無料ツール、20%を超えるなら賭けてよい。この数字が出るまで価格は決めない。
+
+## 2026-08-21 追記 131
+
+- SupabaseのRedirect URL設定を確認した。**すでに登録済みだった。**
+  - Site URL: `https://oyano-moshimo-navi.vercel.app`
+  - Redirect URLs: `https://oyano-moshimo-navi.vercel.app/**`、`oyanomoshimo://handoff`、`oyanomoshimo:///handoff`
+  - ワイルドカードがあるので `/home?cloud=1`、`/family`、`/invite/xxx`、`/plans` すべて戻れる。
+- 本番でマジックリンクを実際に試した。**メールは届き、リンクからログイン状態で `/family` に戻れた。** ここは正常。
+- **ただしバグを踏んだ。** 画面に「家族の情報を用意できませんでした。」が出て、メンバー一覧が「読み込み中です」のまま止まった。
+- 原因（私の実装漏れ）:
+  - `families.owner_user_id` は `profiles(id)` を参照する。`auth.users` から `profiles` を自動作成するトリガーは存在しない。
+  - 既存の `/api/notebook/sync` は家族を作る前に `profiles` をupsertしているが、**追記112で書いた `lib/family.ts` の `getOrCreateFamilyId()` はそれをしていなかった。**
+  - 結果、**クラウド控えを一度も使っていない利用者が先に `/family` を開くと、外部キー違反で家族を作れない。** モックはFKを強制しないため、モック検証では出なかった。
+- 対応:
+  - `getOrCreateFamilyId()` で、家族を作る前に `profiles` をupsertするようにした。
+  - `/api/family`、`/api/family/invite`、`/api/stripe/plus-checkout` の catch でエラーをログに残すようにした。**握りつぶしていたため本番で原因が追えず、診断が遅れた。**
+- 学び:
+  - モックは外部キーを検証しない。スキーマの参照関係に依存する処理は、モックだけでは足りない。
+  - エラーを握りつぶすと、本番で起きた時に何も分からない。最低限ログには残す。
+- 未対応:
+  - 認証メールの本文が英語のまま（Supabaseの既定テンプレート）。`docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md` に日本語版の資料があるが未適用。親の入院で動転している家族が受け取るメールとして、英語のままは良くない。

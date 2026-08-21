@@ -48,7 +48,9 @@ export async function POST(request: Request) {
   let familyId: string;
   try {
     familyId = await getOrCreateFamilyId(context);
-  } catch {
+  } catch (error) {
+    // 握りつぶすと本番で原因が追えない。今回それで診断が遅れた。
+    console.error("[family] failed to prepare family", error);
     return NextResponse.json({ error: "family_failed", message: "家族の情報を用意できませんでした。" }, { status: 500 });
   }
 
