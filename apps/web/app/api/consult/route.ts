@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   buildConsultPrompt,
+  hasNotebookSubstance,
   normalizeConsultAnswer,
   CONSULT_DISCLAIMER,
   CONSULT_MAX_QUESTION_LENGTH,
@@ -9,25 +10,23 @@ import {
   CONSULT_TOOL,
   type ConsultRequest
 } from "@/lib/consult";
-import { checkPublicRateLimit } from "@/lib/publicRateLimit";
+import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const MODEL = "claude-opus-5";
 
+/** 1回ごとに外部APIの費用が出るため、利用者ごとと、サービス全体の両方に1日の上限を置く。 */
+const PER_CLIENT_DAILY_LIMIT = Number(process.env.CONSULT_CLIENT_DAILY_LIMIT ?? 5);
+const SERVICE_DAILY_LIMIT = Number(process.env.CONSULT_DAILY_LIMIT ?? 200);
+const ONE_DAY_SECONDS = 86_400;
+
 function badRequest(message: string) {
   return NextResponse.json({ error: "invalid_request", message }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
-  const limited = await checkPublicRateLimit(request, {
-    keyPrefix: "consult",
-    limit: 12,
-    windowSeconds: 3600
-  });
-  if (limited) return limited;
-
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
@@ -52,6 +51,39 @@ export async function POST(request: NextRequest) {
   }
   if (question.length > CONSULT_MAX_QUESTION_LENGTH) {
     return badRequest(`相談内容は${CONSULT_MAX_QUESTION_LENGTH}文字までにしてください。`);
+  }
+  if (!hasNotebookSubstance(payload)) {
+    return NextResponse.json(
+      {
+        error: "notebook_required",
+        message: "先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。"
+      },
+      { status: 422 }
+    );
+  }
+
+  // ここまでの検証を通ったものだけが枠を消費する。
+  // 入力の不備で弾かれたリクエストで1日の枠を使い切ると、一度も相談できないまま終わる。
+  const limited = await checkPublicRateLimit(request, {
+    keyPrefix: "consult",
+    limit: PER_CLIENT_DAILY_LIMIT,
+    windowSeconds: ONE_DAY_SECONDS
+  });
+  if (limited) return limited;
+
+  const service = await checkServiceRateLimit({
+    keyPrefix: "consult",
+    limit: SERVICE_DAILY_LIMIT,
+    windowSeconds: ONE_DAY_SECONDS
+  });
+  if (!service.allowed) {
+    return NextResponse.json(
+      {
+        error: "consult_capacity_reached",
+        message: "今日の相談の受付上限に達しました。明日また試してください。手帳への記録はこれまで通り使えます。"
+      },
+      { status: 503, headers: { "Retry-After": String(Math.max(1, service.retryAfter)) } }
+    );
   }
 
   const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 1 });

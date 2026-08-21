@@ -7,6 +7,7 @@ import {
   CONSULT_SENT_FIELDS,
   CONSULT_WITHHELD_FIELDS,
   consultAnswerToDiaryBody,
+  hasNotebookSubstance,
   type ConsultAnswer
 } from "@/lib/consult";
 import {
@@ -65,6 +66,7 @@ export function ConsultPanel() {
   const [disclaimer, setDisclaimer] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saved, setSaved] = useState(false);
+  const [hasSubstance, setHasSubstance] = useState(true);
 
   useEffect(() => {
     const localCases = listLocalCases();
@@ -78,6 +80,15 @@ export function ConsultPanel() {
     () => cases.find((item) => item.id === activeCaseId),
     [cases, activeCaseId]
   );
+
+  useEffect(() => {
+    if (!activeCase) return;
+    setHasSubstance(hasNotebookSubstance({
+      question: "",
+      person: activeCase.personProfile,
+      entries: listDiaryEntries(activeCase.id).map((entry) => ({ body: entry.body }))
+    }));
+  }, [activeCase]);
 
   function toggleConsent(next: boolean) {
     setConsent(next);
@@ -227,12 +238,18 @@ export function ConsultPanel() {
         <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
         <button
           className="consult-submit"
-          disabled={!consent || question.trim().length < 4 || phase === "loading"}
+          disabled={!consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
           onClick={submit}
           type="button"
         >
           {phase === "loading" ? "整理しています…" : "相談メモを作る"}
         </button>
+        {!hasSubstance ? (
+          <p className="consult-hint">
+            先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。
+            <Link href="/home#today-diary">今日の記録を書く</Link>
+          </p>
+        ) : null}
         {!consent ? <p className="consult-hint">送る内容に同意すると押せます。</p> : null}
         {phase === "loading" ? <p className="consult-hint">記録を読んでいます。30秒ほどかかることがあります。</p> : null}
         {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}

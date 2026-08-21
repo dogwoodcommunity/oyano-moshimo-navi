@@ -53,12 +53,12 @@ function localRateLimit(key: string, options: RateLimitOptions) {
   return rateLimitResponse(Math.ceil((current.resetAt - now) / 1000));
 }
 
-export async function checkPublicRateLimit(request: Request, options: RateLimitOptions) {
-  const key = `${options.keyPrefix}:${clientKey(request)}`;
+async function consume(key: string, options: RateLimitOptions): Promise<{ allowed: boolean; retryAfter: number }> {
   const supabase = getServerSupabase();
 
   if (!supabase) {
-    return localRateLimit(key, options);
+    const local = localRateLimit(key, options);
+    return local ? { allowed: false, retryAfter: options.windowSeconds } : { allowed: true, retryAfter: 0 };
   }
 
   const { data, error } = await supabase.rpc("check_public_api_rate_limit", {
@@ -68,11 +68,29 @@ export async function checkPublicRateLimit(request: Request, options: RateLimitO
   });
 
   if (error) {
-    return localRateLimit(key, options);
+    const local = localRateLimit(key, options);
+    return local ? { allowed: false, retryAfter: options.windowSeconds } : { allowed: true, retryAfter: 0 };
   }
 
   const result = data as { allowed?: boolean; retry_after?: number } | null;
-  if (result?.allowed !== false) return null;
+  if (result?.allowed !== false) return { allowed: true, retryAfter: 0 };
 
-  return rateLimitResponse(result.retry_after ?? options.windowSeconds);
+  return { allowed: false, retryAfter: result.retry_after ?? options.windowSeconds };
+}
+
+export async function checkPublicRateLimit(request: Request, options: RateLimitOptions) {
+  const key = `${options.keyPrefix}:${clientKey(request)}`;
+  const { allowed, retryAfter } = await consume(key, options);
+  return allowed ? null : rateLimitResponse(retryAfter);
+}
+
+/**
+ * 利用者ごとではなく、サービス全体で1つのカウンタを使う。
+ * 外部APIのように1回ごとに費用が出るものへ、1日の総量の上限を置くために使う。
+ *
+ * 注意: Supabaseが未設定の場合はプロセス内のカウンタに落ちる。
+ * サーバーレスでインスタンスが増えると上限が効かなくなるため、本番では必ずSupabaseを設定する。
+ */
+export async function checkServiceRateLimit(options: RateLimitOptions): Promise<{ allowed: boolean; retryAfter: number }> {
+  return consume(`${options.keyPrefix}:service`, options);
 }

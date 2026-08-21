@@ -64,6 +64,31 @@ export const CONSULT_WITHHELD_FIELDS = [
   "10桁以上の数字、カード番号の形の文字列、暗証番号の近くの数字（自動で伏せます）"
 ];
 
+/** 相談を受け付ける最低条件。記録もプロフィールも無い状態では一般論しか返せない。 */
+export const CONSULT_MIN_PROFILE_FIELDS = 2;
+
+export function hasNotebookSubstance(request: ConsultRequest): boolean {
+  const entries = Array.isArray(request.entries) ? request.entries : [];
+  const hasEntry = entries.some((entry) => typeof entry?.body === "string" && entry.body.trim().length >= 4);
+  if (hasEntry) return true;
+
+  const person = request.person ?? {};
+  const filled = ([
+    "relationship",
+    "careStatus",
+    "birthDate",
+    "hospitalOrFacility",
+    "medicationNote",
+    "familyStructureNote",
+    "carePreference"
+  ] as const).filter((field) => {
+    const value = person[field];
+    return typeof value === "string" && value.trim().length > 0;
+  }).length;
+
+  return filled >= CONSULT_MIN_PROFILE_FIELDS;
+}
+
 const MASK = "［伏字］";
 
 /**

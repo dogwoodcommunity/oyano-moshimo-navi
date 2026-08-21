@@ -13,6 +13,8 @@
 | `STRIPE_WEBHOOK_SECRET` | support pack時 | no | Stripe Webhook署名検証 |
 | `CRON_SECRET` | notification時 | no | Cron手動実行保護 |
 | `ANTHROPIC_API_KEY` | 長期相談時 | no | `/api/consult` からClaude APIを呼ぶ |
+| `CONSULT_CLIENT_DAILY_LIMIT` | 任意 | no | 利用者ごとの相談回数/日。既定5 |
+| `CONSULT_DAILY_LIMIT` | 任意 | no | サービス全体の相談回数/日。既定200 |
 | `NEXT_PUBLIC_APP_SCHEME` | yes | yes | アプリ引き継ぎURL |
 | `NEXT_PUBLIC_WEB_BASE_URL` | yes | yes | Web本番URL |
 
