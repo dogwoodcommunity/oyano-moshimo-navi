@@ -3820,3 +3820,62 @@ GitHubが必要な理由:
   - 家族共有2名無料のUXと招待導線の最終調整は未実装。
   - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
   - Vercelのproduction反映は `Not authorized` のまま。Vercel再ログインまたは `VERCEL_TOKEN` 設定が必要。今回の危機モードも本番未反映。
+
+## 2026-08-21 追記 111
+
+- 経緯:
+  - 追記110に続き、未完了リストの `本物のLLM相談` を実装した。
+- 判断:
+  - キーワードマッチをやめ、Claude API（`claude-opus-5`）で手帳の記録を前提にした整理を返す。
+  - ただし「AIが答える」ではなく「家族が次に動くための整理メモ」に徹する。診断名、治療方針、余命、介護度、相続の分け方、税額、法的結論は断定させない。
+  - この領域で外部AIに情報を送る以上、`送る情報`と`送らない情報`を画面で先に見せてから同意を取る。同意なしでは送信ボタンを押せない。
+  - 氏名、生年月日そのもの、連絡先、書類・鍵の保管場所は、そもそもリクエストに含めない。記録本文の中の電話番号・メール・口座番号らしき数字はサーバー側で自動的に伏字にする。
+  - Vercelの実行時間内に収めるため `output_config.effort` は `medium`、`maxDuration` は 60 とした。
+- 対応:
+  - `apps/web/package.json` に `@anthropic-ai/sdk` を追加。
+  - `apps/web/lib/consult.ts` を追加。
+    - `redactSensitive()`。暗証番号の近くの数字、カード番号形式、電話番号形式、10桁以上の数字、メールアドレスを伏字にする。日付や体温などの短い数値は残す。
+    - `buildConsultPrompt()`。送る項目をここで固定する。この関数を通らない情報はAPIへ渡らない。生年月日は `80代` のような年代へ変換する。
+    - `CONSULT_SENT_FIELDS` / `CONSULT_WITHHELD_FIELDS`。UIの開示表示と実装を同じ定義から出す。
+    - `CONSULT_SYSTEM_PROMPT` と `CONSULT_TOOL`（strict tool use）。出力形式を強制し、自由文で医療・法律の結論が出ないようにする。
+    - `normalizeConsultAnswer()` で不正な形を弾き、`consultAnswerToDiaryBody()` で手帳へ残す本文を組み立てる。
+  - `apps/web/app/api/consult/route.ts` を追加。
+    - `checkPublicRateLimit` で 1時間12回に制限。
+    - `ANTHROPIC_API_KEY` 未設定なら503を返し、手帳の他機能には影響させない。
+    - `stop_reason === "refusal"` を422で返す。RateLimit / Auth / Timeout / APIError を型付きで分岐。
+  - `apps/web/components/ConsultPanel.tsx` を追加。
+    - 手帳がなければ `/start` へ誘導。複数手帳があれば切り替えタブ。
+    - 送る情報・送らない情報の開示と同意チェック（`oyano_consult_consent_v01`）。
+    - 相談例のチップ、入力欄、結果表示（いまの状況 / 次に確認すること / 窓口で聞くこと / 相談先の候補 / 気をつけること / 次に残すこと）。
+    - `この相談メモを手帳に残す` で日記へ保存。
+  - `apps/web/app/consult/page.tsx` を追加。
+  - `apps/web/app/home/page.tsx` に `長期相談` セクションを追加。
+  - `apps/web/app/plans/page.tsx` の長期相談プランを実機能に合わせて修正し、CTAを `/consult` へ。
+  - `apps/web/app/legal/privacy/page.tsx` に `生成AIへの送信（長期相談）` の節を追加。送る項目・送らない項目・自動伏字・学習に使わない旨を明記。
+  - `apps/web/app/safety/page.tsx` に `生成AIへ送るものを、先に見せる` を追加。
+  - `docs/ENVIRONMENT_MATRIX.md`、`apps/web/.env.example`、`apps/web/app/api/admin/env-check/route.ts` に `ANTHROPIC_API_KEY` を追加。
+  - `apps/web/app/sitemap.ts` に `/consult` を追加。
+  - `apps/web/app/globals.css` に `.consult-*` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。`pnpm --filter web run build` OK。
+  - `lib/consult.ts` を単体で実行し、伏字処理を確認。
+    - `口座は1234567890123です` / `カードは1234 5678 9012 3456` / `暗証番号は1234です` / `test@example.com` / `090-1234-5678` / `03-1234-5678` / `0120-000-111` はすべて伏字。
+    - `2026-08-21に受診、37.2度` や `会議は10-15時` は伏字にならないことを確認。
+  - モックのAnthropicエンドポイント（`ANTHROPIC_BASE_URL` で差し替え）を立てて、実際に送信される本文を検証。
+    - 氏名 `テスト母`、生年月日 `1945-03-02`、連絡先 `090-1111-2222`、保管場所メモ `仏壇` がいずれも含まれないことを確認。
+    - 記録本文中の `090-1234-5678` が伏字になっていることを確認。
+    - `model: claude-opus-5`、`output_config.effort: medium`、`tools[0].strict: true` で送られることを確認。
+  - Chromium 390x844 で `/consult` を確認。
+    - 手帳なし → `先に1人分の手帳を作ってください`。
+    - 同意前は送信ボタンが無効、同意後に有効。
+    - 相談例チップで入力欄が埋まる。
+    - 結果が6ブロックで表示され、手帳へ保存できることを確認。日記が1件増える。
+    - 同意状態がリロード後も保持されることを確認。
+    - 横スクロールなし、JSエラーなし。
+  - エラー系:
+    - 4文字未満 → 400、600文字超 → 400。
+    - `stop_reason: refusal` → 422。
+    - `ANTHROPIC_API_KEY` 未設定 → 503。
+- 未確認:
+  - 実際のClaude APIへの疎通は未実施。この環境に `ANTHROPIC_API_KEY` が無いため、モックでの検証にとどまる。本番キー設定後に、実際の応答品質と所要時間の確認が必要。
+  - `output_config.effort` を `medium` にしているが、実応答を見て `high` へ上げるか判断する。

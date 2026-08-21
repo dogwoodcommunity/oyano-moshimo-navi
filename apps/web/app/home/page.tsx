@@ -1048,6 +1048,17 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
+          <section className="nb-section" aria-label="長期相談">
+            <article className="nb-card consult-entry-card">
+              <div>
+                <p className="nb-eyebrow">長期相談</p>
+                <h2>この手帳を前提に相談する</h2>
+                <p>プロフィールと最近の記録をもとに、次に確認すること、窓口で聞くこと、相談先の候補を整理します。毎回ゼロから説明しなくて済みます。</p>
+              </div>
+              <Link className="nb-save" href="/consult">相談メモを作る</Link>
+            </article>
+          </section>
+
           <section className="nb-section" id="today-diary">
             <div className="nb-section-head">
               <strong>今日の記録</strong>

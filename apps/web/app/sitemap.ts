@@ -8,6 +8,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/home",
     "/crisis",
+    "/consult",
     "/guides",
     "/checklists",
     "/safety",

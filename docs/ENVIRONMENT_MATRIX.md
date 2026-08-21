@@ -12,6 +12,7 @@
 | `STRIPE_SUPPORT_PACK_PRICE_ID` | support pack時 | no | 発動サポートパックPrice |
 | `STRIPE_WEBHOOK_SECRET` | support pack時 | no | Stripe Webhook署名検証 |
 | `CRON_SECRET` | notification時 | no | Cron手動実行保護 |
+| `ANTHROPIC_API_KEY` | 長期相談時 | no | `/api/consult` からClaude APIを呼ぶ |
 | `NEXT_PUBLIC_APP_SCHEME` | yes | yes | アプリ引き継ぎURL |
 | `NEXT_PUBLIC_WEB_BASE_URL` | yes | yes | Web本番URL |
 
@@ -48,4 +49,5 @@ https://<web-domain>
 
 - `SUPABASE_SERVICE_ROLE_KEY` は絶対に `NEXT_PUBLIC_` / `EXPO_PUBLIC_` にしない。
 - `STRIPE_SECRET_KEY` と `STRIPE_WEBHOOK_SECRET` はWebサーバーだけに置く。
+- `ANTHROPIC_API_KEY` もWebサーバーだけに置く。未設定の場合、長期相談は503を返し、手帳の他の機能は通常どおり動く。
 - Expoアプリ内に外部Web決済CTAを置かない。
