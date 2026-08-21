@@ -1,4 +1,4 @@
-const CACHE_VERSION = "oyano-moshimo-navi-v17";
+const CACHE_VERSION = "oyano-moshimo-navi-v18";
 const STATIC_CACHE_URLS = [
   "/offline",
   "/brand/watch-bird-mark.svg",
@@ -11,6 +11,15 @@ const STATIC_CACHE_URLS = [
   "/manifest.webmanifest"
 ];
 
+// Crisis pages have to open on a hospital corridor at 2am, so they are fetched
+// at install time instead of waiting for a first visit.
+const PRECACHE_PAGE_URLS = [
+  "/crisis",
+  "/crisis/hospital-night",
+  "/crisis/critical",
+  "/crisis/just-died"
+];
+
 const PAGE_CACHE_URLS = new Set([
   "/",
   "/home",
@@ -18,12 +27,17 @@ const PAGE_CACHE_URLS = new Set([
   "/guides",
   "/checklists",
   "/safety",
-  "/plans"
+  "/plans",
+  ...PRECACHE_PAGE_URLS
 ]);
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(STATIC_CACHE_URLS)).then(() => self.skipWaiting())
+    caches.open(CACHE_VERSION)
+      .then((cache) => cache.addAll(STATIC_CACHE_URLS).then(() =>
+        Promise.all(PRECACHE_PAGE_URLS.map((url) => cache.add(url).catch(() => undefined)))
+      ))
+      .then(() => self.skipWaiting())
   );
 });
 
@@ -59,7 +73,9 @@ self.addEventListener("fetch", (event) => {
           caches.open(CACHE_VERSION).then((cache) => cache.put(request, responseClone));
           return response;
         })
-        .catch(() => caches.match("/offline").then((cached) => cached || caches.match("/home")))
+        .catch(() => caches.match(request).then((cached) =>
+          cached || caches.match("/offline").then((offline) => offline || caches.match("/home"))
+        ))
     );
   }
 });
