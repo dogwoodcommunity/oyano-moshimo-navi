@@ -89,9 +89,11 @@ export async function POST(request: NextRequest) {
   try {
     const response = await client.messages.create({
       model: MODEL,
-      max_tokens: 8000,
-      // 断定を避ける構成で十分な質を出しつつ、Vercelの実行時間内に収める。
-      output_config: { effort: "medium" },
+      max_tokens: 5000,
+      // 本番で29〜49秒かかり、48秒台では空で返った。60秒の実行上限に近すぎる。
+      // 出力の形はシステムプロンプトとstrict schemaで固定してあるので、
+      // 推論の深さを下げても崩れにくいと判断してlowにする。
+      output_config: { effort: "low" },
       system: CONSULT_SYSTEM_PROMPT,
       tools: [CONSULT_TOOL],
       messages: [{ role: "user", content: buildConsultPrompt({ ...payload, question }) }]

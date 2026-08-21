@@ -36,7 +36,8 @@ export type ConsultAnswer = {
 };
 
 export const CONSULT_MAX_QUESTION_LENGTH = 600;
-export const CONSULT_MAX_ENTRIES = 20;
+/** 多いほど読む時間が伸びる。本番の所要時間から12件に落とした。 */
+export const CONSULT_MAX_ENTRIES = 12;
 export const CONSULT_MAX_ENTRY_LENGTH = 400;
 
 export const CONSULT_DISCLAIMER =
@@ -50,7 +51,7 @@ export const CONSULT_SENT_FIELDS = [
   "年代（生年月日そのものは送りません）",
   "病院・施設のメモ、薬・注意点のメモ",
   "家族構成メモ、本人の希望メモ",
-  "最近の記録（最大20件）と、期限が近い確認リスト",
+  "最近の記録（最大12件）と、期限が近い確認リスト",
   "入力した相談内容"
 ];
 
