@@ -4084,3 +4084,33 @@ GitHubが必要な理由:
   - Chromiumで `/admin/funnel` を確認。`3 / 危機モードを開いた（アプリ2・Web1）`、`2 / 対象者を登録した（66.7%）`、`1 / 7日以内に2件目を書いた（33.3%）` が表示され、期間の切り替えも動く。JSエラーなし。
 - 本番で必要な作業:
   - `supabase/funnel_events.sql` を本番Supabaseへ適用する。適用前は `/admin/funnel` が「適用してください」を出す。
+
+## 2026-08-21 追記 119
+
+- 経緯:
+  - 「本体はアプリ、Webは入口」の方針に合わせ、Web側の入口を整理した。
+  - 調べたところ、App Store / Google Play / TestFlight のURLがコードのどこにも無かった。つまり現状のWebには、アプリへ送る先が存在しない。
+- 判断:
+  - ストアURLは環境変数にして、未設定の間はアプリ導線そのものを出さない。押しても何も起きないボタンを置くほうが、置かないより悪い。
+  - `/start` の11択は、消すのではなく前に出す数を減らす。急ぎの3状況は登録より先に危機モードへ送り、残りは主要4つ＋折りたたみにした。11の状況で登録できること自体は維持している。
+- 対応:
+  - `apps/web/lib/appLinks.ts` と `apps/web/components/AppInstallBand.tsx` を追加。
+    - `NEXT_PUBLIC_IOS_APP_URL` / `NEXT_PUBLIC_ANDROID_APP_URL` が設定されていればストアへのボタン、無ければ「アプリは準備中です。いまはこの画面のまま使えます」とWebの手帳への導線を出す。
+  - `apps/web/app/crisis/[key]/page.tsx` の末尾にアプリ導線を追加。危機モードを使い終えた直後が、続ける場所を伝える一番よい位置と判断した。
+  - `apps/web/app/start/page.tsx` を再構成。
+    - 上部に「いま起きている場合は、登録より先にこちら」として3行（入院・危篤・亡くなった直後）を置き、`/crisis/[key]` へ直接送る。
+    - 登録は「これから備える」4件を表示し、残り7件は `ほかの状況から選ぶ` の折りたたみに入れた。
+    - 行の描画を `StatusRow` に切り出した。
+  - `apps/web/app/globals.css` に `.start-urgent` / `.toc-more` / `.app-band` を追加。
+  - `docs/ENVIRONMENT_MATRIX.md` と `apps/web/.env.example` にストアURLを追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - Chromium 390x844 で確認。
+    - 急ぎの3行が表示され、押すと `/crisis/hospital-night` へ遷移する。
+    - 最初に見える登録は4件、折りたたみは閉じた状態で7件。開くと11件すべて表示される。
+    - 登録を押すと従来どおり `/diagnosis` へ進む。
+    - ストアURL未設定時、アプリ導線が「準備中」の表示になることを確認。
+    - 横スクロールなし、JSエラーなし。
+  - `scripts/smoke-web.mjs` 37件すべて成功。
+- 注意:
+  - `/crisis/[key]` は静的生成のため、ストアURLはビルド時に埋め込まれる。公開後に環境変数を設定したら、再デプロイが必要。

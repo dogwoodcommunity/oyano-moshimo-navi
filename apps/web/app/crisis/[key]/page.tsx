@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { AppInstallBand } from "@/components/AppInstallBand";
 import { CrisisMessageTemplate, CrisisSteps } from "@/components/CrisisSteps";
 import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios, getCrisisScenario } from "@oyano/shared";
 import { getGuide } from "@/lib/guides";
@@ -91,6 +92,8 @@ export default function CrisisScenarioPage({ params }: { params: { key: string }
           </div>
         ) : null}
       </section>
+
+      <AppInstallBand reason="この先の記録、家族との共有、期限の通知はアプリで続けられます。今日の対応を残しておくと、次の相談で毎回ゼロから説明せずに済みます。" />
 
       <p className="crisis-emergency">{CRISIS_EMERGENCY_NOTE}</p>
       <p className="crisis-safety">{CRISIS_SAFETY_NOTE}</p>
