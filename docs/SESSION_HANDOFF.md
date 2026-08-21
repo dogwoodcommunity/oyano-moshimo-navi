@@ -4054,3 +4054,33 @@ GitHubが必要な理由:
 - 未確認:
   - アプリの実機表示は未確認（シミュレータが無いため）。
   - アプリからの相談は `EXPO_PUBLIC_WEB_BASE_URL` が本番を指している必要がある。未設定だと「相談の接続先が設定されていません」を返す。
+
+## 2026-08-21 追記 118
+
+- 経緯:
+  - レビューで「計測ツールが何も入っていないので、出しても何も分からない」と指摘した件。
+  - 本体がアプリになったため、Web入口とアプリの間で匿名IDが切れる。ここは追えないと割り切り、両方の数字を別々に見る設計にした。
+- 判断:
+  - イベントは5つに絞る。`crisis_opened` / `crisis_saved` / `person_created` / `record_written` / `consult_asked`。増やすほど何を見ればよいか分からなくなる。
+  - 外部の計測サービスは入れない。このプロダクトの姿勢と合わないため、自前の最小構成にした。個人情報は持たず、端末ごとの匿名IDとイベント名と時刻だけ。
+  - 集計はSQL側の `funnel_summary` に置く。管理画面は表示だけにする。
+- 対応:
+  - `supabase/funnel_events.sql` を追加。テーブル、索引、`funnel_summary(p_days)` を定義。RLSは有効のままポリシーを作らず、service roleからのみ書き込む。
+  - `packages/shared/src/funnel.ts` を追加。イベント名と集計の型、割合の表示。
+  - `apps/web/app/api/events/route.ts` を追加。イベント名の許可リストと匿名IDの長さだけを見る。失敗しても200を返す（計測の失敗が利用者の操作を止めてはいけない）。
+  - `apps/web/lib/funnel.ts` / `apps/mobile/lib/funnel.ts` を追加。匿名IDはlocalStorage / AsyncStorageに保存。
+  - 発火箇所:
+    - Web: `CrisisSteps`（開いた・記録に残した）、`store.createCase`（対象者）、`store.addDiaryEntry`（記録）、`ConsultPanel`（相談）。
+    - アプリ: `crisis/[key]`（開いた・記録に残した）、`mobileData.createPersonForFamily` / `createInitialFamilyPerson`（対象者）、`addTimelineEntry`（記録）、`consult`（相談）。
+    - `record_written` はデータ層の1か所だけで発火する。画面側にも書いていて二重計上していたのを修正した。
+  - `apps/web/app/api/admin/funnel/route.ts` と `apps/web/app/admin/funnel/page.tsx`、`components/AdminFunnel.tsx` を追加。直近7/30/90日を切り替えられる。
+  - `apps/web/app/legal/privacy/page.tsx` に「利用状況の計測」の節を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter mobile run typecheck` OK、`pnpm --filter web run build` OK。
+  - モックSupabaseに `funnel_summary` を実装して検証。
+    - 3人が危機モードを開き、2人が対象者を登録、うち1人が7日以内に2件書いた状態を作り、`crisisOpened 3 / personCreated 2 / returnedWithin7Days 1` が返ることを確認。
+    - 許可リストに無いイベント名、8文字未満の匿名IDは保存されないことを確認。
+    - 管理APIは認証なしで401。
+  - Chromiumで `/admin/funnel` を確認。`3 / 危機モードを開いた（アプリ2・Web1）`、`2 / 対象者を登録した（66.7%）`、`1 / 7日以内に2件目を書いた（33.3%）` が表示され、期間の切り替えも動く。JSエラーなし。
+- 本番で必要な作業:
+  - `supabase/funnel_events.sql` を本番Supabaseへ適用する。適用前は `/admin/funnel` が「適用してください」を出す。

@@ -1,3 +1,4 @@
+export * from "./funnel";
 export * from "./consult";
 export * from "./crisis";
 

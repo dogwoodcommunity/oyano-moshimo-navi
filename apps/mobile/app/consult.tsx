@@ -11,6 +11,7 @@ import {
   type ConsultAnswer
 } from "@oyano/shared";
 import { readConsultConsent, requestConsult, writeConsultConsent } from "@/lib/consult";
+import { trackFunnel } from "@/lib/funnel";
 import {
   addTimelineEntry,
   fetchDashboardData,
@@ -107,6 +108,7 @@ export default function ConsultScreen() {
 
     setAnswer(result.answer);
     setDisclaimer(result.disclaimer);
+    void trackFunnel("consult_asked");
     setPhase("done");
   }
 

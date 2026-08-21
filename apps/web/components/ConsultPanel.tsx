@@ -10,6 +10,7 @@ import {
   hasNotebookSubstance,
   type ConsultAnswer
 } from "@oyano/shared";
+import { trackFunnel } from "@/lib/funnel";
 import {
   addDiaryEntry,
   listDiaryEntries,
@@ -147,6 +148,7 @@ export function ConsultPanel() {
 
       setAnswer(data.answer);
       setDisclaimer(data.disclaimer ?? "");
+      trackFunnel("consult_asked");
       setPhase("done");
     } catch {
       setErrorMessage("通信できませんでした。電波のよい場所でもう一度お試しください。");

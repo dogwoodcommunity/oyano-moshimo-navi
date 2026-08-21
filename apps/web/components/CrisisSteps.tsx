@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import type { CrisisScenario } from "@oyano/shared";
+import { trackFunnel } from "@/lib/funnel";
 import { addDiaryEntry, listLocalCases, type CaseRecord } from "@/lib/store";
 
 const PROGRESS_STORAGE_KEY = "oyano_crisis_progress_v01";
@@ -61,6 +62,7 @@ export function CrisisSteps({ scenario }: { scenario: CrisisScenario }) {
     setDoneIds(readProgress()[scenario.key] ?? []);
     setCases(listLocalCases());
     setLoaded(true);
+    trackFunnel("crisis_opened");
   }, [scenario.key]);
 
   const allSteps = useMemo(() => scenario.groups.flatMap((group) => group.steps), [scenario]);
@@ -110,6 +112,7 @@ export function CrisisSteps({ scenario }: { scenario: CrisisScenario }) {
       body: lines.join("\n").trim(),
       attachments: []
     });
+    trackFunnel("crisis_saved");
     setSaveState("saved");
   }
 

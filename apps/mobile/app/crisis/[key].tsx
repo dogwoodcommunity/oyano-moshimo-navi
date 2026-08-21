@@ -4,6 +4,7 @@ import { Link, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pressable, ScrollView, Share, StyleSheet, Text, View } from "react-native";
 import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, getCrisisScenario } from "@oyano/shared";
+import { trackFunnel } from "@/lib/funnel";
 import { addTimelineEntry, fetchDashboardData, type MobilePerson } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
@@ -42,6 +43,7 @@ export default function CrisisScenarioScreen() {
     }
 
     void load();
+    void trackFunnel("crisis_opened");
     return () => { mounted = false; };
   }, [key]);
 
@@ -125,6 +127,7 @@ export default function CrisisScenarioScreen() {
       return;
     }
 
+    void trackFunnel("crisis_saved");
     setSaveState("saved");
     setSaveMessage(result.source === "demo" ? "お試し表示に記録しました。" : "記録に残しました。");
   }

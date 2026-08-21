@@ -11,6 +11,7 @@ export default function AdminPage() {
         <h1 className="page-title">Admin overview</h1>
         <p className="lead">Web診断case、発動サポートパック、環境設定を本番前に確認する管理入口です。</p>
         <div className="actions">
+          <Link className="secondary" href="/admin/funnel">funnel</Link>
           <Link className="secondary" href="/admin/cases">cases</Link>
           <Link className="secondary" href="/admin/support-packs">support packs</Link>
           <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
