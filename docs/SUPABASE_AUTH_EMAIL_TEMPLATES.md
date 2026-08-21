@@ -7,8 +7,21 @@ https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/templates
 
 ## いまの状態
 
-**まだ貼れない。** 独自SMTPを設定するまで、Supabaseがテンプレートを編集させない。
-先に「先に独自SMTPが要る」の節をやること。
+**画面からは貼れない。** 独自SMTPを設定するまで、Supabaseがテンプレートを編集させない。
+
+**ただし、画面を使わなければ入る。** Management API はSMTPと文面を同時に受け付けるので、
+1回のPATCHで両方入れれば制限に引っかからない。そのためのスクリプトを用意した。
+
+```
+node scripts/setup-auth-email.mjs --check   いまの状態を見る
+node scripts/setup-auth-email.mjs           SMTPと文面をまとめて入れる
+```
+
+文面の実体は `supabase/auth-emails/` にある。下に載せているHTMLと同じもの。
+文面だけ直したいときは、そのファイルを編集してスクリプトを再実行する。
+
+このスクリプトは、アクセストークンとSMTPのパスワードを画面に出さないし、
+どこにも保存しない。
 
 ## 貼るのは2つだけ
 

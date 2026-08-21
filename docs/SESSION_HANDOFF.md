@@ -4465,3 +4465,28 @@ SMTPのパスワードがメールボックスのログインパスワードそ�
 アプリパスワードは個別に取り消せるので鍵としてはより安全）。
 送信数が増えたらBrevoへ移す。手順は
 `docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md` に3段構えで残した。
+
+## 2026-08-21 追記 136
+
+認証メールの設定を、画面ではなくコマンドで入れられるようにした。
+
+`scripts/setup-auth-email.mjs` と `supabase/auth-emails/`。
+
+Supabaseは独自SMTPが無いプロジェクトのテンプレート編集を画面上で止めているが、
+Management API (`PATCH /v1/projects/{ref}/config/auth`) はSMTPと文面の両方を
+受け付ける。**1回のPATCHで同時に入れれば制限に引っかからない。**
+貼り付けができない問題は、これで回避できる。
+
+対象フィールドは公式のOpenAPIスキーマ（UpdateAuthConfigBody）で確認済み:
+`smtp_host` / `smtp_port` / `smtp_user` / `smtp_pass` / `smtp_admin_email` /
+`smtp_sender_name` / `mailer_subjects_confirmation` /
+`mailer_templates_confirmation_content` / `mailer_subjects_magic_link` /
+`mailer_templates_magic_link_content`
+
+文面の実体は `supabase/auth-emails/` に置いた。資料とスクリプトで二重管理に
+ならないようにしている。文面を直すときはそのファイルを編集して再実行する。
+
+**この作業環境からは実行できない。** `api.supabase.com` も `onamae.com` も
+ネットワークポリシーで遮断されている（403）。利用者自身のパソコンで動かす。
+
+トークンとパスワードは画面に出さず、保存もしない。
