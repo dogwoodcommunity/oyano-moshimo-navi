@@ -140,7 +140,7 @@ Body:
 **Resendは使えない。**
 
 `bee-ch.co.jp` はお名前.comで取得しているが、**ネームサーバーはWixに向いている**
-（Wixでサイトを作ると切り替わる）。ResendはWixを検出して弾く。
+（Wixでサイトを作ると切り替わる）。ResendはWixを検出して拒否する。
 
 理由は、Resendが送信用サブドメイン `send.bee-ch.co.jp` への
 **MXレコードを必須**にしているため（AWS SESのバウンス受信に使う）。
@@ -153,41 +153,66 @@ MXをルートに置く逃げ方は取れない。`bee-ch.co.jp` は会社のメ
 - https://resend.com/docs/add-a-domain
 - https://support.wix.com/en/article/managing-dns-records-in-your-wix-account
 
-**Brevo を使う。** ドメイン認証がTXTレコードだけで済み、MXを要求しない。
-WixのDNSのままで通る。無料枠は1日300通。
+### いま取る道: すでに持っているメールのSMTPをそのまま使う
 
-> there is no need to set up an SPF record for Brevo …
-> DKIM alone is sufficient to pass DMARC
+Supabaseは普通のSMTPを受け付ける。**送信サービスに新規登録しなくても、
+いま使っているメールボックスの送信サーバーをそのまま指定すればよい。**
+DNSも触らない。Wixも触らない。
 
-出典: https://help.brevo.com/hc/en-us/articles/12163873383186
+会社のメールはお名前.comのメールサービスで受けている。
+その送信サーバー（`mail***.onamae.ne.jp` / ポート587）を使う。
 
-### 手順
+出典: https://help.onamae.com/answer/15480
 
-1. Brevo でアカウントを作る（https://www.brevo.com）
-2. Senders, Domains & Dedicated IPs → Domains → Add a domain → `bee-ch.co.jp`
-3. 表示された **TXT（Brevo code）と TXT（DKIM）** を、WixのDNS画面で追加する
-   （Wixは会社サイトのDNSを持っている。既存のMXやAレコードには触らない）
-4. Brevo の画面で Verified になるまで待つ（数分〜数時間）
-5. SMTP & API → SMTP → Create a new SMTP key
-6. Supabase の **Authentication → Emails → SMTP Settings** で Enable にして入れる
+**送信専用のメールボックスを1つ作ってから使うこと。**
+SupabaseにはSMTPのパスワードを保存する。お名前.comのメールでは
+**SMTPのパスワード＝メールボックスのログインパスワード**なので、
+`info@bee-ch.co.jp` をそのまま渡すと、会社の受信メールを読める鍵を
+Supabaseに預けることになる。`noreply@bee-ch.co.jp` のような送信専用の箱を
+作って、それだけを渡す。漏れても被害がその箱に閉じる。
 
 | 項目 | 値 |
 | --- | --- |
-| Sender email | `info@bee-ch.co.jp` |
+| Sender email | `noreply@bee-ch.co.jp` |
 | Sender name | `親のもしもナビ` |
-| Host | `smtp-relay.brevo.com` |
+| Host | お名前.comの管理画面に出る `mail***.onamae.ne.jp` |
 | Port | `587` |
-| Username | Brevoに表示されるログイン用アドレス |
-| Password | BrevoのSMTPキー |
+| Username | `noreply@bee-ch.co.jp` |
+| Password | そのメールボックスのパスワード |
 
-7. 保存すると **Templates が編集できるようになる。** そこで上の2つを貼る。
+保存すると **Templates が編集できるようになる。** そこで上の2つを貼る。
 
-DNSにSPF / DKIMを入れないと、Gmailで迷惑メール扱いになりやすい。
-入院直後の家族が受け取るメールが迷惑メールに入ると、気づかれずに終わる。
+#### これで通らなかった場合
+
+お名前.comのメールが外部サーバーからの送信を弾く可能性がある
+（SMTP AUTHは通るのが普通だが、確認できていない）。
+弾かれたら、Gmailのアプリパスワードに切り替える。
+
+| 項目 | 値 |
+| --- | --- |
+| Host | `smtp.gmail.com` |
+| Port | `465` |
+| Username | Gmailのアドレス |
+| Password | アプリパスワード（16桁） |
+
+アプリパスワードは2段階認証を有効にしてから
+https://myaccount.google.com/apppasswords で作る。
+新規登録は不要。差出人はGmailのアドレスになる。
+アプリパスワードは後から個別に取り消せるので、鍵としてはこちらのほうが安全。
+
+出典: https://support.google.com/accounts/answer/185833
+
+#### それでも足りなくなったら
+
+送信数が増えるか、迷惑メール扱いが目立つようになったら、Brevoへ移す。
+ドメイン認証がTXTだけで済み、MXを要求しないのでWixのDNSのまま通る。
+無料枠は1日300通。
+
+出典: https://help.brevo.com/hc/en-us/articles/12163873383186
 
 ### 送信数
 
-Brevoの無料枠は1日300通。いまの規模なら足りる。
+お名前.comのメールもGmailも、1日数百通は送れる。いまの規模なら足りる。
 足りなくなるのは、それが良い知らせのときだけ。
 
 ### 将来やること
