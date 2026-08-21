@@ -34,9 +34,13 @@ NEXT_PUBLIC_WEB_BASE_URL=
    Vercelでrepoをimportしてあれば、`main` への push で自動的にproduction deployが走る。
    通常はこれだけでよい。反映されない場合は、Vercel > Project > Settings > Git で連携先ブランチを確認する。
 
-2. **手動のGitHub Actions**
-   `.github/workflows/deploy-vercel.yml` を Actions タブから手動実行する（pushでは動かない）。
-   先に次のリポジトリシークレットを設定する。
+2. **GitHub Actions（シークレットを入れると自動になる）**
+   `.github/workflows/deploy-vercel.yml` は `main` への push で本番へ反映する。
+   Actions タブからの手動実行もできる。
+   下のシークレットが未設定の間は、失敗させずにスキップする（未設定でCIが赤くなり続けると、本当の失敗に気づけなくなるため）。
+   VercelのGit連携を使う場合は、シークレットを設定しなければ常にスキップされるので、二重にデプロイされることはない。
+
+   設定するリポジトリシークレット:
 
    | Secret | 取得元 |
    | --- | --- |
