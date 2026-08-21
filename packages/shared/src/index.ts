@@ -1,3 +1,4 @@
+export * from "./consult";
 export * from "./crisis";
 
 export type ParentStatus =

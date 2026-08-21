@@ -1,15 +1,13 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { NextResponse, type NextRequest } from "next/server";
 import {
-  buildConsultPrompt,
   hasNotebookSubstance,
   normalizeConsultAnswer,
   CONSULT_DISCLAIMER,
   CONSULT_MAX_QUESTION_LENGTH,
-  CONSULT_SYSTEM_PROMPT,
-  CONSULT_TOOL,
   type ConsultRequest
-} from "@/lib/consult";
+} from "@oyano/shared";
+import { buildConsultPrompt, CONSULT_SYSTEM_PROMPT, CONSULT_TOOL } from "@/lib/consult";
 import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
 
 export const dynamic = "force-dynamic";

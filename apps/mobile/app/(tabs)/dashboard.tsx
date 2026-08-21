@@ -29,6 +29,21 @@ function dueLabel(value?: string) {
   return `${days}日後`;
 }
 
+function ConsultCard() {
+  return (
+    <Link asChild href="/consult">
+      <Pressable style={({ pressed }) => [styles.consultCard, pressed && styles.consultCardPressed]}>
+        <MaterialCommunityIcons color={colors.blue} name="comment-question-outline" size={26} />
+        <View style={styles.consultBody}>
+          <Text style={styles.consultTitle}>この記録を前提に相談する</Text>
+          <Text style={styles.consultHint}>次に確認すること、窓口で聞くことを整理します。毎回ゼロから説明しなくて済みます。</Text>
+        </View>
+        <MaterialCommunityIcons color={colors.muted} name="chevron-right" size={22} />
+      </Pressable>
+    </Link>
+  );
+}
+
 function CrisisBanner() {
   return (
     <Link asChild href="/crisis">
@@ -109,6 +124,7 @@ export default function DashboardScreen() {
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <CrisisBanner />
+      <ConsultCard />
       <ImageBackground
         imageStyle={styles.heroImage}
         resizeMode="cover"
@@ -250,6 +266,21 @@ function TaskSection({
 }
 
 const styles = StyleSheet.create({
+  consultCard: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.line,
+    borderRadius: radius.card,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 14,
+    padding: 14
+  },
+  consultCardPressed: { backgroundColor: colors.surfaceSoft },
+  consultBody: { flex: 1, gap: 3 },
+  consultTitle: { color: colors.ink, fontSize: 15, fontWeight: "900" },
+  consultHint: { color: colors.muted, fontSize: 12, lineHeight: 19 },
   crisisBanner: {
     alignItems: "center",
     backgroundColor: "#f7e7e2",

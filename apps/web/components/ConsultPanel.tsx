@@ -9,7 +9,7 @@ import {
   consultAnswerToDiaryBody,
   hasNotebookSubstance,
   type ConsultAnswer
-} from "@/lib/consult";
+} from "@oyano/shared";
 import {
   addDiaryEntry,
   listDiaryEntries,

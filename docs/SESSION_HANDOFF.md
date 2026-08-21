@@ -4032,3 +4032,25 @@ GitHubが必要な理由:
     - 別クライアントで1回通ったあと、全体上限に達して503。
 - 注意:
   - サービス全体の上限はSupabaseの `check_public_api_rate_limit` に依存する。Supabase未設定の本番では上限が効かないため、必ず設定すること。
+
+## 2026-08-21 追記 117
+
+- 経緯:
+  - 追記115に続き、長期相談をアプリへ移した。これでWebにしかない機能は残っていない（家族共有はアプリ側に元からある）。
+- 判断:
+  - 相談の入口はWebの `/api/consult` に集約したままにする。送る内容の絞り込みと伏字処理をサーバー1か所で完結させるため。アプリ側に同じ処理を置くと、片方だけ直して食い違う。
+  - 型・開示リスト・実体チェック・結果の正規化は両方で使うので `packages/shared/src/consult.ts` へ移した。
+  - システムプロンプトとツール定義、伏字処理、プロンプト組み立ては `apps/web/lib/consult.ts` に残す。アプリのバンドルに載せる必要がなく、載せるべきでもない。
+- 対応:
+  - `packages/shared/src/consult.ts` を追加。型、`CONSULT_SENT_FIELDS` / `CONSULT_WITHHELD_FIELDS`、`hasNotebookSubstance`、`normalizeConsultAnswer`、`consultAnswerToDiaryBody` を移動。
+  - `apps/web/lib/consult.ts` はサーバー専用部分だけになった。route と ConsultPanel の import を `@oyano/shared` へ貼り替え。
+  - `apps/mobile/lib/consult.ts` を追加。同意の保存（AsyncStorage）と `EXPO_PUBLIC_WEB_BASE_URL` 経由のAPI呼び出し。
+  - `apps/mobile/app/consult.tsx` を追加。開示と同意、相談例、入力、結果表示、タイムラインへの保存。
+  - `apps/mobile/app/_layout.tsx` にルート登録、`(tabs)/dashboard.tsx` に相談カードを追加。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - 共有パッケージへ切り出した後もWeb側が壊れていないことを、Chromiumで `/consult` の往復（同意 → 相談 → 結果6ブロック → 手帳へ保存）まで再確認。
+  - `scripts/smoke-web.mjs` 37件すべて成功、失敗0。
+- 未確認:
+  - アプリの実機表示は未確認（シミュレータが無いため）。
+  - アプリからの相談は `EXPO_PUBLIC_WEB_BASE_URL` が本番を指している必要がある。未設定だと「相談の接続先が設定されていません」を返す。
