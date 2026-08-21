@@ -6,7 +6,8 @@
 //
 // 使い方は docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md を見ること。
 //
-//   node scripts/setup-auth-email.mjs --check   いまの状態を見るだけ
+//   node scripts/setup-auth-email.mjs --check           いまの状態を見るだけ
+//   node scripts/setup-auth-email.mjs --templates-only   文面だけ入れる（SMTPは触らない）
 //   node scripts/setup-auth-email.mjs --gmail --user あなた@gmail.com
 //
 // パスワードとトークンは、引数ではなく環境変数で受け取る。
@@ -35,6 +36,8 @@ const args = process.argv.slice(2);
 const checkOnly = args.includes("--check");
 const useGmail = args.includes("--gmail");
 const skipConfirm = args.includes("--yes");
+// すでに独自SMTPが入っている場合はこちら。送信の設定に触らず、文面だけ差し替える。
+const templatesOnly = args.includes("--templates-only");
 
 function argValue(name, fallback = "") {
   const index = args.indexOf(name);
@@ -179,14 +182,24 @@ async function main() {
 
   if (checkOnly) return;
 
-  const smtp = smtpSettings();
+  const smtp = templatesOnly ? null : smtpSettings();
 
   console.log("この内容で設定します:");
-  console.log(`  ${smtp.senderName} <${smtp.senderEmail}>`);
-  console.log(`  ${smtp.host}:${smtp.port}  ユーザー名 ${smtp.user}`);
+  if (smtp) {
+    console.log(`  ${smtp.senderName} <${smtp.senderEmail}>`);
+    console.log(`  ${smtp.host}:${smtp.port}  ユーザー名 ${smtp.user}`);
+  } else {
+    console.log("  送信の設定（SMTP）はそのまま。触りません。");
+  }
   console.log(`  件名「${subjects.magic_link}」`);
   console.log("  文面 日本語（supabase/auth-emails/ の内容）");
   console.log("");
+
+  if (templatesOnly && !before.json?.smtp_host) {
+    console.log("※ 独自SMTPが入っていません。文面だけ入れても、届く相手が広がりません。");
+    console.log("  --templates-only を外して、送信の設定も一緒に入れてください。");
+    console.log("");
+  }
 
   if (!(await confirm("進めますか [y/N]: "))) {
     console.log("中止しました。何も変えていません。");
@@ -194,12 +207,16 @@ async function main() {
   }
 
   const result = await callApi(token, "PATCH", {
-    smtp_host: smtp.host,
-    smtp_port: String(smtp.port),
-    smtp_user: smtp.user,
-    smtp_pass: smtp.pass,
-    smtp_admin_email: smtp.senderEmail,
-    smtp_sender_name: smtp.senderName,
+    ...(smtp
+      ? {
+          smtp_host: smtp.host,
+          smtp_port: String(smtp.port),
+          smtp_user: smtp.user,
+          smtp_pass: smtp.pass,
+          smtp_admin_email: smtp.senderEmail,
+          smtp_sender_name: smtp.senderName
+        }
+      : {}),
     mailer_subjects_confirmation: subjects.confirmation,
     mailer_templates_confirmation_content: confirmation,
     mailer_subjects_magic_link: subjects.magic_link,
@@ -211,7 +228,9 @@ async function main() {
     console.error(`設定できませんでした (${result.status})`);
     console.error(result.text.slice(0, 600));
     console.error("");
-    if (useGmail) {
+    if (templatesOnly) {
+      console.error("文面だけの差し替えで弾かれています。トークンの権限を確認してください。");
+    } else if (useGmail) {
       console.error("Gmailで弾かれる原因は、ほぼアプリパスワードです。");
       console.error("ふだんのGoogleのパスワードでは通りません。");
       console.error("https://myaccount.google.com/apppasswords");
@@ -225,10 +244,8 @@ async function main() {
   console.log("設定しました。");
   describe(result.json);
   console.log("確認のしかた:");
-  console.log("  1. 本番の /home で、自分のアドレスにログイン用のリンクを送る。");
-  console.log(`     件名が「${subjects.magic_link}」になっていれば成功。`);
-  console.log("  2. 自分以外のアドレスでも送ってみる。ここが本当の確認。");
-  console.log("     これまでは、あなた以外には届いていなかった。");
+  console.log("  本番の /home で、自分のアドレスにログイン用のリンクを送る。");
+  console.log(`  件名が「${subjects.magic_link}」になっていれば成功。`);
 }
 
 main().catch((error) => {

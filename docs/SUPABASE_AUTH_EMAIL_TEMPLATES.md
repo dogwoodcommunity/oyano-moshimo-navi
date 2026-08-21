@@ -7,23 +7,47 @@ https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/templates
 
 ## いまの状態
 
-**画面からは貼れない。** 独自SMTPを設定するまで、Supabaseがテンプレートを編集させない。
+**画面からは貼れなかった。** 原因は特定できていない。
 
-**ただし、画面を使わなければ入る。** Management API はSMTPと文面を同時に受け付けるので、
-1回のPATCHで両方入れれば制限に引っかからない。
+**画面を使わなければ入る。** Management API (`PATCH /v1/projects/{ref}/config/auth`) が
+同じ設定を受け付けるので、そちらから入れる。
 
-### 一番手数が少ない手順（Gmail）
+**本番はすでに独自SMTPが入っている**（2026-08-21 に確認）。
+`mail86.onamae.ne.jp:465` / `親のもしもナビ <info@bee-ch.co.jp>`。
+つまり組織メンバー以外にもメールは届く。残っているのは文面だけ。
+
+### すでに独自SMTPが入っている場合（2026-08-21 時点の本番がこれ）
+
+本番はすでに `mail86.onamae.ne.jp:465` / `親のもしもナビ <info@bee-ch.co.jp>` が
+設定されている。**送信の設定は触らず、文面だけ差し替える。**
+
+```
+cd ~/Desktop/oyano-moshimo-navi && git pull origin main
+
+printf "Supabaseのトークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
+export SUPABASE_ACCESS_TOKEN
+
+node scripts/setup-auth-email.mjs --templates-only
+```
+
+`--templates-only` は `mailer_*` の4項目だけを送る。`smtp_*` は一切含めない。
+
+**3行まとめて貼らないこと。** `read` が次の行を値として飲み込む。
+1行目だけ貼って Enter、トークンを貼って Enter、それから残りを貼る。
+
+macOSの標準シェルはzshで、bashの `read -p` は通らない（`no coprocess` になる）。
+`printf` で促してから `read -s` にすれば両方で動く。
+
+### 独自SMTPがまだ無い場合（Gmailを使う）
 
 会社のメールボックスを新しく作る必要がない。DNSも触らない。新規登録もない。
 
 1. https://myaccount.google.com/apppasswords でアプリパスワードを作る（16桁）
    - 2段階認証が有効でないと、このページは出ない
 2. https://supabase.com/dashboard/account/tokens でアクセストークンを作る
-3. 次を順に実行する
+3. 次を順に実行する（1行ずつ）
 
 ```
-cd ~/Desktop/oyano-moshimo-navi && git pull origin main
-
 printf "Supabaseのトークン: "; read -s SUPABASE_ACCESS_TOKEN; echo
 printf "アプリパスワード: "; read -s SMTP_PASS; echo
 export SUPABASE_ACCESS_TOKEN SMTP_PASS
@@ -31,23 +55,22 @@ export SUPABASE_ACCESS_TOKEN SMTP_PASS
 node scripts/setup-auth-email.mjs --gmail --user じぶんのアドレス@gmail.com
 ```
 
-`read -s` は入力を画面に出さない。macOSの標準シェルはzshで、bashの `read -p` は
-通らない（`no coprocess` になる）。`printf` で促してから `read -s` にすれば両方で動く。`--yes` を付けると確認を飛ばせる。
-
-先に `node scripts/setup-auth-email.mjs --check` を実行すると、
-何も変えずにいまの状態だけ見られる。
-
-### お名前.comのメールを使う場合
-
-差出人を `bee-ch.co.jp` にしたいときはこちら。先に送信専用の箱を作ること
-（SMTPのパスワードがメールボックスのログインパスワードそのものなので、
-`info@` を渡すと会社の受信メールを読める鍵をSupabaseに預けることになる）。
+### お名前.comのメールで入れ直す場合
 
 ```
-node scripts/setup-auth-email.mjs --host mail01.onamae.ne.jp --user noreply@bee-ch.co.jp
+node scripts/setup-auth-email.mjs --host mail86.onamae.ne.jp --port 465 --user noreply@bee-ch.co.jp
 ```
 
-サーバー名はお名前.comの管理画面に出る `mail○○.onamae.ne.jp` の形。
+送信専用の箱を使うこと。SMTPのパスワードはメールボックスのログインパスワード
+そのものなので、`info@` を渡すと会社の受信メールを読める鍵をSupabaseに預けることになる。
+
+### 先に状態だけ見る
+
+```
+node scripts/setup-auth-email.mjs --check
+```
+
+何も変えずに、いまの設定だけ表示する。
 
 ### 文面を直したいとき
 
