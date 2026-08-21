@@ -10,18 +10,50 @@ https://supabase.com/dashboard/project/ypnuxyfirlvbsqujocuy/auth/templates
 **画面からは貼れない。** 独自SMTPを設定するまで、Supabaseがテンプレートを編集させない。
 
 **ただし、画面を使わなければ入る。** Management API はSMTPと文面を同時に受け付けるので、
-1回のPATCHで両方入れれば制限に引っかからない。そのためのスクリプトを用意した。
+1回のPATCHで両方入れれば制限に引っかからない。
+
+### 一番手数が少ない手順（Gmail）
+
+会社のメールボックスを新しく作る必要がない。DNSも触らない。新規登録もない。
+
+1. https://myaccount.google.com/apppasswords でアプリパスワードを作る（16桁）
+   - 2段階認証が有効でないと、このページは出ない
+2. https://supabase.com/dashboard/account/tokens でアクセストークンを作る
+3. 次を順に実行する
 
 ```
-node scripts/setup-auth-email.mjs --check   いまの状態を見る
-node scripts/setup-auth-email.mjs           SMTPと文面をまとめて入れる
+cd ~/Desktop/oyano-moshimo-navi && git pull origin main
+
+read -s -p "Supabaseのトークン: " SUPABASE_ACCESS_TOKEN; echo
+read -s -p "アプリパスワード: " SMTP_PASS; echo
+export SUPABASE_ACCESS_TOKEN SMTP_PASS
+
+node scripts/setup-auth-email.mjs --gmail --user じぶんのアドレス@gmail.com
 ```
+
+`read -s` は入力を画面に出さない。`--yes` を付けると確認を飛ばせる。
+
+先に `node scripts/setup-auth-email.mjs --check` を実行すると、
+何も変えずにいまの状態だけ見られる。
+
+### お名前.comのメールを使う場合
+
+差出人を `bee-ch.co.jp` にしたいときはこちら。先に送信専用の箱を作ること
+（SMTPのパスワードがメールボックスのログインパスワードそのものなので、
+`info@` を渡すと会社の受信メールを読める鍵をSupabaseに預けることになる）。
+
+```
+node scripts/setup-auth-email.mjs --host mail01.onamae.ne.jp --user noreply@bee-ch.co.jp
+```
+
+サーバー名はお名前.comの管理画面に出る `mail○○.onamae.ne.jp` の形。
+
+### 文面を直したいとき
 
 文面の実体は `supabase/auth-emails/` にある。下に載せているHTMLと同じもの。
-文面だけ直したいときは、そのファイルを編集してスクリプトを再実行する。
+そのファイルを編集して、上のコマンドをもう一度実行する。
 
-このスクリプトは、アクセストークンとSMTPのパスワードを画面に出さないし、
-どこにも保存しない。
+トークンとパスワードは画面に出ないし、どこにも保存されない。
 
 ## 貼るのは2つだけ
 

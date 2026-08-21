@@ -4,12 +4,19 @@
 // テンプレート編集を止めているが、Management APIは同じ設定を受け付ける。
 // SMTPと文面を1回のPATCHで同時に入れれば、その制限に引っかからない。
 //
-// 使い方（自分のパソコンのターミナルで）:
-//   node scripts/setup-auth-email.mjs          設定する
-//   node scripts/setup-auth-email.mjs --check  いまの状態を見るだけ
+// 使い方は docs/SUPABASE_AUTH_EMAIL_TEMPLATES.md を見ること。
 //
-// アクセストークンは https://supabase.com/dashboard/account/tokens で作る。
-// 入力した token と SMTP のパスワードは、画面に出さないし、保存もしない。
+//   node scripts/setup-auth-email.mjs --check   いまの状態を見るだけ
+//   node scripts/setup-auth-email.mjs --gmail --user あなた@gmail.com
+//
+// パスワードとトークンは、引数ではなく環境変数で受け取る。
+// 引数に書くと、シェルの履歴と ps の出力に残ってしまうため。
+//
+//   read -s -p "トークン: " SUPABASE_ACCESS_TOKEN; echo
+//   read -s -p "パスワード: " SMTP_PASS; echo
+//   export SUPABASE_ACCESS_TOKEN SMTP_PASS
+//
+// 受け取った値は画面に出さないし、どこにも保存しない。
 
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,72 +24,38 @@ import { fileURLToPath } from "node:url";
 import { createInterface } from "node:readline";
 
 const here = dirname(fileURLToPath(import.meta.url));
-const root = join(here, "..");
-const emails = join(root, "supabase", "auth-emails");
+const emails = join(here, "..", "supabase", "auth-emails");
 
 const PROJECT_REF = process.env.SUPABASE_PROJECT_REF ?? "ypnuxyfirlvbsqujocuy";
-const API = `https://api.supabase.com/v1/projects/${PROJECT_REF}/config/auth`;
-const checkOnly = process.argv.includes("--check");
+// 動作確認のときだけ、送り先を差し替えられるようにしてある。
+const API_BASE = process.env.SUPABASE_API_URL ?? "https://api.supabase.com";
+const API = `${API_BASE}/v1/projects/${PROJECT_REF}/config/auth`;
 
-const CTRL_C = "\u0003";
-const DELETE = "\u007f";
-const BACKSPACE = "\u0008";
+const args = process.argv.slice(2);
+const checkOnly = args.includes("--check");
+const useGmail = args.includes("--gmail");
+const skipConfirm = args.includes("--yes");
 
-/** 入力した文字を画面に出さずに読む。パスワードを肩越しに見られないため。 */
-function askHidden(question) {
-  return new Promise((resolve) => {
-    process.stdout.write(question);
-    const stdin = process.stdin;
-    const wasRaw = Boolean(stdin.isRaw);
-    if (stdin.isTTY) stdin.setRawMode(true);
-    stdin.resume();
-    let value = "";
-    const onData = (chunk) => {
-      const char = chunk.toString("utf8");
-      if (char === "\n" || char === "\r") {
-        if (stdin.isTTY) stdin.setRawMode(wasRaw);
-        stdin.removeListener("data", onData);
-        stdin.pause();
-        process.stdout.write("\n");
-        resolve(value);
-        return;
-      }
-      if (char === CTRL_C) {
-        if (stdin.isTTY) stdin.setRawMode(wasRaw);
-        process.stdout.write("\n中止しました。\n");
-        process.exit(130);
-      }
-      if (char === DELETE || char === BACKSPACE) {
-        value = value.slice(0, -1);
-        return;
-      }
-      value += char;
-    };
-    stdin.on("data", onData);
-  });
+function argValue(name, fallback = "") {
+  const index = args.indexOf(name);
+  if (index === -1 || index === args.length - 1) return fallback;
+  return args[index + 1];
 }
 
-function ask(question, fallback = "") {
+function confirm(question) {
+  if (skipConfirm) return Promise.resolve(true);
   const rl = createInterface({ input: process.stdin, output: process.stdout });
   return new Promise((resolve) => {
     rl.question(question, (answer) => {
       rl.close();
-      resolve(answer.trim() || fallback);
+      resolve(answer.trim().toLowerCase() === "y");
     });
   });
 }
 
-async function getToken() {
-  const fromEnv = process.env.SUPABASE_ACCESS_TOKEN?.trim();
-  if (fromEnv) return fromEnv;
-  console.log("アクセストークンは https://supabase.com/dashboard/account/tokens で作れます。");
-  console.log("画面には表示されません。貼り付けて Enter を押してください。");
-  const token = await askHidden("アクセストークン (sbp_...): ");
-  if (!token) {
-    console.error("トークンが空です。");
-    process.exit(1);
-  }
-  return token;
+function fail(...lines) {
+  for (const line of lines) console.error(line);
+  process.exit(1);
 }
 
 async function callApi(token, method, body) {
@@ -125,63 +98,108 @@ function describe(config) {
   console.log("");
 }
 
+function smtpSettings() {
+  const pass = process.env.SMTP_PASS ?? "";
+  if (!pass) {
+    fail(
+      "SMTP_PASS が設定されていません。次のように渡してください。",
+      "",
+      '  read -s -p "パスワード: " SMTP_PASS; echo',
+      "  export SMTP_PASS",
+      "",
+      "引数ではなく環境変数にするのは、シェルの履歴に残さないためです。"
+    );
+  }
+
+  const senderName = process.env.SMTP_SENDER_NAME ?? argValue("--name", "親のもしもナビ");
+
+  if (useGmail) {
+    const user = process.env.SMTP_USER ?? argValue("--user");
+    if (!user) {
+      fail("Gmailのアドレスが要ります。 --user あなたのアドレス@gmail.com を付けてください。");
+    }
+    // Googleはアプリパスワードを "abcd efgh ijkl mnop" と空白入りで表示する。
+    // そのまま貼られることが多いので、こちらで空白を落とす。
+    const cleaned = pass.replace(/\s+/g, "");
+    if (cleaned.length !== 16) {
+      console.log(`※ アプリパスワードは16桁のはずですが、${cleaned.length}桁でした。`);
+      console.log("  ふだんのGoogleのパスワードでは通りません。");
+      console.log("  https://myaccount.google.com/apppasswords で作ったものを使ってください。");
+      console.log("");
+    }
+    return {
+      host: "smtp.gmail.com",
+      port: "465",
+      user,
+      pass: cleaned,
+      senderEmail: process.env.SMTP_SENDER_EMAIL ?? user,
+      senderName
+    };
+  }
+
+  const host = process.env.SMTP_HOST ?? argValue("--host");
+  const user = process.env.SMTP_USER ?? argValue("--user");
+  if (!host || !user) {
+    fail("--host と --user が要ります。（例: --host mail01.onamae.ne.jp --user noreply@bee-ch.co.jp）");
+  }
+  return {
+    host,
+    port: process.env.SMTP_PORT ?? argValue("--port", "587"),
+    user,
+    pass,
+    senderEmail: process.env.SMTP_SENDER_EMAIL ?? argValue("--from", user),
+    senderName
+  };
+}
+
 async function main() {
+  const token = process.env.SUPABASE_ACCESS_TOKEN?.trim();
+  if (!token) {
+    fail(
+      "SUPABASE_ACCESS_TOKEN が設定されていません。",
+      "トークンは https://supabase.com/dashboard/account/tokens で作れます。",
+      "",
+      '  read -s -p "トークン: " SUPABASE_ACCESS_TOKEN; echo',
+      "  export SUPABASE_ACCESS_TOKEN"
+    );
+  }
+
   const subjects = JSON.parse(readFileSync(join(emails, "subjects.json"), "utf8"));
   const confirmation = readFileSync(join(emails, "confirmation.html"), "utf8");
   const magicLink = readFileSync(join(emails, "magic_link.html"), "utf8");
 
-  const token = await getToken();
-
   const before = await callApi(token, "GET");
   if (before.status === 401 || before.status === 403) {
-    console.error("トークンが受け付けられませんでした。作り直して、もう一度試してください。");
-    process.exit(1);
+    fail("トークンが受け付けられませんでした。作り直して、もう一度試してください。");
   }
   if (before.status !== 200) {
-    console.error(`設定を読めませんでした (${before.status})`);
-    console.error(before.text.slice(0, 400));
-    process.exit(1);
+    fail(`設定を読めませんでした (${before.status})`, before.text.slice(0, 400));
   }
   describe(before.json);
 
   if (checkOnly) return;
 
-  console.log("SMTPの情報を入れてください。パスワードは画面に出ません。");
-  console.log("（お名前.comのメールなら、サーバー名は mail○○.onamae.ne.jp の形です）");
-  console.log("");
+  const smtp = smtpSettings();
 
-  const host = await ask("SMTPサーバー名: ");
-  const port = await ask("ポート [587]: ", "587");
-  const user = await ask("ユーザー名（メールアドレス）: ");
-  const senderEmail = await ask(`差出人アドレス [${user}]: `, user);
-  const senderName = await ask("差出人の表示名 [親のもしもナビ]: ", "親のもしもナビ");
-  const pass = await askHidden("パスワード: ");
-
-  if (!host || !user || !pass) {
-    console.error("入力が足りません。中止しました。");
-    process.exit(1);
-  }
-
-  console.log("");
   console.log("この内容で設定します:");
-  console.log(`  ${senderName} <${senderEmail}>`);
-  console.log(`  ${host}:${port}  ユーザー名 ${user}`);
-  console.log(`  件名「${subjects.confirmation}」`);
+  console.log(`  ${smtp.senderName} <${smtp.senderEmail}>`);
+  console.log(`  ${smtp.host}:${smtp.port}  ユーザー名 ${smtp.user}`);
+  console.log(`  件名「${subjects.magic_link}」`);
   console.log("  文面 日本語（supabase/auth-emails/ の内容）");
   console.log("");
-  const ok = await ask("進めますか [y/N]: ");
-  if (ok.toLowerCase() !== "y") {
+
+  if (!(await confirm("進めますか [y/N]: "))) {
     console.log("中止しました。何も変えていません。");
     return;
   }
 
   const result = await callApi(token, "PATCH", {
-    smtp_host: host,
-    smtp_port: String(port),
-    smtp_user: user,
-    smtp_pass: pass,
-    smtp_admin_email: senderEmail,
-    smtp_sender_name: senderName,
+    smtp_host: smtp.host,
+    smtp_port: String(smtp.port),
+    smtp_user: smtp.user,
+    smtp_pass: smtp.pass,
+    smtp_admin_email: smtp.senderEmail,
+    smtp_sender_name: smtp.senderName,
     mailer_subjects_confirmation: subjects.confirmation,
     mailer_templates_confirmation_content: confirmation,
     mailer_subjects_magic_link: subjects.magic_link,
@@ -193,16 +211,24 @@ async function main() {
     console.error(`設定できませんでした (${result.status})`);
     console.error(result.text.slice(0, 600));
     console.error("");
-    console.error("SMTPの情報が違うと、ここで弾かれます。サーバー名とパスワードを確認してください。");
+    if (useGmail) {
+      console.error("Gmailで弾かれる原因は、ほぼアプリパスワードです。");
+      console.error("ふだんのGoogleのパスワードでは通りません。");
+      console.error("https://myaccount.google.com/apppasswords");
+    } else {
+      console.error("サーバー名・ユーザー名・パスワードを確認してください。");
+    }
     process.exit(1);
   }
 
   console.log("");
   console.log("設定しました。");
   describe(result.json);
-  console.log("確認: 本番の /home で自分のアドレスにログイン用のリンクを送ってください。");
-  console.log(`件名が「${subjects.magic_link}」になっていれば成功です。`);
-  console.log("そのあと、自分以外のアドレスでも試してください。そこが本当の確認です。");
+  console.log("確認のしかた:");
+  console.log("  1. 本番の /home で、自分のアドレスにログイン用のリンクを送る。");
+  console.log(`     件名が「${subjects.magic_link}」になっていれば成功。`);
+  console.log("  2. 自分以外のアドレスでも送ってみる。ここが本当の確認。");
+  console.log("     これまでは、あなた以外には届いていなかった。");
 }
 
 main().catch((error) => {
