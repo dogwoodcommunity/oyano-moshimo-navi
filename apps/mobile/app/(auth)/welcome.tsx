@@ -97,6 +97,17 @@ export default function WelcomeScreen() {
         </View>
       ) : null}
 
+      <Pressable onPress={() => router.push("/crisis")} style={styles.crisisButton}>
+        <View style={styles.crisisBadge}>
+          <Text style={styles.crisisBadgeText}>急なとき</Text>
+        </View>
+        <View style={styles.crisisBody}>
+          <Text style={styles.crisisTitle}>いま、急なことが起きている</Text>
+          <Text style={styles.crisisHint}>登録なしで開けます。入院した夜、危篤と言われた時、亡くなった直後に。</Text>
+        </View>
+        <MaterialCommunityIcons color="#a94e28" name="chevron-right" size={24} />
+      </Pressable>
+
       <View style={styles.startPanel}>
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>会員登録して続ける</Text>
@@ -204,6 +215,21 @@ function FeatureRow({
 }
 
 const styles = StyleSheet.create({
+  crisisButton: {
+    alignItems: "center",
+    backgroundColor: "#f7e7e2",
+    borderColor: "#e2c7b6",
+    borderRadius: radius.card,
+    borderWidth: 1.5,
+    flexDirection: "row",
+    gap: 12,
+    padding: 14
+  },
+  crisisBadge: { backgroundColor: "#a94e28", borderRadius: 999, paddingHorizontal: 11, paddingVertical: 5 },
+  crisisBadgeText: { color: "#fff", fontSize: 11.5, fontWeight: "900" },
+  crisisBody: { flex: 1, gap: 3 },
+  crisisTitle: { color: colors.ink, fontSize: 15.5, fontWeight: "900" },
+  crisisHint: { color: "#8d6a58", fontSize: 12, lineHeight: 19 },
   scroll: { backgroundColor: colors.paper, flex: 1 },
   screen: { gap: 16, padding: 16, paddingBottom: 36, paddingTop: 16 },
   photoHero: { borderRadius: 18, minHeight: 390, overflow: "hidden", ...shadow },

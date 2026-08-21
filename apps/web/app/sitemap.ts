@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { crisisScenarios } from "@/lib/crisis";
+import { crisisScenarios } from "@oyano/shared";
 import { guides } from "@/lib/guides";
 
 export default function sitemap(): MetadataRoute.Sitemap {

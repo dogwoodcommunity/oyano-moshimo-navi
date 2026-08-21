@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { CrisisMessageTemplate, CrisisSteps } from "@/components/CrisisSteps";
-import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios, getCrisisScenario } from "@/lib/crisis";
+import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios, getCrisisScenario } from "@oyano/shared";
 import { getGuide } from "@/lib/guides";
 
 export function generateStaticParams() {

@@ -3969,3 +3969,32 @@ GitHubが必要な理由:
   - 本番反映そのものは未実施。次のいずれかが必要。
     - VercelのGit連携が有効なら、このブランチをmainへマージする。
     - 有効でないなら、`VERCEL_TOKEN` などのシークレットを設定して手動ワークフローを実行する。
+
+## 2026-08-21 追記 115
+
+- ユーザー方針の確認:
+  - 「WEBはイメージしてない」。本体はアプリ（Expo）で、Webは入口だけ、という前提を確認した。
+  - これにより、追記110〜112でWebに実装した機能は「Webだけにある」状態が問題になる。まず一番強い危機モードをアプリへ移した。
+  - あわせて、追記114で検討していたWeb Pushは作らない方針にした。通知は既存のExpo pushを使う。
+- 判断:
+  - 危機モードの定義をWeb専用の `apps/web/lib/crisis.ts` に置いたままだと、WebとアプリでZ文言がずれる。`packages/shared` へ移して1か所にした。
+  - 危機モードはログイン前でも開ける必要がある。深夜に病院から連絡が来た人が、その場で会員登録するとは考えにくい。そのため `(tabs)` の外に置き、welcome画面からも直接開けるようにした。
+  - 第一報テンプレートは、Webではクリップボードコピーだが、アプリでは `Share` の共有シートにした。LINEやSMSへそのまま送れるほうが速い。
+- 対応:
+  - `apps/web/lib/crisis.ts` を `packages/shared/src/crisis.ts` へ移動し、`packages/shared/src/index.ts` から再エクスポート。
+  - Web側の4ファイルの import を `@oyano/shared` に貼り替え。
+  - `apps/mobile/app/crisis/index.tsx` を追加。119番の案内と3つの状況。
+  - `apps/mobile/app/crisis/[key].tsx` を追加。
+    - ステップのチェックを AsyncStorage（`oyano_crisis_progress_v01`）で保持。
+    - `いますぐの項目 n / m 済み` を表示。
+    - `今日の記録に残す` で `addTimelineEntry` にmood=urgentで書き込む。対象者が無い場合はダッシュボードへ誘導（未ログインならwelcomeへリダイレクトされる）。
+    - 第一報テンプレートは `Share.share()` で共有。
+    - やらなくていいこと / 聞かれやすいこと / 捨てないもの を表示。
+  - `apps/mobile/app/_layout.tsx` に2ルートを登録。
+  - `apps/mobile/app/(tabs)/dashboard.tsx` に緊急バナーを追加（空状態と通常状態の両方）。
+  - `apps/mobile/app/(auth)/welcome.tsx` に「急なとき」を追加。登録前でも開ける。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。共有パッケージへ移した後も `/crisis/[key]` は3ページSSGされる。
+- 未確認:
+  - アプリの実機表示は未確認。この環境にシミュレータもExpo Goも無いため、型と構成の確認にとどまる。EAS buildまたは `expo start` での目視確認が必要。
