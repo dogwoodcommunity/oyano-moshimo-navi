@@ -1632,6 +1632,9 @@ textarea {
 }
 
 .navlinks {
+  /* 「急なとき」だけが余白付きのピルなので、揃えないと文字の高さがずれる。
+     既定の stretch では、余白の無いリンクの文字が上に寄ってしまう。 */
+  align-items: center;
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
@@ -7734,6 +7737,12 @@ textarea {
 }
 
 .journey-state {
+  /* 丸を見出しの行に合わせる。
+     そのまま上揃えにすると、ラベルと見出しの隙間に浮いてどちらとも揃わない。
+     中央揃えにすると、行数の多い項目で本文の横まで下がってしまう。
+     ラベル1行（11.5px×1.2）＋下余白3px の下にある見出し1行（15px×1.45）の
+     中心へ、丸（34px）の中心を置く。 */
+  margin-top: calc(11.5px * 1.2 + 3px + 15px * 1.45 / 2 - 17px);
   align-items: center;
   background: #eee5d3;
   border-radius: 999px;
@@ -7874,6 +7883,9 @@ textarea {
 }
 
 .cloud-backup-card {
+  /* .nb-card は余白を持たず、中の .nb-row 側が持つ設計。
+     このカードは中身を直接置いているので、自分で余白を持たないと枠に張り付く。 */
+  padding: 16px;
   background:
     linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 252, 248, 0.92)),
     radial-gradient(circle at 100% 0%, rgba(47, 110, 130, 0.12), transparent 38%);

@@ -36,6 +36,7 @@ const criticalCss = `
   .entry-how-card li{background:#f5f8f3;border-radius:14px;display:grid;gap:4px;padding:14px}
   .entry-how-card strong{font-size:17px}
   .entry-board-link,.secondary{align-items:center;background:#fff;border:1.5px solid rgba(39,100,71,.32);border-radius:999px;color:#0f6b45;display:inline-flex;font-weight:900;justify-content:center;min-height:48px;padding:12px 18px}
+  .navlinks{align-items:center}
   .nav-crisis{align-items:center;background:#fbeadf;border:1px solid rgba(180,86,46,.28);border-radius:999px;color:#b4562e;display:inline-flex;min-height:34px;padding:6px 14px}
   .footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:28px 24px;color:#6f7974;font-size:13px;font-weight:800}
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
