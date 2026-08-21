@@ -4229,3 +4229,30 @@ GitHubが必要な理由:
   - リポジトリの Settings > Secrets に `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` を登録する。
   - 登録後、mainへ何かpushされた時点で自動的に本番へ反映される。デプロイ後に `scripts/smoke-web.mjs` が自動で走る。
   - または、VercelのGit連携を接続する（この場合シークレットは登録しない）。
+
+## 2026-08-21 追記 125
+
+- 本番反映を実施した。実行はユーザーのMacから。
+- 手順:
+  - この環境からはVercelへ到達できないため（組織のegressポリシーで403）、ユーザーのターミナルで実行してもらった。
+  - 元の作業フォルダが見つからなかったため、`~/Desktop` へ新規clone。`mdfind` では `~/Documents/Codex/2026-07-05/zip-v0-3-web-expo-codex/review_exports/` 配下のzipしか見つからず、元フォルダは同ディレクトリのあたりと推測される。
+  - `npx vercel login`（device認証）→ `npx vercel link` → `npx vercel --prod`。
+  - `vercel link` は新しいCLI（59.3.0）で選択形式が変わっており、`Search all projects` から実在プロジェクトを選ぶ形にした。フォルダ名からの推測候補を選ぶと、既存プロジェクトが無い場合に新規作成される恐れがあるため。
+  - Team: `dogwoodcommunity1`、Project: `oyano-moshimo-navi`。同じチームに `web` という別プロジェクトもあるので取り違えに注意。
+- 結果:
+  - Deployment: `https://oyano-moshimo-navi-1xtfus1yv-dogwoodcommunity1.vercel.app`
+  - Aliased: `https://oyano-moshimo-navi.vercel.app`
+  - `✓ Ready in 60s`
+  - Inspect: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi/5dnUubEHw9J7CDkv1iyMuJrKGtAT`
+- 確認:
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` を本番に対して実行し、**37件すべてOK、失敗0**。
+  - `/crisis`、`/crisis/hospital-night`、`/crisis/critical`、`/crisis/just-died`、`/consult`、`/family` がいずれも200。
+  - `/api/consult` は503（`ANTHROPIC_API_KEY` 未設定のため設計どおり）。`/api/family` は401（認証必須のため設計どおり）。
+  - `admin env api` はADMIN_ACCESS_TOKEN未指定のためSKIP。
+- 本番で残っている設定:
+  - `ANTHROPIC_API_KEY` を Vercel の Environment Variables に追加する。追加後は再デプロイが必要。未設定の間、`/consult` の画面は出るが送信すると503になる。
+  - `supabase/funnel_events.sql` を本番Supabaseへ適用する。未適用だと `/admin/funnel` が「適用してください」を表示する。
+  - Supabase の Authentication > URL Configuration に本番URLをRedirect URLとして追加する。無いと招待の確認メールから戻れない。
+- 注意:
+  - 今回 `~/Desktop/oyano-moshimo-navi` にcloneしたフォルダに `.vercel/project.json` と `.env.local` が作られている。次回以降はこのフォルダで `npx vercel --prod` だけで反映できる。
+  - `.github/workflows/deploy-vercel.yml` は、シークレットを登録すればmainへのpushで自動反映する状態になっている（現在は未登録のためスキップ）。今回のようにCLIで反映するなら登録は不要。
