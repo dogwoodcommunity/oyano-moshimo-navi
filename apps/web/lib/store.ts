@@ -1,5 +1,6 @@
 "use client";
 
+import { trackFunnel } from "@/lib/funnel";
 import {
   buildDiagnosisResult,
   createHandoffToken,
@@ -175,6 +176,7 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
     createdAt: new Date().toISOString()
   };
   writeDiaryEntries([entry, ...readDiaryEntries()]);
+  trackFunnel("record_written");
   return entry;
 }
 
@@ -251,6 +253,7 @@ export async function createCase(selectedStatus: ParentStatus): Promise<CaseReco
   };
 
   writeCases([record, ...readCases()]);
+  trackFunnel("person_created");
   return record;
 }
 

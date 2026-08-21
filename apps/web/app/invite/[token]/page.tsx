@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { InviteAccept } from "@/components/InviteAccept";
 
 type InvitePageProps = {
   params: {
@@ -17,34 +18,30 @@ export default function InvitePage({ params }: InvitePageProps) {
   const appUrl = `${appScheme}://invite?token=${encodeURIComponent(params.token)}`;
 
   return (
-    <main className="container">
-      <section className="panel elevated">
-        <p className="eyebrow">Family Invite</p>
-        <h1 className="page-title">家族ボードに招待されています。</h1>
-        <p className="lead">
-          アプリをお持ちの場合は、そのまま家族ボードを開けます。
-          まだ入れていない場合は、このページを残してアプリ準備後にもう一度開いてください。
+    <main className="container family-page">
+      <section className="family-hero">
+        <p className="family-eyebrow">家族からの招待</p>
+        <h1>同じ手帳を、一緒に見られるようになります。</h1>
+        <p className="family-lead">
+          親の状況、決めたこと、期限、写真を、家族で同じ画面から確認できます。
+          新しく登録し直す必要はありません。
         </p>
-        <div className="meta-row">
-          <a className="button primary-cta" href={appUrl}>
-            アプリで開く
-          </a>
-          <Link className="secondary" href="/home">
-            サイトを見る
-          </Link>
-        </div>
       </section>
 
-      <section className="columns" style={{ marginTop: 18 }}>
-        <article className="panel">
-          <h2>この招待でできること</h2>
-          <ul className="list">
-            <li>家族で同じタスクと期限を確認できます。</li>
-            <li>担当者が決まっていないことを見えるようにできます。</li>
-            <li>期限が近い手続きは、必要なときだけ通知で思い出せます。</li>
-          </ul>
-          <p className="hint">招待リンクは発行から7日間有効です。</p>
-        </article>
+      <InviteAccept token={params.token} />
+
+      <section className="family-card">
+        <h2>この招待でできること</h2>
+        <ul className="family-list">
+          <li>家族で同じ記録と期限を確認できます。</li>
+          <li>担当が決まっていないことを、見えるようにできます。</li>
+          <li>期限が近い手続きを、必要なときだけ思い出せます。</li>
+        </ul>
+        <p className="family-note">招待リンクは発行から7日間有効です。</p>
+        <div className="family-hero-actions">
+          <a className="secondary" href={appUrl}>アプリで開く</a>
+          <Link className="secondary" href="/home">サイトを見る</Link>
+        </div>
       </section>
     </main>
   );

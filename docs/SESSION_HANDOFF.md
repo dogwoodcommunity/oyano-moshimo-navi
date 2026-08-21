@@ -3759,3 +3759,429 @@ GitHubが必要な理由:
   - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
   - Vercel CLIで `npx vercel --prod --yes` を実行したが、`Not authorized` で失敗。`~/.vercel` と `VERCEL_TOKEN` も無いため、production反映にはVercel再ログインまたはtoken設定が必要。
   - `https://oyano-moshimo-navi.vercel.app/home` はHTTP 200だが、確認時点では古いVercel cacheが返っており、今回のクラウド控えUIはまだ本番未反映。
+
+## 2026-08-21 追記 110
+
+- 経緯:
+  - Codexが利用制限に達したため、Claude Code側で実装を引き継いだ。
+  - 追記109の未完了リストのうち、ユーザー選択により `危機モード` を最優先で実装した。
+- 判断:
+  - 危機モードは「読み物」ではなく「即答」にする。登録・入力・ログインなしで、いま必要な手順だけを順番に出す。
+  - パニック時に効くのは、やることの提示だけでなく `いまはやらなくていいこと` の明示だと考え、全シナリオに入れた。
+  - 深夜の病院・葬儀の場で通信が不安定でも開ける必要があるため、PWAでプリキャッシュする対象にした。
+  - 医療・法律・税務の結論は断定しない方針を維持。相続放棄3か月・相続税10か月・死亡届7日は「一般的な目安」として示し、個別判断は専門家へ寄せた。
+- 対応:
+  - `apps/web/lib/crisis.ts` を追加。
+    - 3シナリオを定義。`hospital-night`（救急・入院になった）、`critical`（危篤・看取りと言われた）、`just-died`（亡くなった直後）。
+    - 各シナリオを `いま5分でやること` / `今夜・今日のうちに` / `明日以降で間に合うこと` の3段に分割。
+    - `いまはやらなくていいこと`、`病院・葬儀社・役所から聞かれやすいこと`、`捨てない・消さないもの`、`家族への第一報テンプレート` を追加。
+    - `CRISIS_EMERGENCY_NOTE`（命に関わる状態なら119番）と `CRISIS_SAFETY_NOTE`（断定しない旨）を共通定数化。
+  - `apps/web/app/crisis/page.tsx` を追加。
+    - 119番の案内を最上部に置き、3つの状況を大きなボタンで選ばせる入口。
+  - `apps/web/app/crisis/[key]/page.tsx` を追加。
+    - `generateStaticParams` / `generateMetadata` 対応。ビルド時に3ページを静的生成。
+    - ステップ、第一報テンプレート、やらなくていいこと、聞かれること、捨てないもの、関連ガイド導線を表示。
+  - `apps/web/components/CrisisSteps.tsx` を追加。
+    - ステップのチェック状態を `oyano_crisis_progress_v01` としてlocalStorageに保持。
+    - `いますぐの項目 n / m 済み` を表示し、全部済んだら「ここから先は明日でも間に合います」に切り替え。
+    - `今日の記録に残す` で、済んだこと／まだのことを本文にした日記エントリ（mood: urgent）を手帳へ追加。
+    - 手帳未作成の場合は `/start` への導線に切り替え。
+    - 第一報テンプレートのコピー。クリップボードAPIが使えない端末では長押し選択を案内する。
+  - `apps/web/app/home/page.tsx`
+    - 手帳表紙の直下に `いま、急なことが起きている` の緊急バナーを追加（手帳あり・なし両方で表示）。
+  - `apps/web/app/layout.tsx`
+    - ヘッダーnavに `急なとき` を追加。critical CSSにも `.nav-crisis` を入れて初期表示の崩れを防止。
+  - `apps/web/public/sw.js`
+    - `CACHE_VERSION` を `oyano-moshimo-navi-v18` に更新。
+    - `PRECACHE_PAGE_URLS` を追加し、危機モード4URLをinstall時に先読みキャッシュ。未訪問でもオフラインで開ける。
+    - オフライン時のフォールバックを修正。従来は常に `/offline` を返していたが、まずリクエスト自身のキャッシュを返すようにした。
+  - `apps/web/app/sitemap.ts`
+    - `/crisis` と3シナリオを追加。
+  - `apps/web/app/globals.css`
+    - `.crisis-*` を追加。片手・大きめタップ領域・390px幅前提。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。
+  - `pnpm --filter web run build` OK。`/crisis/[key]` が3ページSSGされることを確認。
+  - `next start -p 3010` + Chromium 390x844 で確認。
+    - `/crisis`、`/crisis/hospital-night`、`/crisis/critical`、`/crisis/just-died` が200、存在しないkeyは404。
+    - ステップのチェックがリロード後も保持されることを確認。
+    - 手帳なし → `まず手帳を作る`、手帳あり → `今日の記録に残す` に切り替わることを確認。
+    - 記録実行後、`oyano_diary_entries_v01` に mood=urgent のエントリが1件入り、本文に済んだこと／まだのことが入ることを確認。
+    - 第一報テンプレートのコピーが成功し、ボタンが `コピーしました` に変わることを確認。
+    - `/home` の緊急バナーが表示され、タップで `/crisis` へ遷移することを確認。
+    - 3ページとも横スクロールが発生しないことを確認。
+    - JSエラー・consoleエラーなし。
+  - オフライン確認:
+    - `/home` でSW（v18）がactiveになった後にネットワークを切り、未訪問の `/crisis/just-died` と `/crisis` が実コンテンツで開くことを確認。
+- 注意:
+  - `pnpm --filter web run lint` は ESLint未設定の対話プロンプトが出て失敗する。今回の変更とは無関係の既存状態。typecheckとbuildで代替した。
+- 未完了（追記109から継続）:
+  - 本物のLLM相談は未実装。
+  - 家族共有2名無料のUXと招待導線の最終調整は未実装。
+  - 本番環境で `/api/notebook/sync` の実データ同期、Magic Link復元、JSONエクスポートの実機確認が必要。
+  - Vercelのproduction反映は `Not authorized` のまま。Vercel再ログインまたは `VERCEL_TOKEN` 設定が必要。今回の危機モードも本番未反映。
+
+## 2026-08-21 追記 111
+
+- 経緯:
+  - 追記110に続き、未完了リストの `本物のLLM相談` を実装した。
+- 判断:
+  - キーワードマッチをやめ、Claude API（`claude-opus-5`）で手帳の記録を前提にした整理を返す。
+  - ただし「AIが答える」ではなく「家族が次に動くための整理メモ」に徹する。診断名、治療方針、余命、介護度、相続の分け方、税額、法的結論は断定させない。
+  - この領域で外部AIに情報を送る以上、`送る情報`と`送らない情報`を画面で先に見せてから同意を取る。同意なしでは送信ボタンを押せない。
+  - 氏名、生年月日そのもの、連絡先、書類・鍵の保管場所は、そもそもリクエストに含めない。記録本文の中の電話番号・メール・口座番号らしき数字はサーバー側で自動的に伏字にする。
+  - Vercelの実行時間内に収めるため `output_config.effort` は `medium`、`maxDuration` は 60 とした。
+- 対応:
+  - `apps/web/package.json` に `@anthropic-ai/sdk` を追加。
+  - `apps/web/lib/consult.ts` を追加。
+    - `redactSensitive()`。暗証番号の近くの数字、カード番号形式、電話番号形式、10桁以上の数字、メールアドレスを伏字にする。日付や体温などの短い数値は残す。
+    - `buildConsultPrompt()`。送る項目をここで固定する。この関数を通らない情報はAPIへ渡らない。生年月日は `80代` のような年代へ変換する。
+    - `CONSULT_SENT_FIELDS` / `CONSULT_WITHHELD_FIELDS`。UIの開示表示と実装を同じ定義から出す。
+    - `CONSULT_SYSTEM_PROMPT` と `CONSULT_TOOL`（strict tool use）。出力形式を強制し、自由文で医療・法律の結論が出ないようにする。
+    - `normalizeConsultAnswer()` で不正な形を弾き、`consultAnswerToDiaryBody()` で手帳へ残す本文を組み立てる。
+  - `apps/web/app/api/consult/route.ts` を追加。
+    - `checkPublicRateLimit` で 1時間12回に制限。
+    - `ANTHROPIC_API_KEY` 未設定なら503を返し、手帳の他機能には影響させない。
+    - `stop_reason === "refusal"` を422で返す。RateLimit / Auth / Timeout / APIError を型付きで分岐。
+  - `apps/web/components/ConsultPanel.tsx` を追加。
+    - 手帳がなければ `/start` へ誘導。複数手帳があれば切り替えタブ。
+    - 送る情報・送らない情報の開示と同意チェック（`oyano_consult_consent_v01`）。
+    - 相談例のチップ、入力欄、結果表示（いまの状況 / 次に確認すること / 窓口で聞くこと / 相談先の候補 / 気をつけること / 次に残すこと）。
+    - `この相談メモを手帳に残す` で日記へ保存。
+  - `apps/web/app/consult/page.tsx` を追加。
+  - `apps/web/app/home/page.tsx` に `長期相談` セクションを追加。
+  - `apps/web/app/plans/page.tsx` の長期相談プランを実機能に合わせて修正し、CTAを `/consult` へ。
+  - `apps/web/app/legal/privacy/page.tsx` に `生成AIへの送信（長期相談）` の節を追加。送る項目・送らない項目・自動伏字・学習に使わない旨を明記。
+  - `apps/web/app/safety/page.tsx` に `生成AIへ送るものを、先に見せる` を追加。
+  - `docs/ENVIRONMENT_MATRIX.md`、`apps/web/.env.example`、`apps/web/app/api/admin/env-check/route.ts` に `ANTHROPIC_API_KEY` を追加。
+  - `apps/web/app/sitemap.ts` に `/consult` を追加。
+  - `apps/web/app/globals.css` に `.consult-*` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。`pnpm --filter web run build` OK。
+  - `lib/consult.ts` を単体で実行し、伏字処理を確認。
+    - `口座は1234567890123です` / `カードは1234 5678 9012 3456` / `暗証番号は1234です` / `test@example.com` / `090-1234-5678` / `03-1234-5678` / `0120-000-111` はすべて伏字。
+    - `2026-08-21に受診、37.2度` や `会議は10-15時` は伏字にならないことを確認。
+  - モックのAnthropicエンドポイント（`ANTHROPIC_BASE_URL` で差し替え）を立てて、実際に送信される本文を検証。
+    - 氏名 `テスト母`、生年月日 `1945-03-02`、連絡先 `090-1111-2222`、保管場所メモ `仏壇` がいずれも含まれないことを確認。
+    - 記録本文中の `090-1234-5678` が伏字になっていることを確認。
+    - `model: claude-opus-5`、`output_config.effort: medium`、`tools[0].strict: true` で送られることを確認。
+  - Chromium 390x844 で `/consult` を確認。
+    - 手帳なし → `先に1人分の手帳を作ってください`。
+    - 同意前は送信ボタンが無効、同意後に有効。
+    - 相談例チップで入力欄が埋まる。
+    - 結果が6ブロックで表示され、手帳へ保存できることを確認。日記が1件増える。
+    - 同意状態がリロード後も保持されることを確認。
+    - 横スクロールなし、JSエラーなし。
+  - エラー系:
+    - 4文字未満 → 400、600文字超 → 400。
+    - `stop_reason: refusal` → 422。
+    - `ANTHROPIC_API_KEY` 未設定 → 503。
+- 未確認:
+  - 実際のClaude APIへの疎通は未実施。この環境に `ANTHROPIC_API_KEY` が無いため、モックでの検証にとどまる。本番キー設定後に、実際の応答品質と所要時間の確認が必要。
+  - `output_config.effort` を `medium` にしているが、実応答を見て `high` へ上げるか判断する。
+
+## 2026-08-21 追記 112
+
+- 経緯:
+  - 追記111に続き、未完了リストの `家族共有2名無料のUXと招待導線` を実装した。
+- 判断:
+  - SQL側には `create_family_invite` / `accept_family_invite` が既にあり、無料枠（オーナー以外に2人）とメール一致チェックも実装済みだった。欠けていたのはWeb側の導線だけだったので、RPCはそのまま使い、Web APIとUIを足す方針にした。
+  - 招待系RPCは `auth.uid()` を見る `security definer` のため、service roleクライアントでは通らない。利用者のアクセストークンで動くクライアントを別に用意した。
+  - コピーは実装に合わせて `あなたのほかに2人まで無料` とした。SQLが数えているのはオーナー以外の人数なので、`家族2人まで` という言い方だと実際の挙動とずれる。
+- 対応:
+  - `apps/web/lib/serverSupabase.ts`
+    - `getUserSupabase(accessToken)` を追加。anon key + `Authorization: Bearer` で作り、RPCの `auth.uid()` を効かせる。
+    - **バグ修正**: Next.jsのData CacheがRoute Handler内のGET fetchを既定でキャッシュしていた。Supabaseクライアントに `cache: "no-store"` の fetch を差し込んで無効化。
+  - `apps/web/lib/family.ts` を追加。
+    - `resolveFamilyContext()` でトークン検証とクライアント生成。
+    - `getOrCreateFamilyId()` はクラウド控えと同じ考え方で家族を1つに決める。
+    - RPCの例外名を日本語メッセージへ変換する `messageForRpcError()`。
+  - `apps/web/app/api/family/route.ts`（GET）。メンバー、招待中、残り枠、プランを返す。
+  - `apps/web/app/api/family/invite/route.ts`（POST）。メール形式、自分あて招待を弾く。枠オーバーは402。
+  - `apps/web/app/api/family/invite/accept/route.ts`（POST）。
+  - `apps/web/components/FamilyShare.tsx`、`apps/web/app/family/page.tsx` を追加。
+  - `apps/web/components/InviteAccept.tsx` を追加し、`/invite/[token]` を実際に受け取れるページへ変更。従来はアプリへのdeep linkだけで、Webからは参加できなかった。
+  - `apps/web/lib/browserSupabase.ts` に `sendMagicLink(email, redirectPath)` を追加。招待ページへ戻す確認メールを送れるようにした。
+  - `apps/web/app/home/page.tsx` に `家族共有` セクションを追加。`apps/web/app/sitemap.ts` に `/family` を追加。
+  - `apps/web/app/globals.css` に `.family-*` と `.invite-card` を追加。プレースホルダが入力済みに見えないよう色も調整。
+- 確認:
+  - `pnpm --filter web run typecheck` OK。`pnpm --filter web run build` OK。
+  - Supabaseが無い環境では、API 3本が503、`/family` と `/invite/[token]` は `家族共有はまだ使えません` を表示することを確認。
+  - PostgREST/GoTrue互換のモックを立てて、SQLのRPC挙動（無料枠2人、メール一致、オーナーのみ招待可）を再現し、以下を確認。
+    - `/api/family` を2回叩いても家族が1つしか作られない（Data Cacheのバグ修正後）。修正前は毎回新しい家族が作られていた。
+    - 招待作成 → 残り枠が2→1へ、招待中として表示。
+    - 招待されていない人が受け取ろうとすると拒否。招待された本人は参加でき、メンバーに追加される。
+    - 3人目の招待は402で `無料で共有できるのは、あなたのほかに2人までです`。
+    - オーナー以外が招待しようとすると `招待できるのは、手帳を作った人だけです`。
+    - 自分あて招待、メール形式不正、トークン無しをそれぞれ400/401で拒否。
+  - Chromium 390x844 で確認。
+    - 未ログイン時は確認メール送信フォーム。
+    - ログイン時はメンバー一覧、残り枠、招待フォームを表示。招待作成後にリンクとコピーボタンが出て、枠表示が更新される。
+    - 枠が埋まっている時は招待ボタンが無効になり、Plusへの案内が出る。
+    - `/invite/[token]` で、違うアドレスの人はエラー、招待された本人は `参加しました` まで到達。
+    - 横スクロールなし、JSエラーなし。
+- 注意:
+  - 実際のSupabaseでの疎通は未実施。この環境にSupabaseが無いためモックでの検証にとどまる。本番キー設定後に、実DBでの招待・参加の確認が必要。
+  - Next.jsのData Cacheの件は、既存の `/api/notebook/sync` のGET（クラウド復元）にも同じ影響があったはずで、今回の修正で一緒に直っている。
+
+## 2026-08-21 追記 113
+
+- 経緯:
+  - 未完了リストの `本番でのクラウド控えの実機確認` に着手した。本番へアクセスできないため、確認を実行できる形にして渡す。
+- 対応:
+  - `scripts/smoke-notebook-sync.mjs` を追加。
+    - 既定は読み取りのみ。`--write` を付けた時だけ、確認用の手帳を1件書き込んで往復を検証する。
+    - トークン無しGETが401、トークン付きGETが200、POSTの同期件数、プロフィール・確認リスト・日記が戻ること、2回目のPOSTで重複しないことを確認する。
+    - 本番で `--write` した場合に残るデータの目印（`profile->>localCaseId`）と削除方法を最後に表示する。
+  - `package.json` に `smoke:notebook-sync` を追加。
+  - `docs/CLOUD_BACKUP_VERIFICATION.md` を追加。
+    - 前提の環境変数とSupabaseのRedirect URL設定。
+    - アクセストークンの取り方。
+    - 自動チェックの実行方法。
+    - 手で確認する9項目。特に「Safariのサイトデータ消去後に復元できること」を最重要とした。ここが通らない限り、記録が消えないとは言えない。
+    - 家族共有の確認6項目。
+    - 確認用データの削除SQL。
+    - 既知の注意点（localCaseIdでの突き合わせ、添付のデータURL同期、Data Cacheを外していること）。
+  - `scripts/smoke-web.mjs` に `/crisis` 3ページ、`/crisis`、`/consult`、`/family`、`/api/family`、`/api/consult` を追加。
+- 確認:
+  - PostgREST互換モックを `people` / `tasks` / `timeline_events` / `profiles` とPATCH・upsert・`in`・`->>`フィルタまで拡張し、`smoke-notebook-sync` を `--write` で実行して12/12成功。
+    - クラウド控えの往復（対象者、プロフィール、確認リスト、日記の本文）が一致することを確認。
+    - 2回目のPOSTで対象者も日記も増えないことを確認。
+  - `scripts/smoke-web.mjs` をローカルに対して実行し、37件すべて成功、失敗0。
+- 未確認:
+  - 本番Supabaseに対する実行は未実施。上記手順書に沿って、本番キーを持っている人の実行が必要。
+
+## 2026-08-21 追記 114
+
+- 経緯:
+  - 未完了リストの `Vercel production反映` について、この環境からはVercelの認証情報が無いため実行できない。代わりに、反映手段を選べる形にした。
+- 判断:
+  - 追記109で `npx vercel --prod --yes` が `Not authorized` になったのは、CLIのログインが切れていたため。VercelのGit連携が有効なら、そもそもCLIは要らず `main` へのpushで反映される。
+  - 自動デプロイのワークフローをpushトリガーで足すのは、本番へ勝手に反映されることになるので避けた。手動実行（workflow_dispatch）だけにしている。
+- 対応:
+  - `.github/workflows/deploy-vercel.yml` を追加。
+    - `workflow_dispatch` のみ。preview / production を選んで実行する。
+    - `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` が無い場合は、最初のステップで理由を出して止まる。
+    - デプロイ後に `scripts/smoke-web.mjs` を自動で流す。
+  - `docs/DEPLOYMENT.md` に「本番へ反映する3つの方法」を追加。Git連携、手動Actions、ローカルCLIの順。
+    - PWAのService Workerキャッシュで古く見える場合の対処（`CACHE_VERSION` を上げる）も明記。
+- 未完了:
+  - 本番反映そのものは未実施。次のいずれかが必要。
+    - VercelのGit連携が有効なら、このブランチをmainへマージする。
+    - 有効でないなら、`VERCEL_TOKEN` などのシークレットを設定して手動ワークフローを実行する。
+
+## 2026-08-21 追記 115
+
+- ユーザー方針の確認:
+  - 「WEBはイメージしてない」。本体はアプリ（Expo）で、Webは入口だけ、という前提を確認した。
+  - これにより、追記110〜112でWebに実装した機能は「Webだけにある」状態が問題になる。まず一番強い危機モードをアプリへ移した。
+  - あわせて、追記114で検討していたWeb Pushは作らない方針にした。通知は既存のExpo pushを使う。
+- 判断:
+  - 危機モードの定義をWeb専用の `apps/web/lib/crisis.ts` に置いたままだと、WebとアプリでZ文言がずれる。`packages/shared` へ移して1か所にした。
+  - 危機モードはログイン前でも開ける必要がある。深夜に病院から連絡が来た人が、その場で会員登録するとは考えにくい。そのため `(tabs)` の外に置き、welcome画面からも直接開けるようにした。
+  - 第一報テンプレートは、Webではクリップボードコピーだが、アプリでは `Share` の共有シートにした。LINEやSMSへそのまま送れるほうが速い。
+- 対応:
+  - `apps/web/lib/crisis.ts` を `packages/shared/src/crisis.ts` へ移動し、`packages/shared/src/index.ts` から再エクスポート。
+  - Web側の4ファイルの import を `@oyano/shared` に貼り替え。
+  - `apps/mobile/app/crisis/index.tsx` を追加。119番の案内と3つの状況。
+  - `apps/mobile/app/crisis/[key].tsx` を追加。
+    - ステップのチェックを AsyncStorage（`oyano_crisis_progress_v01`）で保持。
+    - `いますぐの項目 n / m 済み` を表示。
+    - `今日の記録に残す` で `addTimelineEntry` にmood=urgentで書き込む。対象者が無い場合はダッシュボードへ誘導（未ログインならwelcomeへリダイレクトされる）。
+    - 第一報テンプレートは `Share.share()` で共有。
+    - やらなくていいこと / 聞かれやすいこと / 捨てないもの を表示。
+  - `apps/mobile/app/_layout.tsx` に2ルートを登録。
+  - `apps/mobile/app/(tabs)/dashboard.tsx` に緊急バナーを追加（空状態と通常状態の両方）。
+  - `apps/mobile/app/(auth)/welcome.tsx` に「急なとき」を追加。登録前でも開ける。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK。
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。共有パッケージへ移した後も `/crisis/[key]` は3ページSSGされる。
+- 未確認:
+  - アプリの実機表示は未確認。この環境にシミュレータもExpo Goも無いため、型と構成の確認にとどまる。EAS buildまたは `expo start` での目視確認が必要。
+
+## 2026-08-21 追記 116
+
+- 経緯:
+  - レビューで指摘した `/api/consult` のコスト無防備を塞いだ。
+  - 実装当初はIP+UAハッシュで12回/時のみ。IPを変えれば実質無制限に外部APIを叩けた。
+- 判断:
+  - 上限は2段構えにする。利用者ごとの1日上限だけでは、IPを変えられると意味がない。サービス全体の1日上限を置いて、費用の最大値を確定させる。
+  - 手帳の実体がないリクエストは断る。記録もプロフィールも無い状態では一般論しか返せず、費用だけがかかる。これは費用対策であると同時に「先に記録を書く」という本来の順番へ戻す導線でもある。
+  - 検証で弾いたリクエストは枠を消費させない。最初の実装では順番が逆で、記録を書き忘れた人が一度も相談できないまま1日の枠を使い切る状態だった。
+- 対応:
+  - `apps/web/lib/publicRateLimit.ts`
+    - 共通処理を `consume()` に切り出し、`checkServiceRateLimit()` を追加。利用者ごとではなく固定キーで数える。
+    - Supabase未設定時はプロセス内カウンタに落ちるため、サーバーレスでは上限が効かない旨をコメントに明記。
+  - `apps/web/lib/consult.ts`
+    - `hasNotebookSubstance()` を追加。4文字以上の記録が1件あるか、プロフィールが2つ以上埋まっているかで判定する。
+  - `apps/web/app/api/consult/route.ts`
+    - 上限を「利用者ごと5回/日」「サービス全体200回/日」に変更（環境変数で調整可）。
+    - 手帳の実体チェックを追加し、無い場合は422。
+    - 上限の消費を、すべての検証を通過した後へ移動。
+  - `apps/web/components/ConsultPanel.tsx`
+    - 記録が無い場合は送信ボタンを無効にし、記録を書く導線を出す。サーバーで弾く前に画面で止める。
+  - `docs/ENVIRONMENT_MATRIX.md` と `apps/web/.env.example` に `CONSULT_CLIENT_DAILY_LIMIT` / `CONSULT_DAILY_LIMIT` を追加。
+- 費用の目安:
+  - 1回あたり入力2〜3k、出力1.5〜3kトークン程度。Claude Opus 5 は入力$5 / 出力$25 per MTok なので、おおよそ$0.05〜0.1/回。
+  - 既定の全体200回/日なら、最大でも1日$10〜20、月$300〜600で頭打ちになる。公開規模に応じて `CONSULT_DAILY_LIMIT` を決めること。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - モックのAnthropicエンドポイントを立てて、上限3回/クライアント・4回/全体に設定して検証。
+    - 記録もプロフィールも無いリクエストを5回連続 → すべて422。そのあと正しいリクエストが3回通ることを確認（弾いた分は枠を消費していない）。
+    - 同一クライアントの4回目 → 429。
+    - 別クライアントで1回通ったあと、全体上限に達して503。
+- 注意:
+  - サービス全体の上限はSupabaseの `check_public_api_rate_limit` に依存する。Supabase未設定の本番では上限が効かないため、必ず設定すること。
+
+## 2026-08-21 追記 117
+
+- 経緯:
+  - 追記115に続き、長期相談をアプリへ移した。これでWebにしかない機能は残っていない（家族共有はアプリ側に元からある）。
+- 判断:
+  - 相談の入口はWebの `/api/consult` に集約したままにする。送る内容の絞り込みと伏字処理をサーバー1か所で完結させるため。アプリ側に同じ処理を置くと、片方だけ直して食い違う。
+  - 型・開示リスト・実体チェック・結果の正規化は両方で使うので `packages/shared/src/consult.ts` へ移した。
+  - システムプロンプトとツール定義、伏字処理、プロンプト組み立ては `apps/web/lib/consult.ts` に残す。アプリのバンドルに載せる必要がなく、載せるべきでもない。
+- 対応:
+  - `packages/shared/src/consult.ts` を追加。型、`CONSULT_SENT_FIELDS` / `CONSULT_WITHHELD_FIELDS`、`hasNotebookSubstance`、`normalizeConsultAnswer`、`consultAnswerToDiaryBody` を移動。
+  - `apps/web/lib/consult.ts` はサーバー専用部分だけになった。route と ConsultPanel の import を `@oyano/shared` へ貼り替え。
+  - `apps/mobile/lib/consult.ts` を追加。同意の保存（AsyncStorage）と `EXPO_PUBLIC_WEB_BASE_URL` 経由のAPI呼び出し。
+  - `apps/mobile/app/consult.tsx` を追加。開示と同意、相談例、入力、結果表示、タイムラインへの保存。
+  - `apps/mobile/app/_layout.tsx` にルート登録、`(tabs)/dashboard.tsx` に相談カードを追加。
+- 確認:
+  - `pnpm --filter mobile run typecheck` OK、`pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - 共有パッケージへ切り出した後もWeb側が壊れていないことを、Chromiumで `/consult` の往復（同意 → 相談 → 結果6ブロック → 手帳へ保存）まで再確認。
+  - `scripts/smoke-web.mjs` 37件すべて成功、失敗0。
+- 未確認:
+  - アプリの実機表示は未確認（シミュレータが無いため）。
+  - アプリからの相談は `EXPO_PUBLIC_WEB_BASE_URL` が本番を指している必要がある。未設定だと「相談の接続先が設定されていません」を返す。
+
+## 2026-08-21 追記 118
+
+- 経緯:
+  - レビューで「計測ツールが何も入っていないので、出しても何も分からない」と指摘した件。
+  - 本体がアプリになったため、Web入口とアプリの間で匿名IDが切れる。ここは追えないと割り切り、両方の数字を別々に見る設計にした。
+- 判断:
+  - イベントは5つに絞る。`crisis_opened` / `crisis_saved` / `person_created` / `record_written` / `consult_asked`。増やすほど何を見ればよいか分からなくなる。
+  - 外部の計測サービスは入れない。このプロダクトの姿勢と合わないため、自前の最小構成にした。個人情報は持たず、端末ごとの匿名IDとイベント名と時刻だけ。
+  - 集計はSQL側の `funnel_summary` に置く。管理画面は表示だけにする。
+- 対応:
+  - `supabase/funnel_events.sql` を追加。テーブル、索引、`funnel_summary(p_days)` を定義。RLSは有効のままポリシーを作らず、service roleからのみ書き込む。
+  - `packages/shared/src/funnel.ts` を追加。イベント名と集計の型、割合の表示。
+  - `apps/web/app/api/events/route.ts` を追加。イベント名の許可リストと匿名IDの長さだけを見る。失敗しても200を返す（計測の失敗が利用者の操作を止めてはいけない）。
+  - `apps/web/lib/funnel.ts` / `apps/mobile/lib/funnel.ts` を追加。匿名IDはlocalStorage / AsyncStorageに保存。
+  - 発火箇所:
+    - Web: `CrisisSteps`（開いた・記録に残した）、`store.createCase`（対象者）、`store.addDiaryEntry`（記録）、`ConsultPanel`（相談）。
+    - アプリ: `crisis/[key]`（開いた・記録に残した）、`mobileData.createPersonForFamily` / `createInitialFamilyPerson`（対象者）、`addTimelineEntry`（記録）、`consult`（相談）。
+    - `record_written` はデータ層の1か所だけで発火する。画面側にも書いていて二重計上していたのを修正した。
+  - `apps/web/app/api/admin/funnel/route.ts` と `apps/web/app/admin/funnel/page.tsx`、`components/AdminFunnel.tsx` を追加。直近7/30/90日を切り替えられる。
+  - `apps/web/app/legal/privacy/page.tsx` に「利用状況の計測」の節を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter mobile run typecheck` OK、`pnpm --filter web run build` OK。
+  - モックSupabaseに `funnel_summary` を実装して検証。
+    - 3人が危機モードを開き、2人が対象者を登録、うち1人が7日以内に2件書いた状態を作り、`crisisOpened 3 / personCreated 2 / returnedWithin7Days 1` が返ることを確認。
+    - 許可リストに無いイベント名、8文字未満の匿名IDは保存されないことを確認。
+    - 管理APIは認証なしで401。
+  - Chromiumで `/admin/funnel` を確認。`3 / 危機モードを開いた（アプリ2・Web1）`、`2 / 対象者を登録した（66.7%）`、`1 / 7日以内に2件目を書いた（33.3%）` が表示され、期間の切り替えも動く。JSエラーなし。
+- 本番で必要な作業:
+  - `supabase/funnel_events.sql` を本番Supabaseへ適用する。適用前は `/admin/funnel` が「適用してください」を出す。
+
+## 2026-08-21 追記 119
+
+- 経緯:
+  - 「本体はアプリ、Webは入口」の方針に合わせ、Web側の入口を整理した。
+  - 調べたところ、App Store / Google Play / TestFlight のURLがコードのどこにも無かった。つまり現状のWebには、アプリへ送る先が存在しない。
+- 判断:
+  - ストアURLは環境変数にして、未設定の間はアプリ導線そのものを出さない。押しても何も起きないボタンを置くほうが、置かないより悪い。
+  - `/start` の11択は、消すのではなく前に出す数を減らす。急ぎの3状況は登録より先に危機モードへ送り、残りは主要4つ＋折りたたみにした。11の状況で登録できること自体は維持している。
+- 対応:
+  - `apps/web/lib/appLinks.ts` と `apps/web/components/AppInstallBand.tsx` を追加。
+    - `NEXT_PUBLIC_IOS_APP_URL` / `NEXT_PUBLIC_ANDROID_APP_URL` が設定されていればストアへのボタン、無ければ「アプリは準備中です。いまはこの画面のまま使えます」とWebの手帳への導線を出す。
+  - `apps/web/app/crisis/[key]/page.tsx` の末尾にアプリ導線を追加。危機モードを使い終えた直後が、続ける場所を伝える一番よい位置と判断した。
+  - `apps/web/app/start/page.tsx` を再構成。
+    - 上部に「いま起きている場合は、登録より先にこちら」として3行（入院・危篤・亡くなった直後）を置き、`/crisis/[key]` へ直接送る。
+    - 登録は「これから備える」4件を表示し、残り7件は `ほかの状況から選ぶ` の折りたたみに入れた。
+    - 行の描画を `StatusRow` に切り出した。
+  - `apps/web/app/globals.css` に `.start-urgent` / `.toc-more` / `.app-band` を追加。
+  - `docs/ENVIRONMENT_MATRIX.md` と `apps/web/.env.example` にストアURLを追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - Chromium 390x844 で確認。
+    - 急ぎの3行が表示され、押すと `/crisis/hospital-night` へ遷移する。
+    - 最初に見える登録は4件、折りたたみは閉じた状態で7件。開くと11件すべて表示される。
+    - 登録を押すと従来どおり `/diagnosis` へ進む。
+    - ストアURL未設定時、アプリ導線が「準備中」の表示になることを確認。
+    - 横スクロールなし、JSエラーなし。
+  - `scripts/smoke-web.mjs` 37件すべて成功。
+- 注意:
+  - `/crisis/[key]` は静的生成のため、ストアURLはビルド時に埋め込まれる。公開後に環境変数を設定したら、再デプロイが必要。
+
+## 2026-08-21 追記 120
+
+- 経緯:
+  - レビューで最優先に挙げた「課金導線が閉じている」件。`/plans` のFamily PlusのCTAが `/plans` 自身を指しており、押しても同じページに戻る状態だった。価格は「準備中」、Stripe側にもsubscriptionのコードが無かった。
+- 判断:
+  - 本体がアプリになったため、この経路は「Webで契約する人向け」に限る。iOSアプリ内から同じものを売る場合はApp内課金の対象になり、Stripeは使えない。IAPの導入は別途判断が必要。
+  - price IDが未設定の間は受付を開かない。価格表示も環境変数にして、決まるまで「準備中」のままにする。
+  - Plusは家族単位で持つ。誰が払ったかではなく、どの家族が広がるかで管理する。
+  - 解約・失敗で `families.plan` を戻す経路を必ず入れる。入れないと返金後もPlusのままになる。
+- 対応:
+  - `apps/web/app/api/stripe/plus-checkout/route.ts` を追加。Supabaseのアクセストークンで家族を特定し、`mode=subscription` のCheckout Sessionを作る。すでにPlusなら409。
+  - `apps/web/app/api/stripe/webhook/route.ts`
+    - `persistFamilyPlan()` を追加。`checkout.session.completed`（subscription）と `customer.subscription.updated` / `deleted` を処理する。
+    - `subscriptions` テーブルへ記録し、`families.plan` を `plus` / `free` に切り替える。
+    - 既存のサポートパック（単発決済）の処理とは、`mode` と `metadata.familyId` で分岐する。
+  - `apps/web/components/PlusUpgrade.tsx` を追加。本人確認 → 決済画面へ、の2段。成功・取消の戻りも表示する。
+  - `apps/web/app/plans/page.tsx`
+    - CTAの遷移先を自分自身から `#plus` へ修正。
+    - 価格表示を `NEXT_PUBLIC_PLUS_PRICE_LABEL` から読むようにした。
+  - 環境変数に `STRIPE_PLUS_PRICE_ID` と `NEXT_PUBLIC_PLUS_PRICE_LABEL` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - price ID未設定で `/api/stripe/plus-checkout` が503を返すことを確認。
+  - Chromium 390x844 で `/plans` を確認。CTAが `#plus` へ移動し、受付ブロックが本人確認のフォームを出すことを確認。JSエラーなし。
+- 未確認・未決定:
+  - 実際のStripeでの決済は未実施。price ID設定後にテストモードでの確認が必要。
+  - webhookの `customer.subscription.*` はStripe側でイベントを有効にする必要がある。
+  - **iOSのApp内課金は未対応**。アプリ内からPlusを売るなら `expo-in-app-purchases` か RevenueCat の導入が必要で、手数料15〜30%がかかる。画面には「iPhoneのアプリの中からは、Appleの規約により同じ手続きはご利用いただけません」と明記してある。
+
+## 2026-08-21 追記 121
+
+- 経緯:
+  - 本体がアプリになったため、Plusをアプリ内で売るならApp内課金（IAP）が必要になる件。
+  - これはコードより先に事業と規約の判断が要る話なので、判断材料を文書にし、コード側は「どの経路から来ても最後は1か所で決まる」形だけ先に用意した。
+- 判断:
+  - iOSアプリ内でデジタル機能のサブスクを売る場合、原則IAPが必須。手数料は原則30%、Small Business Programで15%。
+  - 「Webで契約してアプリで解放」自体は可能だが、**アプリ内からWeb決済へ誘導すること**が禁止されている。現在の `PlusUpgrade` の注意書きはWeb画面にのみ置き、アプリ側には入れていない。
+  - `expo-in-app-purchases` は非推奨のため採用しない。入れるならRevenueCat。
+  - 課金経路が増えても、Plusかどうかを決めるのは `families.plan` の1か所に保つ。
+- 対応:
+  - `docs/IN_APP_PURCHASE_PLAN.md` を追加。選択肢A（Webのみ）/ B（RevenueCat）/ C（非推奨）と、必要な作業、判断が必要なことを整理。
+  - `apps/web/app/api/revenuecat/webhook/route.ts` を追加。
+    - `REVENUECAT_WEBHOOK_SECRET` で認証。未設定なら501。
+    - `app_user_id` からSupabaseのユーザー → 家族を引く。家族idが直接来た場合も受ける。
+    - 解約と期限切れを分ける。`CANCELLATION` では失効させず、期限到来または `EXPIRATION` で `free` に戻す。ここを一緒にすると、解約した瞬間に使えなくなり返金対応が増える。
+    - `subscriptions` への記録に失敗しても権利の反映は続けるが、警告ログは残す。
+  - 環境変数に `REVENUECAT_WEBHOOK_SECRET` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - モックSupabaseで検証。
+    - 誤ったsecret → 401。
+    - `INITIAL_PURCHASE`（期限は未来）→ `plan: plus`。
+    - `CANCELLATION`（期限は未来）→ `plus` のまま。
+    - `EXPIRATION`（期限は過去）→ `free`。
+    - 家族が見つからない `app_user_id` → `applied: false`（500にはしない）。
+    - 同じ利用者から2回送っても `subscriptions` は1行のまま。
+- 未対応:
+  - アプリ側の `react-native-purchases` は未導入。入れるとExpo Goでは動かなくなり、development buildへの移行が必要になる。
+  - App Store Connect の商品作成、RevenueCatのアカウント設定は未着手。
+
+## 2026-08-21 追記 122
+
+- アプリのバンドル検証:
+  - シミュレータが無いため実機表示は確認できないが、`expo export --platform ios` でバンドルが通ることを確認した。型チェックでは見つからない、Metroの解決エラーの有無を見るため。
+  - iOSバンドル 3.3MB の生成に成功。
+  - バンドル内に新画面が含まれることを確認。`oyano_crisis_progress_v01`、`oyano_consult_consent_v01`、`crisis_opened`、`consult_asked`、`person_created`、`hospital-night`、`just-died` を検出。
+  - 日本語文言はHermesがUTF-16で格納するため、UTF-16でバイト検索して `いまはやらなくていいこと`、`急なとき`、`死亡診断書` を検出。
+  - つまり `@oyano/shared` の crisis / consult / funnel、`@/lib/funnel`、`@/lib/consult` はいずれもMetroで解決できている。
+- 残る未確認:
+  - 画面の見た目、タップ操作、`Share` シート、AsyncStorageの保持は未確認。`expo start` かEAS buildでの目視が必要。

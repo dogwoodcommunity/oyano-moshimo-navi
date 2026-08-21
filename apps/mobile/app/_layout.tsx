@@ -52,6 +52,9 @@ export default function RootLayout() {
     <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
       <Stack.Screen name="(auth)/welcome" options={{ title: "はじめに" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+      <Stack.Screen name="consult" options={{ title: "長期相談" }} />
+      <Stack.Screen name="crisis/index" options={{ title: "急なとき" }} />
+      <Stack.Screen name="crisis/[key]" options={{ title: "急なとき" }} />
       <Stack.Screen name="handoff" options={{ title: "アプリに保存" }} />
       <Stack.Screen name="people/new" options={{ title: "対象者を追加" }} />
       <Stack.Screen name="people/[id]/index" options={{ title: "対象者" }} />

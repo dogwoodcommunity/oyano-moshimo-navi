@@ -1,4 +1,5 @@
 import type { DiagnosisResult, ParentStatus } from "@oyano/shared";
+import { trackFunnel } from "@/lib/funnel";
 import { demoPerson, demoResult, demoTimeline } from "./demoData";
 import { getSupabase } from "./supabase";
 
@@ -484,6 +485,7 @@ export async function createPersonForFamily({
     created_by: userResult.user?.id ?? null
   });
 
+  void trackFunnel("person_created");
   return {
     source: "supabase",
     person: personFromRow(row),
@@ -528,6 +530,7 @@ export async function createInitialFamilyPerson({
   if (!result?.personId) return { source: "supabase", error: "家族ボードを作成できませんでした。" };
 
   const person = await fetchPerson(result.personId);
+  void trackFunnel("person_created");
   return {
     source: "supabase",
     person,
@@ -824,6 +827,7 @@ export async function addTimelineEntry({
 
   if (entryError) return { source: "supabase", error: entryError.message };
   const row = insertedEntry;
+  void trackFunnel("record_written");
   return { source: "supabase", entry: row ? timelineFromRow(row) : undefined };
 }
 

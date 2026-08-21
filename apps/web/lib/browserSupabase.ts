@@ -64,12 +64,19 @@ export async function completeBrowserSupabaseAuthFromUrl(): Promise<{
 }
 
 export async function sendNotebookMagicLink(email: string): Promise<{ ok: boolean; error?: string }> {
+  return sendMagicLink(email, "/home?cloud=1");
+}
+
+/**
+ * 確認メールから戻る先を指定できる版。招待の受け取りでは招待ページへ戻す必要がある。
+ */
+export async function sendMagicLink(email: string, redirectPath: string): Promise<{ ok: boolean; error?: string }> {
   const client = getBrowserSupabase();
   if (!client || typeof window === "undefined") {
     return { ok: false, error: "クラウド保存の設定がまだありません。" };
   }
 
-  const redirectTo = `${window.location.origin}/home?cloud=1`;
+  const redirectTo = `${window.location.origin}${redirectPath}`;
   const { error } = await client.auth.signInWithOtp({
     email,
     options: {

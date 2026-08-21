@@ -915,6 +915,15 @@ export default function FamilyBoardPage() {
         </nav>
       </section>
 
+      <Link className="crisis-banner" href="/crisis">
+        <span className="crisis-banner-badge">急なとき</span>
+        <span className="crisis-banner-body">
+          <strong>いま、急なことが起きている</strong>
+          <small>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</small>
+        </span>
+        <span className="crisis-banner-chev" aria-hidden="true">›</span>
+      </Link>
+
       {!loaded ? (
         <section className="nb-card board-empty">
           <h2>読み込み中です</h2>
@@ -1036,6 +1045,28 @@ export default function FamilyBoardPage() {
                 </button>
               </div>
               <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
+            </article>
+          </section>
+
+          <section className="nb-section" aria-label="家族共有">
+            <article className="nb-card family-entry-card">
+              <div>
+                <p className="nb-eyebrow">家族共有</p>
+                <h2>同じ手帳を家族にも見せる</h2>
+                <p>病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに2人まで無料です。</p>
+              </div>
+              <Link className="nb-save" href="/family">家族を招待する</Link>
+            </article>
+          </section>
+
+          <section className="nb-section" aria-label="長期相談">
+            <article className="nb-card consult-entry-card">
+              <div>
+                <p className="nb-eyebrow">長期相談</p>
+                <h2>この手帳を前提に相談する</h2>
+                <p>プロフィールと最近の記録をもとに、次に確認すること、窓口で聞くこと、相談先の候補を整理します。毎回ゼロから説明しなくて済みます。</p>
+              </div>
+              <Link className="nb-save" href="/consult">相談メモを作る</Link>
             </article>
           </section>
 

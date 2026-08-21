@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { crisisScenarios } from "@oyano/shared";
 import { guides } from "@/lib/guides";
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -6,6 +7,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const staticPaths = [
     "",
     "/home",
+    "/crisis",
+    "/consult",
+    "/family",
     "/guides",
     "/checklists",
     "/safety",
@@ -22,6 +26,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticPaths.map((path) => ({
       url: `${baseUrl}${path}`,
+      lastModified: new Date()
+    })),
+    ...crisisScenarios.map((scenario) => ({
+      url: `${baseUrl}/crisis/${scenario.key}`,
       lastModified: new Date()
     })),
     ...guides.map((guide) => ({

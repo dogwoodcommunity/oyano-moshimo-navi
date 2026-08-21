@@ -1,0 +1,88 @@
+name: Deploy to Vercel
+
+# 手動実行だけ。pushでは動かない。
+# VercelのGit連携が有効なら、そちらが main への push で自動デプロイするため、
+# このワークフローは「連携が使えない時の手段」として用意している。
+#
+# 必要なリポジトリシークレット:
+#   VERCEL_TOKEN       https://vercel.com/account/tokens で発行
+#   VERCEL_ORG_ID      .vercel/project.json の orgId、または Vercel の Settings から
+#   VERCEL_PROJECT_ID  .vercel/project.json の projectId
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: デプロイ先
+        required: true
+        default: preview
+        type: choice
+        options:
+          - preview
+          - production
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fail fast when secrets are missing
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          missing=""
+          [ -z "$VERCEL_TOKEN" ] && missing="$missing VERCEL_TOKEN"
+          [ -z "$VERCEL_ORG_ID" ] && missing="$missing VERCEL_ORG_ID"
+          [ -z "$VERCEL_PROJECT_ID" ] && missing="$missing VERCEL_PROJECT_ID"
+          if [ -n "$missing" ]; then
+            echo "リポジトリシークレットが足りません:$missing"
+            echo "docs/DEPLOYMENT.md の「手動デプロイ」を参照してください。"
+            exit 1
+          fi
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Pull Vercel environment
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.target }}" = "production" ]; then
+            npx vercel@latest pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            npx vercel@latest pull --yes --environment=preview --token=${{ secrets.VERCEL_TOKEN }}
+          fi
+
+      - name: Build
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.target }}" = "production" ]; then
+            npx vercel@latest build --prod --token=${{ secrets.VERCEL_TOKEN }}
+          else
+            npx vercel@latest build --token=${{ secrets.VERCEL_TOKEN }}
+          fi
+
+      - name: Deploy
+        id: deploy
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+        run: |
+          if [ "${{ inputs.target }}" = "production" ]; then
+            url=$(npx vercel@latest deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }})
+          else
+            url=$(npx vercel@latest deploy --prebuilt --token=${{ secrets.VERCEL_TOKEN }})
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "deployed: $url"
+
+      - name: Smoke the deployment
+        run: node scripts/smoke-web.mjs "${{ steps.deploy.outputs.url }}"
