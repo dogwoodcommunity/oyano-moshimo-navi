@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { PlusUpgrade } from "@/components/PlusUpgrade";
 
 export const metadata: Metadata = {
   title: "料金と使い方",
@@ -23,7 +24,8 @@ const plans = [
   },
   {
     name: "Family Plus",
-    price: "準備中",
+    // 価格を決めたら NEXT_PUBLIC_PLUS_PRICE_LABEL に入れる。未設定の間は準備中のまま。
+    price: process.env.NEXT_PUBLIC_PLUS_PRICE_LABEL?.trim() || "準備中",
     audience: "2人目以降も管理したい家族",
     items: [
       "複数対象者の管理",
@@ -31,8 +33,8 @@ const plans = [
       "家族会議用PDF",
       "履歴保存とカスタム通知"
     ],
-    cta: "Plusを確認する",
-    href: "/plans",
+    cta: "Plusの手続きへ",
+    href: "#plus",
     featured: true
   },
   {
@@ -75,6 +77,9 @@ export default function PlansPage() {
           </article>
         ))}
       </section>
-    </main>
+    
+      <PlusUpgrade />
+
+      </main>
   );
 }

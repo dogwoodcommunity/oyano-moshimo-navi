@@ -11,8 +11,13 @@ type StripeEvent = {
       amount_total?: number;
       metadata?: {
         caseId?: string;
+        familyId?: string;
       };
       payment_status?: string;
+      mode?: string;
+      subscription?: string;
+      status?: string;
+      current_period_end?: number;
     };
   };
 };
@@ -86,6 +91,57 @@ async function persistCheckoutSession(eventType: string, session: StripeCheckout
     .in("status", ["requested"]);
 }
 
+/**
+ * Plusは家族単位。支払いが続いている間だけ families.plan を plus にする。
+ * 解約や失敗で戻す経路が無いと、返金後もPlusのままになる。
+ */
+async function persistFamilyPlan(eventType: string, object: StripeCheckoutSession) {
+  const familyId = object.metadata?.familyId;
+  const supabase = getServerSupabase();
+  if (!familyId || !supabase) return;
+
+  const activeStatuses = ["active", "trialing"];
+  const isActive = eventType === "checkout.session.completed"
+    ? object.payment_status !== "unpaid"
+    : activeStatuses.includes(object.status ?? "");
+
+  const subscriptionId = eventType === "checkout.session.completed"
+    ? object.subscription ?? null
+    : object.id;
+
+  const periodEnd = object.current_period_end
+    ? new Date(object.current_period_end * 1000).toISOString()
+    : null;
+
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("provider", "stripe")
+    .eq("provider_subscription_id", subscriptionId)
+    .limit(1)
+    .maybeSingle();
+
+  const payload = {
+    family_id: familyId,
+    provider: "stripe",
+    provider_subscription_id: subscriptionId,
+    status: isActive ? "active" : "canceled",
+    current_period_end: periodEnd,
+    updated_at: new Date().toISOString()
+  };
+
+  if (existing?.id) {
+    await supabase.from("subscriptions").update(payload).eq("id", existing.id);
+  } else if (subscriptionId) {
+    await supabase.from("subscriptions").insert(payload);
+  }
+
+  await supabase
+    .from("families")
+    .update({ plan: isActive ? "plus" : "free", updated_at: new Date().toISOString() })
+    .eq("id", familyId);
+}
+
 export async function POST(request: Request) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
   if (!webhookSecret) {
@@ -106,7 +162,18 @@ export async function POST(request: Request) {
     "checkout.session.async_payment_succeeded",
     "checkout.session.async_payment_failed"
   ].includes(event.type)) {
-    await persistCheckoutSession(event.type, event.data.object);
+    if (event.data.object.mode === "subscription" || event.data.object.metadata?.familyId) {
+      await persistFamilyPlan(event.type, event.data.object);
+    } else {
+      await persistCheckoutSession(event.type, event.data.object);
+    }
+  }
+
+  if ([
+    "customer.subscription.updated",
+    "customer.subscription.deleted"
+  ].includes(event.type)) {
+    await persistFamilyPlan(event.type, event.data.object);
   }
 
   return NextResponse.json({ received: true });

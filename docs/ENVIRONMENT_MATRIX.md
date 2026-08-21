@@ -17,6 +17,8 @@
 | `CONSULT_DAILY_LIMIT` | 任意 | no | サービス全体の相談回数/日。既定200 |
 | `NEXT_PUBLIC_IOS_APP_URL` | 公開後 | no | Web入口からApp Storeへ送る。未設定なら導線を出さない |
 | `NEXT_PUBLIC_ANDROID_APP_URL` | 公開後 | no | 同上（Google Play） |
+| `STRIPE_PLUS_PRICE_ID` | Plus提供時 | no | 継続課金のprice。未設定なら `/api/stripe/plus-checkout` は503 |
+| `NEXT_PUBLIC_PLUS_PRICE_LABEL` | Plus提供時 | no | `/plans` の価格表示。未設定なら「準備中」 |
 | `NEXT_PUBLIC_APP_SCHEME` | yes | yes | アプリ引き継ぎURL |
 | `NEXT_PUBLIC_WEB_BASE_URL` | yes | yes | Web本番URL |
 

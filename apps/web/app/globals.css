@@ -9729,3 +9729,86 @@ textarea {
 @media (max-width: 640px) {
   .app-band { grid-template-columns: minmax(0, 1fr); padding: 18px 16px; }
 }
+
+/* Plusの受付 */
+.plus-upgrade {
+  background: var(--surface);
+  border: 1px solid rgba(224, 215, 196, 0.8);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+  display: grid;
+  gap: 12px;
+  margin: 18px auto 0;
+  max-width: 640px;
+  padding: 24px 22px;
+  scroll-margin-top: 24px;
+}
+
+.plus-upgrade h2 {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: 21px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.plus-upgrade > p {
+  color: var(--ink-sub);
+  font-size: 14.5px;
+  font-weight: 700;
+  line-height: 1.85;
+  margin: 0;
+}
+
+.plus-field { display: grid; gap: 6px; }
+.plus-field label { color: var(--ink-sub); font-size: 13.5px; font-weight: 800; }
+
+.plus-field input {
+  background: #fff;
+  border: 1.5px solid rgba(203, 221, 227, 0.9);
+  border-radius: 12px;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 50px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.plus-field input:focus { border-color: rgba(74, 143, 166, 0.7); outline: none; }
+
+.plus-button {
+  background: linear-gradient(180deg, #18754e, #0d4f34);
+  border: 0;
+  border-radius: 14px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+  min-height: 54px;
+  padding: 14px 18px;
+  width: 100%;
+}
+
+.plus-button:disabled { background: #d9e2dc; color: #8b968f; cursor: not-allowed; }
+.plus-note { color: var(--ink-faint); font-size: 13.5px; font-weight: 800; line-height: 1.8; margin: 0; }
+
+.plus-outcome {
+  background: var(--primary-tint);
+  border-radius: 12px;
+  color: var(--tab-teal-ink);
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+  padding: 12px 14px;
+}
+
+.plus-error {
+  background: var(--urgent-bg);
+  border-radius: 12px;
+  color: #8d3f1e;
+  font-size: 14px;
+  font-weight: 800;
+  margin: 0;
+  padding: 12px 14px;
+}

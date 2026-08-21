@@ -4114,3 +4114,32 @@ GitHubが必要な理由:
   - `scripts/smoke-web.mjs` 37件すべて成功。
 - 注意:
   - `/crisis/[key]` は静的生成のため、ストアURLはビルド時に埋め込まれる。公開後に環境変数を設定したら、再デプロイが必要。
+
+## 2026-08-21 追記 120
+
+- 経緯:
+  - レビューで最優先に挙げた「課金導線が閉じている」件。`/plans` のFamily PlusのCTAが `/plans` 自身を指しており、押しても同じページに戻る状態だった。価格は「準備中」、Stripe側にもsubscriptionのコードが無かった。
+- 判断:
+  - 本体がアプリになったため、この経路は「Webで契約する人向け」に限る。iOSアプリ内から同じものを売る場合はApp内課金の対象になり、Stripeは使えない。IAPの導入は別途判断が必要。
+  - price IDが未設定の間は受付を開かない。価格表示も環境変数にして、決まるまで「準備中」のままにする。
+  - Plusは家族単位で持つ。誰が払ったかではなく、どの家族が広がるかで管理する。
+  - 解約・失敗で `families.plan` を戻す経路を必ず入れる。入れないと返金後もPlusのままになる。
+- 対応:
+  - `apps/web/app/api/stripe/plus-checkout/route.ts` を追加。Supabaseのアクセストークンで家族を特定し、`mode=subscription` のCheckout Sessionを作る。すでにPlusなら409。
+  - `apps/web/app/api/stripe/webhook/route.ts`
+    - `persistFamilyPlan()` を追加。`checkout.session.completed`（subscription）と `customer.subscription.updated` / `deleted` を処理する。
+    - `subscriptions` テーブルへ記録し、`families.plan` を `plus` / `free` に切り替える。
+    - 既存のサポートパック（単発決済）の処理とは、`mode` と `metadata.familyId` で分岐する。
+  - `apps/web/components/PlusUpgrade.tsx` を追加。本人確認 → 決済画面へ、の2段。成功・取消の戻りも表示する。
+  - `apps/web/app/plans/page.tsx`
+    - CTAの遷移先を自分自身から `#plus` へ修正。
+    - 価格表示を `NEXT_PUBLIC_PLUS_PRICE_LABEL` から読むようにした。
+  - 環境変数に `STRIPE_PLUS_PRICE_ID` と `NEXT_PUBLIC_PLUS_PRICE_LABEL` を追加。
+- 確認:
+  - `pnpm --filter web run typecheck` OK、`pnpm --filter web run build` OK。
+  - price ID未設定で `/api/stripe/plus-checkout` が503を返すことを確認。
+  - Chromium 390x844 で `/plans` を確認。CTAが `#plus` へ移動し、受付ブロックが本人確認のフォームを出すことを確認。JSエラーなし。
+- 未確認・未決定:
+  - 実際のStripeでの決済は未実施。price ID設定後にテストモードでの確認が必要。
+  - webhookの `customer.subscription.*` はStripe側でイベントを有効にする必要がある。
+  - **iOSのApp内課金は未対応**。アプリ内からPlusを売るなら `expo-in-app-purchases` か RevenueCat の導入が必要で、手数料15〜30%がかかる。画面には「iPhoneのアプリの中からは、Appleの規約により同じ手続きはご利用いただけません」と明記してある。
