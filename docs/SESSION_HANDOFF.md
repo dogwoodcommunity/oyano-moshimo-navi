@@ -5788,3 +5788,24 @@ xcrun simctl io $SIM screenshot /tmp/shot.png
 - テスト済み端末ではSafari/ChatGPT内ブラウザ/PWAの履歴やキャッシュが残るため、
   レビュー用URLは `https://oyano-moshimo-navi.vercel.app/start?fresh=1&v=9d4ae39` を使う。
 - それでも古い画面が残る場合は、iPhoneのSafariサイトデータで `oyano` を削除して開き直す。
+
+## 2026-08-22 追記 154 — 施設配布用A5家族確認カードの叩き台
+
+ユーザーから、介護施設・病院・地域包括支援センターなどに置いてもらう宣伝方法として、
+「家族確認カード」の実物イメージが欲しいと相談があった。
+
+対応:
+
+- `docs/marketing/family_check_card_a5.html` を新規作成。
+- A5縦、表裏2ページの印刷用HTML。
+- 表面は広告ではなく「親が入院した時、家族で最初に確認すること」として、
+  病院窓口、退院準備、支払い・保険、家族の役割分担を書き込めるカードにした。
+- 裏面はQRから `https://oyano-moshimo-navi.vercel.app/start?fresh=1` に誘導し、
+  「無料で状況を整理」「この人の手帳として残す」という導線にした。
+- ロゴは `apps/web/public/brand/watch-bird-mark.svg` を参照。
+- QRは暫定で `api.qrserver.com` の生成URLを使っている。正式印刷前には固定QR画像に差し替えるのが望ましい。
+
+判断:
+
+- 全国郵送DMより、施設・病院・ケアマネが家族へ渡しやすい「使える紙」として設計する方が初期検証に向く。
+- 初期配布は全国ではなく、地域包括支援センター、退院支援窓口、居宅介護支援事業所など30か所程度で反応を見るのがよい。
