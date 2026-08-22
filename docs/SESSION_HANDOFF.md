@@ -4978,3 +4978,20 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - この追記時点ではcommit/push前。
   - 次に `git diff --check`、`npm run typecheck --workspace web`、`npm run build --workspace web` を実行して確認する。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 120
+
+- GitHub反映:
+  - `14948aa Sync saved consult notes to cloud` を `origin/main` へpush済み。
+  - push結果: `e1d9d05..14948aa main -> main`。
+- 確認:
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build時のSupabase JS Node 20非推奨警告は継続して出るが、ビルドは成功。
+- 現在地:
+  - AI相談メモは「この相談メモを手帳に残す」を押すと、ローカル手帳に追加されるだけでなく、ログイン済みなら即 `/api/notebook/sync` でクラウド控えにも保存される。
+  - 未ログイン/セッションなしの場合は、端末内保存は維持しつつ、クラウド控えは家族ボードでメール確認後に保存する旨を表示する。
+  - レビュー指摘の「消えない手帳」について、プロフィール・タスク・日記・AI相談メモの主要な保存経路はクラウド同期される状態になった。
+  - 次に進めるなら、確認リストの編集性をさらに強める（カードから直接編集drawerへ入れる、並び替え、担当者/期限の見え方）、または日記の月別サマリー/注意サイン表示を強化する。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
