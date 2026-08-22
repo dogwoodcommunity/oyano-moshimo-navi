@@ -4902,3 +4902,14 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - この追記時点ではcommit/push前。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
   - 次にやるなら、この差分をcommit/pushし、その後「対象者ページをプロフィール/記録/確認リスト/写真のタブ構成へ分ける」「記録一覧からAI要約・注意サインへ進む」を進める。
+
+## 2026-08-22 追記 116
+
+- GitHub反映:
+  - `2cb20fd Gate consult behind Plus plan` を `origin/main` へpush済み。
+  - push結果: `7ee9c6a..2cb20fd main -> main`。
+- 現在地:
+  - 長期相談APIは、本人確認済みかつ参加家族の `families.plan` が `plus` の場合だけClaudeへ進む。
+  - 画面側も未ログインでは相談ボタンを押せず、クラウド控え作成へ誘導する。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
+  - 次に進めるなら、ユーザーが強く求めている「1人目マイページの手帳感」を優先し、プロフィール編集・過去記録一覧・確認リスト・写真資料をタブまたは明確なセクションへ整理する。
