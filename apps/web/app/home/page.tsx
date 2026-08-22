@@ -905,6 +905,29 @@ export default function FamilyBoardPage() {
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
+  const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
+  const unassignedTaskCount = openTasks.filter((task) => !task.assignee?.trim()).length;
+  const latestEntry = activeEntries[0];
+  const daysFromLatestEntry = daysSince(latestEntry?.date);
+  const latestEntrySummary = latestEntry
+    ? latestEntry.body.length > 92
+      ? `${latestEntry.body.slice(0, 92)}…`
+      : latestEntry.body
+    : "まだ記録はありません。今日の様子を1行だけ残すと、ここに流れが出ます。";
+  const latestEntryLabel = latestEntry
+    ? daysFromLatestEntry === 0
+      ? `今日の記録 · ${moodLabel(latestEntry.mood)}`
+      : `${formatLongDate(latestEntry.date)}の記録 · ${moodLabel(latestEntry.mood)}`
+    : "今日の記録はまだありません";
+  const nextFamilyQuestion = notebookInsight?.questions[0] ?? "次に家族へ確認したいことを1つだけ書いておきますか？";
+  const nextTaskCopy = unassignedTaskCount > 0
+    ? `担当が決まっていない確認が${unassignedTaskCount}件あります`
+    : openTasks[0]
+      ? `${openTasks[0].title}（${dueText(openTasks[0])}）`
+      : "いま未完了の確認リストはありません";
+  const profileNextCopy = activeMissingProfileItems[0]
+    ? `${activeMissingProfileItems[0]}を足すと、相談や共有がしやすくなります`
+    : "基本情報はそろっています。変化があれば更新できます";
 
   function tabForHash(hash: string): NotebookTab | undefined {
     if (hash === "#today-diary" || hash === "#diary-history") return "record";
@@ -1520,6 +1543,65 @@ export default function FamilyBoardPage() {
                 <div>
                   <strong>{attachments.length}</strong>
                   <span>写真・資料</span>
+                </div>
+              </div>
+              <div className="person-daily-board" aria-label={`${activePersonName}の今日の手帳`}>
+                <div className="person-daily-main">
+                  <span>今日の手帳</span>
+                  <strong>{latestEntryLabel}</strong>
+                  <p>{latestEntrySummary}</p>
+                </div>
+                <div className="person-daily-actions" aria-label="よく使う操作">
+                  <a
+                    href="#today-diary"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#today-diary");
+                    }}
+                  >
+                    今日の記録を書く
+                  </a>
+                  <a
+                    href="#diary-history"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#diary-history");
+                    }}
+                  >
+                    過去の記録を見る
+                  </a>
+                </div>
+              </div>
+              <div className="person-next-panel" aria-label="次に整えること">
+                <div>
+                  <span>基本情報</span>
+                  <strong>{profileNextCopy}</strong>
+                  <button
+                    type="button"
+                    onClick={() => openNotebookSection("#profile-edit-fields")}
+                  >
+                    編集する
+                  </button>
+                </div>
+                <div>
+                  <span>確認リスト</span>
+                  <strong>{nextTaskCopy}</strong>
+                  <button
+                    type="button"
+                    onClick={() => openNotebookSection("#task-checklist")}
+                  >
+                    確認する
+                  </button>
+                </div>
+                <div>
+                  <span>家族に聞くこと</span>
+                  <strong>{nextFamilyQuestion}</strong>
+                  <button
+                    type="button"
+                    onClick={() => openNotebookSection("#today-diary")}
+                  >
+                    記録する
+                  </button>
                 </div>
               </div>
               <div className="person-command-grid" aria-label="手帳でできること">
