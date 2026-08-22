@@ -1138,7 +1138,6 @@ export default function FamilyBoardPage() {
       ? `今日の記録 · ${moodLabel(latestEntry.mood)}`
       : `${formatLongDate(latestEntry.date)}の記録 · ${moodLabel(latestEntry.mood)}`
     : "今日の記録はまだありません";
-  const nextFamilyQuestion = notebookInsight?.questions[0] ?? "次に家族へ確認したいことを1つだけ書いておきますか？";
   const nextTaskCopy = unassignedTaskCount > 0
     ? `担当が決まっていない確認が${unassignedTaskCount}件あります`
     : openTasks[0]
@@ -1968,7 +1967,17 @@ export default function FamilyBoardPage() {
               </div>
               <div className="person-next-panel" aria-label="次に整えること">
                 <div>
-                  <span>基本情報</span>
+                  <span>1. 今日の記録</span>
+                  <strong>まず今日あったことを1行だけ残す</strong>
+                  <button
+                    type="button"
+                    onClick={() => openNotebookSection("#today-diary")}
+                  >
+                    書く
+                  </button>
+                </div>
+                <div>
+                  <span>2. 基本情報</span>
                   <strong>{profileNextCopy}</strong>
                   <button
                     type="button"
@@ -1978,85 +1987,78 @@ export default function FamilyBoardPage() {
                   </button>
                 </div>
                 <div>
-                  <span>確認リスト</span>
+                  <span>3. 確認リスト</span>
                   <strong>{nextTaskCopy}</strong>
                   <button
                     type="button"
                     onClick={() => openNotebookSection("#task-checklist")}
                   >
-                    確認する
+                    見る
                   </button>
                 </div>
-                <div>
-                  <span>家族に聞くこと</span>
-                  <strong>{nextFamilyQuestion}</strong>
-                  <button
-                    type="button"
-                    onClick={() => openNotebookSection("#today-diary")}
+              </div>
+              <details className="person-more-actions">
+                <summary>写真・過去の記録など、ほかの操作を見る</summary>
+                <div className="person-command-grid" aria-label="手帳でできること">
+                  <a
+                    href="#person-profile"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#person-profile");
+                    }}
                   >
-                    記録する
-                  </button>
+                    <span className="command-icon is-profile" aria-hidden="true">
+                      <img src="/brand/watch-bird-mark.svg" alt="" />
+                    </span>
+                    <strong>プロフィールを編集</strong>
+                    <small>名前・続柄・病院・薬・連絡先を更新</small>
+                  </a>
+                  <a
+                    href="#today-diary"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#today-diary");
+                    }}
+                  >
+                    <span className="command-icon is-diary" aria-hidden="true" />
+                    <strong>今日の記録を書く</strong>
+                    <small>体調・発言・病院連絡を1行で残す</small>
+                  </a>
+                  <a
+                    href="#diary-history"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#diary-history");
+                    }}
+                  >
+                    <span className="command-icon is-history" aria-hidden="true" />
+                    <strong>過去の記録を見る</strong>
+                    <small>月別・変化あり・写真つきで振り返る</small>
+                  </a>
+                  <a
+                    href="#task-checklist"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#task-checklist");
+                    }}
+                  >
+                    <span className="command-icon is-task" aria-hidden="true" />
+                    <strong>確認リストを編集</strong>
+                    <small>期限・担当・状態を家族で更新</small>
+                  </a>
+                  <a
+                    href="#media-library"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#media-library");
+                    }}
+                  >
+                    <span className="command-icon is-media" aria-hidden="true" />
+                    <strong>写真を見る</strong>
+                    <small>日記に添付した写真を確認</small>
+                  </a>
                 </div>
-              </div>
-              <div className="person-command-grid" aria-label="手帳でできること">
-                <a
-                  href="#person-profile"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#person-profile");
-                  }}
-                >
-                  <span className="command-icon is-profile" aria-hidden="true">
-                    <img src="/brand/watch-bird-mark.svg" alt="" />
-                  </span>
-                  <strong>プロフィールを編集</strong>
-                  <small>名前・続柄・病院・薬・連絡先を更新</small>
-                </a>
-                <a
-                  href="#today-diary"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#today-diary");
-                  }}
-                >
-                  <span className="command-icon is-diary" aria-hidden="true" />
-                  <strong>今日の記録を書く</strong>
-                  <small>体調・発言・病院連絡を1行で残す</small>
-                </a>
-                <a
-                  href="#diary-history"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#diary-history");
-                  }}
-                >
-                  <span className="command-icon is-history" aria-hidden="true" />
-                  <strong>過去の記録を見る</strong>
-                  <small>月別・変化あり・写真つきで振り返る</small>
-                </a>
-                <a
-                  href="#task-checklist"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#task-checklist");
-                  }}
-                >
-                  <span className="command-icon is-task" aria-hidden="true" />
-                  <strong>確認リストを編集</strong>
-                  <small>期限・担当・状態を家族で更新</small>
-                </a>
-                <a
-                  href="#media-library"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#media-library");
-                  }}
-                >
-                  <span className="command-icon is-media" aria-hidden="true" />
-                  <strong>写真を見る</strong>
-                  <small>日記に添付した写真を確認</small>
-                </a>
-              </div>
+              </details>
             </article>
             <article className="nb-card handbook-readiness-panel" aria-label={`${activePersonName}の手帳の育ち具合`}>
               <div className="handbook-readiness-head">
@@ -2387,41 +2389,35 @@ export default function FamilyBoardPage() {
             </section>
           ) : null}
 
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="家族共有">
-            <article className="nb-card family-entry-card">
-              <div>
-                <p className="nb-eyebrow">家族共有</p>
-                <h2>{isSharedFamilyMember ? "共有された手帳を一緒に更新する" : "同じ手帳を家族にも見せる"}</h2>
-                <p>
-                  {isSharedFamilyMember
-                    ? "この手帳は作成者が招待とプランを管理しています。あなたは記録、確認リスト、写真を一緒に更新できます。追加課金の手続きは不要です。"
-                    : `病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで無料です。`}
-                </p>
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="必要な時だけ使う機能">
+            <details className="nb-card optional-tools-card">
+              <summary>
+                <span>必要な時だけ使う</span>
+                <strong>共有・相談・緊急カード</strong>
+                <small>ふだんは閉じておき、必要になった時だけ開きます。</small>
+              </summary>
+              <div className="optional-tool-list">
+                <Link className="optional-tool" href="/family">
+                  <span>家族共有</span>
+                  <strong>{isSharedFamilyMember ? "共有状態を見る" : "家族を招待する"}</strong>
+                  <small>
+                    {isSharedFamilyMember
+                      ? "追加課金の手続きは不要です。作成者の手帳を一緒に更新します。"
+                      : `病院に聞く人、支払いを見る人、写真を残す人を分けられます。あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで無料です。`}
+                  </small>
+                </Link>
+                <Link className="optional-tool" href="/consult">
+                  <span>長期相談</span>
+                  <strong>相談メモを作る</strong>
+                  <small>プロフィールと最近の記録をもとに、次に確認することを整理します。</small>
+                </Link>
+                <Link className="optional-tool" href={`/emergency-card/${activeCase.id}`}>
+                  <span>緊急カード</span>
+                  <strong>印刷用の1枚を作る</strong>
+                  <small>緊急連絡先、病院・施設、薬の注意だけをA5サイズで印刷できます。</small>
+                </Link>
               </div>
-              <Link className="nb-save" href="/family">{isSharedFamilyMember ? "共有状態を見る" : "家族を招待する"}</Link>
-            </article>
-          </section>
-
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="長期相談">
-            <article className="nb-card consult-entry-card">
-              <div>
-                <p className="nb-eyebrow">長期相談</p>
-                <h2>この手帳を前提に相談する</h2>
-                <p>プロフィールと最近の記録をもとに、次に確認すること、窓口で聞くこと、相談先の候補を整理します。毎回ゼロから説明しなくて済みます。</p>
-              </div>
-              <Link className="nb-save" href="/consult">相談メモを作る</Link>
-            </article>
-          </section>
-
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="緊急カード">
-            <article className="nb-card emergency-card-entry">
-              <div>
-                <p className="nb-eyebrow">緊急カード</p>
-                <h2>冷蔵庫や手帳に入れる1枚を作る</h2>
-                <p>緊急連絡先、病院・施設、薬の注意だけをA5サイズで印刷できます。重要書類の保管場所は載せません。</p>
-              </div>
-              <Link className="nb-save" href={`/emergency-card/${activeCase.id}`}>緊急カードを印刷する</Link>
-            </article>
+            </details>
           </section>
 
           <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary">

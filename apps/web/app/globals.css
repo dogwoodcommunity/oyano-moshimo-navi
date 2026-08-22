@@ -7467,6 +7467,59 @@ textarea {
   line-height: 1.5;
 }
 
+.person-more-actions {
+  background: #f8faf5;
+  border: 1px dashed #cfdccd;
+  border-radius: 16px;
+  display: grid;
+  gap: 10px;
+  padding: 0;
+}
+
+.person-more-actions summary {
+  align-items: center;
+  color: #2f6e82;
+  cursor: pointer;
+  display: flex;
+  font-size: 13.5px;
+  font-weight: 900;
+  justify-content: space-between;
+  line-height: 1.55;
+  list-style: none;
+  min-height: 50px;
+  padding: 13px 14px;
+  touch-action: manipulation;
+}
+
+.person-more-actions summary::-webkit-details-marker {
+  display: none;
+}
+
+.person-more-actions summary::after {
+  background: #fffdf8;
+  border: 1px solid #dce8dd;
+  border-radius: 999px;
+  color: #174f39;
+  content: "開く";
+  flex: 0 0 auto;
+  font-size: 11px;
+  font-weight: 900;
+  margin-left: 12px;
+  padding: 5px 9px;
+}
+
+.person-more-actions[open] {
+  padding-bottom: 12px;
+}
+
+.person-more-actions[open] summary::after {
+  content: "閉じる";
+}
+
+.person-more-actions .person-command-grid {
+  padding: 0 12px;
+}
+
 .handbook-readiness-panel {
   background:
     linear-gradient(145deg, rgba(255, 253, 248, 0.98), rgba(246, 250, 245, 0.98)),
@@ -9164,6 +9217,118 @@ textarea {
   font-weight: 800;
   line-height: 1.55;
   margin: 0;
+}
+
+.optional-tools-card {
+  background:
+    linear-gradient(145deg, rgba(255, 253, 248, 0.98), rgba(246, 250, 245, 0.98)),
+    radial-gradient(circle at 96% 6%, rgba(74, 143, 166, 0.12), transparent 36%);
+  padding: 0;
+}
+
+.optional-tools-card summary {
+  align-items: center;
+  cursor: pointer;
+  display: grid;
+  gap: 4px 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  list-style: none;
+  min-height: 86px;
+  padding: 17px 18px;
+  touch-action: manipulation;
+}
+
+.optional-tools-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.optional-tools-card summary::after {
+  align-items: center;
+  background: #fffdf8;
+  border: 1px solid #d8e4e8;
+  border-radius: 999px;
+  color: #2f6e82;
+  content: "開く";
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  grid-column: 2;
+  grid-row: 1 / span 3;
+  justify-content: center;
+  min-height: 38px;
+  min-width: 56px;
+  padding: 7px 12px;
+}
+
+.optional-tools-card[open] summary::after {
+  content: "閉じる";
+}
+
+.optional-tools-card summary span {
+  color: #2f6e82;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.optional-tools-card summary strong {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.optional-tools-card summary small {
+  color: var(--ink-sub);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.optional-tool-list {
+  border-top: 1px solid rgba(224, 215, 196, 0.72);
+  display: grid;
+  gap: 10px;
+  padding: 0 14px 14px;
+}
+
+.optional-tool {
+  background: #fff;
+  border: 1px solid rgba(214, 226, 213, 0.95);
+  border-radius: 15px;
+  color: var(--ink);
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  text-decoration: none;
+  touch-action: manipulation;
+}
+
+.optional-tool:active {
+  background: #f5f9f4;
+  transform: translateY(1px);
+}
+
+.optional-tool span {
+  color: #2f6e82;
+  font-size: 11.5px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.optional-tool strong {
+  color: var(--ink);
+  font-size: 15.5px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
+.optional-tool small {
+  color: var(--ink-sub);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.6;
 }
 
 .journey-card {
@@ -10986,27 +11151,95 @@ textarea {
 }
 
 .consult-case-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.consult-case-picker {
+  background: #fffdf8;
+  border: 1px solid rgba(224, 215, 196, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 12px 26px rgba(28, 48, 39, 0.06);
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+}
+
+.consult-step-head {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+.consult-step-head > span {
+  align-items: center;
+  background: #174f39;
+  border-radius: 999px;
+  color: #fffdf6;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.consult-step-head strong,
+.consult-step-head small {
+  display: block;
+  line-height: 1.45;
+}
+
+.consult-step-head strong {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.consult-step-head small {
+  color: var(--ink-sub);
+  font-size: 12.5px;
+  font-weight: 800;
+  margin-top: 2px;
 }
 
 .consult-case-tabs button {
   background: #fff;
   border: 1.5px solid rgba(203, 221, 227, 0.9);
-  border-radius: 999px;
+  border-radius: 14px;
   color: var(--ink-sub);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 900;
-  min-height: 42px;
-  padding: 10px 16px;
+  display: grid;
+  font: inherit;
+  gap: 3px;
+  justify-items: start;
+  min-height: 66px;
+  padding: 11px 13px;
+  text-align: left;
+  touch-action: manipulation;
 }
 
 .consult-case-tabs button.is-active {
-  background: var(--primary-tint);
-  border-color: rgba(74, 143, 166, 0.5);
+  background: #eef7f5;
+  border-color: rgba(74, 143, 166, 0.72);
+  box-shadow: inset 4px 0 0 #2f6e82;
   color: var(--tab-teal-ink);
+}
+
+.consult-case-tabs button strong {
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.consult-case-tabs button small {
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .consult-disclosure,

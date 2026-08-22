@@ -8,6 +8,7 @@ import {
   CONSULT_WITHHELD_FIELDS,
   consultAnswerToDiaryBody,
   hasNotebookSubstance,
+  statusLabel,
   type ConsultAnswer
 } from "@oyano/shared";
 import { getBrowserSupabase } from "@/lib/browserSupabase";
@@ -67,6 +68,33 @@ function todayInputValue() {
 
 function allDiaryEntriesForSync(cases: CaseRecord[]) {
   return cases.flatMap((caseRecord) => listDiaryEntries(caseRecord.id));
+}
+
+function consultNotebookBaseName(caseRecord: CaseRecord) {
+  const profile = caseRecord.personProfile;
+  const candidates = [
+    profile?.displayName,
+    profile?.fullName,
+    caseRecord.answers.targetName,
+    profile?.relationship ? `${profile.relationship}の手帳` : undefined
+  ];
+  const name = candidates.find((item) => item?.trim())?.trim();
+  return name || "名前未入力";
+}
+
+function consultNotebookLabel(caseRecord: CaseRecord, index: number, allCases: CaseRecord[]) {
+  const baseName = consultNotebookBaseName(caseRecord);
+  const sameNameCount = allCases.filter((item) => consultNotebookBaseName(item) === baseName).length;
+  const shouldPrefix = sameNameCount > 1 || baseName === "名前未入力" || baseName === "この手帳";
+  return shouldPrefix ? `${index + 1}人目：${baseName}` : baseName;
+}
+
+function consultNotebookMeta(caseRecord: CaseRecord) {
+  const createdAt = new Date(caseRecord.createdAt);
+  const createdLabel = Number.isNaN(createdAt.getTime())
+    ? "作成日未設定"
+    : `${createdAt.getMonth() + 1}/${createdAt.getDate()}作成`;
+  return `${statusLabel(caseRecord.selectedStatus)}・${createdLabel}`;
 }
 
 export function ConsultPanel() {
@@ -298,26 +326,36 @@ export function ConsultPanel() {
   return (
     <div className="consult-panel">
       {cases.length > 1 ? (
-        <div className="consult-case-tabs" role="group" aria-label="相談する手帳">
-          {cases.map((caseRecord) => (
-            <button
-              className={caseRecord.id === activeCaseId ? "is-active" : ""}
-              key={caseRecord.id}
-              onClick={() => setActiveCaseId(caseRecord.id)}
-              type="button"
-            >
-              {caseRecord.personProfile?.displayName?.trim() || caseRecord.personProfile?.relationship || "この手帳"}
-            </button>
-          ))}
+        <div className="consult-case-picker" aria-label="相談する手帳">
+          <div className="consult-step-head">
+            <span>1</span>
+            <div>
+              <strong>相談する手帳を選ぶ</strong>
+              <small>複数ある時は、まず誰の相談かを選びます。</small>
+            </div>
+          </div>
+          <div className="consult-case-tabs" role="group">
+            {cases.map((caseRecord, index) => (
+              <button
+                className={caseRecord.id === activeCaseId ? "is-active" : ""}
+                key={caseRecord.id}
+                onClick={() => setActiveCaseId(caseRecord.id)}
+                type="button"
+              >
+                <strong>{consultNotebookLabel(caseRecord, index, cases)}</strong>
+                <small>{consultNotebookMeta(caseRecord)}</small>
+              </button>
+            ))}
+          </div>
         </div>
       ) : null}
 
       <section className="consult-plus-gate" aria-label="長期相談の利用条件">
         <div>
-          <p className="consult-gate-kicker">Plus内機能</p>
-          <h2>この人の手帳を読んで、次の確認を整理します。</h2>
+          <p className="consult-gate-kicker">使う前に</p>
+          <h2>相談は「手帳を読む」機能です。</h2>
           <p>
-            長期相談は、クラウドに控え保存された手帳を前提に使います。
+            プロフィールと最近の記録を前提に、次に確認することを整理します。
             {signedInEmail ? ` 現在は ${signedInEmail} で確認済みです。` : " 先に家族ボードでメール確認をしてください。"}
           </p>
           {consultAccess ? <ConsultAccessNote access={consultAccess} /> : null}
