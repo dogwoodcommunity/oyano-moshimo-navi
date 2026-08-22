@@ -8893,6 +8893,22 @@ textarea {
   border-color: rgba(15, 95, 65, 0.2);
 }
 
+.cloud-guard-card {
+  margin-top: 12px;
+}
+
+.cloud-guard-card .cloud-backup-head {
+  margin-bottom: 0.8rem;
+}
+
+.cloud-guard-card h2 {
+  font-size: clamp(1.12rem, 4.6vw, 1.42rem);
+}
+
+.cloud-guard-card .cloud-message {
+  font-size: 0.86rem;
+}
+
 .cloud-backup-head {
   align-items: center;
   display: grid;

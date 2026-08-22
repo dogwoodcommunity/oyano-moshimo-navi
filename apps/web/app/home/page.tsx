@@ -1540,6 +1540,69 @@ export default function FamilyBoardPage() {
                 </a>
               </div>
             </article>
+            <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳の保存状態">
+              <div className="cloud-backup-head">
+                <div className="cloud-backup-icon" aria-hidden="true">
+                  <img src="/brand/watch-bird-mark.svg" alt="" />
+                </div>
+                <div>
+                  <p className="nb-eyebrow">{cloudUserEmail ? "控え保存中" : "保存状態"}</p>
+                  <h2>{cloudUserEmail ? "この手帳はクラウドにも残ります" : "今はこの端末だけに保存されています"}</h2>
+                  <p>
+                    {cloudUserEmail
+                      ? "プロフィール、日記、写真メモ、確認リストの変更は自動で控え保存されます。"
+                      : "機種変更やブラウザの履歴削除に備えて、メール確認でクラウド控えを作れます。"}
+                  </p>
+                </div>
+              </div>
+              {cloudUserEmail ? (
+                <div className="cloud-linked-box">
+                  <span>控え保存先</span>
+                  <strong>{cloudUserEmail}</strong>
+                  <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
+                    <span aria-hidden="true" />
+                    <em>
+                      {cloudAutoStatus === "saving"
+                        ? "自動保存中です"
+                        : cloudAutoStatus === "error"
+                          ? "自動保存を確認してください"
+                          : lastCloudSyncedAt
+                            ? `最終保存 ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
+                            : "変更が入ると自動で保存します"}
+                    </em>
+                  </div>
+                </div>
+              ) : (
+                <div className="cloud-form">
+                  <label>
+                    <span>控え保存に使うメールアドレス</span>
+                    <input
+                      inputMode="email"
+                      placeholder="例: family@example.com"
+                      type="email"
+                      value={cloudEmail}
+                      onChange={(event) => setCloudEmail(event.target.value)}
+                    />
+                  </label>
+                  <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
+                    控えを作る
+                  </button>
+                </div>
+              )}
+              <p className="cloud-message">{cloudMessage}</p>
+              <div className="cloud-action-row">
+                <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  今すぐ保存
+                </button>
+                <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  復元
+                </button>
+                <button type="button" onClick={downloadNotebookExport}>
+                  ダウンロード
+                </button>
+              </div>
+              <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
+            </article>
             <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`}>
               {notebookTabs.map((tab) => (
                 <button
@@ -1623,72 +1686,6 @@ export default function FamilyBoardPage() {
               </div>
             </section>
           ) : null}
-
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="記録の控え保存">
-            <article className={`nb-card cloud-backup-card is-${cloudStatus}`}>
-              <div className="cloud-backup-head">
-                <div className="cloud-backup-icon" aria-hidden="true">
-                  <img src="/brand/watch-bird-mark.svg" alt="" />
-                </div>
-                <div>
-                  <p className="nb-eyebrow">大事な記録を消さない</p>
-                  <h2>{cloudUserEmail ? "この手帳は自動で控え保存されます" : "この手帳のクラウド控えを作る"}</h2>
-                  <p>
-                    {cloudUserEmail
-                      ? "プロフィール、日記、写真メモ、確認リストの変更はクラウドにも控えます。機種変更や履歴削除に備えられます。"
-                      : "今はこの端末にも保存されています。メール確認をして控えを作ると、機種変更や履歴削除に備えられます。"}
-                  </p>
-                </div>
-              </div>
-              {cloudUserEmail ? (
-                <div className="cloud-linked-box">
-                  <span>控え保存先</span>
-                  <strong>{cloudUserEmail}</strong>
-                  <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
-                    <span aria-hidden="true" />
-                    <em>
-                      {cloudAutoStatus === "saving"
-                        ? "自動保存中です"
-                        : cloudAutoStatus === "error"
-                          ? "自動保存を確認してください"
-                          : lastCloudSyncedAt
-                            ? `最終保存 ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
-                            : "変更が入ると自動で保存します"}
-                    </em>
-                  </div>
-                </div>
-              ) : (
-                <div className="cloud-form">
-                  <label>
-                    <span>メールアドレス</span>
-                    <input
-                      inputMode="email"
-                      placeholder="例: family@example.com"
-                      type="email"
-                      value={cloudEmail}
-                      onChange={(event) => setCloudEmail(event.target.value)}
-                    />
-                  </label>
-                  <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
-                    本人確認メールを送る
-                  </button>
-                </div>
-              )}
-              <p className="cloud-message">{cloudMessage}</p>
-              <div className="cloud-action-row">
-                <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
-                  今すぐクラウドに保存
-                </button>
-                <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
-                  クラウドから復元
-                </button>
-                <button type="button" onClick={downloadNotebookExport}>
-                  控えをダウンロード
-                </button>
-              </div>
-              <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
-            </article>
-          </section>
 
           <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="家族共有">
             <article className="nb-card family-entry-card">
