@@ -6004,3 +6004,23 @@ SVGだけではスマホで保存・共有しづらいため、同じロゴをPN
 - `corepack pnpm --dir apps/mobile exec tsc --noEmit` 成功。
 - `git diff --check` 成功。
 - ローカルNext確認は `127.0.0.1:3016` で起動しようとしたが、環境側で `listen EPERM` になったため未実施。push後はVercel本番URLで実機確認する。
+
+## 2026-08-22 追記 163 — Claudeレビュー用資料を作成
+
+ユーザーから「claudにレビューもらうから資料つくって」と依頼があった。
+
+対応:
+
+- `docs/CLAUDE_REVIEW_PROMPT_2026-08-22.md` を追加した。
+  - Claudeにそのまま貼れるレビュー依頼文。
+  - 結論、UX、課金価値、手帳としての信頼、AI/相談、セキュリティ/法務、コード構造をレビューしてもらう構成。
+- `docs/CLAUDE_PRODUCT_REVIEW_BRIEF_2026-08-22.md` を追加した。
+  - 現在のPWA/アプリ中心方針、主画面、直近改善、未解決リスク、レビューで答えてほしい質問を整理。
+- この後、最新 `main` を `git archive` でZIP化し、Claudeに渡せるコード監査パッケージとして `review_exports/claude_review_2026-08-22/` に出力する。
+
+Claudeに渡す時の優先順:
+
+1. `docs/CLAUDE_REVIEW_PROMPT_2026-08-22.md`
+2. `docs/CLAUDE_PRODUCT_REVIEW_BRIEF_2026-08-22.md`
+3. コードZIP
+4. 必要なら `docs/MONETIZATION.md` と `docs/SESSION_HANDOFF.md`
