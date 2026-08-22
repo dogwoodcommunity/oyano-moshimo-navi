@@ -187,6 +187,12 @@ function formatLongDate(dateString?: string) {
   return `${date.getMonth() + 1}月${date.getDate()}日`;
 }
 
+function clipText(value: string, maxLength: number) {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (normalized.length <= maxLength) return normalized;
+  return `${normalized.slice(0, maxLength)}…`;
+}
+
 function daysUntil(dateString?: string) {
   if (!dateString) return null;
   const today = new Date(todayInputValue()).getTime();
@@ -444,12 +450,18 @@ function buildMonthReview(entries: DiaryEntry[], profile: PersonProfile | undefi
   if (!profile?.emergencyContact?.trim() && !profile?.keyContact?.trim()) questions.add("緊急時に最初に連絡する人は決まっていますか？");
   if (questions.size === 0) questions.add("次に家族へ共有したいことを1つだけ選ぶなら何ですか？");
 
+  const latestEntry = entries[0];
+  const familyLine = latestEntry
+    ? `今月の共有メモ: ${formatLongDate(latestEntry.date)}「${clipText(latestEntry.body, 54)}」。次は「${Array.from(questions)[0]}」を確認します。`
+    : "今月の共有メモ: まだ記録がありません。まず今日の様子を1行だけ残します。";
+
   return {
     tone,
     title,
     body,
     facts,
-    questions: Array.from(questions).slice(0, 3)
+    questions: Array.from(questions).slice(0, 3),
+    familyLine
   };
 }
 
@@ -471,6 +483,10 @@ function MonthReview({ entries, profile }: { entries: DiaryEntry[]; profile: Per
         <ul>
           {review.questions.map((question) => <li key={question}>{question}</li>)}
         </ul>
+      </div>
+      <div className="month-review-family-line">
+        <span>家族に共有する一文</span>
+        <p>{review.familyLine}</p>
       </div>
       <Link className="month-review-consult" href="/consult">この記録をもとに相談メモを作る</Link>
     </div>
@@ -675,8 +691,15 @@ function buildNotebookInsight(
   const attachmentCount = entries.reduce((sum, entry) => sum + entry.attachments.length, 0);
   const latestEntry = entries[0];
   const daysFromLastEntry = daysSince(latestEntry?.date);
-  const nextTask = tasks[0];
+  const openTasks = tasks.filter((task) => (task.progress ?? "todo") !== "done" && task.progress !== "skipped");
+  const nextTask = openTasks[0];
   const nextTaskDays = daysUntil(nextTask?.dueDate);
+  const unassignedCount = openTasks.filter((task) => !task.assignee?.trim()).length;
+  const nearTasks = openTasks.filter((task) => {
+    const days = daysUntil(task.dueDate);
+    return days !== null && days <= 7;
+  });
+  const person = profile?.displayName?.trim() || profile?.fullName?.trim() || "この人";
   const alerts: { tone: "urgent" | "warning" | "good"; title: string; body: string; href: string }[] = [];
 
   if (urgentCount > 0) {
@@ -703,6 +726,15 @@ function buildNotebookInsight(
       title: "本人情報がまだ薄いです",
       body: "フルネーム、生年月日、病院・施設、薬の注意点を足すと、相談時に説明しやすくなります。",
       href: "#profile-edit-fields"
+    });
+  }
+
+  if (unassignedCount > 0) {
+    alerts.push({
+      tone: "warning",
+      title: "担当未定の確認があります",
+      body: `${unassignedCount}件の確認リストに担当が入っていません。家族で誰が見るかだけ決めておきましょう。`,
+      href: "#task-checklist"
     });
   }
 
@@ -771,6 +803,69 @@ function buildNotebookInsight(
   if (/家|実家|鍵|片付|写真|荷物|書類/.test(text)) questions.add("鍵、重要書類、ライフラインの状態を写真で残しましたか？");
   if (questions.size === 0) questions.add("次に家族へ確認したいことを1つだけ書いておきますか？");
 
+  let primaryAction = {
+    label: "今日の記録を書く",
+    title: "まず今日あったことを1行残す",
+    body: "体調、病院からの連絡、家族で決めたこと。短くても残ると、次に相談する時の説明が楽になります。",
+    href: "#today-diary"
+  };
+
+  if (urgentCount > 0) {
+    primaryAction = {
+      label: "連絡順を見る",
+      title: "急ぎの記録を家族で確認する",
+      body: "急な変化がある日は、誰が病院・介護先に連絡するか、誰へ共有するかを先に決めてください。",
+      href: "#diary-history"
+    };
+  } else if (nearTasks.length > 0 && nextTask) {
+    primaryAction = {
+      label: "確認リストへ",
+      title: "期限が近い確認を先に進める",
+      body: `${nextTask.title} は ${dueText(nextTask)} です。担当と次の連絡先を入れておくと家族で動きやすくなります。`,
+      href: "#task-checklist"
+    };
+  } else if (unassignedCount > 0) {
+    primaryAction = {
+      label: "担当を決める",
+      title: "担当未定をなくす",
+      body: "家族で見る手帳は、内容より先に「誰がやるか」が決まると動きます。1件だけでも担当を入れてください。",
+      href: "#task-checklist"
+    };
+  } else if (completion.percent < 70) {
+    primaryAction = {
+      label: "基本情報へ",
+      title: "相談に必要な本人情報を足す",
+      body: "病院・施設、主な連絡先、薬の注意点が入ると、家族共有や相談メモの質が上がります。",
+      href: "#person-profile"
+    };
+  } else if (attachmentCount === 0 && /家|実家|鍵|片付|写真|荷物|書類/.test(text)) {
+    primaryAction = {
+      label: "写真の使い方へ",
+      title: "写真で残すものを決める",
+      body: "実家・書類・鍵の話が出ています。場所が分かる写真を1枚添えるだけで、後の家族確認がかなり楽になります。",
+      href: "#media-library"
+    };
+  }
+
+  const firstQuestion = Array.from(questions)[0] ?? "次に家族へ確認したいことを1つだけ書いておきますか？";
+  const familyMessage = latestEntry
+    ? `${person}の共有メモ: ${formatLongDate(latestEntry.date)}「${clipText(latestEntry.body, 58)}」。次は「${firstQuestion}」を確認したいです。`
+    : `${person}の手帳を作りました。まず今日の様子、病院・介護先、家族で決めたことを1行ずつ残していきます。`;
+
+  const watchPoints = [
+    nearTasks.length > 0
+      ? `7日以内の確認が${nearTasks.length}件あります`
+      : "期限が近いものは今のところ落ち着いています",
+    unassignedCount > 0
+      ? `担当未定が${unassignedCount}件あります`
+      : "担当未定はありません",
+    daysFromLastEntry === null
+      ? "記録はまだありません"
+      : daysFromLastEntry === 0
+        ? "今日の記録があります"
+        : `最後の記録から${daysFromLastEntry}日たっています`
+  ];
+
   return {
     urgentCount,
     changedCount,
@@ -781,7 +876,10 @@ function buildNotebookInsight(
     forecastTitle,
     forecastBody,
     alerts: alerts.slice(0, 3),
-    questions: Array.from(questions).slice(0, 4)
+    questions: Array.from(questions).slice(0, 4),
+    primaryAction,
+    familyMessage,
+    watchPoints
   };
 }
 
@@ -803,6 +901,7 @@ export default function FamilyBoardPage() {
   const [taskComposerOpen, setTaskComposerOpen] = useState(false);
   const [newTaskForm, setNewTaskForm] = useState<TaskEditForm>(() => blankTaskForm());
   const [newTaskSaved, setNewTaskSaved] = useState(false);
+  const [familyMessageCopied, setFamilyMessageCopied] = useState(false);
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("overview");
   const [loaded, setLoaded] = useState(false);
@@ -889,6 +988,7 @@ export default function FamilyBoardPage() {
     setTaskComposerOpen(false);
     setNewTaskForm(blankTaskForm());
     setNewTaskSaved(false);
+    setFamilyMessageCopied(false);
     setActiveNotebookTab("overview");
   }, [activeCase?.id]);
 
@@ -1029,6 +1129,16 @@ export default function FamilyBoardPage() {
     if (tab === "tasks") return `${activeTasks.filter((task) => (task.progress ?? "todo") !== "done").length}件`;
     if (tab === "media") return `${attachments.length}件`;
     return "まず見る";
+  }
+
+  async function copyFamilyMessage(message: string) {
+    try {
+      await navigator.clipboard.writeText(message);
+      setFamilyMessageCopied(true);
+      window.setTimeout(() => setFamilyMessageCopied(false), 2200);
+    } catch {
+      setFamilyMessageCopied(false);
+    }
   }
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
@@ -1927,6 +2037,44 @@ export default function FamilyBoardPage() {
               body="手帳は毎日長く触るものではなく、必要な日に迷わず戻れる場所として使います。"
             />
           </section>
+
+          {notebookInsight ? (
+            <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="今日の一手">
+              <article className="nb-card next-action-card">
+                <div className="next-action-head">
+                  <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                  <div>
+                    <span>今日の一手</span>
+                    <strong>{notebookInsight.primaryAction.title}</strong>
+                    <p>{notebookInsight.primaryAction.body}</p>
+                  </div>
+                </div>
+                <a
+                  className="next-action-button"
+                  href={notebookInsight.primaryAction.href}
+                  onClick={(event) => {
+                    if (!notebookInsight.primaryAction.href.startsWith("#")) return;
+                    event.preventDefault();
+                    openNotebookSection(notebookInsight.primaryAction.href);
+                  }}
+                >
+                  {notebookInsight.primaryAction.label}
+                </a>
+                <div className="family-share-note">
+                  <div>
+                    <span>家族に送るなら</span>
+                    <p>{notebookInsight.familyMessage}</p>
+                  </div>
+                  <button type="button" onClick={() => copyFamilyMessage(notebookInsight.familyMessage)}>
+                    {familyMessageCopied ? "コピー済み" : "コピー"}
+                  </button>
+                </div>
+                <div className="watch-point-list" aria-label="今日の確認ポイント">
+                  {notebookInsight.watchPoints.map((point) => <span key={point}>{point}</span>)}
+                </div>
+              </article>
+            </section>
+          ) : null}
 
           <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="記録から見えること">
             <div className="nb-section-head">

@@ -358,6 +358,8 @@ export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] 
 
   if (entry.mood === "urgent") {
     advice.add("急な変化がある時は、まず医療・介護の窓口と家族の連絡順を確認してください。");
+  } else if (entry.mood === "changed") {
+    advice.add("変化があった日は、いつから・誰が見たか・次に誰へ伝えるかを一緒に残すと後で役立ちます。");
   }
   if (/入院|病院|退院|医師|看護|薬|服薬/.test(text)) {
     advice.add("病院名、担当窓口、退院見込み、薬の変更を記録しておくと次の相談が早くなります。");
@@ -374,8 +376,9 @@ export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] 
   if (advice.size === 0) {
     advice.add("今日の記録は残せています。次は、家族に確認したいことが1つあるかだけ見ておくと十分です。");
   }
+  advice.add("家族に送る時は「今日あったこと」「次に確認したいこと」を分けると、返事をもらいやすくなります。");
 
-  return Array.from(advice).slice(0, 3);
+  return Array.from(advice).slice(0, 4);
 }
 
 async function postJson<T>(path: string, body: unknown): Promise<T | null> {
