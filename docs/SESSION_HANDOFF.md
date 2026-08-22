@@ -4828,3 +4828,12 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - この追記時点で `main` は `origin/main` より1commit先行。
   - 未追跡の `review_exports/` は既存のレビュー出力フォルダとして残っているが、今回のcommitには含めない。
   - 次の操作は `git push origin main`。
+
+## 2026-08-22 追記 112
+
+- GitHub反映:
+  - `02f9c08 Make notebook tasks editable` を `origin/main` へpush済み。
+  - push結果: `f61c113..02f9c08 main -> main`。
+- 直後の残状態:
+  - 未追跡の `review_exports/` は残っている。今回の作業対象外のためcommitしていない。
+  - VercelはGitHub連携が有効なら自動デプロイ待ち。CLI手動deployは引き続きVercel認証が必要。
