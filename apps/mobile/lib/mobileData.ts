@@ -2,7 +2,33 @@ import type { DiagnosisResult, ParentStatus } from "@oyano/shared";
 import { trackFunnel } from "@/lib/funnel";
 import { demoPerson, demoResult, demoTimeline } from "./demoData";
 import { getSupabase } from "./supabase";
-import { canCreateNotebook, NOTEBOOK_LIMIT_MESSAGE } from "@oyano/shared";
+import { canCreateNotebook, NOTEBOOK_LIMIT_MESSAGE, statusLabel } from "@oyano/shared";
+
+/**
+ * 家族の誰かが記録を足す・状態を更新したとき、離れた家族へ「変化があった」ことを届ける。
+ * 書き込みが成功した後に呼ぶ。通知が失敗しても記録自体は残るので、黙って続ける。
+ * 記録のタイトルや中身は送らない。ロック画面に「危篤」等が出る事故を防ぐため、
+ * 通知は「誰が・何をしたか」だけにする。
+ */
+async function notifyFamilyUpdate(personId: string, kind: "record" | "status") {
+  const baseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
+  const supabase = getSupabase();
+  if (!baseUrl || !supabase) return;
+
+  try {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) return;
+
+    await fetch(`${baseUrl}/api/family/notify`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ personId, kind })
+    });
+  } catch {
+    // 通知の失敗は無視する。記録・更新はすでに成功している。
+  }
+}
 
 export type MobilePersonProfile = {
   fullName?: string;
@@ -84,6 +110,8 @@ export type MobileTimelineEntry = {
   mood?: MobileDiaryMood;
   attachments: MobileTimelineAttachment[];
   createdAt?: string;
+  /** 誰が書いたか。家族共有で「長女が記録」と出すために使う。 */
+  createdBy?: string;
 };
 
 export type CreatePersonResult = {
@@ -149,6 +177,7 @@ type TimelineRow = {
   mood?: MobileDiaryMood | null;
   attachments?: unknown;
   created_at: string | null;
+  created_by?: string | null;
 };
 
 const demoFamilyMembers: FamilyMember[] = [
@@ -227,7 +256,8 @@ function timelineFromRow(row: TimelineRow): MobileTimelineEntry {
     body: row.body ?? undefined,
     mood: row.mood ?? undefined,
     attachments: normalizeAttachments(row.attachments),
-    createdAt: row.created_at ?? undefined
+    createdAt: row.created_at ?? undefined,
+    createdBy: row.created_by ?? undefined
   };
 }
 
@@ -670,6 +700,7 @@ export async function updatePersonStatus(
   });
 
   if (error) return { source: "demo", error: error.message };
+  void notifyFamilyUpdate(personId, "status");
   return { source: "supabase" };
 }
 
@@ -736,7 +767,7 @@ export async function fetchTimelineEntries(personId: string): Promise<MobileTime
 
   const timelineResult = await supabase
     .from("timeline_events")
-    .select("id, person_id, event_type, event_date, title, body, mood, attachments, created_at")
+    .select("id, person_id, event_type, event_date, title, body, mood, attachments, created_at, created_by")
     .eq("person_id", personId)
     .order("event_date", { ascending: false })
     .order("created_at", { ascending: false })
@@ -764,6 +795,7 @@ export async function addTimelineEntry({
   body,
   date,
   mood,
+  notifyFamily = true,
   personId,
   title
 }: {
@@ -771,6 +803,8 @@ export async function addTimelineEntry({
   body: string;
   date?: string;
   mood: MobileDiaryMood;
+  /** 相談メモのように、家族へ知らせたくない保存では false にする。 */
+  notifyFamily?: boolean;
   personId: string;
   title?: string;
 }): Promise<{ source: "supabase" | "demo"; entry?: MobileTimelineEntry; error?: string }> {
@@ -840,6 +874,7 @@ export async function addTimelineEntry({
   if (entryError) return { source: "supabase", error: entryError.message };
   const row = insertedEntry;
   void trackFunnel("record_written");
+  if (notifyFamily) void notifyFamilyUpdate(personId, "record");
   return { source: "supabase", entry: row ? timelineFromRow(row) : undefined };
 }
 

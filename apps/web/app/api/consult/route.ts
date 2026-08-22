@@ -59,6 +59,15 @@ export async function POST(request: NextRequest) {
   if (question.length > CONSULT_MAX_QUESTION_LENGTH) {
     return badRequest(`相談内容は${CONSULT_MAX_QUESTION_LENGTH}文字までにしてください。`);
   }
+  // historyは自由入力の塊なので、形が崩れたまま通すと組み立て時に落ちたり、
+  // 巨大な配列でプロンプト（＝API費用）が膨らむ。枠を消費する前にここで弾く。
+  if (payload.history !== undefined) {
+    const validHistory = Array.isArray(payload.history)
+      && payload.history.every((turn) => Boolean(turn) && typeof turn === "object" && typeof (turn as { question?: unknown }).question === "string");
+    if (!validHistory) {
+      return badRequest("相談の続きの情報を読み取れませんでした。");
+    }
+  }
   if (!hasNotebookSubstance(payload)) {
     return NextResponse.json(
       {

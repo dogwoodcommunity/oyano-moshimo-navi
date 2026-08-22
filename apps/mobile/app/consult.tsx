@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import {
   consultAnswerToDiaryBody,
+  consultAnswerToHistoryTurn,
   hasNotebookSubstance,
+  CONSULT_MAX_HISTORY,
   CONSULT_MAX_QUESTION_LENGTH,
   CONSULT_SENT_FIELDS,
   CONSULT_WITHHELD_FIELDS,
@@ -31,16 +33,18 @@ const suggestions = [
 
 type Phase = "loading" | "ready" | "asking" | "done" | "error";
 
+/** 画面に積み上がる、1回ぶんの相談と回答。前回までを踏まえてAIが続けて答える。 */
+type ConsultTurn = { id: string; question: string; answer: ConsultAnswer; saved: boolean };
+
 export default function ConsultScreen() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [person, setPerson] = useState<MobilePerson | null>(null);
   const [entries, setEntries] = useState<MobileTimelineEntry[]>([]);
   const [consent, setConsent] = useState(false);
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<ConsultAnswer | null>(null);
+  const [turns, setTurns] = useState<ConsultTurn[]>([]);
   const [disclaimer, setDisclaimer] = useState("");
   const [message, setMessage] = useState("");
-  const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     let mounted = true;
@@ -88,16 +92,21 @@ export default function ConsultScreen() {
 
   async function ask() {
     if (!person) return;
+    const asked = question.trim();
     setPhase("asking");
     setMessage("");
-    setAnswer(null);
-    setSaved(false);
+
+    // 前回までのやりとりを短くまとめて渡す。これでAIが続きとして答えられる。
+    const history = turns
+      .slice(-CONSULT_MAX_HISTORY)
+      .map((turn) => consultAnswerToHistoryTurn(turn.question, turn.answer));
 
     const result = await requestConsult({
-      question: question.trim(),
+      question: asked,
       person: payloadPerson,
       entries: diaryEntries,
-      tasks: []
+      tasks: [],
+      history
     });
 
     if (!result.ok) {
@@ -106,21 +115,31 @@ export default function ConsultScreen() {
       return;
     }
 
-    setAnswer(result.answer);
+    setTurns((prev) => [
+      ...prev,
+      { id: `${Date.now()}-${prev.length}`, question: asked, answer: result.answer, saved: false }
+    ]);
     setDisclaimer(result.disclaimer);
+    setQuestion("");
     void trackFunnel("consult_asked");
     setPhase("done");
   }
 
-  async function saveToTimeline() {
-    if (!person || !answer) return;
+  async function saveTurnToTimeline(index: number) {
+    const turn = turns[index];
+    if (!person || !turn) return;
     const result = await addTimelineEntry({
       personId: person.id,
-      body: consultAnswerToDiaryBody(question, answer),
+      body: consultAnswerToDiaryBody(turn.question, turn.answer),
       mood: "stable",
+      // 相談は、まだ家族に言えない不安を書く場でもある。
+      // 保存しても家族へ通知は出さない。見せたい時は本人が知らせればよい。
+      notifyFamily: false,
       title: "相談メモ"
     });
-    if (!result.error) setSaved(true);
+    if (!result.error) {
+      setTurns((prev) => prev.map((item, i) => (i === index ? { ...item, saved: true } : item)));
+    }
   }
 
   if (phase === "loading") {
@@ -185,20 +204,44 @@ export default function ConsultScreen() {
         </Pressable>
       </View>
 
+      {turns.map((turn, index) => (
+        <AnswerCard
+          answer={turn.answer}
+          disclaimer={index === turns.length - 1 ? disclaimer : ""}
+          key={turn.id}
+          onSave={() => saveTurnToTimeline(index)}
+          question={turn.question}
+          saved={turn.saved}
+          turnNumber={index + 1}
+        />
+      ))}
+
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>いま困っていることを書いてください</Text>
-        <View style={styles.suggestions}>
-          {suggestions.map((item) => (
-            <Pressable key={item} onPress={() => setQuestion(item)} style={styles.suggestion}>
-              <Text style={styles.suggestionText}>{item}</Text>
-            </Pressable>
-          ))}
-        </View>
+        <Text style={styles.cardTitle}>
+          {turns.length > 0 ? "続けて相談する" : "いま困っていることを書いてください"}
+        </Text>
+        {turns.length > 0 ? (
+          <Text style={styles.body}>
+            前回までのやりとりを覚えています。「その後こうなった」「次はどうすれば」と、続けて聞けます。
+          </Text>
+        ) : (
+          <View style={styles.suggestions}>
+            {suggestions.map((item) => (
+              <Pressable key={item} onPress={() => setQuestion(item)} style={styles.suggestion}>
+                <Text style={styles.suggestionText}>{item}</Text>
+              </Pressable>
+            ))}
+          </View>
+        )}
         <TextInput
           maxLength={CONSULT_MAX_QUESTION_LENGTH}
           multiline
           onChangeText={setQuestion}
-          placeholder="例: 退院の話が出ていますが、家に戻れるのか判断がつきません。何から確認すればいいですか。"
+          placeholder={
+            turns.length > 0
+              ? "例: 昨日、退院日が決まりました。家に戻るまでに何を準備すればいいですか。"
+              : "例: 退院の話が出ていますが、家に戻れるのか判断がつきません。何から確認すればいいですか。"
+          }
           placeholderTextColor={colors.muted}
           style={styles.input}
           value={question}
@@ -210,7 +253,7 @@ export default function ConsultScreen() {
           style={[styles.primaryButton, !canAsk && styles.primaryButtonDisabled]}
         >
           <Text style={styles.primaryButtonText}>
-            {phase === "asking" ? "整理しています…" : "相談メモを作る"}
+            {phase === "asking" ? "整理しています…" : turns.length > 0 ? "続けて相談する" : "相談メモを作る"}
           </Text>
         </Pressable>
         {!hasSubstance ? (
@@ -222,44 +265,65 @@ export default function ConsultScreen() {
         {phase === "asking" ? <Text style={styles.hint}>記録を読んでいます。30秒ほどかかることがあります。</Text> : null}
         {phase === "error" ? <Text style={styles.error}>{message}</Text> : null}
       </View>
-
-      {answer ? (
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>いまの状況</Text>
-          <Text style={styles.answerBody}>{answer.situation}</Text>
-
-          {answer.nextChecks.length > 0 ? (
-            <>
-              <Text style={styles.sectionTitle}>次に確認するとよいこと</Text>
-              {answer.nextChecks.map((check, index) => (
-                <View key={check.title} style={styles.check}>
-                  <Text style={styles.checkTitle}>{index + 1}. {check.title}</Text>
-                  <Text style={styles.checkWhy}>{check.why}</Text>
-                </View>
-              ))}
-            </>
-          ) : null}
-
-          <AnswerList items={answer.askQuestions} title="窓口で聞くこと" />
-          <AnswerList items={answer.providerCategories} title="相談先の候補" />
-          <AnswerList items={answer.watchOuts} title="気をつけること" />
-
-          {answer.recordSuggestion ? (
-            <>
-              <Text style={styles.sectionTitle}>次に記録へ残すこと</Text>
-              <Text style={styles.answerBody}>{answer.recordSuggestion}</Text>
-            </>
-          ) : null}
-
-          <Pressable onPress={saveToTimeline} style={styles.secondaryButton}>
-            <Text style={styles.secondaryButtonText}>
-              {saved ? "記録に残しました" : "この相談メモを記録に残す"}
-            </Text>
-          </Pressable>
-          {disclaimer ? <Text style={styles.disclaimer}>{disclaimer}</Text> : null}
-        </View>
-      ) : null}
     </ScrollView>
+  );
+}
+
+function AnswerCard({
+  answer,
+  disclaimer,
+  onSave,
+  question,
+  saved,
+  turnNumber
+}: {
+  answer: ConsultAnswer;
+  disclaimer: string;
+  onSave: () => void;
+  question: string;
+  saved: boolean;
+  turnNumber: number;
+}) {
+  return (
+    <View style={styles.card}>
+      <View style={styles.turnQuestion}>
+        <Text style={styles.turnBadge}>{turnNumber}回目の相談</Text>
+        <Text style={styles.turnQuestionText}>{question}</Text>
+      </View>
+
+      <Text style={styles.cardTitle}>いまの状況</Text>
+      <Text style={styles.answerBody}>{answer.situation}</Text>
+
+      {answer.nextChecks.length > 0 ? (
+        <>
+          <Text style={styles.sectionTitle}>次に確認するとよいこと</Text>
+          {answer.nextChecks.map((check, index) => (
+            <View key={check.title} style={styles.check}>
+              <Text style={styles.checkTitle}>{index + 1}. {check.title}</Text>
+              <Text style={styles.checkWhy}>{check.why}</Text>
+            </View>
+          ))}
+        </>
+      ) : null}
+
+      <AnswerList items={answer.askQuestions} title="窓口で聞くこと" />
+      <AnswerList items={answer.providerCategories} title="相談先の候補" />
+      <AnswerList items={answer.watchOuts} title="気をつけること" />
+
+      {answer.recordSuggestion ? (
+        <>
+          <Text style={styles.sectionTitle}>次に記録へ残すこと</Text>
+          <Text style={styles.answerBody}>{answer.recordSuggestion}</Text>
+        </>
+      ) : null}
+
+      <Pressable onPress={onSave} style={styles.secondaryButton}>
+        <Text style={styles.secondaryButtonText}>
+          {saved ? "記録に残しました" : "この相談メモを記録に残す"}
+        </Text>
+      </Pressable>
+      {disclaimer ? <Text style={styles.disclaimer}>{disclaimer}</Text> : null}
+    </View>
   );
 }
 
@@ -340,6 +404,9 @@ const styles = StyleSheet.create({
   hint: { color: colors.muted, fontSize: 12.5, lineHeight: 21 },
   error: { color: colors.rose, fontSize: 13.5, fontWeight: "800", lineHeight: 22 },
   answerBody: { color: colors.ink, fontSize: 14.5, lineHeight: 26 },
+  turnQuestion: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 6, marginBottom: 4, padding: 14 },
+  turnBadge: { alignSelf: "flex-start", backgroundColor: "#e7f0e8", borderRadius: 999, color: colors.greenDark, fontSize: 11.5, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 4 },
+  turnQuestionText: { color: colors.ink, fontSize: 15, fontWeight: "800", lineHeight: 23 },
   check: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 4, padding: 14 },
   checkTitle: { color: colors.ink, fontSize: 14.5, fontWeight: "900", lineHeight: 23 },
   checkWhy: { color: colors.muted, fontSize: 13, lineHeight: 22 },

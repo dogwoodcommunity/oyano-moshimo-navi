@@ -61,6 +61,82 @@ function CrisisBanner() {
   );
 }
 
+type NextAction = {
+  key: string;
+  title: string;
+  hint: string;
+  ctaLabel: string;
+  href: string;
+  tone: "alert" | "normal";
+};
+
+/**
+ * 開いた瞬間に迷わせないため、いま一番やるべきことを「1つだけ」選ぶ。
+ * 期限切れ→担当未定→期限間近、の順で拾い、急ぎがなければ「今日の記録」を勧める。
+ * 「まずこれ→次はこれ」を成立させる中心の関数。ここに来る人は不安なことが多い前提で、
+ * 数字や専門語より「次に何をすればいいか」を平易に出す。
+ */
+function pickNextAction(
+  personId: string,
+  buckets: { today: number; unassigned: number; soon: number }
+): NextAction {
+  if (buckets.today > 0) {
+    return {
+      key: "due",
+      title: `今日までの手続きが${buckets.today}件あります`,
+      hint: "期限が来ているものだけ、先に確認しましょう。",
+      ctaLabel: "確認する",
+      href: `/people/${personId}/tasks?filter=due`,
+      tone: "alert"
+    };
+  }
+  if (buckets.unassigned > 0) {
+    return {
+      key: "unassigned",
+      title: `担当が決まっていない手続きが${buckets.unassigned}件あります`,
+      hint: "誰がやるかを家族で分けておくと、抜け落ちません。",
+      ctaLabel: "家族で分ける",
+      href: `/people/${personId}/tasks?filter=unassigned`,
+      tone: "normal"
+    };
+  }
+  if (buckets.soon > 0) {
+    return {
+      key: "soon",
+      title: `もうすぐ期限の手続きが${buckets.soon}件あります`,
+      hint: "7日以内に期限が来るものです。今のうちに目を通しましょう。",
+      ctaLabel: "確認する",
+      href: `/people/${personId}/tasks?filter=soon`,
+      tone: "normal"
+    };
+  }
+  return {
+    key: "record",
+    title: "今日の様子を、ひとつ残しておきましょう",
+    hint: "食事・薬・体調・家族で話したこと。ひと言でも、あとで家族と見返せます。",
+    ctaLabel: "今日の記録を書く",
+    href: `/people/${personId}/timeline`,
+    tone: "normal"
+  };
+}
+
+function NextActionCard({ action }: { action: NextAction }) {
+  const alert = action.tone === "alert";
+  return (
+    <View style={[styles.nextCard, alert && styles.nextCardAlert]}>
+      <Text style={[styles.nextKicker, alert && styles.nextKickerAlert]}>つぎにやること</Text>
+      <Text style={styles.nextTitle}>{action.title}</Text>
+      <Text style={styles.nextHint}>{action.hint}</Text>
+      <Link asChild href={action.href}>
+        <Pressable style={({ pressed }) => [styles.nextButton, alert && styles.nextButtonAlert, pressed && styles.nextButtonPressed]}>
+          <Text style={styles.nextButtonText}>{action.ctaLabel}</Text>
+          <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
+        </Pressable>
+      </Link>
+    </View>
+  );
+}
+
 export default function DashboardScreen() {
   const [data, setData] = useState<DashboardData>(demoDashboardData());
   const activeTasks = data.tasks.filter((task) => task.status !== "done" && task.status !== "skipped");
@@ -121,10 +197,16 @@ export default function DashboardScreen() {
     );
   }
 
+  const nextAction = pickNextAction(data.person.id, {
+    today: todayTasks.length,
+    unassigned: unassignedTasks.length,
+    soon: soonTasks.length
+  });
+
   return (
     <ScrollView contentContainerStyle={styles.screen}>
       <CrisisBanner />
-      <ConsultCard />
+      <NextActionCard action={nextAction} />
       <ImageBackground
         imageStyle={styles.heroImage}
         resizeMode="cover"
@@ -172,6 +254,7 @@ export default function DashboardScreen() {
           <Link href={`/people/new?anchorPersonId=${data.person.id}`} style={styles.secondaryButton}>対象者を追加</Link>
         </View>
       </View>
+      <ConsultCard />
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
           <View style={styles.summaryText}>
@@ -281,6 +364,45 @@ const styles = StyleSheet.create({
   consultBody: { flex: 1, gap: 3 },
   consultTitle: { color: colors.ink, fontSize: 15, fontWeight: "900" },
   consultHint: { color: colors.muted, fontSize: 12, lineHeight: 19 },
+  nextCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.green,
+    borderRadius: radius.card,
+    borderWidth: 2,
+    gap: 8,
+    marginBottom: 14,
+    padding: 18,
+    ...shadow
+  },
+  nextCardAlert: { backgroundColor: "#fff5f6", borderColor: "#c8546c" },
+  nextKicker: {
+    alignSelf: "flex-start",
+    backgroundColor: "#e7f0e8",
+    borderRadius: 999,
+    color: colors.greenDark,
+    fontSize: 12.5,
+    fontWeight: "900",
+    overflow: "hidden",
+    paddingHorizontal: 11,
+    paddingVertical: 5
+  },
+  nextKickerAlert: { backgroundColor: "#fadfe4", color: "#9a3f56" },
+  nextTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 30 },
+  nextHint: { color: colors.muted, fontSize: 14.5, lineHeight: 23 },
+  nextButton: {
+    alignItems: "center",
+    backgroundColor: colors.green,
+    borderRadius: radius.control,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    marginTop: 4,
+    paddingHorizontal: 18,
+    paddingVertical: 15
+  },
+  nextButtonAlert: { backgroundColor: "#c8546c" },
+  nextButtonPressed: { opacity: 0.88 },
+  nextButtonText: { color: "#fff", fontSize: 17, fontWeight: "900" },
   crisisBanner: {
     alignItems: "center",
     backgroundColor: "#f7e7e2",

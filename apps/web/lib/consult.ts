@@ -1,6 +1,7 @@
 import {
   CONSULT_MAX_ENTRIES,
   CONSULT_MAX_ENTRY_LENGTH,
+  CONSULT_MAX_HISTORY,
   CONSULT_MAX_QUESTION_LENGTH,
   type ConsultEntry,
   type ConsultRequest
@@ -102,6 +103,34 @@ export function buildConsultPrompt(request: ConsultRequest): string {
     tasks.forEach((task) => lines.push(`- ${task.title}${task.dueDate ? `（期限 ${task.dueDate}）` : ""}`));
   }
 
+  // 件数も長さもここで必ず絞る。クライアントを信用せず、巨大な履歴が
+  // そのまま外部APIへ流れて費用が跳ねる事故を防ぐ。
+  const history = (Array.isArray(request.history) ? request.history : [])
+    .slice(-CONSULT_MAX_HISTORY)
+    .map((turn) => ({
+      question: clean(turn.question, CONSULT_MAX_QUESTION_LENGTH),
+      situation: clean(turn.situation, 400),
+      nextChecks: (Array.isArray(turn.nextChecks) ? turn.nextChecks : [])
+        .slice(0, 6)
+        .filter((title): title is string => typeof title === "string")
+        .map((title) => clean(title, 120))
+        .filter((title): title is string => Boolean(title))
+    }))
+    .filter((turn) => Boolean(turn.question));
+
+  lines.push("");
+  lines.push("# これまでの相談（古い順・今回はこの続き）");
+  if (history.length === 0) {
+    lines.push("（今回が最初の相談です）");
+  } else {
+    history.forEach((turn, index) => {
+      lines.push(`## ${index + 1}回目`);
+      lines.push(`相談: ${turn.question}`);
+      if (turn.situation) lines.push(`前回の整理: ${turn.situation}`);
+      if (turn.nextChecks.length > 0) lines.push(`前回案内した次の確認: ${turn.nextChecks.join(" / ")}`);
+    });
+  }
+
   return lines.join("\n");
 }
 
@@ -118,6 +147,7 @@ export const CONSULT_SYSTEM_PROMPT = `あなたは、日本で親の入院・介
 - 記録に、呼吸の異常、意識がない、強い痛み、出血、転倒後の様子の変化など、急を要する可能性がある記述があれば、最初の項目で「まず主治医・看護師・救急へ相談する」ことを書く。
 - 家族の誰かを責めない。介護を担っている人の負担を軽く扱わない。
 - 「AIが判断しました」という書き方をしない。利用者が自分で判断するための材料として書く。
+- 「これまでの相談」がある場合は、その続きとして答える。前回すでに案内したことを最初から繰り返さず、今回の質問と、前回からの状況の変化に焦点を当てる。必要なら前回の案内がその後どうなったかを一言確認する。同じ人と会話を続けている前提で、毎回はじめましてのようには書かない。
 
 ## 出力
 

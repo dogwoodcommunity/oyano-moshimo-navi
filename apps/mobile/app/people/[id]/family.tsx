@@ -5,14 +5,46 @@ import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from 
 import {
   createFamilyInvite,
   fetchFamilyMembers,
+  fetchTimelineEntries,
   promoteFamilyMemberToOwner,
-  type FamilyMember
+  type FamilyMember,
+  type MobileDiaryMood,
+  type MobileTimelineEntry
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+
+function activityMoodLabel(mood?: MobileDiaryMood) {
+  if (mood === "urgent") return "急ぎ";
+  if (mood === "changed") return "変化あり";
+  return "記録";
+}
+
+/** 「3日前」のように、離れた家族が変化の新しさをひと目で分かるようにする。 */
+function relativeDay(dateValue?: string) {
+  if (!dateValue) return "";
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue.replaceAll("-", "/");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const diff = Math.round((today.getTime() - date.getTime()) / 86400000);
+  if (diff === 0) return "今日";
+  if (diff === 1) return "昨日";
+  if (diff > 1 && diff < 7) return `${diff}日前`;
+  return dateValue.replaceAll("-", "/");
+}
+
+/** 「誰が書いたか」を家族の呼び名にする。分からない時は無理に埋めない。 */
+function authorLabel(createdBy: string | undefined, members: FamilyMember[]) {
+  if (!createdBy) return "";
+  const author = members.find((member) => member.userId === createdBy);
+  if (!author) return "";
+  return author.isCurrentUser ? "あなた" : author.displayName;
+}
 
 export default function FamilyScreen() {
   const params = useLocalSearchParams<{ id: string }>();
   const [members, setMembers] = useState<FamilyMember[]>([]);
+  const [activity, setActivity] = useState<MobileTimelineEntry[]>([]);
   const [email, setEmail] = useState("");
   const [relationship, setRelationship] = useState("");
   const [message, setMessage] = useState("");
@@ -26,6 +58,9 @@ export default function FamilyScreen() {
 
   useEffect(() => {
     fetchFamilyMembers(params.id).then(setMembers);
+    fetchTimelineEntries(params.id)
+      .then((entries) => setActivity(entries.slice(0, 5)))
+      .catch(() => setActivity([]));
   }, [params.id]);
 
   async function invite() {
@@ -104,6 +139,38 @@ export default function FamilyScreen() {
         <Text style={styles.kicker}>家族共有</Text>
         <Text style={styles.title}>家族で同じボードを見る</Text>
         <Text style={styles.body}>担当、期限、写真、メモを家族で確認します。無料ではオーナー以外に2名まで招待できます。</Text>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.cardTitleRow}>
+          <MaterialCommunityIcons color={colors.green} name="pulse" size={22} />
+          <Text style={styles.cardTitle}>最近の家族の動き</Text>
+        </View>
+        <Text style={styles.body}>
+          離れていても、いつ・どんな変化があったかをここで見守れます。新しい記録や状態の更新は、通知でもお知らせします。
+        </Text>
+        {activity.length === 0 ? (
+          <Text style={styles.body}>まだ記録がありません。今日の様子を1つ残すと、ここに出ます。</Text>
+        ) : (
+          activity.map((entry) => {
+            const author = authorLabel(entry.createdBy, members);
+            return (
+            <View key={entry.id} style={styles.activityRow}>
+              <View style={styles.activityTop}>
+                <Text style={styles.activityMood}>
+                  {author ? `${author}が記録` : activityMoodLabel(entry.mood)}
+                </Text>
+                <Text style={styles.activityWhen}>{relativeDay(entry.date)}</Text>
+              </View>
+              <Text style={styles.activityTitle}>{entry.title}</Text>
+              {entry.body ? (
+                <Text style={styles.activityBody} numberOfLines={2}>{entry.body}</Text>
+              ) : null}
+            </View>
+            );
+          })
+        )}
+        <Link href={`/people/${params.id}/timeline`} style={styles.activityLink}>すべての記録を見る</Link>
       </View>
 
       <View style={styles.policyCard}>
@@ -231,5 +298,12 @@ const styles = StyleSheet.create({
   secondaryButton: { alignItems: "center", backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48 },
   secondaryButtonText: { color: colors.ink, fontWeight: "900" },
   upgradeText: { color: colors.gold, fontWeight: "900", lineHeight: 22 },
-  body: { color: colors.muted, lineHeight: 22 }
+  body: { color: colors.muted, lineHeight: 22 },
+  activityRow: { backgroundColor: "#fbfdf9", borderColor: colors.line, borderLeftColor: colors.green, borderLeftWidth: 4, borderRadius: radius.control, borderWidth: 1, gap: 5, padding: 12 },
+  activityTop: { alignItems: "center", flexDirection: "row", justifyContent: "space-between" },
+  activityMood: { color: colors.green, fontSize: 12, fontWeight: "900" },
+  activityWhen: { color: colors.muted, fontSize: 12, fontWeight: "800" },
+  activityTitle: { color: colors.ink, fontSize: 15.5, fontWeight: "900", lineHeight: 22 },
+  activityBody: { color: colors.muted, lineHeight: 20 },
+  activityLink: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.greenDark, fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12, textAlign: "center" }
 });

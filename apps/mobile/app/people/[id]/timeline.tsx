@@ -19,13 +19,31 @@ const moodOptions: Array<{ key: MobileDiaryMood; label: string; description: str
   { key: "urgent", label: "急ぎ", description: "家族で確認", icon: "phone-alert-outline" }
 ];
 
-const quickNotes = [
-  "食事・水分の様子",
-  "薬を飲めたか",
-  "病院や施設からの連絡",
-  "本人の発言や気分",
-  "家族で話したこと",
-  "写真・書類を残したいもの"
+/**
+ * 打たずに残せるように、その日の様子をそのまま選べる言葉にした。
+ * 動揺している時ほど文章は書けない。タップだけで1件の記録が完成する。
+ */
+const quickAnswers = [
+  "食事はとれた",
+  "食事が少なかった",
+  "水分はとれた",
+  "薬は飲めた",
+  "薬を飲めなかった",
+  "よく眠れていた",
+  "眠れていない様子",
+  "機嫌がよかった",
+  "元気がなかった",
+  "痛みがある様子",
+  "病院・施設から連絡があった",
+  "家族で相談した"
+];
+
+/** 同時に選ぶと矛盾する組み合わせ。片方を選ぶともう片方は外れる。 */
+const exclusivePairs: string[][] = [
+  ["食事はとれた", "食事が少なかった"],
+  ["薬は飲めた", "薬を飲めなかった"],
+  ["よく眠れていた", "眠れていない様子"],
+  ["機嫌がよかった", "元気がなかった"]
 ];
 
 function todayString() {
@@ -53,6 +71,7 @@ export default function TimelineScreen() {
   const [person, setPerson] = useState<MobilePerson | null>(null);
   const [entries, setEntries] = useState<MobileTimelineEntry[]>([]);
   const [mood, setMood] = useState<MobileDiaryMood>("stable");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [body, setBody] = useState("");
   const [attachments, setAttachments] = useState<MobileTimelineAttachment[]>([]);
   const [saving, setSaving] = useState(false);
@@ -78,8 +97,17 @@ export default function TimelineScreen() {
     };
   }, [params.id]);
 
-  function addQuickNote(note: string) {
-    setBody((current) => current ? `${current}\n・${note}: ` : `・${note}: `);
+  function toggleTag(tag: string) {
+    setSelectedTags((current) => {
+      if (current.includes(tag)) return current.filter((item) => item !== tag);
+      // 「薬は飲めた」と「薬を飲めなかった」のように両立しない項目は、
+      // 選んだ方だけを残す。矛盾した記録が家族に共有されるのを防ぐ。
+      const opposite = exclusivePairs.find((pair) => pair.includes(tag))?.find((item) => item !== tag);
+      const cleaned = opposite ? current.filter((item) => item !== opposite) : current;
+      return [...cleaned, tag];
+    });
+    // 次の記録を書き始めたら、前回の「保存しました」は役目を終える。
+    setMessage("");
   }
 
   function addAttachmentMemo(type: "photo" | "pdf") {
@@ -94,13 +122,19 @@ export default function TimelineScreen() {
     setBody((current) => current ? `${current}\n・${label}をあとで添付` : `・${label}をあとで添付`);
   }
 
+  // タップで選んだ様子と、任意のひとことを1つの本文にまとめる。
+  // これで「何も打たずタップだけ」でも記録が成立する。
+  const tagLines = selectedTags.map((tag) => `・${tag}`).join("\n");
+  const composedBody = [tagLines, body.trim()].filter((part) => part.length > 0).join("\n");
+  const canSave = composedBody.length > 0 || attachments.length > 0;
+
   async function saveEntry() {
-    if (saving) return;
+    if (saving || !canSave) return;
     setMessage("");
     setSaving(true);
     const result = await addTimelineEntry({
       attachments,
-      body,
+      body: composedBody,
       date: todayString(),
       mood,
       personId: params.id,
@@ -114,6 +148,7 @@ export default function TimelineScreen() {
     }
 
     setEntries((current) => [result.entry as MobileTimelineEntry, ...current]);
+    setSelectedTags([]);
     setBody("");
     setAttachments([]);
     setMood("stable");
@@ -156,23 +191,33 @@ export default function TimelineScreen() {
           })}
         </View>
 
-        <Text style={styles.label}>何を残しますか</Text>
+        <Text style={styles.label}>今日はどうでしたか（タップで選ぶだけ）</Text>
+        <View style={styles.quickGrid}>
+          {quickAnswers.map((tag) => {
+            const active = selectedTags.includes(tag);
+            return (
+              <Pressable
+                key={tag}
+                onPress={() => toggleTag(tag)}
+                style={[styles.quickChip, active ? styles.quickChipActive : null]}
+              >
+                <Text style={[styles.quickChipText, active ? styles.quickChipTextActive : null]}>
+                  {active ? "✓ " : ""}{tag}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        <Text style={styles.label}>ひとこと補足（任意・書かなくても保存できます）</Text>
         <TextInput
           multiline
           onChangeText={setBody}
-          placeholder="例: 今日は退院後初めて外を少し歩けた。薬は朝だけ確認が必要。"
+          placeholder="例: 退院後はじめて外を少し歩けた。次の受診で歩行のことを聞きたい。"
           placeholderTextColor="#8a958f"
           style={styles.textarea}
           value={body}
         />
-
-        <View style={styles.quickGrid}>
-          {quickNotes.map((note) => (
-            <Pressable key={note} onPress={() => addQuickNote(note)} style={styles.quickChip}>
-              <Text style={styles.quickChipText}>+ {note}</Text>
-            </Pressable>
-          ))}
-        </View>
 
         <View style={styles.attachmentRow}>
           <Pressable onPress={() => addAttachmentMemo("photo")} style={styles.attachmentButton}>
@@ -195,10 +240,13 @@ export default function TimelineScreen() {
 
         {message ? <Text style={styles.noticeText}>{message}</Text> : null}
 
-        <Pressable disabled={saving} onPress={saveEntry} style={[styles.saveButton, saving ? styles.disabled : null]}>
+        <Pressable disabled={saving || !canSave} onPress={saveEntry} style={[styles.saveButton, saving || !canSave ? styles.disabled : null]}>
           <Text style={styles.saveButtonText}>{saving ? "保存中" : "記録を保存する"}</Text>
           <MaterialCommunityIcons color="#fff" name="check" size={20} />
         </Pressable>
+        {!canSave && !message ? (
+          <Text style={styles.body}>上の項目をタップするか、ひとこと書くと保存できます。</Text>
+        ) : null}
       </View>
 
       <View style={styles.card}>
@@ -254,8 +302,10 @@ const styles = StyleSheet.create({
   moodDescriptionActive: { color: "rgba(255,255,255,0.74)" },
   textarea: { backgroundColor: "#fff", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.ink, fontSize: 16, minHeight: 130, padding: 12, textAlignVertical: "top" },
   quickGrid: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  quickChip: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, paddingHorizontal: 11, paddingVertical: 8 },
-  quickChipText: { color: colors.greenDark, fontSize: 12, fontWeight: "900" },
+  quickChip: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, paddingHorizontal: 13, paddingVertical: 10 },
+  quickChipActive: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
+  quickChipText: { color: colors.greenDark, fontSize: 13.5, fontWeight: "900" },
+  quickChipTextActive: { color: "#fff" },
   attachmentRow: { flexDirection: "row", gap: 8 },
   attachmentButton: { alignItems: "center", backgroundColor: "#fff9eb", borderColor: "#ead9b8", borderRadius: radius.control, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48 },
   attachmentText: { color: colors.greenDark, fontWeight: "900" },

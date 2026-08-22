@@ -36,6 +36,23 @@ const profileFields: ProfileField[] = [
   { key: "documentLocationNote", label: "書類の場所", placeholder: "例: 保険証券は実家の茶色い棚", multiline: true }
 ];
 
+/**
+ * 「あと何を埋めれば良いか」を利用者に示すための情報。
+ * priority: key＝先に埋めたい重要項目、nice＝あると便利。why＝埋めると何に役立つか（平易に）。
+ * 数字（60%）だけでは次に何をすればいいか分からないので、これで誘導する。
+ */
+const fieldGuidance: Partial<Record<keyof MobilePersonProfile, { priority: "key" | "nice"; why: string }>> = {
+  displayName: { priority: "key", why: "画面や通知での呼び方に使います。" },
+  relationship: { priority: "key", why: "AI相談で続柄を踏まえた助言になります。" },
+  birthDate: { priority: "key", why: "AI相談で年代を踏まえた助言になります（生年月日そのものは送りません）。" },
+  careStatus: { priority: "key", why: "いまの状況に合ったタスクと助言に使います。" },
+  keyContact: { priority: "key", why: "急なときに家族がすぐ連絡できます。" },
+  documentLocationNote: { priority: "key", why: "相続や手続きのとき、家族が書類を探せます。" },
+  fullName: { priority: "nice", why: "正式な手続きの控えに使えます。" },
+  hospitalOrFacility: { priority: "nice", why: "AI相談や受診の準備がより具体的になります。" },
+  medicationNote: { priority: "nice", why: "体調の変化を家族と共有しやすくなります。" }
+};
+
 function defaultProfile(person: MobilePerson): MobilePersonProfile {
   return {
     displayName: person.displayName,
@@ -45,9 +62,14 @@ function defaultProfile(person: MobilePerson): MobilePersonProfile {
   };
 }
 
+/** DBのprofileは自由なJSONなので、文字列以外が入っていても落ちないようにする。 */
+function isFilled(value: unknown): boolean {
+  return typeof value === "string" && value.trim().length > 0;
+}
+
 function completion(profile: MobilePersonProfile) {
   const required = ["displayName", "relationship", "birthDate", "careStatus", "keyContact", "documentLocationNote"] as const;
-  const done = required.filter((key) => Boolean(profile[key]?.trim())).length;
+  const done = required.filter((key) => isFilled(profile[key])).length;
   return Math.round((done / required.length) * 100);
 }
 
@@ -98,6 +120,11 @@ export default function PersonScreen() {
   }, [params.id]);
 
   const profileCompletion = useMemo(() => completion(profile), [profile]);
+  // まだ空いている「重要」項目のうち、フォーム順で最初のもの＝次に埋めるとよいもの。
+  const nextField = useMemo(
+    () => profileFields.find((field) => fieldGuidance[field.key]?.priority === "key" && !isFilled(profile[field.key])),
+    [profile]
+  );
   const latestEntry = timeline[0];
 
   function updateField(key: keyof MobilePersonProfile, value: string) {
@@ -164,21 +191,44 @@ export default function PersonScreen() {
           <Text style={styles.percentBadge}>{profileCompletion}%</Text>
         </View>
         <Text style={styles.body}>
-          最初は呼び名だけで大丈夫です。あとから氏名、病院、書類の場所を足すほど、家族共有やAI相談で使いやすくなります。
+          最初は呼び名だけで大丈夫です。あとから足すほど、家族共有やAI相談で使いやすくなります。
         </Text>
-        {profileFields.map((field) => (
-          <View key={field.key} style={styles.fieldGroup}>
-            <Text style={styles.label}>{field.label}</Text>
-            <TextInput
-              multiline={field.multiline}
-              onChangeText={(value) => updateField(field.key, value)}
-              placeholder={field.placeholder}
-              placeholderTextColor="#8a958f"
-              style={[styles.input, field.multiline ? styles.multiline : null]}
-              value={profile[field.key] ?? ""}
-            />
+        {nextField ? (
+          <View style={styles.nextFill}>
+            <Text style={styles.nextFillLabel}>つぎに埋めるとよいこと</Text>
+            <Text style={styles.nextFillTitle}>{nextField.label}</Text>
+            <Text style={styles.nextFillWhy}>{fieldGuidance[nextField.key]?.why}</Text>
           </View>
-        ))}
+        ) : (
+          <View style={styles.nextFillDone}>
+            <Text style={styles.nextFillWhy}>大事な項目は入っています。残りは必要になった時に足せば十分です。</Text>
+          </View>
+        )}
+        {profileFields.map((field) => {
+          const guide = fieldGuidance[field.key];
+          const isNext = field.key === nextField?.key;
+          return (
+            <View key={field.key} style={styles.fieldGroup}>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{field.label}</Text>
+                {guide ? (
+                  <Text style={guide.priority === "key" ? styles.keyTag : styles.niceTag}>
+                    {guide.priority === "key" ? "重要" : "あるとよい"}
+                  </Text>
+                ) : null}
+              </View>
+              {guide?.why ? <Text style={styles.fieldWhy}>{guide.why}</Text> : null}
+              <TextInput
+                multiline={field.multiline}
+                onChangeText={(value) => updateField(field.key, value)}
+                placeholder={field.placeholder}
+                placeholderTextColor="#8a958f"
+                style={[styles.input, field.multiline ? styles.multiline : null, isNext ? styles.inputNext : null]}
+                value={profile[field.key] ?? ""}
+              />
+            </View>
+          );
+        })}
         {message ? <Text style={styles.noticeText}>{message}</Text> : null}
         <Pressable disabled={saving} onPress={saveProfile} style={[styles.saveButton, saving ? styles.disabled : null]}>
           <Text style={styles.saveButtonText}>{saving ? "保存中" : "プロフィールを保存する"}</Text>
@@ -261,9 +311,19 @@ const styles = StyleSheet.create({
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },
   percentBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6 },
   fieldGroup: { gap: 6 },
+  labelRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   label: { color: colors.ink, fontWeight: "900" },
+  keyTag: { backgroundColor: "#e7f0e8", borderRadius: 999, color: colors.greenDark, fontSize: 11, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 3 },
+  niceTag: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.muted, fontSize: 11, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 3 },
+  fieldWhy: { color: colors.muted, fontSize: 12.5, lineHeight: 19 },
   input: { backgroundColor: "#fff", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, color: colors.ink, fontSize: 16, minHeight: 48, paddingHorizontal: 12 },
+  inputNext: { borderColor: colors.green, borderWidth: 2 },
   multiline: { minHeight: 82, paddingTop: 12, textAlignVertical: "top" },
+  nextFill: { backgroundColor: "#eef6ef", borderColor: colors.green, borderRadius: radius.control, borderWidth: 1, gap: 3, padding: 13 },
+  nextFillDone: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, padding: 13 },
+  nextFillLabel: { color: colors.greenDark, fontSize: 12, fontWeight: "900" },
+  nextFillTitle: { color: colors.ink, fontSize: 18, fontWeight: "900" },
+  nextFillWhy: { color: colors.muted, fontSize: 13, lineHeight: 20 },
   saveButton: { alignItems: "center", backgroundColor: colors.green, borderRadius: radius.control, flexDirection: "row", gap: 8, justifyContent: "center", minHeight: 54 },
   saveButtonText: { color: "#fff", fontSize: 16, fontWeight: "900" },
   disabled: { opacity: 0.62 },
