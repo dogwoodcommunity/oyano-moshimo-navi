@@ -660,6 +660,7 @@ export default function FamilyBoardPage() {
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
+  const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
   const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
   const [taskSavedKey, setTaskSavedKey] = useState<string | null>(null);
@@ -734,6 +735,10 @@ export default function FamilyBoardPage() {
     if (cases.length === 0) return undefined;
     return cases.find((item) => item.id === activeCaseId) ?? cases[0];
   }, [activeCaseId, cases]);
+
+  useEffect(() => {
+    setProfileEditorOpen(false);
+  }, [activeCase?.id]);
 
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
   const activeTasks = activeCase?.result?.tasks ?? [];
@@ -1233,6 +1238,66 @@ export default function FamilyBoardPage() {
 
       {activeCase ? (
         <div className="notebook-workspace" aria-label={`${activePersonName}の管理手帳`}>
+          <section className="nb-section person-command-section" aria-label={`${activePersonName}の手帳メニュー`}>
+            <article className="nb-card person-command-card">
+              <div className="person-command-head">
+                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                <div>
+                  <p className="nb-eyebrow">この人の手帳</p>
+                  <h1>{notebookTitle(activePersonName)}を育てる場所です。</h1>
+                  <p>プロフィール、日記、確認リスト、写真・資料をここから更新できます。記録が増えるほど、あとで家族に説明しやすくなります。</p>
+                </div>
+              </div>
+              <div className="person-command-stats" aria-label="手帳の状態">
+                <div>
+                  <strong>{activeProfileCompletion.percent}%</strong>
+                  <span>プロフィール</span>
+                </div>
+                <div>
+                  <strong>{activeEntries.length}</strong>
+                  <span>過去の記録</span>
+                </div>
+                <div>
+                  <strong>{activeTasks.filter((task) => (task.progress ?? "todo") !== "done").length}</strong>
+                  <span>未完了リスト</span>
+                </div>
+                <div>
+                  <strong>{attachments.length}</strong>
+                  <span>写真・資料</span>
+                </div>
+              </div>
+              <div className="person-command-grid" aria-label="手帳でできること">
+                <a href="#person-profile" onClick={() => setProfileEditorOpen(true)}>
+                  <span className="command-icon is-profile" aria-hidden="true">
+                    <img src="/brand/watch-bird-mark.svg" alt="" />
+                  </span>
+                  <strong>プロフィールを編集</strong>
+                  <small>名前・続柄・病院・薬・連絡先を更新</small>
+                </a>
+                <a href="#today-diary">
+                  <span className="command-icon is-diary" aria-hidden="true" />
+                  <strong>今日の記録を書く</strong>
+                  <small>体調・発言・病院連絡を1行で残す</small>
+                </a>
+                <a href="#diary-history">
+                  <span className="command-icon is-history" aria-hidden="true" />
+                  <strong>過去の記録を見る</strong>
+                  <small>月別・変化あり・写真つきで振り返る</small>
+                </a>
+                <a href="#task-checklist">
+                  <span className="command-icon is-task" aria-hidden="true" />
+                  <strong>確認リストを編集</strong>
+                  <small>期限・担当・状態を家族で更新</small>
+                </a>
+                <a href="#media-library">
+                  <span className="command-icon is-media" aria-hidden="true" />
+                  <strong>写真・資料を見る</strong>
+                  <small>日記に添付した写真やPDFを確認</small>
+                </a>
+              </div>
+            </article>
+          </section>
+
           <section className="nb-section" aria-label="今日見るところ">
             <div className="nb-section-head">
               <strong>今日見るところ</strong>
@@ -1544,7 +1609,7 @@ export default function FamilyBoardPage() {
               )}
               {activeEntries.length > 0 ? (
                 <details className="history-drawer">
-                  <summary>すべて見る ›</summary>
+                  <summary>過去の記録を月別にすべて見る ›</summary>
                   <div className="record-filter-tabs" aria-label="記録の絞り込み">
                     {([
                       ["all", "すべて"],
@@ -1640,8 +1705,12 @@ export default function FamilyBoardPage() {
                   </div>
                 ))}
               </div>
-              <details className="profile-edit-drawer" open={activeProfileCompletion.percent < 85}>
-                <summary>プロフィールを編集する</summary>
+              <details
+                className="profile-edit-drawer"
+                open={profileEditorOpen || activeProfileCompletion.percent < 85}
+                onToggle={(event) => setProfileEditorOpen(event.currentTarget.open)}
+              >
+                <summary>ここを押してプロフィールを編集する</summary>
                 {activeProfile ? (
                   <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
                     <label>
@@ -1894,7 +1963,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section">
+          <section className="nb-section" id="media-library">
             <div className="nb-section-head">
               <strong>写真・資料</strong>
               <span className="rule" aria-hidden="true" />
