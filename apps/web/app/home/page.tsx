@@ -595,6 +595,28 @@ function notebookPayloadSignature(payload: NotebookSyncPayload) {
   return JSON.stringify(payload);
 }
 
+function attachmentForNotebookSync(attachment: DiaryAttachment): DiaryAttachment {
+  if (!attachment.storageBucket || !attachment.storagePath || !attachment.previewUrl) {
+    return attachment;
+  }
+
+  const { previewUrl: _previewUrl, ...syncAttachment } = attachment;
+  return syncAttachment;
+}
+
+function diaryEntryForNotebookSync(entry: DiaryEntry): DiaryEntry {
+  if (entry.attachments.length === 0) return entry;
+
+  return {
+    ...entry,
+    attachments: entry.attachments.map(attachmentForNotebookSync)
+  };
+}
+
+function diaryEntriesForNotebookSync(entries: DiaryEntry[]) {
+  return entries.map(diaryEntryForNotebookSync);
+}
+
 function taskDateParts(dateString?: string) {
   if (!dateString) return { month: "--", day: "--" };
   const date = new Date(`${dateString}T00:00:00`);
@@ -1432,13 +1454,10 @@ export default function FamilyBoardPage() {
 
       if (error) throw error;
 
-      const storedAttachment = { ...item.attachment };
-      delete storedAttachment.previewUrl;
-
       return {
         ...item,
         attachment: {
-          ...storedAttachment,
+          ...item.attachment,
           storageBucket: result.bucket,
           storagePath: result.storagePath,
           uploadedAt: new Date().toISOString(),
@@ -1555,7 +1574,7 @@ export default function FamilyBoardPage() {
   }
 
   function allDiaryEntriesForSync() {
-    return Object.values(diaryEntries).flat();
+    return diaryEntriesForNotebookSync(Object.values(diaryEntries).flat());
   }
 
   function notebookSyncPayload(
@@ -1564,7 +1583,7 @@ export default function FamilyBoardPage() {
   ): NotebookSyncPayload {
     return {
       cases: nextCases,
-      diaryEntries: nextDiaryEntries
+      diaryEntries: diaryEntriesForNotebookSync(nextDiaryEntries)
     };
   }
 
@@ -2459,9 +2478,9 @@ export default function FamilyBoardPage() {
               {activeForm.files.length > 0 ? (
                 <div className="attachment-strip">
                   {activeForm.files.map((file) => (
-                    <span key={file.id}>
+                    <span className={file.previewUrl ? "has-preview" : undefined} key={file.id}>
                       {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
-                      {file.name}
+                      <small>{file.name}</small>
                     </span>
                   ))}
                 </div>
@@ -2661,9 +2680,9 @@ export default function FamilyBoardPage() {
                                 {entry.attachments.length > 0 ? (
                                   <div className="entry-attachments">
                                     {entry.attachments.slice(0, 3).map((file) => (
-                                      <span key={file.id}>
+                                      <span className={file.previewUrl ? "has-preview" : undefined} key={file.id}>
                                         {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
-                                        {file.name}
+                                        <small>{file.name}</small>
                                       </span>
                                     ))}
                                   </div>

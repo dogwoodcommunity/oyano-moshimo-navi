@@ -174,13 +174,31 @@ function readDiaryEntries(): DiaryEntry[] {
   }
 }
 
+function attachmentForNotebookStorage(attachment: DiaryAttachment): DiaryAttachment {
+  if (!attachment.storageBucket || !attachment.storagePath || !attachment.previewUrl) {
+    return attachment;
+  }
+
+  const { previewUrl: _previewUrl, ...storedAttachment } = attachment;
+  return storedAttachment;
+}
+
+function diaryEntryForNotebookStorage(entry: DiaryEntry): DiaryEntry {
+  if (entry.attachments.length === 0) return entry;
+
+  return {
+    ...entry,
+    attachments: entry.attachments.map(attachmentForNotebookStorage)
+  };
+}
+
 function writeDiaryEntries(entries: DiaryEntry[]) {
   memoryDiaryEntries = [...entries];
   const storage = getLocalStorage();
   if (!storage) return;
 
   try {
-    storage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+    storage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries.map(diaryEntryForNotebookStorage)));
     lastNotebookStorageWarning = null;
   } catch {
     lastNotebookStorageWarning = storageWarningMessage();

@@ -1545,11 +1545,34 @@
   padding: 6px 8px;
 }
 
+.entry-attachments span.has-preview {
+  align-items: flex-start;
+  border-radius: 18px;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  width: min(152px, 100%);
+}
+
+.entry-attachments small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .entry-attachments img {
   border-radius: 8px;
   height: 28px;
   object-fit: cover;
   width: 28px;
+}
+
+.entry-attachments span.has-preview img {
+  border-radius: 14px;
+  height: 92px;
+  width: 100%;
 }
 
 .section-title-row {
@@ -5476,11 +5499,34 @@ textarea {
   padding: 6px 8px;
 }
 
+.attachment-strip span.has-preview {
+  align-items: flex-start;
+  border-radius: 18px;
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  width: min(132px, 44vw);
+}
+
+.attachment-strip small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .attachment-strip img {
   border-radius: 8px;
   height: 30px;
   object-fit: cover;
   width: 30px;
+}
+
+.attachment-strip span.has-preview img {
+  border-radius: 14px;
+  height: 82px;
+  width: 100%;
 }
 
 .diary-save {
@@ -8068,11 +8114,37 @@ textarea {
   padding: 6px 10px;
 }
 
+.attachment-strip span.has-preview {
+  align-items: flex-start;
+  background: #fff;
+  border: 1px solid rgba(15, 95, 65, 0.16);
+  border-radius: 18px;
+  box-shadow: 0 10px 22px rgba(35, 49, 43, 0.08);
+  flex-direction: column;
+  gap: 7px;
+  padding: 7px;
+  width: min(132px, 44vw);
+}
+
+.attachment-strip small {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .attachment-strip img {
   border-radius: 999px;
   height: 22px;
   object-fit: cover;
   width: 22px;
+}
+
+.attachment-strip span.has-preview img {
+  border-radius: 14px;
+  height: 82px;
+  width: 100%;
 }
 
 .record-storage-message {

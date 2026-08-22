@@ -6302,3 +6302,31 @@ Claude再レビューで「家族3組テスト: GO。コード側ブロッカー
    - 意図的409で未送信日記が復元後も残ること。
 2. 家族3組テスト開始。
 3. テストの裏で、有料前必須の consult実弾5回、Stripe E2E、メール通知へ進む。
+
+## 2026-08-23 追記 172 — 写真保存直後の表示をサムネイル化
+
+ユーザーが実機で日記に写真を保存したところ、保存後の記録カードに写真サムネイルではなく `B367A3CB-...jpg` のようなファイル名チップだけが表示され、「写真保存したんやけどなんか中途半端ちゃう？」と指摘。
+
+原因:
+
+- 前回のStorage対応で、アップロード成功後に `previewUrl` を削除していた。
+- そのため「localStorageや同期ペイロードにbase64を残さない」という安全対策は効いたが、現在表示中の画面からもプレビューが消え、写真を残した実感が弱くなっていた。
+
+変更:
+
+- `apps/web/app/home/page.tsx`
+  - Storageアップロード成功後も、画面表示中の `DiaryAttachment.previewUrl` は保持するよう変更。
+  - 代わりに `attachmentForNotebookSync()` / `diaryEntryForNotebookSync()` / `diaryEntriesForNotebookSync()` を追加し、クラウド同期ペイロードではStorage保存済み写真のdata URLだけを落とす。
+  - 日記作成前の添付一覧と保存後の記録カードで、写真がある添付に `has-preview` classを付け、ファイル名だけでなくサムネイルとして見えるよう変更。
+- `apps/web/lib/store.ts`
+  - `attachmentForNotebookStorage()` / `diaryEntryForNotebookStorage()` を追加。
+  - localStorage保存時は、Storage保存済み写真の `previewUrl` を除外してJSON保存する。
+  - 画面の現在stateではプレビューを残しつつ、端末保存容量とSafari localStorage枯渇リスクを抑える。
+- `apps/web/app/globals.css`
+  - 日記入力中の添付と保存後の添付表示を、丸いファイル名チップではなく小さな写真カード風に調整。
+
+意図:
+
+- ユーザー体験上は「写真を保存した」と分かる。
+- 技術的には、重いbase64 data URLをlocalStorageや同期JSONに残さない。
+- 未ログインでStorageに上がっていない写真だけは、従来どおり端末内プレビューを保持する。
