@@ -5508,3 +5508,106 @@ corepack pnpm run eas:mobile:build:ios     # rootから
 - `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
 - プレミアプランを作るかどうか。中身が決まっていない。
 - 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
+
+## 2026-08-22 追記 124 — 実機で画面を見たら3つ壊れていた（追記123の更新）
+
+追記123では「実機表示は未確認」と書いたが、そのあとiOSシミュレータで
+実際に画面を開いた。**バンドルは通っていたが、表示は3か所壊れていた。**
+追記123の「2. 実機で5機能の画面を見る」は、この追記で置き換える。
+
+### 直したもの
+
+**1. 画面の中のロゴが古い葉のままだった**
+
+`e4a4a6a` で見守り鳥へ差し替えたのは画像ファイル（アイコン、スプラッシュ、
+通知、Webのfavicon）だけ。画面の中に出るマスコットは
+`apps/mobile/components/MascotGuide.tsx` の `MascotMark` が**図形で描いている**ため、
+画像を替えても変わらなかった。ようこそ、家族ボード、管理手帳、期限と担当、
+親の登録の5画面に出る。`docs/BRAND_ASSETS.md` と
+`apps/web/public/brand/watch-bird-mark.svg`（viewBox 56×56）に合わせて描き直した。
+
+**2. `Link asChild` で Pressable の style が壊れる**
+
+`Link asChild` は子要素へ自分の `style` を渡す。そのため
+`<Pressable style={({ pressed }) => [...]}>` の**関数形式の style が無効になり**、
+背景色も `flexDirection: "row"` も消える。「急なとき」バナー、相談カード、
+「つぎにやること」のボタン、急なときの選択肢が対象だった。
+遷移を `useRouter()` の `router.push()` に変えて直した。押した時の反応は残る。
+
+**これは既存バグで、私の新機能だけの問題ではなかった。**
+今後 `Link asChild` に関数形式の style を持つ Pressable を入れないこと。
+
+**3. iOSでは Text に背景色 + `borderRadius: 999` を併用すると描画されない**
+
+「つぎにやること」「長期入院」「100%」「重要／あるとよい」「◯回目の相談」
+「担当未定」など、**バッジが軒並み見えていなかった**。場所は取るが何も描かれない。
+`radius.control`（8）程度の小さい値なら問題なく描画される（ボタン類は無事だった）。
+
+対処は2通り。下地を `View` にして文字を中の `Text` に置くか、半径を実寸に合う値
+（14程度）へ下げる。高さ20px前後のバッジなら14で角は完全に丸くなる。
+`View` にしたのは `nextKicker` と `statusBadge`、半径を下げたのは10か所。
+
+**今後バッジを作るときは `borderRadius: 999` を Text に付けない。**
+`crisisBadge` のように View + Text にするのが安全。
+
+### あわせて直したもの
+
+`apps/mobile/app/people/[id]/family.tsx` に「無料ではオーナー以外に2名まで招待」
+という古い表記が残っていた。サーバーは追記145で1人に変えてあり、Webも直したが、
+アプリだけ2名のままだった。`FREE_PLAN_MEMBER_LIMIT` と `MEMBER_LIMIT_MESSAGE` を
+共有パッケージから引くようにした。数字を画面に直接書かないこと。
+
+### 実機で確認する手順（次に見るときのため）
+
+グローバルにpnpmは入っていない。corepack を使う。
+
+```
+cd ~/Desktop/oyano-moshimo-navi
+corepack prepare pnpm@9.12.3 --activate
+corepack pnpm install --frozen-lockfile
+cd apps/mobile && corepack pnpm exec expo start --ios
+```
+
+シミュレータのタップは自動化できない（アクセシビリティ権限が要る）。
+かわりに**ディープリンクで直接その画面を開ける**。これが速い。
+
+```
+SIM=$(xcrun simctl list devices | grep -m1 "iPhone 17 (" | grep -oE "[0-9A-F-]{36}")
+xcrun simctl openurl $SIM "exp://127.0.0.1:8081/--/dashboard"
+xcrun simctl openurl $SIM "exp://127.0.0.1:8081/--/consult"
+xcrun simctl openurl $SIM "exp://127.0.0.1:8081/--/crisis"
+xcrun simctl openurl $SIM "exp://127.0.0.1:8081/--/people/00000000-0000-4000-8000-000000000101/timeline"
+xcrun simctl io $SIM screenshot /tmp/shot.png
+```
+
+`apps/mobile/.env` が無い状態では Supabase 未設定と判定され、**見本データで動く**
+（山田花子・母・長期入院）。実データが写らないので、スクリーンショット向き。
+
+型チェックは `apps/mobile` と `apps/web` それぞれで `corepack pnpm exec tsc --noEmit`。
+どちらも通ることを確認済み。iOS/Android両方のバンドル生成も確認済み。
+
+### いまの状態
+
+- この3コミット（追記123、表示修正、追記124）は、Codexが先にpushしたWeb側の
+  作業10コミットの上へリベースして載せてある。触った場所は重なっていない
+  （Codexは`apps/web`、こちらは`apps/mobile`）。
+- Webのバックエンド（AI相談の対話継続、家族への通知API）は本番反映済み。
+- アプリのコードは main にあるが、**配布ビルドはまだ作っていない**。
+
+### 次にやること
+
+1. EASビルド。`app.json` に `extra.eas.projectId` が無いので `eas init` が要る。
+   ```
+   npx eas-cli login
+   cd apps/mobile && npx eas-cli init
+   corepack pnpm run eas:mobile:build:ios
+   ```
+2. 相談画面で実際にAIへ投げて、2回目の相談が前回を踏まえて返るかを見る
+   （見本データのままでは外部APIを叩かないので、ログインした状態で確認が要る）。
+3. 家族への通知が実際に届くか。送信側と受信側で別アカウントが要る。
+
+### 残っているもの（追記145から）
+
+- `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
+- プレミアプランを作るかどうか。中身が決まっていない。
+- 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
