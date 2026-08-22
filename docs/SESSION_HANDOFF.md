@@ -5185,3 +5185,13 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - build時のSupabase JS Node 20非推奨警告は継続。動作には影響なし。
 - 残状態:
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 132
+
+- GitHub反映:
+  - amend後の実コミットは `5021202 Add notebook section tabs`。
+  - push結果: `0dc8357..5021202 main -> main`。
+  - 追記131に残っている `365c2be` はamend前の一時コミット番号。最終的にGitHubへ入ったのは `5021202`。
+- 現在地:
+  - `/home` の対象者手帳タブ化はGitHub反映済み。
+  - 次の優先はレビュー指摘の最重要点である、localStorage依存を減らすSupabase同期/匿名開始の本格化。
