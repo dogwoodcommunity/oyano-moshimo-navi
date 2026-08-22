@@ -5082,3 +5082,24 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 残状態:
   - この追記時点では実装・commit/push前。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 126
+
+- GitHub反映:
+  - `f372f1f Make profile editing discoverable` を `origin/main` へpush済み。
+  - push結果: `6f53189..f372f1f main -> main`。
+- 実装内容:
+  - `/home` の対象者プロフィールで、充実度カード直下に明確な `プロフィールを編集する` ボタンを追加。
+  - 「基本情報を足すほど、日記・確認リスト・相談が使いやすくなる」という説明を追加。
+  - 未入力プロフィール項目を `まだ足せる項目` のチップで表示し、何を足せばよいか分かるようにした。
+  - プロフィールが埋まっている場合は「必要な基本情報はそろっています。変化があればいつでも更新できます。」を表示。
+  - 編集detailsのsummary文言を `編集欄を開く・閉じる` に変更。
+- 確認:
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build時のSupabase JS Node 20非推奨警告は継続。動作には影響なし。
+- 現在地:
+  - プロフィール編集機能自体は既存フォームを使い、スマホ上で入口が分かる状態になった。
+  - 次に進めるなら、日記/過去記録を「見返す」「編集する」「確認リスト候補やアラートにつなげる」導線を強化する。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
