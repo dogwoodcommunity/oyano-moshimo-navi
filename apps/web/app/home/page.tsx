@@ -1566,10 +1566,17 @@ export default function FamilyBoardPage() {
     setTaskAddedEntryId(entry.id);
   }
 
-  function reloadNotebookState(nextCases = listLocalCases()) {
+  function reloadNotebookState(nextCases = listLocalCases(), nextDiaryEntries?: DiaryEntry[]) {
     setCases(nextCases);
     setActiveCaseId((current) => current && nextCases.some((item) => item.id === current) ? current : nextCases[0]?.id ?? null);
-    setDiaryEntries(Object.fromEntries(nextCases.map((item) => [item.id, listDiaryEntries(item.id)])));
+    setDiaryEntries(Object.fromEntries(nextCases.map((item) => [
+      item.id,
+      nextDiaryEntries
+        ? nextDiaryEntries
+          .filter((entry) => entry.caseId === item.id)
+          .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt))
+        : listDiaryEntries(item.id)
+    ])));
     setProfileForms(Object.fromEntries(nextCases.map((item) => [item.id, profileSeed(item)])));
   }
 
@@ -1749,8 +1756,8 @@ export default function FamilyBoardPage() {
         cases: restoredCases,
         diaryEntries: restoredEntries
       });
-      reloadNotebookState(restoredCases);
-      lastSyncedPayloadRef.current = notebookPayloadSignature(restoredNotebook);
+      reloadNotebookState(restoredCases, restoredNotebook.diaryEntries);
+      lastSyncedPayloadRef.current = notebookPayloadSignature(notebookSyncPayload(restoredNotebook.cases, restoredNotebook.diaryEntries));
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");

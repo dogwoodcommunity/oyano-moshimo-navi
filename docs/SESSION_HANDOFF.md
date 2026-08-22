@@ -6318,6 +6318,7 @@ Claude再レビューで「家族3組テスト: GO。コード側ブロッカー
   - Storageアップロード成功後も、画面表示中の `DiaryAttachment.previewUrl` は保持するよう変更。
   - 代わりに `attachmentForNotebookSync()` / `diaryEntryForNotebookSync()` / `diaryEntriesForNotebookSync()` を追加し、クラウド同期ペイロードではStorage保存済み写真のdata URLだけを落とす。
   - 日記作成前の添付一覧と保存後の記録カードで、写真がある添付に `has-preview` classを付け、ファイル名だけでなくサムネイルとして見えるよう変更。
+  - `restoreNotebookFromCloud()` 後にlocalStorageから読み直して署名URLプレビューを落としていたため、復元直後はクラウドから返った `restoredNotebook.diaryEntries` をstateへ直接反映するよう変更。
 - `apps/web/lib/store.ts`
   - `attachmentForNotebookStorage()` / `diaryEntryForNotebookStorage()` を追加。
   - localStorage保存時は、Storage保存済み写真の `previewUrl` を除外してJSON保存する。
