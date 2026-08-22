@@ -5015,3 +5015,20 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - この追記時点ではcommit/push前。
   - 次に `git diff --check`、`npm run typecheck --workspace web`、`npm run build --workspace web` を実行して確認する。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 122
+
+- GitHub反映:
+  - `19ef257 Add monthly notebook review cards` を `origin/main` へpush済み。
+  - push結果: `2715694..19ef257 main -> main`。
+- 確認:
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build時のSupabase JS Node 20非推奨警告は継続して出るが、ビルドは成功。
+- 現在地:
+  - `/home` の「過去の手帳」では、最近のまとめに加えて、月別履歴を開くと各月ごとの見返しカードが表示される。
+  - 月別見返しカードには、記録件数/変化件数/写真資料件数、記録内容からの確認質問、Plus相談へ進む「この記録をもとに相談メモを作る」導線がある。
+  - 無料側の機械的な整理は「AI」と呼ばず、Plus側の本物のClaude相談へつなぐ設計にした。
+  - 次に進めるなら、確認リストカードから直接編集できるUXを強化する、またはプロフィール編集の保存後に「次に足すとよい項目」を出す。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
