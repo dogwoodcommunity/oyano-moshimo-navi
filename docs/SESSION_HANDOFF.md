@@ -5768,3 +5768,23 @@ xcrun simctl io $SIM screenshot /tmp/shot.png
 - 初めて使う人は通常、過去登録データがないため、古い手帳へ戻る状態にはならない。
 - ただし、既に同じ端末でテストしているユーザーはブラウザ履歴・PWAキャッシュ・localStorageが残るため、
   レビューには `https://oyano-moshimo-navi.vercel.app/start?fresh=1` を使う。
+
+## 2026-08-22 追記 153 — `/start?fresh=1` の本番反映確認
+
+追記152の再デプロイ後、本番URLを確認した。
+
+確認結果:
+
+- `https://oyano-moshimo-navi.vercel.app/sw.js` は
+  `CACHE_VERSION = "oyano-moshimo-navi-v19"` を返している。
+- `https://oyano-moshimo-navi.vercel.app/start?fresh=1&v=9d4ae39` はHTTP 200。
+- 取得したHTMLには新しい文言
+  `ここから始めます`、`まずは1人だけ`、`下のカードから` が含まれている。
+- 古い画面内の `もどる`、`1人目の登録` は本文検索では出ていない。
+
+ユーザーへの案内:
+
+- 初回ユーザーは過去のlocalStorageがないため、以前登録した手帳へ戻る表示にはならない。
+- テスト済み端末ではSafari/ChatGPT内ブラウザ/PWAの履歴やキャッシュが残るため、
+  レビュー用URLは `https://oyano-moshimo-navi.vercel.app/start?fresh=1&v=9d4ae39` を使う。
+- それでも古い画面が残る場合は、iPhoneのSafariサイトデータで `oyano` を削除して開き直す。
