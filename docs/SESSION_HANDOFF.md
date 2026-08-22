@@ -24,6 +24,8 @@
   - `/home` の家族ボードで、過去記録・変化・次の導線が初見で分かるように、手帳トップへ「記録から見えること」セクションを追加。
   - 記録あり: 最近のまとめ、記録数/変化/写真・資料、記録テーマ、次に見ておくこと、過去記録/今日の記録CTAを表示。
   - 記録なし: キャラ付きで「今日の記録を書く」CTAを表示。
+  - 検証: `git diff --check` OK、`npm run typecheck --workspace web` OK、`npm run build --workspace web` OK。
+  - GitHub: 実装コミット `92de614 Surface notebook record summary` を `main` へpush済み。
 - ユーザー要望: 「レビューしてもらうから資料だして」。
 - 直近のプロダクト判断:
   - 初期の `Web入口 + Expo継続アプリ` 方針から、現在は **PWA/アプリのみで完結する家族の手帳** へ寄せている。
