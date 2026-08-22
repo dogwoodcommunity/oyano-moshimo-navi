@@ -1,4 +1,4 @@
-const CACHE_VERSION = "oyano-moshimo-navi-v18";
+const CACHE_VERSION = "oyano-moshimo-navi-v19";
 const STATIC_CACHE_URLS = [
   "/offline",
   "/brand/watch-bird-mark.svg",
@@ -59,6 +59,11 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/admin")) return;
   if (url.pathname.startsWith("/result/")) return;
   if (url.pathname.startsWith("/diagnosis")) return;
+
+  if (url.searchParams.has("fresh") || url.searchParams.has("reset")) {
+    event.respondWith(fetch(new Request(request, { cache: "reload" })));
+    return;
+  }
 
   if (STATIC_CACHE_URLS.includes(url.pathname)) {
     event.respondWith(caches.match(request).then((cached) => cached || fetch(request)));

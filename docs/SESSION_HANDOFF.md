@@ -5746,3 +5746,25 @@ xcrun simctl io $SIM screenshot /tmp/shot.png
 
 - ブラウザやLINE/Safariの左上に出る端末側の「戻る」は履歴なのでアプリ側から完全には消せない。
 - ただし、アプリ画面内の「もどる」導線は削除済みなので、ページ自体は0から始める登録体験として見える。
+
+## 2026-08-22 追記 152 — 本番反映とPWAキャッシュ対策
+
+追記151の修正後、ユーザー実機ではまだ古い `/start` が表示され、画面内に「‹ もどる」が残っていた。
+確認したところ、GitHubには `e85c6d0` がpush済みだったが、Vercel本番が古いビルドを返していた。
+
+対応:
+
+- `npx vercel --prod --yes` は `Not authorized` で失敗した。
+- `npx vercel whoami` は `dogwoodcommunity`、`npx vercel project ls` では対象プロジェクトが
+  `dogwoodcommunity1` 配下だった。
+- `npx vercel --prod --yes --scope dogwoodcommunity1` で本番デプロイ成功。
+- 本番URL `https://oyano-moshimo-navi.vercel.app` は新しいデプロイへalias済み。
+- さらに `apps/web/public/sw.js` の `CACHE_VERSION` を `oyano-moshimo-navi-v19` へ更新。
+- `/start?fresh=1` や `/start?reset=1` はサービスワーカーのページキャッシュを使わず、
+  `cache: "reload"` で取得するように変更した。
+
+判断:
+
+- 初めて使う人は通常、過去登録データがないため、古い手帳へ戻る状態にはならない。
+- ただし、既に同じ端末でテストしているユーザーはブラウザ履歴・PWAキャッシュ・localStorageが残るため、
+  レビューには `https://oyano-moshimo-navi.vercel.app/start?fresh=1` を使う。
