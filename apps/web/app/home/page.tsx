@@ -12,9 +12,11 @@ import {
   exportNotebookData,
   listDiaryEntries,
   listLocalCases,
+  readCanManageFamilyBilling,
   replaceLocalNotebook,
   updateDiaryEntry,
   updateCaseProfile,
+  writeCanManageFamilyBilling,
   writePlan,
   updateCaseTask,
   type CaseRecord,
@@ -802,6 +804,7 @@ export default function FamilyBoardPage() {
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
   const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。1分でクラウド控えを作れます。");
   const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
+  const [canManageFamilyBilling, setCanManageFamilyBilling] = useState(() => readCanManageFamilyBilling());
   const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
   const autoSyncTimerRef = useRef<number | null>(null);
   const lastSyncedPayloadRef = useRef("");
@@ -853,6 +856,8 @@ export default function FamilyBoardPage() {
         lastSyncedPayloadRef.current = "";
         setLastCloudSyncedAt(null);
         setCloudAutoStatus("idle");
+        setCanManageFamilyBilling(true);
+        writeCanManageFamilyBilling(true);
       }
     });
 
@@ -904,6 +909,8 @@ export default function FamilyBoardPage() {
   const recentEntries = activeEntries.slice(0, 2);
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
+  const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
+  const visibleSupportActions = isSharedFamilyMember ? supportActions.filter((action) => action.href !== "/plans") : supportActions;
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
   const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
   const unassignedTaskCount = openTasks.filter((task) => !task.assignee?.trim()).length;
@@ -1258,6 +1265,16 @@ export default function FamilyBoardPage() {
     setCloudMessage("本人確認メールを送りました。メール内のリンクを開くと、この手帳をクラウドへ保存できます。");
   }
 
+  function applyFamilyBillingState(result: { canManageFamilyBilling?: unknown; isFamilyOwner?: unknown }) {
+    const canManage = typeof result.canManageFamilyBilling === "boolean"
+      ? result.canManageFamilyBilling
+      : typeof result.isFamilyOwner === "boolean"
+        ? result.isFamilyOwner
+        : true;
+    setCanManageFamilyBilling(canManage);
+    writeCanManageFamilyBilling(canManage);
+  }
+
   async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
     const payload = options.payload ?? notebookSyncPayload();
     const signature = notebookPayloadSignature(payload);
@@ -1299,6 +1316,7 @@ export default function FamilyBoardPage() {
       }
 
       writePlan(result.plan);
+      applyFamilyBillingState(result);
       lastSyncedPayloadRef.current = signature;
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
@@ -1356,6 +1374,7 @@ export default function FamilyBoardPage() {
       const restoredCases = Array.isArray(result.cases) ? result.cases : [];
       const restoredEntries = Array.isArray(result.diaryEntries) ? result.diaryEntries : [];
       writePlan(result.plan);
+      applyFamilyBillingState(result);
       replaceLocalNotebook({
         cases: restoredCases,
         diaryEntries: restoredEntries
@@ -1379,7 +1398,8 @@ export default function FamilyBoardPage() {
 
     firstCloudLoadDoneRef.current = true;
     const payload = notebookSyncPayload();
-    if (payload.cases.length === 0) {
+    const shouldRestoreFromCloud = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cloud") === "1";
+    if (shouldRestoreFromCloud || payload.cases.length === 0) {
       void restoreNotebookFromCloud({ silent: true });
       return;
     }
@@ -1468,7 +1488,7 @@ export default function FamilyBoardPage() {
                   {personName(caseRecord)}
                 </button>
               ))}
-              <Link href="/plans">＋ 手帳を追加</Link>
+              {isSharedFamilyMember ? null : <Link href="/plans">＋ 手帳を追加</Link>}
             </>
           ) : (
             <>
@@ -1880,7 +1900,7 @@ export default function FamilyBoardPage() {
             )}
           </section>
 
-          {supportActions.length > 0 ? (
+          {visibleSupportActions.length > 0 ? (
             <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="次に備えること">
               <div className="nb-section-head">
                 <strong>次に備えること</strong>
@@ -1888,7 +1908,7 @@ export default function FamilyBoardPage() {
                 <span className="aside">おすすめ順</span>
               </div>
               <div className="support-action-list">
-                {supportActions.map((action) => (
+                {visibleSupportActions.map((action) => (
                   <a
                     className="support-action-card"
                     href={action.href}
@@ -1915,10 +1935,14 @@ export default function FamilyBoardPage() {
             <article className="nb-card family-entry-card">
               <div>
                 <p className="nb-eyebrow">家族共有</p>
-                <h2>同じ手帳を家族にも見せる</h2>
-                <p>病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに{FREE_PLAN_MEMBER_LIMIT}人まで無料です。</p>
+                <h2>{isSharedFamilyMember ? "共有された手帳を一緒に更新する" : "同じ手帳を家族にも見せる"}</h2>
+                <p>
+                  {isSharedFamilyMember
+                    ? "この手帳は作成者が招待とプランを管理しています。あなたは記録、確認リスト、写真を一緒に更新できます。追加課金の手続きは不要です。"
+                    : `病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで無料です。`}
+                </p>
               </div>
-              <Link className="nb-save" href="/family">家族を招待する</Link>
+              <Link className="nb-save" href="/family">{isSharedFamilyMember ? "共有状態を見る" : "家族を招待する"}</Link>
             </article>
           </section>
 
@@ -2698,31 +2722,35 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="この手帳を家族で続ける">
-            <article className="nb-card companion-panel">
-	              <MascotNote
-	                label="続けるなら"
-	                title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
-	                body="まず無料で1人分を使い、家族2人までは一緒に見られる設計にします。2人目以降の対象者、容量、月まとめ、長期相談をPlusで広げます。"
-	              />
-              <div className="companion-feature-grid">
-                {continuationFeatures.map((feature) => (
-                  <div className="companion-feature" key={feature.title}>
-                    <span>{feature.label}</span>
-                    <strong>{feature.title}</strong>
-                    <p>{feature.body}</p>
+          {isSharedFamilyMember ? null : (
+            <>
+              <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="この手帳を家族で続ける">
+                <article className="nb-card companion-panel">
+                  <MascotNote
+                    label="続けるなら"
+                    title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
+                    body="まず無料で1人分を使い、家族2人までは一緒に見られる設計にします。2人目以降の対象者、容量、月まとめ、長期相談をPlusで広げます。"
+                  />
+                  <div className="companion-feature-grid">
+                    {continuationFeatures.map((feature) => (
+                      <div className="companion-feature" key={feature.title}>
+                        <span>{feature.label}</span>
+                        <strong>{feature.title}</strong>
+                        <p>{feature.body}</p>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <Link className="companion-plan-link" href="/plans">
-                Plusでできることを見る
-              </Link>
-            </article>
-          </section>
+                  <Link className="companion-plan-link" href="/plans">
+                    Plusでできることを見る
+                  </Link>
+                </article>
+              </section>
 
-	          <p className={`nb-plus-note ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`}>
-	            2人目以降の手帳、容量、月まとめ、長期相談は <Link href="/plans">Plus</Link> で。
-	          </p>
+              <p className={`nb-plus-note ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`}>
+                2人目以降の手帳、容量、月まとめ、長期相談は <Link href="/plans">Plus</Link> で。
+              </p>
+            </>
+          )}
         </div>
       ) : null}
     </main>

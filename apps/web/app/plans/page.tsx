@@ -32,7 +32,7 @@ const plans = [
     audience: "2人目以降も管理したい家族",
     items: [
       "2人目以降の対象者管理",
-      "家族招待を増やす",
+      "家族招待を増やす（手帳を作った人が管理）",
       "写真・PDF容量の拡張",
       "長期相談を1日5回まで",
       "家族会議用PDFと月次まとめ"
@@ -50,7 +50,8 @@ export default function PlansPage() {
         <p className="pill">料金と使い方</p>
         <h1 className="page-title">1人目は無料。複数管理と長期相談は有料へ。</h1>
         <p className="lead">
-          親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人分の記録を整え、必要になった時だけ複数管理や長期相談を追加できます。家族共有は最初の価値体験として無料枠を残します。
+          親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人分の記録を整え、必要になった時だけ複数管理や長期相談を追加できます。
+          支払いは家族手帳ごとです。招待された人が、同じ手帳で二重に支払う必要はありません。
         </p>
       </section>
 
@@ -66,6 +67,15 @@ export default function PlansPage() {
             <Link className={plan.featured ? "button" : "secondary"} href={plan.href}>{plan.cta}</Link>
           </article>
         ))}
+      </section>
+
+      <section className="panel plan-trust-panel">
+        <p className="pill">家族単位</p>
+        <h2>支払いは、1つの家族手帳に1つだけ。</h2>
+        <p>
+          手帳を作った人がFamily Plusにすると、招待された家族は同じ手帳を追加課金なしで使えます。
+          招待された人の画面には決済ボタンを出さず、共有された手帳を見る・更新する導線だけにします。
+        </p>
       </section>
 
       <section className="panel plan-trust-panel">
@@ -87,7 +97,7 @@ export default function PlansPage() {
         <div className="plan-compare-row">
           <span>家族共有</span>
           <strong>無料: あなたのほかに{FREE_PLAN_MEMBER_LIMIT}人</strong>
-          <strong>Plus: 人数を増やせる</strong>
+          <strong>Plus: 人数を増やせる（家族単位）</strong>
         </div>
         <div className="plan-compare-row">
           <span>相談</span>

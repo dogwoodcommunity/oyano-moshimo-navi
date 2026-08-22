@@ -189,6 +189,7 @@ export function FamilyShare() {
 
   const remaining = summary?.remaining;
   const isFull = summary?.plan === "free" && typeof remaining === "number" && remaining <= 0;
+  const isSharedMember = Boolean(summary && !summary.isOwner);
 
   return (
     <div className="family-share">
@@ -224,63 +225,77 @@ export function FamilyShare() {
         )}
       </section>
 
-      <section className="family-card">
-        <h2>家族を招待する</h2>
-        <p>
-          招待した人には、同じ手帳のクラウド控えが見えるようになります。
-          先に無料で一緒に使ってみて、足りなくなってからPlusを考えれば大丈夫です。
-        </p>
-        <p className="family-note">
-          まだクラウド控えを作っていない場合は、先に <Link href="/home">手帳上部の「保存状態」</Link> から保存しておいてください。招待した家族には、控えた内容が見えます。
-        </p>
-        <div className="family-field">
-          <label htmlFor="family-invite-email">招待する人のメールアドレス</label>
-          <input
-            id="family-invite-email"
-            inputMode="email"
-            onChange={(event) => setInviteEmail(event.target.value)}
-            placeholder="sister@example.com"
-            type="email"
-            value={inviteEmail}
-          />
-        </div>
-        <div className="family-field">
-          <label htmlFor="family-invite-relationship">その人の呼び方（任意）</label>
-          <input
-            id="family-invite-relationship"
-            maxLength={20}
-            onChange={(event) => setInviteRelationship(event.target.value)}
-            placeholder="例: 妹"
-            type="text"
-            value={inviteRelationship}
-          />
-        </div>
-        <button
-          className="family-primary"
-          disabled={busy || isFull || !inviteEmail.trim()}
-          onClick={createInvite}
-          type="button"
-        >
-          {busy ? "作っています…" : "招待リンクを作る"}
-        </button>
-        {isFull ? (
-          <p className="family-note">
-            無料の枠が埋まっています。さらに家族を招待する場合は <Link href="/plans">Plus</Link> で広げられます。
+      {isSharedMember ? (
+        <section className="family-card">
+          <h2>共有された手帳に参加中です</h2>
+          <p>
+            この手帳は、手帳を作った家族が招待とプランを管理しています。
+            あなたは同じ手帳の記録、確認リスト、写真を一緒に更新できます。
           </p>
-        ) : null}
-        {message ? <p className="family-error" role="status">{message}</p> : null}
-
-        {invite ? (
-          <div className="family-invite-result" role="status">
-            <strong>{invite.invitedEmail} 宛の招待ができました</strong>
-            <p>このリンクを本人に送ってください。{invite.expiresInDays}日で切れます。招待したアドレスでログインした人だけが参加できます。</p>
-            <code>{invite.url}</code>
-            <button onClick={copyInviteUrl} type="button">
-              {copied ? "コピーしました" : "リンクをコピーする"}
-            </button>
+          <p className="family-note">
+            招待された家族が、同じ手帳で別に支払う必要はありません。自分で別の家族手帳を作る時だけ、別途プランを考えます。
+          </p>
+          <Link className="family-primary" href="/home?cloud=1">共有された手帳を開く</Link>
+        </section>
+      ) : (
+        <section className="family-card">
+          <h2>家族を招待する</h2>
+          <p>
+            招待した人には、同じ手帳のクラウド控えが見えるようになります。
+            課金は家族手帳ごとです。招待された家族に、別の課金ボタンは出しません。
+          </p>
+          <p className="family-note">
+            まだクラウド控えを作っていない場合は、先に <Link href="/home">手帳上部の「保存状態」</Link> から保存しておいてください。招待した家族には、控えた内容が見えます。
+          </p>
+          <div className="family-field">
+            <label htmlFor="family-invite-email">招待する人のメールアドレス</label>
+            <input
+              id="family-invite-email"
+              inputMode="email"
+              onChange={(event) => setInviteEmail(event.target.value)}
+              placeholder="sister@example.com"
+              type="email"
+              value={inviteEmail}
+            />
           </div>
-        ) : null}
-      </section>
+          <div className="family-field">
+            <label htmlFor="family-invite-relationship">その人の呼び方（任意）</label>
+            <input
+              id="family-invite-relationship"
+              maxLength={20}
+              onChange={(event) => setInviteRelationship(event.target.value)}
+              placeholder="例: 妹"
+              type="text"
+              value={inviteRelationship}
+            />
+          </div>
+          <button
+            className="family-primary"
+            disabled={busy || isFull || !inviteEmail.trim()}
+            onClick={createInvite}
+            type="button"
+          >
+            {busy ? "作っています…" : "招待リンクを作る"}
+          </button>
+          {isFull ? (
+            <p className="family-note">
+              無料の枠が埋まっています。さらに家族を招待する場合は、手帳を作った人の <Link href="/plans">Family Plus</Link> で広げられます。
+            </p>
+          ) : null}
+          {message ? <p className="family-error" role="status">{message}</p> : null}
+
+          {invite ? (
+            <div className="family-invite-result" role="status">
+              <strong>{invite.invitedEmail} 宛の招待ができました</strong>
+              <p>このリンクを本人に送ってください。{invite.expiresInDays}日で切れます。招待したアドレスでログインした人だけが参加できます。</p>
+              <code>{invite.url}</code>
+              <button onClick={copyInviteUrl} type="button">
+                {copied ? "コピーしました" : "リンクをコピーする"}
+              </button>
+            </div>
+          ) : null}
+        </section>
+      )}
     </div>
   );
 }

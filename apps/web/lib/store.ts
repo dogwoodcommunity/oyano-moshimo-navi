@@ -86,6 +86,7 @@ export type NotebookExport = {
 
 const STORAGE_KEY = "oyano_cases_v03";
 const PLAN_STORAGE_KEY = "oyano_plan_v01";
+const FAMILY_BILLING_MANAGER_STORAGE_KEY = "oyano_family_billing_manager_v01";
 const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
 let memoryCases: CaseRecord[] = [];
 let memoryDiaryEntries: DiaryEntry[] = [];
@@ -411,6 +412,25 @@ export function writePlan(plan: string | null | undefined) {
     storage.setItem(PLAN_STORAGE_KEY, plan === "plus" ? "plus" : "free");
   } catch {
     // 保存できなくても free 扱いで動く。
+  }
+}
+
+/**
+ * クラウドの家族手帳で、今のユーザーが課金・招待枠を管理できるか。
+ * 招待された家族には二重課金CTAを出さないため、サーバー結果を控える。
+ */
+export function readCanManageFamilyBilling(): boolean {
+  const storage = getLocalStorage();
+  return storage?.getItem(FAMILY_BILLING_MANAGER_STORAGE_KEY) !== "false";
+}
+
+export function writeCanManageFamilyBilling(canManage: boolean | null | undefined) {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    storage.setItem(FAMILY_BILLING_MANAGER_STORAGE_KEY, canManage === false ? "false" : "true");
+  } catch {
+    // 保存できなくても、未確定時は作成者側として扱う。
   }
 }
 

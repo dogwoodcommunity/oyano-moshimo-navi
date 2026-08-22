@@ -198,13 +198,42 @@ async function getOrCreateFamily(supabase: NonNullable<ReturnType<typeof getServ
   return family.id as string;
 }
 
-/** 参加している家族のうち、どれか1つでもPlusならPlusとして扱う。 */
-async function planForFamilies(
+type FamilyBillingContext = {
+  plan: "free" | "plus";
+  isFamilyOwner: boolean;
+};
+
+async function billingContextForFamilies(
   supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
-  familyIds: string[]
-): Promise<"free" | "plus"> {
-  const { data } = await supabase.from("families").select("plan").in("id", familyIds);
-  return asArray<AnyRecord>(data).some((row) => row.plan === "plus") ? "plus" : "free";
+  familyIds: string[],
+  userId: string
+): Promise<FamilyBillingContext> {
+  const { data } = await supabase
+    .from("families")
+    .select("id,plan,owner_user_id")
+    .in("id", familyIds);
+  const rows = asArray<AnyRecord>(data);
+  return {
+    plan: rows.some((row) => row.plan === "plus") ? "plus" : "free",
+    isFamilyOwner: rows.some((row) => row.owner_user_id === userId)
+  };
+}
+
+async function billingContextForFamily(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  familyId: string,
+  userId: string
+): Promise<FamilyBillingContext> {
+  const { data, error } = await supabase
+    .from("families")
+    .select("plan,owner_user_id")
+    .eq("id", familyId)
+    .single();
+  if (error) throw error;
+  return {
+    plan: data?.plan === "plus" ? "plus" : "free",
+    isFamilyOwner: data?.owner_user_id === userId
+  };
 }
 
 export async function GET(request: NextRequest) {
@@ -219,11 +248,20 @@ export async function GET(request: NextRequest) {
 
   if (membershipError) return jsonError(membershipError.message, 500);
   const familyIds = asArray<AnyRecord>(memberships).map((item) => item.family_id).filter(Boolean);
-  if (familyIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [], plan: "free" });
+  if (familyIds.length === 0) {
+    return NextResponse.json({
+      cases: [],
+      diaryEntries: [],
+      plan: "free",
+      isFamilyOwner: true,
+      canManageFamilyBilling: true
+    });
+  }
 
   // 手帳を何冊まで作れるかの判定に使うため、planも返す。
   // これが無いと、クライアントは上限を知らないまま2冊目を作らせてしまう。
-  const plan = await planForFamilies(supabase, familyIds);
+  const billing = await billingContextForFamilies(supabase, familyIds, user.id);
+  const { plan } = billing;
 
   const { data: people, error: peopleError } = await supabase
     .from("people")
@@ -234,7 +272,15 @@ export async function GET(request: NextRequest) {
   if (peopleError) return jsonError(peopleError.message, 500);
 
   const personIds = asArray<AnyRecord>(people).map((person) => person.id).filter(Boolean);
-  if (personIds.length === 0) return NextResponse.json({ cases: [], diaryEntries: [], plan });
+  if (personIds.length === 0) {
+    return NextResponse.json({
+      cases: [],
+      diaryEntries: [],
+      plan,
+      isFamilyOwner: billing.isFamilyOwner,
+      canManageFamilyBilling: billing.isFamilyOwner
+    });
+  }
 
   const [{ data: tasks, error: tasksError }, { data: events, error: eventsError }] = await Promise.all([
     supabase.from("tasks").select("*").in("person_id", personIds).order("due_date", { ascending: true }),
@@ -324,7 +370,13 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  return NextResponse.json({ cases, diaryEntries });
+  return NextResponse.json({
+    cases,
+    diaryEntries,
+    plan,
+    isFamilyOwner: billing.isFamilyOwner,
+    canManageFamilyBilling: billing.isFamilyOwner
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -358,7 +410,13 @@ export async function POST(request: NextRequest) {
   // 無料プランで作れる手帳の数を、クラウド側でも止める。
   // 画面側の判定だけでは、古い端末や直接呼び出しをすり抜けてしまう。
   // すでにクラウドにある手帳の更新は、上限に関係なく通す。止めるのは新しく増えるぶんだけ。
-  const plan = await planForFamilies(supabase, [familyId]);
+  let billing: FamilyBillingContext;
+  try {
+    billing = await billingContextForFamily(supabase, familyId, user.id);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "家族データを確認できませんでした。", 500);
+  }
+  const { plan } = billing;
   const { data: currentPeople, error: currentPeopleError } = await supabase
     .from("people")
     .select("id")
@@ -370,6 +428,7 @@ export async function POST(request: NextRequest) {
   let syncedTasks = 0;
   let syncedEntries = 0;
   let skippedPeople = 0;
+  let skippedSharedPeople = 0;
 
   for (const localCase of localCases) {
     const localCaseId = String(localCase.id);
@@ -398,6 +457,12 @@ export async function POST(request: NextRequest) {
     };
 
     const existingPersonId = existingPeople?.[0]?.id;
+
+    if (!existingPersonId && !billing.isFamilyOwner) {
+      skippedPeople += 1;
+      skippedSharedPeople += 1;
+      continue;
+    }
 
     if (!existingPersonId && !canCreateNotebook(plan, peopleInCloud)) {
       // 上限を超える新しい手帳は、クラウドへ上げない。端末の中には残る。
@@ -485,11 +550,17 @@ export async function POST(request: NextRequest) {
     ok: true,
     familyId,
     plan,
+    isFamilyOwner: billing.isFamilyOwner,
+    canManageFamilyBilling: billing.isFamilyOwner,
     syncedPeople,
     syncedTasks,
     syncedEntries,
     skippedPeople,
-    ...(skippedPeople > 0 ? { notice: NOTEBOOK_LIMIT_MESSAGE } : {})
+    ...(skippedSharedPeople > 0
+      ? { notice: "共有された手帳では、新しい対象者の追加は手帳を作った人が行います。" }
+      : skippedPeople > 0
+        ? { notice: NOTEBOOK_LIMIT_MESSAGE }
+        : {})
   });
 }
 

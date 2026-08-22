@@ -5863,3 +5863,36 @@ SVGだけではスマホで保存・共有しづらいため、同じロゴをPN
 
 - 前の `1680×448` 版はスマホ表示や資料貼り付け時に上下が詰まって見えた。
 - 新しい横組みPNGは白い角丸背景の上下余白を広げ、チラシやレビュー資料に置いた時に窮屈に見えないようにした。
+
+## 2026-08-22 追記 158 — 招待された家族には課金CTAを出さない
+
+ユーザーから「1人目で課金して招待しているのに、2人目以降のアプリにも課金ボタンが出るのは変。共有のみのページにすべき」と指摘があった。
+
+判断:
+
+- Family Plusは個人課金ではなく、家族手帳単位の課金として扱う。
+- 手帳を作った人が招待とプランを管理する。
+- 招待された家族は、同じ手帳の記録・確認リスト・写真更新に参加する人であり、同じ手帳に対する追加課金CTAは出さない。
+- 招待された家族が自分で別の家族手帳を作る時だけ、自分のプラン判断になる。
+
+対応:
+
+- `apps/web/app/api/notebook/sync/route.ts` が `isFamilyOwner` / `canManageFamilyBilling` を返すようにした。
+- 共有メンバーがクラウド同期する場合、新しい対象者の作成はスキップし、既存の共有手帳の更新に限定した。
+- `apps/web/lib/store.ts` に家族課金管理可否の保存/読込を追加した。
+- `apps/web/app/home/page.tsx` で共有メンバー判定を追加し、共有メンバーには「手帳を追加」「Plusでできること」などの課金・作成者向け導線を非表示にした。
+- `apps/web/components/FamilyShare.tsx` で、共有メンバーには招待フォームではなく「共有された手帳に参加中」の説明と手帳を開く導線だけを表示するようにした。
+- `apps/web/components/PlusUpgrade.tsx` で、ログイン後に家族情報を確認し、非オーナーには決済ボタンを出さないようにした。
+- `apps/web/app/family/page.tsx`、`apps/web/app/plans/page.tsx`、`apps/web/components/InviteAccept.tsx`、`apps/web/app/invite/[token]/page.tsx` の文言を「追加課金なし」「家族手帳単位」に統一した。
+- Expo側の `apps/mobile/app/account/plan.tsx` と `apps/mobile/app/invite.tsx` も、招待された家族が別で支払う必要はない文言に揃えた。
+- `docs/MONETIZATION.md` に「招待された家族の扱い」を追記した。
+
+検証:
+
+- `corepack pnpm --dir apps/web exec tsc --noEmit` 成功。
+- `corepack pnpm --dir apps/mobile exec tsc --noEmit` 成功。
+
+次に確認すること:
+
+- 実機で、オーナーアカウントでは家族招待・Plus導線が見えること。
+- 招待された家族アカウントで `/home?cloud=1` を開いた時、追加手帳・Plus導線が消え、共有手帳の更新だけになっていること。

@@ -20,6 +20,7 @@ export function PlusUpgrade() {
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [outcome, setOutcome] = useState<"success" | "cancel" | null>(null);
+  const [canManageBilling, setCanManageBilling] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -41,6 +42,20 @@ export function PlusUpgrade() {
 
       const token = data.session?.access_token ?? null;
       setAccessToken(token);
+      if (token) {
+        try {
+          const response = await fetch("/api/family", { headers: { Authorization: `Bearer ${token}` } });
+          if (response.ok) {
+            const family = await response.json() as { isOwner?: boolean };
+            if (cancelled) return;
+            setCanManageBilling(family.isOwner !== false);
+          }
+        } catch {
+          if (cancelled) return;
+          setCanManageBilling(true);
+        }
+      }
+      if (cancelled) return;
       setState(token ? "ready" : "signed-out");
     }
 
@@ -102,10 +117,11 @@ export function PlusUpgrade() {
         <p className="plus-note" role="status">手続きは取り消されました。無料のままお使いいただけます。</p>
       ) : null}
 
-      <h2>Plusにする</h2>
+      <h2>{canManageBilling ? "Plusにする" : "共有された手帳のプラン"}</h2>
       <p>
         2人目以降の対象者、写真・PDFの容量、家族会議用のまとめ、長期相談が広がります。
         まずは無料のまま使ってみて、足りなくなってからで大丈夫です。
+        Plusは家族手帳単位なので、招待された家族が同じ手帳で別に支払う必要はありません。
       </p>
 
       {state === "checking" ? <p className="plus-note">読み込み中です</p> : null}
@@ -120,7 +136,7 @@ export function PlusUpgrade() {
 
       {state === "signed-out" || state === "sending" || state === "sent" ? (
         <>
-          <p className="plus-note">Plusは手帳の家族単位です。先にメールで本人確認をします。パスワードは作りません。</p>
+          <p className="plus-note">Plusは手帳を作った人が家族単位で手続きします。招待された家族が共有手帳を見るだけなら、別の支払いは不要です。先にメールで本人確認をします。</p>
           <div className="plus-field">
             <label htmlFor="plus-email">メールアドレス</label>
             <input
@@ -148,15 +164,21 @@ export function PlusUpgrade() {
       ) : null}
 
       {state === "ready" || state === "opening" || state === "error" ? (
-        <button className="plus-button" disabled={state === "opening"} onClick={openCheckout} type="button">
-          {state === "opening" ? "決済画面を開いています…" : "Plusの手続きへ進む"}
-        </button>
+        canManageBilling ? (
+          <button className="plus-button" disabled={state === "opening"} onClick={openCheckout} type="button">
+            {state === "opening" ? "決済画面を開いています…" : "Plusの手続きへ進む"}
+          </button>
+        ) : (
+          <p className="plus-note" role="status">
+            この手帳は作成者がプランを管理しています。招待された家族の追加手続きは不要です。
+          </p>
+        )
       ) : null}
 
       {message ? <p className="plus-error" role="status">{message}</p> : null}
 
       <p className="plus-note">
-        iPhoneのアプリの中からは、Appleの規約により同じ手続きはご利用いただけません。この画面から手続きしてください。
+        iPhoneのアプリの中からは、Appleの規約により同じ手続きはご利用いただけません。招待された家族には、この受付導線を案内しません。
       </p>
     </section>
   );

@@ -9,8 +9,8 @@ type InvitePageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "家族ボードへの招待 | 親のもしもナビ",
-  description: "親のもしもナビの家族ボード招待を確認するページです。"
+  title: "共有された手帳への招待 | 親のもしもナビ",
+  description: "親のもしもナビの共有手帳に、追加課金なしで参加するための招待ページです。"
 };
 
 export default function InvitePage({ params }: InvitePageProps) {
@@ -21,10 +21,10 @@ export default function InvitePage({ params }: InvitePageProps) {
     <main className="container family-page">
       <section className="family-hero">
         <p className="family-eyebrow">家族からの招待</p>
-        <h1>同じ手帳を、一緒に見られるようになります。</h1>
+        <h1>共有された手帳に参加する。</h1>
         <p className="family-lead">
           親の状況、決めたこと、期限、写真を、家族で同じ画面から確認できます。
-          新しく登録し直す必要はありません。
+          新しく登録し直す必要はありません。招待された人の追加課金もありません。
         </p>
       </section>
 
@@ -36,6 +36,7 @@ export default function InvitePage({ params }: InvitePageProps) {
           <li>家族で同じ記録と期限を確認できます。</li>
           <li>担当が決まっていないことを、見えるようにできます。</li>
           <li>期限が近い手続きを、必要なときだけ思い出せます。</li>
+          <li>招待された人の追加課金はありません。</li>
         </ul>
         <p className="family-note">招待リンクは発行から7日間有効です。</p>
         <div className="family-hero-actions">

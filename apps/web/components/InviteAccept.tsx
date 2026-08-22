@@ -106,7 +106,7 @@ export function InviteAccept({ token }: { token: string }) {
     return (
       <section className="invite-card is-done">
         <h2>参加しました</h2>
-        <p>同じ手帳を見られるようになりました。手帳を開いて、クラウドの控えを読み込んでください。</p>
+        <p>同じ手帳を見られるようになりました。追加課金は不要です。手帳を開いて、クラウドの控えを読み込んでください。</p>
         <Link className="family-primary" href="/home?cloud=1">手帳を開く</Link>
       </section>
     );
@@ -118,7 +118,7 @@ export function InviteAccept({ token }: { token: string }) {
         <h2>招待されたメールアドレスで確認します</h2>
         <p>
           招待メールが届いたアドレスを入れてください。確認メールのリンクを開くと、この画面に戻って参加できます。
-          パスワードは作りません。
+          パスワードは作りません。追加課金はありません。
         </p>
         <div className="family-field">
           <label htmlFor="invite-email">メールアドレス</label>
@@ -153,7 +153,7 @@ export function InviteAccept({ token }: { token: string }) {
       <h2>この招待を受け取りますか</h2>
       <p>
         {signedInEmail ? `${signedInEmail} として確認済みです。` : "確認済みです。"}
-        参加すると、同じ手帳のクラウド控えを見られるようになります。
+        参加すると、同じ手帳のクラウド控えを見られるようになります。手帳を作った人の家族プランに参加するだけなので、別の支払いは不要です。
       </p>
       <button className="family-primary" disabled={phase === "joining"} onClick={join} type="button">
         {phase === "joining" ? "参加しています…" : "この手帳に参加する"}

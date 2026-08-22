@@ -6,8 +6,9 @@ import { fetchDashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
 const rows = [
-  ["現在のプラン", "Free"],
-  ["親の登録", "1名"],
+  ["現在のプラン", "家族手帳に紐づきます"],
+  ["課金単位", "家族手帳ごと"],
+  ["対象者の登録", "1名から"],
   ["家族招待", `あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`],
   ["期限通知", "基本通知あり"],
   ["写真", "10枚目安"],
@@ -31,7 +32,7 @@ export default function AccountPlanScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>プラン確認</Text>
         <Text style={styles.title}>利用状態の詳細</Text>
-        <Text style={styles.body}>現在使える範囲と、サポートの進行状況を確認します。</Text>
+        <Text style={styles.body}>手帳を作った家族のプラン状態を確認します。招待された家族は、同じ手帳を追加課金なしで使います。</Text>
       </View>
 
       <View style={styles.card}>
@@ -52,8 +53,8 @@ export default function AccountPlanScreen() {
           <MaterialCommunityIcons color={colors.green} name="package-variant-closed" size={23} />
           <Text style={styles.cardTitle}>Family Plus</Text>
         </View>
-        <Text style={styles.body}>月額980円・年額9,800円。2人目以降、家族招待の追加、写真・PDF容量、長期相談を広げます。</Text>
-        <Text style={styles.body}>アプリでは利用状態だけを表示します。外部決済への案内は置きません。</Text>
+        <Text style={styles.body}>月額980円・年額9,800円。Family Plusは家族手帳ごとのプランです。</Text>
+        <Text style={styles.body}>手帳を作った人がPlusなら、招待された家族は同じ手帳を追加課金なしで使えます。アプリでは利用状態だけを表示します。</Text>
         <View style={styles.statusPill}>
           <Text style={styles.statusPillText}>解約しても基本の記録は読めます</Text>
         </View>
@@ -67,8 +68,8 @@ export default function AccountPlanScreen() {
       ) : null}
 
       <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>表示方針</Text>
-        <Text style={styles.noticeText}>ここでは受付済みの内容や利用状態だけを表示します。家族が混乱しないよう、操作は状態確認に絞っています。</Text>
+        <Text style={styles.noticeTitle}>招待された家族の表示</Text>
+        <Text style={styles.noticeText}>共有された手帳では、決済ではなく記録・確認リスト・写真の更新に集中します。別の支払いボタンは出しません。</Text>
       </View>
     </ScrollView>
   );
