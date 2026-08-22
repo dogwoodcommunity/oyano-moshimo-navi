@@ -240,6 +240,18 @@ function taskFormSeed(task: TaskWithDue): TaskEditForm {
   };
 }
 
+function blankTaskForm(): TaskEditForm {
+  return {
+    title: "",
+    description: "",
+    dueDate: dateInputAfterDays(7),
+    priority: "2",
+    progress: "todo",
+    assignee: "",
+    note: ""
+  };
+}
+
 function diaryEditSeed(entry: DiaryEntry): DiaryEditForm {
   return {
     date: entry.date,
@@ -779,6 +791,9 @@ export default function FamilyBoardPage() {
   const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
   const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
   const [taskSavedKey, setTaskSavedKey] = useState<string | null>(null);
+  const [taskComposerOpen, setTaskComposerOpen] = useState(false);
+  const [newTaskForm, setNewTaskForm] = useState<TaskEditForm>(() => blankTaskForm());
+  const [newTaskSaved, setNewTaskSaved] = useState(false);
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("overview");
   const [loaded, setLoaded] = useState(false);
@@ -857,6 +872,11 @@ export default function FamilyBoardPage() {
     setEditingDiaryId(null);
     setDiarySavedId(null);
     setTaskAddedEntryId(null);
+    setEditingTaskKey(null);
+    setTaskSavedKey(null);
+    setTaskComposerOpen(false);
+    setNewTaskForm(blankTaskForm());
+    setNewTaskSaved(false);
     setActiveNotebookTab("overview");
   }, [activeCase?.id]);
 
@@ -969,17 +989,17 @@ export default function FamilyBoardPage() {
     setTaskForms((current) => ({
       ...current,
       [key]: {
-        ...(current[key] ?? {
-          title: "",
-          description: "",
-          dueDate: todayInputValue(),
-          priority: "2",
-          progress: "todo",
-          assignee: "",
-          note: ""
-        }),
+        ...(current[key] ?? blankTaskForm()),
         ...patch
       }
+    }));
+  }
+
+  function updateNewTaskForm(patch: Partial<TaskEditForm>) {
+    setNewTaskSaved(false);
+    setNewTaskForm((current) => ({
+      ...current,
+      ...patch
     }));
   }
 
@@ -1014,6 +1034,28 @@ export default function FamilyBoardPage() {
     }
     setEditingTaskKey(null);
     setTaskSavedKey(key);
+  }
+
+  function addManualTask(caseId: string) {
+    const title = newTaskForm.title.trim();
+    if (!title) return;
+
+    const updated = addCaseTask(caseId, {
+      title,
+      description: newTaskForm.description.trim() || "家族で確認したいこととして追加しました。",
+      dueDate: newTaskForm.dueDate || todayInputValue(),
+      priority: taskPriorityValue(newTaskForm.priority),
+      progress: newTaskForm.progress,
+      assignee: newTaskForm.assignee.trim(),
+      note: newTaskForm.note.trim() || "手入力で確認リストへ追加"
+    });
+    if (!updated) return;
+
+    replaceCaseInState(updated);
+    setNewTaskForm(blankTaskForm());
+    setTaskComposerOpen(false);
+    setNewTaskSaved(true);
+    setTaskSavedKey(taskEditKey(caseId, 0));
   }
 
   function quickUpdateTask(caseId: string, taskIndex: number, patch: Partial<EditableTask>) {
@@ -2278,11 +2320,106 @@ export default function FamilyBoardPage() {
               <Link className="aside-link" href={`/result/${activeCase.id}`}>整理結果を見る</Link>
             </div>
             <article className="nb-card task-list-card">
+              <p className="task-list-help">
+                確認リストは、あとから家族の言葉に直せます。既存カードを押すと編集、新しく気づいたことは下の「確認項目を追加」から足せます。
+              </p>
+              <div className={`task-add-card ${taskComposerOpen ? "is-open" : ""}`}>
+                <div className="task-add-head">
+                  <div>
+                    <span>家族で決めたことを足す</span>
+                    <strong>確認項目を追加</strong>
+                    <p>病院に聞くこと、家族へ頼むこと、写真で残すことを1件ずつ追加できます。</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setTaskComposerOpen((current) => !current);
+                      setNewTaskSaved(false);
+                    }}
+                  >
+                    {taskComposerOpen ? "閉じる" : "追加する"}
+                  </button>
+                </div>
+                {taskComposerOpen ? (
+                  <div className="task-edit-panel task-add-panel">
+                    <label className="task-edit-field task-edit-wide">
+                      <span>やること</span>
+                      <input
+                        placeholder="例: 退院後の通院日を病院に確認する"
+                        value={newTaskForm.title}
+                        onChange={(event) => updateNewTaskForm({ title: event.target.value })}
+                      />
+                    </label>
+                    <label className="task-edit-field task-edit-wide">
+                      <span>説明</span>
+                      <textarea
+                        placeholder="例: 次回通院日、送迎の有無、持ち物を確認して家族に共有する。"
+                        value={newTaskForm.description}
+                        onChange={(event) => updateNewTaskForm({ description: event.target.value })}
+                      />
+                    </label>
+                    <div className="task-edit-grid">
+                      <label className="task-edit-field">
+                        <span>期限</span>
+                        <input
+                          type="date"
+                          value={newTaskForm.dueDate}
+                          onChange={(event) => updateNewTaskForm({ dueDate: event.target.value })}
+                        />
+                      </label>
+                      <label className="task-edit-field">
+                        <span>担当</span>
+                        <input
+                          placeholder="例: 自分 / 長男 / 妹"
+                          value={newTaskForm.assignee}
+                          onChange={(event) => updateNewTaskForm({ assignee: event.target.value })}
+                        />
+                      </label>
+                      <label className="task-edit-field">
+                        <span>状態</span>
+                        <select
+                          value={newTaskForm.progress}
+                          onChange={(event) => updateNewTaskForm({ progress: event.target.value as TaskEditForm["progress"] })}
+                        >
+                          <option value="todo">未着手</option>
+                          <option value="doing">進行中</option>
+                          <option value="done">完了</option>
+                        </select>
+                      </label>
+                      <label className="task-edit-field">
+                        <span>優先度</span>
+                        <select
+                          value={newTaskForm.priority}
+                          onChange={(event) => updateNewTaskForm({ priority: event.target.value as TaskEditForm["priority"] })}
+                        >
+                          <option value="1">急ぎ</option>
+                          <option value="2">通常</option>
+                          <option value="3">あとで</option>
+                        </select>
+                      </label>
+                    </div>
+                    <label className="task-edit-field task-edit-wide">
+                      <span>家族メモ</span>
+                      <textarea
+                        placeholder="例: 兄にLINE済み。返事が来たら担当を決める。"
+                        value={newTaskForm.note}
+                        onChange={(event) => updateNewTaskForm({ note: event.target.value })}
+                      />
+                    </label>
+                    <div className="task-edit-footer">
+                      <button type="button" onClick={() => addManualTask(activeCase.id)}>
+                        確認リストに追加
+                      </button>
+                      <button type="button" onClick={() => setTaskComposerOpen(false)}>
+                        やめる
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+                {newTaskSaved ? <small className="task-add-feedback">確認リストに追加しました。</small> : null}
+              </div>
               {activeTasks.length > 0 ? (
                 <>
-                  <p className="task-list-help">
-                    確認リストはあとから直せます。カードを押すと、内容・期限・担当・家族メモを編集できます。
-                  </p>
                   {activeTasks.slice(0, 8).map((task, taskIndex) => {
                     const key = taskEditKey(activeCase.id, taskIndex);
                     const dateParts = taskDateParts(task.dueDate);
@@ -2307,7 +2444,7 @@ export default function FamilyBoardPage() {
                               <b>{dateParts.day}</b>
                             </span>
                             <span className="task-copy">
-                              <span className="task-tap-hint">押すと編集できます</span>
+                              <span className="task-tap-hint">このカードを押すと編集できます</span>
                               <strong>{task.title}</strong>
                               <small>{task.description}</small>
                             </span>
@@ -2318,7 +2455,7 @@ export default function FamilyBoardPage() {
                             type="button"
                             onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
                           >
-                            内容を編集
+                            編集する
                           </button>
                         </div>
                         <div className="task-card-meta">
