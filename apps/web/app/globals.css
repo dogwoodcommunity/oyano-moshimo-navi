@@ -7000,6 +7000,14 @@ textarea {
   margin-top: 24px;
 }
 
+.nb-section.is-hidden-tab {
+  display: none;
+}
+
+.nb-plus-note.is-hidden-tab {
+  display: none;
+}
+
 .nb-section-head {
   align-items: center;
   display: flex;
@@ -7045,6 +7053,68 @@ textarea {
 
 .person-command-section {
   margin-top: 18px;
+}
+
+.notebook-tab-bar {
+  background: rgba(255, 253, 246, 0.96);
+  border: 1px solid rgba(224, 215, 196, 0.78);
+  border-radius: 18px;
+  box-shadow: 0 10px 24px rgba(36, 66, 78, 0.10);
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin-top: 12px;
+  overflow-x: auto;
+  padding: 6px;
+  position: sticky;
+  scrollbar-width: none;
+  top: 8px;
+  z-index: 20;
+}
+
+.notebook-tab-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.notebook-tab-bar button {
+  background: #fff;
+  border: 1px solid #e0d9cb;
+  border-radius: 14px;
+  color: var(--ink-faint);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: 3px;
+  justify-items: center;
+  min-height: 58px;
+  min-width: 0;
+  padding: 8px 4px 7px;
+  text-align: center;
+  touch-action: manipulation;
+}
+
+.notebook-tab-bar button:active {
+  transform: translateY(1px);
+}
+
+.notebook-tab-bar button.is-active {
+  background: #174f39;
+  border-color: #174f39;
+  box-shadow: 0 8px 16px rgba(23, 79, 57, 0.18);
+  color: #fffdf6;
+}
+
+.notebook-tab-bar strong {
+  font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 900;
+  line-height: 1.2;
+}
+
+.notebook-tab-bar small {
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 1.25;
 }
 
 .person-command-card {

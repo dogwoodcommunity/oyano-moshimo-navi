@@ -50,10 +50,19 @@ type TaskEditForm = {
 type RecordFilter = "all" | "changed" | "attachments";
 type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
 type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
+type NotebookTab = "overview" | "record" | "profile" | "tasks" | "media";
 type NotebookSyncPayload = {
   cases: CaseRecord[];
   diaryEntries: DiaryEntry[];
 };
+
+const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
+  { id: "overview", label: "今日", note: "まず見る" },
+  { id: "record", label: "記録", note: "書く・見返す" },
+  { id: "profile", label: "基本情報", note: "プロフィール" },
+  { id: "tasks", label: "確認", note: "やること" },
+  { id: "media", label: "写真", note: "資料" }
+];
 
 const emptyDiaryForm: DiaryFormState = {
   body: "",
@@ -771,6 +780,7 @@ export default function FamilyBoardPage() {
   const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
   const [taskSavedKey, setTaskSavedKey] = useState<string | null>(null);
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
+  const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("overview");
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
@@ -847,6 +857,7 @@ export default function FamilyBoardPage() {
     setEditingDiaryId(null);
     setDiarySavedId(null);
     setTaskAddedEntryId(null);
+    setActiveNotebookTab("overview");
   }, [activeCase?.id]);
 
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
@@ -874,6 +885,32 @@ export default function FamilyBoardPage() {
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
+
+  function tabForHash(hash: string): NotebookTab | undefined {
+    if (hash === "#today-diary" || hash === "#diary-history") return "record";
+    if (hash === "#person-profile" || hash === "#profile-edit-fields") return "profile";
+    if (hash === "#task-checklist") return "tasks";
+    if (hash === "#media-library") return "media";
+    return undefined;
+  }
+
+  function openNotebookSection(hash: string) {
+    const tab = tabForHash(hash);
+    if (tab) setActiveNotebookTab(tab);
+    if (hash === "#person-profile" || hash === "#profile-edit-fields") setProfileEditorOpen(true);
+
+    window.setTimeout(() => {
+      document.querySelector(hash)?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }, 0);
+  }
+
+  function notebookTabNote(tab: NotebookTab) {
+    if (tab === "record") return `${activeEntries.length}件`;
+    if (tab === "profile") return `${activeProfileCompletion.percent}%`;
+    if (tab === "tasks") return `${activeTasks.filter((task) => (task.progress ?? "todo") !== "done").length}件`;
+    if (tab === "media") return `${attachments.length}件`;
+    return "まず見る";
+  }
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
     setForms((current) => ({
@@ -1335,7 +1372,16 @@ export default function FamilyBoardPage() {
             <strong>{activeCase ? notebookTitle(activePersonName) : "まず1人分の手帳から"}</strong>
           </div>
           {activeCase ? (
-            <a className="cover-profile-link" href="#person-profile">プロフィール</a>
+            <a
+              className="cover-profile-link"
+              href="#person-profile"
+              onClick={(event) => {
+                event.preventDefault();
+                openNotebookSection("#person-profile");
+              }}
+            >
+              プロフィール
+            </a>
           ) : (
             <Link className="cover-profile-link" href="/start">作る</Link>
           )}
@@ -1435,52 +1481,110 @@ export default function FamilyBoardPage() {
                 </div>
               </div>
               <div className="person-command-grid" aria-label="手帳でできること">
-                <a href="#person-profile" onClick={() => setProfileEditorOpen(true)}>
+                <a
+                  href="#person-profile"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#person-profile");
+                  }}
+                >
                   <span className="command-icon is-profile" aria-hidden="true">
                     <img src="/brand/watch-bird-mark.svg" alt="" />
                   </span>
                   <strong>プロフィールを編集</strong>
                   <small>名前・続柄・病院・薬・連絡先を更新</small>
                 </a>
-                <a href="#today-diary">
+                <a
+                  href="#today-diary"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#today-diary");
+                  }}
+                >
                   <span className="command-icon is-diary" aria-hidden="true" />
                   <strong>今日の記録を書く</strong>
                   <small>体調・発言・病院連絡を1行で残す</small>
                 </a>
-                <a href="#diary-history">
+                <a
+                  href="#diary-history"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#diary-history");
+                  }}
+                >
                   <span className="command-icon is-history" aria-hidden="true" />
                   <strong>過去の記録を見る</strong>
                   <small>月別・変化あり・写真つきで振り返る</small>
                 </a>
-                <a href="#task-checklist">
+                <a
+                  href="#task-checklist"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#task-checklist");
+                  }}
+                >
                   <span className="command-icon is-task" aria-hidden="true" />
                   <strong>確認リストを編集</strong>
                   <small>期限・担当・状態を家族で更新</small>
                 </a>
-                <a href="#media-library">
+                <a
+                  href="#media-library"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#media-library");
+                  }}
+                >
                   <span className="command-icon is-media" aria-hidden="true" />
                   <strong>写真・資料を見る</strong>
                   <small>日記に添付した写真やPDFを確認</small>
                 </a>
               </div>
             </article>
+            <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`}>
+              {notebookTabs.map((tab) => (
+                <button
+                  className={activeNotebookTab === tab.id ? "is-active" : ""}
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveNotebookTab(tab.id);
+                    if (tab.id === "profile") setProfileEditorOpen(true);
+                  }}
+                >
+                  <strong>{tab.label}</strong>
+                  <small>{notebookTabNote(tab.id)}</small>
+                </button>
+              ))}
+            </nav>
           </section>
 
-          <section className="nb-section" aria-label="今日見るところ">
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="今日見るところ">
             <div className="nb-section-head">
               <strong>今日見るところ</strong>
               <span className="rule" aria-hidden="true" />
               <span className="aside">{boardDateLabel()}</span>
             </div>
             <div className="nb-card">
-              {todayRows.map((alert) => (
-                <a className={`nb-row is-${alert.tone}`} href={normalizeAlertHref(alert.href)} key={`${alert.title}-${alert.body}`}>
-                  <span className="lead">{alert.tone === "urgent" ? "急ぎ" : alert.tone === "warning" ? "確認" : "安心"}</span>
-                  <strong>{alert.title}</strong>
-                  <small>{alert.body}</small>
-                  <span className="chev" aria-hidden="true">›</span>
-                </a>
-              ))}
+              {todayRows.map((alert) => {
+                const href = normalizeAlertHref(alert.href);
+                return (
+                  <a
+                    className={`nb-row is-${alert.tone}`}
+                    href={href}
+                    key={`${alert.title}-${alert.body}`}
+                    onClick={(event) => {
+                      if (!href.startsWith("#")) return;
+                      event.preventDefault();
+                      openNotebookSection(href);
+                    }}
+                  >
+                    <span className="lead">{alert.tone === "urgent" ? "急ぎ" : alert.tone === "warning" ? "確認" : "安心"}</span>
+                    <strong>{alert.title}</strong>
+                    <small>{alert.body}</small>
+                    <span className="chev" aria-hidden="true">›</span>
+                  </a>
+                );
+              })}
             </div>
             <MascotNote
               label="今日の見方"
@@ -1490,7 +1594,7 @@ export default function FamilyBoardPage() {
           </section>
 
           {supportActions.length > 0 ? (
-            <section className="nb-section" aria-label="次に備えること">
+            <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="次に備えること">
               <div className="nb-section-head">
                 <strong>次に備えること</strong>
                 <span className="rule" aria-hidden="true" />
@@ -1498,7 +1602,16 @@ export default function FamilyBoardPage() {
               </div>
               <div className="support-action-list">
                 {supportActions.map((action) => (
-                  <a className="support-action-card" href={action.href} key={action.title}>
+                  <a
+                    className="support-action-card"
+                    href={action.href}
+                    key={action.title}
+                    onClick={(event) => {
+                      if (!action.href.startsWith("#")) return;
+                      event.preventDefault();
+                      openNotebookSection(action.href);
+                    }}
+                  >
                     <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                     <span>{action.label}</span>
                     <div>
@@ -1511,7 +1624,7 @@ export default function FamilyBoardPage() {
             </section>
           ) : null}
 
-          <section className="nb-section" aria-label="記録の控え保存">
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="記録の控え保存">
             <article className={`nb-card cloud-backup-card is-${cloudStatus}`}>
               <div className="cloud-backup-head">
                 <div className="cloud-backup-icon" aria-hidden="true">
@@ -1577,7 +1690,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" aria-label="家族共有">
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="家族共有">
             <article className="nb-card family-entry-card">
               <div>
                 <p className="nb-eyebrow">家族共有</p>
@@ -1588,7 +1701,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" aria-label="長期相談">
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="長期相談">
             <article className="nb-card consult-entry-card">
               <div>
                 <p className="nb-eyebrow">長期相談</p>
@@ -1599,7 +1712,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" id="today-diary">
+          <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary">
             <div className="nb-section-head">
               <strong>今日の記録</strong>
               <span className="rule" aria-hidden="true" />
@@ -1674,7 +1787,7 @@ export default function FamilyBoardPage() {
           </section>
 
           {notebookInsight ? (
-            <section className="nb-section" aria-label="気づきメモ">
+            <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} aria-label="気づきメモ">
               <article className="kizuki-card">
                 <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <span className="tag">気づきメモ</span>
@@ -1700,7 +1813,7 @@ export default function FamilyBoardPage() {
           ) : null}
 
           {journeyCards.length > 0 ? (
-            <section className="nb-section" aria-label="これからの道すじ">
+            <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="これからの道すじ">
               <div className="nb-section-head">
                 <strong>これからの道すじ</strong>
                 <span className="rule" aria-hidden="true" />
@@ -1734,7 +1847,7 @@ export default function FamilyBoardPage() {
             </section>
           ) : null}
 
-          <section className="nb-section" id="diary-history">
+          <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="diary-history">
             <div className="nb-section-head">
               <strong>過去の手帳</strong>
               <span className="rule" aria-hidden="true" />
@@ -1893,7 +2006,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" id="person-profile">
+          <section className={`nb-section ${activeNotebookTab === "profile" ? "" : "is-hidden-tab"}`} id="person-profile">
             <div className="nb-section-head">
               <strong>プロフィール</strong>
               <span className="rule" aria-hidden="true" />
@@ -2076,7 +2189,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" id="task-checklist">
+          <section className={`nb-section ${activeNotebookTab === "tasks" ? "" : "is-hidden-tab"}`} id="task-checklist">
             <div className="nb-section-head">
               <strong>確認リスト</strong>
               <span className="rule" aria-hidden="true" />
@@ -2231,7 +2344,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" id="media-library">
+          <section className={`nb-section ${activeNotebookTab === "media" ? "" : "is-hidden-tab"}`} id="media-library">
             <div className="nb-section-head">
               <strong>写真・資料</strong>
               <span className="rule" aria-hidden="true" />
@@ -2258,7 +2371,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section" aria-label="この手帳を家族で続ける">
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="この手帳を家族で続ける">
             <article className="nb-card companion-panel">
 	              <MascotNote
 	                label="続けるなら"
@@ -2280,7 +2393,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-	          <p className="nb-plus-note">
+	          <p className={`nb-plus-note ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`}>
 	            2人目以降の手帳、容量、月まとめ、長期相談は <Link href="/plans">Plus</Link> で。
 	          </p>
         </div>
