@@ -6069,3 +6069,31 @@ Claudeに渡す時の優先順:
 2. 写真をSupabase Storageへ移す。本実装ではlocalStorageにbase64を残さない。
 3. 期限通知/月1確認の受け皿を、PWA方針に合わせてメール通知へ寄せる。
 4. `apps/web/app/home/page.tsx` が大きくなりすぎているので、`ProfileTab` / `RecordTab` / `TasksTab` / `MediaTab` / hooks に分割する。
+
+## 2026-08-23 追記 165 — GitHub push と本番反映
+
+追記164の補修をコミットしてGitHubへpushし、本番Vercelにも反映した。
+
+コミット:
+
+- `83e1aa7 Patch notebook reliability issues from review`
+- push先: `origin main`
+
+本番:
+
+- 通常URL: `https://oyano-moshimo-navi.vercel.app`
+- Vercel deployment: `https://oyano-moshimo-navi-edc7sz2u4-dogwoodcommunity1.vercel.app`
+- Vercel inspect: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi/DH6taLDwMs16T9JemvLJCS8235ps`
+- readyState: `READY`
+
+本番確認:
+
+- `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- `/home` は `HTTP/2 200`。
+- 主要ページ `/home`, `/start`, `/guides`, `/consult`, `/family`, `/plans`, `/diagnosis`, `/support-pack`, `/manifest.webmanifest`, `/sw.js` などが200。
+- 認証が必要なAPIは401、空相談は400など、スモーク上のガードも期待通り。
+
+注意:
+
+- 未追跡の `review_exports/` はレビュー用生成物なので今回のコミット対象外。
+- 本番に入ったのは、consultモデルID修正、写真3枚/圧縮/警告、PDF添付一時停止、同期競合409、日記更新時の手帳 `updatedAt` 更新。
