@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { statusLabel, targetLabel } from "@oyano/shared";
+import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import {
   addCaseTask,
@@ -1692,7 +1692,7 @@ export default function FamilyBoardPage() {
               <div>
                 <p className="nb-eyebrow">家族共有</p>
                 <h2>同じ手帳を家族にも見せる</h2>
-                <p>病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに1人まで無料です。</p>
+                <p>病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。あなたのほかに{FREE_PLAN_MEMBER_LIMIT}人まで無料です。</p>
               </div>
               <Link className="nb-save" href="/family">家族を招待する</Link>
             </article>

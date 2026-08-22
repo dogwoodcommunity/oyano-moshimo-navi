@@ -231,7 +231,7 @@ export function FamilyShare() {
           先に無料で一緒に使ってみて、足りなくなってからPlusを考えれば大丈夫です。
         </p>
         <p className="family-note">
-          まだクラウド控えを作っていない場合は、先に <Link href="/home">手帳の「大事な記録を消さない」</Link> から保存しておいてください。招待した家族には、控えた内容が見えます。
+          まだクラウド控えを作っていない場合は、先に <Link href="/home">手帳上部の「保存状態」</Link> から保存しておいてください。招待した家族には、控えた内容が見えます。
         </p>
         <div className="family-field">
           <label htmlFor="family-invite-email">招待する人のメールアドレス</label>

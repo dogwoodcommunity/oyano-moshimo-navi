@@ -5259,3 +5259,44 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - レビュー指摘の最重要点「記録が消えない信頼」に対して、まず画面上の保存状態・クラウド控え導線を上部へ出した。
   - 次に進めるなら、localStorage依存をさらに減らすため、匿名開始データをSupabaseへ早期同期する実装、または本物のLLM相談のPlus導線を進める。
   - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 138
+
+- 目的:
+  - 課金価値レビューの「家族共有をPlusの壁の向こうに置くと価値体験と拡散を殺す」という指摘を採用する。
+  - 現状は無料で招待できる人数が「本人以外1人」になっているため、最初の家族会議で兄弟2人まで自然に巻き込めない。
+- 実装方針:
+  - 無料枠を「手帳を作った本人 + 招待家族2人」へ戻す。
+  - `packages/shared/src/plan.ts`、家族共有UI、手帳内の共有カード文言、Supabase RPC SQLの上限を同じ数字にそろえる。
+  - 収益の壁は、2人目以降の対象者、容量拡張、家族会議PDF、AI相談、無制限共有へ置く。
+- 残状態:
+  - この追記時点では実装・検証・commit/push前。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 139
+
+- 実装内容:
+  - 無料の家族招待枠を、手帳を作った本人以外2人までに変更した。
+  - `packages/shared/src/plan.ts` の `FREE_PLAN_MEMBER_LIMIT` を `2` に変更。
+  - `/home` の家族共有カード、`/family` の説明文、`FamilyShare` の共有数表示と保存状態への案内文を更新。
+  - Supabase SQLの `create_family_invite` / `accept_family_invite` の無料枠判定も `2` に統一。
+  - 対象SQLは `supabase/family_invite_rpc.sql`、`supabase/free_plan_member_limit.sql`、`supabase/admin_auth_hardening.sql`。
+- 検証結果:
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 注意:
+  - GitHub/Vercelへ反映しても、本番SupabaseのRPC上限はSQL Editorで `supabase/free_plan_member_limit.sql` を実行するまで変わらない。
+  - UIとAPIコードは2人無料表示になるため、DB側SQLも本番へ流す必要がある。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 140
+
+- GitHub反映準備:
+  - コミット `ad76c68 Allow two free family invitees` を作成。
+  - この追記を同コミットへamendしてから `origin/main` へpush予定。
+  - 内容は、無料の家族招待枠を本人以外2人までに戻し、Web UI、共有文言、Supabase RPC SQLの上限値を統一する変更。
+- 注意:
+  - 本番Supabaseの関数はGitHub pushだけでは変わらないため、あとで `supabase/free_plan_member_limit.sql` をSQL Editorで実行する必要がある。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。

@@ -1,4 +1,4 @@
--- 無料プランの人数上限を1人に下げる。
+-- 無料プランの人数上限を、手帳を作った本人以外2人までにする。
 --
 -- 招待を作る側（create_family_invite）と、受け取る側（accept_family_invite）の
 -- 両方に上限が書かれている。片方だけ直すと、招待は作れないのに受け取りは通る、
@@ -87,7 +87,7 @@ begin
   end if;
 
   -- 無料で招待できる人数。packages/shared/src/plan.ts の FREE_PLAN_MEMBER_LIMIT と揃えること。
-  v_limit := case when v_plan = 'plus' then null else 1 end;
+  v_limit := case when v_plan = 'plus' then null else 2 end;
 
   if v_limit is not null then
     select
@@ -191,7 +191,7 @@ begin
           and fm.user_id is distinct from f.owner_user_id
       -- 無料で受け入れられる人数。packages/shared/src/plan.ts の
       -- FREE_PLAN_MEMBER_LIMIT および create_family_invite の v_limit と揃えること。
-      ) < 1
+      ) < 2
     );
 
   if not found then

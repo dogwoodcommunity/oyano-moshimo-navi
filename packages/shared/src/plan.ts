@@ -11,8 +11,8 @@ export type FamilyPlan = "free" | "plus";
 /** 無料で作れる手帳（対象者）の数。2冊目からPlus。 */
 export const FREE_PLAN_NOTEBOOK_LIMIT = 1;
 
-/** 無料で招待できる人数（手帳を作った本人は数えない）。2人目からPlus。 */
-export const FREE_PLAN_MEMBER_LIMIT = 1;
+/** 無料で招待できる人数（手帳を作った本人は数えない）。3人目からPlus。 */
+export const FREE_PLAN_MEMBER_LIMIT = 2;
 
 export function isPlus(plan: FamilyPlan | string | null | undefined): boolean {
   return plan === "plus";
