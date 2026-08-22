@@ -5376,3 +5376,22 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 注意:
   - 初回typecheckだけ `.next/types` 欠落で失敗したが、buildで再生成後は成功。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 144
+
+- GitHub/Vercel反映:
+  - amend後の実コミットは `c7c6c5e Clarify notebook cloud backup`。
+  - push結果: `ec36876..c7c6c5e main -> main`。
+  - 最初に `apps/web` 直下から `npx vercel deploy --prod --yes` を実行したが、`@oyano/shared: workspace:*` をnpmが解決できず `Unsupported URL Type "workspace:"` で失敗。これは誤った作業ディレクトリからの手動デプロイによるもの。
+  - その後、リポジトリルートから `npx vercel deploy --prod --yes` を実行して成功。
+  - Production URL: `https://oyano-moshimo-navi.vercel.app`
+  - Deployment URL: `https://oyano-moshimo-navi-87e7aw0fm-dogwoodcommunity1.vercel.app`
+  - Deployment ID: `dpl_ApsVg5Hk6mCBKZ8SJ8eXDS8o137d`
+- 本番確認:
+  - `curl -I https://oyano-moshimo-navi.vercel.app/home` は HTTP 200。
+  - `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` は主要ページ/APIガードでOK表示を確認。
+  - ただしスモークスクリプトがOK表示後に終了しなかったため、Ctrl-Cで停止。確認済み表示は `/home`、`/start`、`/guides`、`/crisis`、`/consult`、`/family`、`/manifest.webmanifest`、`/api/health`、auth必須APIの401など。
+- 現在地:
+  - 手帳上部のクラウド控えカードは、未ログイン時に「端末だけ保存の危険」と「メールで控え保存を始める」導線を明確化済み。
+  - 次に進めるなら、クラウド同期をさらに強くするため、初回登録直後に控え保存を促すモーダル/トースト、またはSupabase匿名セッションによる早期バックアップを検討する。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
