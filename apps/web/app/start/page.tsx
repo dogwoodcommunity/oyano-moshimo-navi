@@ -92,12 +92,20 @@ export default function StartPage() {
   return (
     <main className="paper-bg notebook-start-page">
       <section className="toc-header">
-        <button className="toc-back" type="button" onClick={() => router.push("/home")}>
-          ‹ もどる
-        </button>
-        <p className="toc-kicker">1人目の登録</p>
-        <h1>管理する人の、今の状況を選んでください。</h1>
-        <p>父母、義父母、親戚など、対象者はあとで名前を入力できます。まずは近い状況を1つ選びます。</p>
+        <div className="toc-start-brand" aria-label="親のもしもナビ">
+          <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+          <span>
+            <strong>親のもしもナビ</strong>
+            <small>はじめての手帳登録</small>
+          </span>
+        </div>
+        <p className="toc-kicker">ここから始めます</p>
+        <h1>まずは1人だけ、家族の手帳を作ります。</h1>
+        <p>父母、義父母、親戚など、誰でも大丈夫です。最初は名前を入れず、近い状況を1つ選ぶだけで始められます。</p>
+        <div className="toc-first-step" aria-label="最初にすること">
+          <span>最初にすること</span>
+          <strong>下のカードから、いま一番近い状況を1つ押してください。</strong>
+        </div>
       </section>
 
       <section className="start-urgent" aria-label="いま起きている場合">
