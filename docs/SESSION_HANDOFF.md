@@ -5056,7 +5056,6 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - 無料側の機械的な整理は「AI」と呼ばず、Plus側の本物のClaude相談へつなぐ設計にした。
   - 次に進めるなら、確認リストカードから直接編集できるUXを強化する、またはプロフィール編集の保存後に「次に足すとよい項目」を出す。
   - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
-
 ## 2026-08-22 追記 123
 
 - 目的:
@@ -5395,3 +5394,117 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - 手帳上部のクラウド控えカードは、未ログイン時に「端末だけ保存の危険」と「メールで控え保存を始める」導線を明確化済み。
   - 次に進めるなら、クラウド同期をさらに強くするため、初回登録直後に控え保存を促すモーダル/トースト、またはSupabase匿名セッションによる早期バックアップを検討する。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+## 2026-08-22 追記 145 — 5機能を入れた。残りは実機確認とビルド（Codex向け指示）
+
+### いまどうなっているか
+
+前提として、**この製品の本体はアプリ（Expo）**。`apps/web` はアプリがつなぐ
+バックエンドAPIと共通ロジックの置き場であって、独立したWeb製品ではない。
+
+ターゲットはほぼ50代で、機械が得意ではない。目指すのは
+「開けばどんな状況でも冷静に記録でき、次の一手が分かる」
+「ボタンだらけで迷わせず、まずこれ→次これと誘導する」
+「その人の情報を読み込んで対話が続くAI相談」
+「家族と共有して、離れていても変化を見守れて安心」。
+機能を足すかどうかは、この4つに効くかで決める。
+
+追記145の作業（Web反映・無料プラン人数1人のSQL）は完了済み。
+そのうえで、上の狙いに対して足りていなかった5点を実装した。
+
+### 入れた5機能（コミット f61c113、mainへpush済み）
+
+1. **家族ボードに「つぎにやること」を1つだけ出す** `apps/mobile/app/(tabs)/dashboard.tsx`
+   `pickNextAction()` が 期限切れ→担当未定→期限間近→今日の記録 の順で拾い、
+   見出し1つとボタン1つに絞る。相談カードは競合するので下段へ移した。
+2. **AI相談を続きものにした** `packages/shared/src/consult.ts` /
+   `apps/web/lib/consult.ts` / `apps/mobile/app/consult.tsx`
+   前回までの相談と回答の要点を `history` として渡し、プロンプトに
+   「これまでの相談」欄を足した。システム指示に、繰り返さず変化に答えるよう明記。
+   画面は1問1答からスレッドへ（`turns`）。
+3. **記録をタップだけで残せるようにした** `apps/mobile/app/people/[id]/timeline.tsx`
+   動揺している夜に文章は書けない。`quickAnswers` を選ぶだけで保存が成立する。
+   自由文は任意の補足に降格。矛盾する組（薬は飲めた／飲めなかった等4組）は片方だけ残す。
+4. **プロフィールに「つぎに埋めるとよいこと」** `apps/mobile/app/people/[id]/index.tsx`
+   `fieldGuidance` で重要/あるとよいと、埋めると何に役立つかを添える。
+   数字（60%）だけでは次に何をすればいいか分からない。
+5. **家族の遠隔見守り**
+   - `apps/mobile/app/people/[id]/family.tsx` に「最近の家族の動き」（誰が・いつ）
+   - `apps/web/app/api/family/notify/route.ts`（新規）＋ `apps/mobile/lib/mobileData.ts`
+     の `notifyFamilyUpdate()`。記録追加・状態更新で家族へプッシュ。
+
+### 触るとき壊してはいけない判断
+
+- **通知本文に記録の中身もタイトルも入れない。** ロック画面に「危篤」「亡くなった直後」が
+  出る事故は取り返しがつかない。送るのは「誰が・何をしたか」だけ。
+  `notify/route.ts` は `summary` を受け取らない設計にしてある。戻さないこと。
+- **相談メモの保存では家族に通知しない。** 相談はまだ家族に言えない不安を書く場でもある。
+  `addTimelineEntry({ notifyFamily: false })` で抑えている。
+- **相談履歴はサーバー側で必ず絞る。** クライアントを信用すると巨大な履歴が
+  そのまま外部APIへ流れて費用が跳ねる。`api/consult/route.ts` で形を検証し、
+  `lib/consult.ts` で件数と長さを切っている。両方必要。
+- **権限なしと存在しないを同じ返事にする。** `notify/route.ts` の `SILENT_OK`。
+  IDの当てずっぽうで手帳の有無を探れないようにするため。
+
+### 検証済みのこと
+
+- アプリの型チェック（`apps/mobile` で `tsc --noEmit`）= エラーなし
+- Webの型チェック（`apps/web` で `tsc --noEmit`）= エラーなし
+- iOS/Androidともバンドル生成成功（各約2.5MB、Metro経由で実際に生成して確認）
+- 本番反映済み: `api/consult` の履歴検証が効いている（不正な history は400）、
+  `api/family/notify` は404から401（認可が正しく働いている）へ
+- `SUPABASE_SERVICE_ROLE_KEY` は本番に設定済み（push-tokens/register が501でなく401を返すことで確認）
+- `smoke-web.mjs` 全38経路OK
+
+### ここからやること
+
+#### 1. 開発環境の用意（node_modulesが無い状態から始める場合）
+
+pnpm前提だがグローバルには入っていない。corepackを使う。
+
+```
+cd ~/Desktop/oyano-moshimo-navi
+corepack prepare pnpm@9.12.3 --activate
+corepack pnpm install --frozen-lockfile
+```
+
+#### 2. 実機で5機能の画面を見る（未実施。ここが本丸）
+
+```
+cd apps/mobile
+corepack pnpm exec expo start
+```
+
+スマホの Expo Go でQRを読む。見るのは次の5つ。
+
+- 家族ボードを開いた瞬間、「つぎにやること」が**1つだけ**出ていて、押す先が迷わないか
+- 相談で1回聞いたあと「続けて相談する」で、前回を踏まえた答えが返るか
+  （2回目に「その後こうなった」と聞いて、最初から説明し直させられないか）
+- 記録画面で、**何も打たずにタップだけ**で保存できるか
+- 管理手帳で「つぎに埋めるとよいこと」が出て、埋めると消えるか
+- 家族共有に「最近の家族の動き」が出て、誰が書いたか分かるか
+
+50代・非ITの目で見ること。迷ったら、それは実装の問題。
+
+#### 3. EASビルド（配布用。2の確認が済んでから）
+
+`app.json` に `extra.eas.projectId` が**無い**。初期化が要る。
+
+```
+npx eas-cli login
+cd apps/mobile && npx eas-cli init
+corepack pnpm run eas:mobile:build:ios     # rootから
+```
+
+`eas.json` の preview/production には `EXPO_PUBLIC_WEB_BASE_URL` が
+本番URLで入っているので、通知と相談はビルド後に実際に動く。
+
+### 直さずに残したもの（実害なしと判断）
+
+- 通知の送信を待たない（fire-and-forget）。保存自体は成功しているので実害は小さい。
+- 相談の回答後に自動スクロールしない。回答は入力欄の位置に出るので実用上は見える。
+
+### そのあとに残るもの（追記145から引き継ぎ）
+
+- `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
+- プレミアプランを作るかどうか。中身が決まっていない。
+- 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
