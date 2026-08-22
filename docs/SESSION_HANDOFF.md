@@ -4864,3 +4864,13 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 残状態:
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残っている。今回もcommit対象外。
   - 次の操作はcommit/push。
+
+## 2026-08-22 追記 114
+
+- GitHub反映:
+  - `7515db6 Make notebook cloud backup automatic` を `origin/main` へpush済み。
+  - push結果: `d2d7811..7515db6 main -> main`。
+- 現在地:
+  - 家族ボードのクラウド控えは、ログイン済みなら初回同期・空端末なら復元・編集後はデバウンス自動保存まで入った。
+  - 次に進めるなら、レビュー指摘の残りから「本物のAI相談の導線整理」「家族共有2名無料の体験確認」「対象者ページのタブ/手帳感のさらなる整理」の順が現実的。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
