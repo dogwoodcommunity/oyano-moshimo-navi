@@ -213,12 +213,20 @@ export function exportNotebookData(): NotebookExport {
   };
 }
 
+function diaryEntryTimestamp(entry: DiaryEntry) {
+  const timestamp = Date.parse(entry.updatedAt || entry.createdAt);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
 function mergeDiaryEntries(remoteEntries: DiaryEntry[], localEntries: DiaryEntry[]) {
   const merged = new Map<string, DiaryEntry>();
 
   remoteEntries.forEach((entry) => merged.set(entry.id, entry));
   localEntries.forEach((entry) => {
-    if (!merged.has(entry.id)) merged.set(entry.id, entry);
+    const existing = merged.get(entry.id);
+    if (!existing || diaryEntryTimestamp(entry) > diaryEntryTimestamp(existing)) {
+      merged.set(entry.id, entry);
+    }
   });
 
   return Array.from(merged.values())

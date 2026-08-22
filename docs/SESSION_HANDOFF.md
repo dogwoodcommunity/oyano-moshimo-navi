@@ -6267,3 +6267,38 @@ Claude再レビューで指摘された3組テスト前ブロッカー対応後�
 - `review_exports/` はレビュー用生成物のためGit管理外。
 - 最新のコード本体は `5555ada` でpush済み。
 - 有料テストはまだ不可。consult実弾5回、Stripe E2E、メール通知が残っている。
+
+## 2026-08-23 追記 171 — 3組テストGO検収後の最小対応
+
+Claude再レビューで「家族3組テスト: GO。コード側ブロッカーなし。ただし実機確認3つは必須」と検収された。
+
+追加で、ブロッカーではない軽微指摘として「`mergeDiaryEntries` がID衝突時に常にリモート勝ちなので、既存日記をオフライン編集した場合に巻き戻る可能性がある」と指摘されたため、テスト前に小さく修正した。
+
+変更:
+
+- `apps/web/lib/store.ts`
+  - `diaryEntryTimestamp()` を追加。
+  - `mergeDiaryEntries()` で同じ日記IDがremote/localにある場合、`updatedAt || createdAt` が新しい方を残すよう変更。
+  - 新規日記だけでなく、既存日記のローカル編集もクラウド復元時に残りやすくした。
+
+3組テスト用資料:
+
+- `docs/FAMILY_TEST_PROTOCOL.md`
+  - 実機確認3つ、テスト対象、渡すURL、初回に見てもらうこと、観察項目、必ず聞く質問、聞かない質問、判定ラインを整理。
+- `docs/TEST_COOPERATION_REQUEST.md`
+  - LINE/メールで送れるテスト協力お願い文と口頭説明文を作成。
+
+検証:
+
+- `corepack pnpm exec tsc --noEmit` in `apps/web` 成功。
+- `corepack pnpm exec tsc --noEmit` in `apps/mobile` 成功。
+- `git diff --check` 成功。
+
+次にやること:
+
+1. 実機確認3つ:
+   - ログイン済み写真追加後にlocalStorageへdata URLが残らないこと。
+   - 別端末/別ブラウザ復元でStorage写真が署名URLで表示されること。
+   - 意図的409で未送信日記が復元後も残ること。
+2. 家族3組テスト開始。
+3. テストの裏で、有料前必須の consult実弾5回、Stripe E2E、メール通知へ進む。
