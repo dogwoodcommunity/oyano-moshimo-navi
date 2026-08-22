@@ -5300,3 +5300,16 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 注意:
   - 本番Supabaseの関数はGitHub pushだけでは変わらないため、あとで `supabase/free_plan_member_limit.sql` をSQL Editorで実行する必要がある。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 141
+
+- GitHub反映:
+  - amend後の実コミットは `8fd7c65 Allow two free family invitees`。
+  - push結果: `e98a77f..8fd7c65 main -> main`。
+  - 追記140に残っている `ad76c68` はamend前の一時コミット番号。最終的にGitHubへ入ったのは `8fd7c65`。
+- 現在地:
+  - Web UI/APIコード/SQLファイル上は、家族共有の無料枠が「本人以外2人まで」に統一済み。
+  - VercelはGitHub push後に自動デプロイされる想定。
+  - 本番SupabaseのDB関数だけは、SQL Editorで `supabase/free_plan_member_limit.sql` を実行するまで旧上限のままになる可能性がある。
+  - 次に進めるなら、本番SupabaseへこのSQLを流すか、レビューの最重要点である匿名開始データの早期クラウド同期をさらに詰める。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
