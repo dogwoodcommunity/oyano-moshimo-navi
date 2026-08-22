@@ -6097,3 +6097,49 @@ Claudeに渡す時の優先順:
 
 - 未追跡の `review_exports/` はレビュー用生成物なので今回のコミット対象外。
 - 本番に入ったのは、consultモデルID修正、写真3枚/圧縮/警告、PDF添付一時停止、同期競合409、日記更新時の手帳 `updatedAt` 更新。
+
+## 2026-08-23 追記 166 — 日記写真をSupabase Storageへ逃がす実装
+
+Claude再レビューの「写真がlocalStorage base64だけで、消えない手帳の約束と矛盾する」指摘に対して、本実装の第一段を入れた。
+
+対応:
+
+- `apps/web/app/api/notebook/photo-upload-url/route.ts` を追加。
+  - 認証済みユーザーのBearer tokenを検証し、Supabase Storage bucket `home-photos` に署名付きアップロードURLを発行する。
+  - 保存パスは `notebook/{userId}/{uuid}-{safeFileName}`。
+  - jpeg/png/webpのみ、8MBまで。
+  - 住所・表札・鍵番号・位置情報への注意もレスポンスに含める。
+- `apps/web/lib/store.ts`
+  - `DiaryAttachment` に `storageBucket`, `storagePath`, `uploadedAt`, `uploadStatus` を追加。
+- `apps/web/app/home/page.tsx`
+  - 写真追加時、長辺1280px/JPEG品質0.78で圧縮し、端末プレビュー用のData URLとアップロード用Blobを分けた。
+  - メール確認済みでSupabase sessionがある場合は、写真追加時に裏でStorageへアップロードする。
+  - アップロード成功時は添付にStorageの保存先を持たせる。
+  - アップロード失敗時も端末側には追加し、クラウド保管失敗の警告を出す。
+  - PDFは引き続き一時停止。写真は1回の記録につき3枚まで。
+- `apps/web/app/api/notebook/sync/route.ts`
+  - クラウド同期POST時、Storage保存済みの写真はbase64 `previewUrl` をDBへ送らず、bucket/pathだけ保存する。
+  - クラウド復元GET時、Storage保存済み写真に1時間の署名付き表示URLを発行して `previewUrl` に戻す。
+  - local-only写真は従来通り圧縮済みData URLを残す。
+
+判断:
+
+- 未ログイン利用を壊さないため、localStorageプレビューは残す。
+- ただしログイン済みなら写真実体はSupabase Storageにも残るので、「端末履歴削除で写真実体が完全消失する」問題をかなり弱めた。
+- bucket名は既存の `home-photos` を流用した。日記写真専用bucketを作るより、既存SQLと本番bucketを活かす方が今は安全。
+- PDFの実体保存は未実装。PDF UIはまだ出さない方針を維持。
+
+検証:
+
+- `git diff --check` 成功。
+- `corepack pnpm --dir apps/web exec tsc --noEmit` 成功。
+- `corepack pnpm --dir apps/mobile exec tsc --noEmit` 成功。
+- `corepack pnpm --dir apps/web run build` 成功。
+  - Supabase SDKのNode 20非推奨警告は出るが、ビルド自体は成功。
+
+次に残ること:
+
+1. 実機で、メール確認済み状態で写真を追加し、Storage uploadが通るか確認する。
+2. Supabase Storage上に `notebook/{userId}/...` のobjectができているか確認する。
+3. 別端末/別ブラウザでクラウド復元し、写真が署名付きURLで表示されるか確認する。
+4. 期限通知/月1確認をPWA方針に合わせてメール通知へ寄せる。

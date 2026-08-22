@@ -86,6 +86,7 @@ const LOCAL_PHOTO_QUALITY = 0.78;
 
 type PreparedPhoto = {
   attachment: DiaryAttachment;
+  blob: Blob;
   warning?: string;
 };
 
@@ -295,7 +296,7 @@ function diaryTaskTitle(entry: DiaryEntry) {
   return "この日の記録から家族で確認する";
 }
 
-function readFileAsDataUrl(file: File): Promise<string | undefined> {
+function readFileAsDataUrl(file: Blob): Promise<string | undefined> {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined);
@@ -304,11 +305,22 @@ function readFileAsDataUrl(file: File): Promise<string | undefined> {
   });
 }
 
+function canvasToBlob(canvas: HTMLCanvasElement, type: string, quality: number): Promise<Blob | null> {
+  return new Promise((resolve) => canvas.toBlob(resolve, type, quality));
+}
+
+function photoUploadName(fileName: string) {
+  const baseName = fileName.replace(/\.[^.]+$/, "") || "photo";
+  return `${baseName}.jpg`;
+}
+
 async function prepareLocalPhoto(file: File): Promise<PreparedPhoto | null> {
   if (!file.type.startsWith("image/")) return null;
 
   const fallbackUrl = await readFileAsDataUrl(file);
   let previewUrl = fallbackUrl;
+  let uploadBlob: Blob = file;
+  let uploadType = file.type || "image/jpeg";
   let compressedSize = file.size;
   let warning: string | undefined;
 
@@ -329,8 +341,13 @@ async function prepareLocalPhoto(file: File): Promise<PreparedPhoto | null> {
       const context = canvas.getContext("2d");
       if (context) {
         context.drawImage(image, 0, 0, width, height);
-        previewUrl = canvas.toDataURL("image/jpeg", LOCAL_PHOTO_QUALITY);
-        compressedSize = Math.round((previewUrl.length * 3) / 4);
+        const compressedBlob = await canvasToBlob(canvas, "image/jpeg", LOCAL_PHOTO_QUALITY);
+        if (compressedBlob) {
+          uploadBlob = compressedBlob;
+          uploadType = "image/jpeg";
+          compressedSize = compressedBlob.size;
+          previewUrl = await readFileAsDataUrl(compressedBlob) ?? previewUrl;
+        }
       }
     } catch {
       warning = "写真を軽くできませんでした。容量が大きい場合は保存できないことがあります。";
@@ -338,17 +355,19 @@ async function prepareLocalPhoto(file: File): Promise<PreparedPhoto | null> {
   }
 
   if (file.size > compressedSize + 64_000) {
-    warning = "写真を軽くして追加しました。正式な写真保管はクラウド保存の本移行で対応します。";
+    warning = "写真を軽くして追加しました。メール確認済みなら、クラウドにも控え保存します。";
   }
 
   return {
     attachment: {
       id: createLocalId("attachment"),
-      name: file.name,
-      type: "image/jpeg",
+      name: uploadType === "image/jpeg" ? photoUploadName(file.name) : file.name,
+      type: uploadType,
       size: compressedSize,
-      previewUrl
+      previewUrl,
+      uploadStatus: "local"
     },
+    blob: uploadBlob,
     warning
   };
 }
@@ -1350,7 +1369,7 @@ export default function FamilyBoardPage() {
     const slots = Math.max(0, MAX_LOCAL_PHOTO_COUNT - current.files.length);
     if (slots === 0) {
       setRecordStorageTone("warning");
-      setRecordStorageMessage("写真は3枚までにしています。大事な写真だけ残して、正式な写真保管はクラウド移行で対応します。");
+      setRecordStorageMessage("写真は1回の記録につき3枚までにしています。メール確認済みなら、追加した写真はクラウドにも控え保存します。");
       return;
     }
 
@@ -1358,19 +1377,78 @@ export default function FamilyBoardPage() {
     const imageFiles = allFiles.filter((file) => file.type.startsWith("image/")).slice(0, slots);
     const ignoredCount = allFiles.length - imageFiles.length;
     const prepared = (await Promise.all(imageFiles.map(prepareLocalPhoto))).filter(Boolean) as PreparedPhoto[];
-    const warnings = prepared.map((item) => item.warning).filter(Boolean) as string[];
+    const uploadedPrepared = await Promise.all(prepared.map(uploadPreparedPhoto));
+    const warnings = uploadedPrepared.map((item) => item.warning).filter(Boolean) as string[];
+    const uploadedCount = uploadedPrepared.filter((item) => item.attachment.uploadStatus === "uploaded").length;
 
-    updateForm(caseId, { files: [...current.files, ...prepared.map((item) => item.attachment)].slice(0, MAX_LOCAL_PHOTO_COUNT) });
+    updateForm(caseId, { files: [...current.files, ...uploadedPrepared.map((item) => item.attachment)].slice(0, MAX_LOCAL_PHOTO_COUNT) });
 
     if (ignoredCount > 0) {
-      warnings.push("PDFと4枚目以降の写真は、クラウド保管へ移行するまで一時停止しています。いまは写真3枚まで追加できます。");
+      warnings.push("PDFと4枚目以降の写真は一時停止しています。いまは写真3枚まで追加できます。");
     }
     if (warnings.length > 0) {
       setRecordStorageTone("warning");
       setRecordStorageMessage(Array.from(new Set(warnings)).join(" "));
     } else if (prepared.length > 0) {
       setRecordStorageTone("info");
-      setRecordStorageMessage("写真を追加しました。保存ボタンを押すと今日の記録に残ります。");
+      setRecordStorageMessage(
+        uploadedCount > 0
+          ? "写真を追加しました。クラウドにも控え保存しています。保存ボタンを押すと今日の記録に残ります。"
+          : "写真を追加しました。保存ボタンを押すと今日の記録に残ります。メール確認をするとクラウドにも控え保存できます。"
+      );
+    }
+  }
+
+  async function uploadPreparedPhoto(item: PreparedPhoto): Promise<PreparedPhoto> {
+    if (!cloudUserEmail) return item;
+
+    const client = getBrowserSupabase();
+    if (!client) return item;
+
+    const token = await getAccessToken({ silent: true });
+    if (!token) return item;
+
+    try {
+      const response = await fetch("/api/notebook/photo-upload-url", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          fileName: item.attachment.name,
+          contentType: item.attachment.type,
+          fileSizeBytes: item.blob.size
+        })
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok || !result.bucket || !result.storagePath || !result.token) {
+        throw new Error(result.error ?? "写真のクラウド保管に失敗しました。");
+      }
+
+      const { error } = await client.storage
+        .from(result.bucket)
+        .uploadToSignedUrl(result.storagePath, result.token, item.blob, { contentType: item.attachment.type });
+
+      if (error) throw error;
+
+      return {
+        ...item,
+        attachment: {
+          ...item.attachment,
+          storageBucket: result.bucket,
+          storagePath: result.storagePath,
+          uploadedAt: new Date().toISOString(),
+          uploadStatus: "uploaded"
+        }
+      };
+    } catch {
+      return {
+        ...item,
+        warning: [item.warning, "写真のクラウド保管に失敗しました。端末には追加していますが、あとでクラウド保存をもう一度確認してください。"]
+          .filter(Boolean)
+          .join(" ")
+      };
     }
   }
 

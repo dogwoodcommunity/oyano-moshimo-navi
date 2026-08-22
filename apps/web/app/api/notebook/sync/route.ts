@@ -9,6 +9,18 @@ import {
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type AnyRecord = Record<string, any>;
+type ServerSupabase = NonNullable<ReturnType<typeof getServerSupabase>>;
+type NotebookAttachmentSnapshot = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  previewUrl?: string;
+  storageBucket?: string;
+  storagePath?: string;
+  uploadedAt?: string;
+  uploadStatus?: "local" | "uploaded";
+};
 
 type LocalTask = {
   id?: string;
@@ -124,6 +136,45 @@ function taskSnapshot(localCase: LocalCase) {
     assignee: safeText(task.assignee),
     note: safeText(task.note),
     updatedAt: safeIso(task.updatedAt)
+  }));
+}
+
+function attachmentSnapshot(value: unknown): NotebookAttachmentSnapshot[] {
+  return asArray<AnyRecord>(value).slice(0, 10).map((attachment, index) => {
+    const storageBucket = safeText(attachment.storageBucket);
+    const storagePath = safeText(attachment.storagePath);
+    const snapshot: NotebookAttachmentSnapshot = {
+      id: safeText(attachment.id) || `attachment-${index}`,
+      name: safeText(attachment.name) || "写真",
+      type: safeText(attachment.type) || "image/jpeg",
+      size: Number.isFinite(Number(attachment.size)) ? Number(attachment.size) : 0,
+      uploadStatus: storageBucket && storagePath ? "uploaded" : "local"
+    };
+
+    if (storageBucket && storagePath) {
+      snapshot.storageBucket = storageBucket;
+      snapshot.storagePath = storagePath;
+      snapshot.uploadedAt = safeText(attachment.uploadedAt) || undefined;
+    } else {
+      const previewUrl = safeText(attachment.previewUrl);
+      if (previewUrl) snapshot.previewUrl = previewUrl;
+    }
+
+    return snapshot;
+  });
+}
+
+async function attachSignedPhotoPreviews(supabase: ServerSupabase, value: unknown): Promise<NotebookAttachmentSnapshot[]> {
+  const attachments = attachmentSnapshot(value);
+  return Promise.all(attachments.map(async (attachment) => {
+    if (!attachment.storageBucket || !attachment.storagePath) return attachment;
+
+    const { data, error } = await supabase.storage
+      .from(attachment.storageBucket)
+      .createSignedUrl(attachment.storagePath, 60 * 60);
+
+    if (error || !data?.signedUrl) return attachment;
+    return { ...attachment, previewUrl: data.signedUrl };
   }));
 }
 
@@ -394,7 +445,7 @@ export async function GET(request: NextRequest) {
     };
   });
 
-  const diaryEntries = asArray<AnyRecord>(events).map((event) => {
+  const diaryEntries = await Promise.all(asArray<AnyRecord>(events).map(async (event) => {
     const metadata = asRecord(event.metadata);
     return {
       id: String(metadata.localDiaryId || event.id),
@@ -402,10 +453,10 @@ export async function GET(request: NextRequest) {
       date: safeDate(event.event_date),
       mood: ["stable", "changed", "urgent"].includes(event.mood) ? event.mood : "stable",
       body: String(event.body || event.title || ""),
-      attachments: asArray(event.attachments),
+      attachments: await attachSignedPhotoPreviews(supabase, event.attachments),
       createdAt: safeIso(event.created_at)
     };
-  });
+  }));
 
   return NextResponse.json({
     cases,
@@ -579,7 +630,7 @@ export async function POST(request: NextRequest) {
         title: entry.mood === "urgent" ? "急ぎの記録" : entry.mood === "changed" ? "変化の記録" : "日々の記録",
         body: String(entry.body || "記録"),
         mood: ["stable", "changed", "urgent"].includes(entry.mood ?? "") ? entry.mood : "stable",
-        attachments: asArray(entry.attachments),
+        attachments: attachmentSnapshot(entry.attachments),
         metadata: { localDiaryId, localCaseId, syncedAt: now },
         created_by: user.id
       };

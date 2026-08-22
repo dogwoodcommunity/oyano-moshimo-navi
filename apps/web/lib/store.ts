@@ -65,6 +65,10 @@ export type DiaryAttachment = {
   type: string;
   size: number;
   previewUrl?: string;
+  storageBucket?: string;
+  storagePath?: string;
+  uploadedAt?: string;
+  uploadStatus?: "local" | "uploaded";
 };
 
 export type DiaryEntry = {
