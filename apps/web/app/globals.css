@@ -8374,6 +8374,132 @@ textarea {
   padding: 6px 10px;
 }
 
+.record-digest-consult {
+  align-items: center;
+  background: #fff;
+  border: 1.5px solid rgba(47, 110, 130, 0.22);
+  border-radius: 999px;
+  color: #2f6e82;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 14px;
+  text-decoration: none;
+}
+
+.month-review {
+  background:
+    linear-gradient(135deg, rgba(255, 253, 246, 0.98), rgba(248, 251, 245, 0.98)),
+    radial-gradient(circle at 96% 8%, rgba(47, 110, 130, 0.12), transparent 34%);
+  border: 1px solid rgba(214, 224, 212, 0.92);
+  border-left: 6px solid #8aa897;
+  border-radius: 18px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.month-review.is-urgent {
+  border-left-color: #b35b75;
+}
+
+.month-review.is-changed {
+  border-left-color: #b88943;
+}
+
+.month-review span {
+  color: #2f6e82;
+  display: block;
+  font-size: 12px;
+  font-weight: 900;
+  margin-bottom: 4px;
+}
+
+.month-review strong {
+  color: var(--ink);
+  display: block;
+  font-size: 15.5px;
+  font-weight: 900;
+  line-height: 1.5;
+}
+
+.month-review p {
+  color: var(--ink-sub);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.7;
+  margin: 6px 0 0;
+}
+
+.month-review-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.month-review-facts em {
+  background: #fff;
+  border: 1px solid #e1e9de;
+  border-radius: 999px;
+  color: var(--ink);
+  font-size: 11.5px;
+  font-style: normal;
+  font-weight: 900;
+  min-height: 28px;
+  padding: 5px 9px;
+}
+
+.month-review-questions {
+  background: rgba(255, 255, 255, 0.74);
+  border: 1px solid rgba(225, 233, 222, 0.85);
+  border-radius: 14px;
+  padding: 11px 12px;
+}
+
+.month-review-questions ul {
+  display: grid;
+  gap: 5px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.month-review-questions li {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.65;
+  padding-left: 16px;
+  position: relative;
+}
+
+.month-review-questions li::before {
+  background: #2f6e82;
+  border-radius: 999px;
+  content: "";
+  height: 5px;
+  left: 1px;
+  position: absolute;
+  top: 9px;
+  width: 5px;
+}
+
+.month-review-consult {
+  align-items: center;
+  background: #2f6e82;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 40px;
+  padding: 9px 14px;
+  text-decoration: none;
+}
+
 .cloud-backup-card {
   /* .nb-card は余白を持たず、中の .nb-row 側が持つ設計。
      このカードは中身を直接置いているので、自分で余白を持たないと枠に張り付く。 */

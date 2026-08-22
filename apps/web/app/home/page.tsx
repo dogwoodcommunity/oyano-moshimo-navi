@@ -345,6 +345,76 @@ function monthLabel(month: string) {
   return `${Number(rawMonth)}月の記録`;
 }
 
+function buildMonthReview(entries: DiaryEntry[], profile: PersonProfile | undefined) {
+  const text = entries.map((entry) => entry.body).join("\n");
+  const urgentCount = entries.filter((entry) => entry.mood === "urgent").length;
+  const changedCount = entries.filter((entry) => entry.mood === "changed").length;
+  const attachmentCount = entries.reduce((sum, entry) => sum + entry.attachments.length, 0);
+  const facts = [
+    `${entries.length}件の記録`,
+    `変化 ${changedCount + urgentCount}件`,
+    `写真・資料 ${attachmentCount}件`
+  ];
+  let tone: "urgent" | "changed" | "steady" = "steady";
+  let title = "この月は、日々の様子を見返せます";
+  let body = "変化が大きい日だけでなく、いつも通りの日も残っていると、あとから家族で状況を説明しやすくなります。";
+
+  if (urgentCount > 0) {
+    tone = "urgent";
+    title = "急ぎの記録がある月です";
+    body = "急な変化、病院・介護先からの連絡、家族で決めたことを優先して見返してください。";
+  } else if (changedCount > 0) {
+    tone = "changed";
+    title = "変化が残っている月です";
+    body = "通院や家族会議で説明できるように、変化した日とその後の様子を続けて確認しましょう。";
+  } else if (entries.length >= 3) {
+    title = "記録の流れが見えてきています";
+    body = "同じ調子で1行ずつ残すと、数週間後に「いつから変わったか」を家族で振り返れます。";
+  }
+
+  const questions = new Set<string>();
+  if (/退院|在宅|訪問|通院/.test(text)) questions.add("次回通院、訪問サービス、送迎担当は決まっていますか？");
+  if (/薬|服薬|飲み忘れ/.test(text)) questions.add("薬の変更日、飲み忘れ、誰に相談したかを残せていますか？");
+  if (/忘れ|認知|混乱|徘徊|発言/.test(text)) questions.add("実際の発言、日時、場所を事実として残せていますか？");
+  if (/支払|請求|保険|年金/.test(text)) questions.add("支払い・保険・年金の書類の場所は家族で分かりますか？");
+  if (/家|実家|鍵|片付|写真|荷物|書類/.test(text)) questions.add("鍵、重要書類、部屋の状態を写真で残しましたか？");
+  if (!profile?.hospitalOrFacility?.trim()) questions.add("病院・施設・ケア先の窓口はプロフィールに入っていますか？");
+  if (!profile?.emergencyContact?.trim() && !profile?.keyContact?.trim()) questions.add("緊急時に最初に連絡する人は決まっていますか？");
+  if (questions.size === 0) questions.add("次に家族へ共有したいことを1つだけ選ぶなら何ですか？");
+
+  return {
+    tone,
+    title,
+    body,
+    facts,
+    questions: Array.from(questions).slice(0, 3)
+  };
+}
+
+function MonthReview({ entries, profile }: { entries: DiaryEntry[]; profile: PersonProfile | undefined }) {
+  const review = buildMonthReview(entries, profile);
+
+  return (
+    <div className={`month-review is-${review.tone}`}>
+      <div>
+        <span>この月の見返し</span>
+        <strong>{review.title}</strong>
+        <p>{review.body}</p>
+      </div>
+      <div className="month-review-facts" aria-label="この月の集計">
+        {review.facts.map((fact) => <em key={fact}>{fact}</em>)}
+      </div>
+      <div className="month-review-questions">
+        <span>次に確認すること</span>
+        <ul>
+          {review.questions.map((question) => <li key={question}>{question}</li>)}
+        </ul>
+      </div>
+      <Link className="month-review-consult" href="/consult">この記録をもとに相談メモを作る</Link>
+    </div>
+  );
+}
+
 function notebookTitle(name: string) {
   const trimmed = name.trim() || "この人";
   if (trimmed.endsWith("さん") || trimmed.startsWith("お")) return `${trimmed}の手帳`;
@@ -1594,6 +1664,7 @@ export default function FamilyBoardPage() {
                   <div className="record-tags" aria-label="記録から見えるテーマ">
                     {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
                   </div>
+                  <Link className="record-digest-consult" href="/consult">この記録をもとに相談メモを作る</Link>
                 </div>
               ) : null}
               {recentEntries.length > 0 ? (
@@ -1634,6 +1705,7 @@ export default function FamilyBoardPage() {
                             <h3>{monthLabel(group.month)}</h3>
                             <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
                           </div>
+                          <MonthReview entries={group.items} profile={activeProfile} />
                           {group.items.map((entry) => (
                             <article className="diary-entry-card" key={entry.id}>
                               <div className="diary-entry-meta">
