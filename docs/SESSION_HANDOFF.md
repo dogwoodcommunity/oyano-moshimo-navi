@@ -5117,3 +5117,26 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 残状態:
   - この追記時点では実装・commit/push前。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 128
+
+- GitHub反映:
+  - `6f2ab5a Make diary records actionable` を `origin/main` へpush済み。
+  - push結果: `541e5b6..6f2ab5a main -> main`。
+- 実装内容:
+  - `apps/web/lib/store.ts` に `updateDiaryEntry()` と `addCaseTask()` を追加。
+  - `DiaryEntry` に `updatedAt` を追加。
+  - `/home` の過去の手帳を初期表示で開くようにし、summaryを `すべての記録を見返す・編集する` に変更。
+  - 各日記カードに `この記録を編集`、`確認リストに追加`、`相談メモへ` を追加。
+  - 日記編集パネルで日付/本文/通常・変化あり・急ぎを更新できる。
+  - 日記から確認リストへ追加すると、内容に応じたタイトル・期限・優先度でタスクが追加される。
+  - 無料側はAIと言わず `この日のメモから` の確認候補として表示。
+- 確認:
+  - `git diff --check` OK。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build時のSupabase JS Node 20非推奨警告は継続。動作には影響なし。
+- 現在地:
+  - 過去記録は見返し・編集・確認リスト化できる状態。
+  - 次に進めるなら、`/home` の対象者マイページをタブ化（プロフィール/記録/確認リスト/写真）してスクロール長を整理、またはクラウド同期状況/バックアップ訴求の視認性強化。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
