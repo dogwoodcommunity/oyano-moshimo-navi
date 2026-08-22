@@ -29,7 +29,9 @@
     - スマホ幅で追加カードのボタンが詰まらないようCSSも調整。
     - 検証: `git diff --check` OK、`npm run typecheck --workspace web` OK、`npm run build --workspace web` OK。
     - build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
-    - コミット `5137745 Improve checklist editing flow` を作成。この追記を同コミットへamendしてからpush予定。
+    - amend後の実コミットは `26b9eb7 Improve checklist editing flow`。
+    - push結果: `8a9fdd9..26b9eb7 main -> main`。
+    - 本番反映はこの後Vercel deployで確認予定。
   - 直前対応で、無料の家族招待枠は「本人以外2人まで」にコード/SQL上変更済み。GitHub push済み。ただし本番Supabase DBへは `supabase/free_plan_member_limit.sql` をSQL Editorで実行する必要あり。
   - `/home` の家族ボードで、過去記録・変化・次の導線が初見で分かるように、手帳トップへ「記録から見えること」セクションを追加。
   - 記録あり: 最近のまとめ、記録数/変化/写真・資料、記録テーマ、次に見ておくこと、過去記録/今日の記録CTAを表示。
