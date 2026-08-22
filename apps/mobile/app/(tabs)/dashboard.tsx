@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
@@ -29,35 +29,43 @@ function dueLabel(value?: string) {
   return `${days}日後`;
 }
 
+/**
+ * Link asChild は子へ style を渡すため、Pressable の関数形式の style が壊れて
+ * 背景も並びも消える。押した時の反応を残したいので、遷移は router.push で行う。
+ */
 function ConsultCard() {
+  const router = useRouter();
   return (
-    <Link asChild href="/consult">
-      <Pressable style={({ pressed }) => [styles.consultCard, pressed && styles.consultCardPressed]}>
-        <MaterialCommunityIcons color={colors.blue} name="comment-question-outline" size={26} />
-        <View style={styles.consultBody}>
-          <Text style={styles.consultTitle}>この記録を前提に相談する</Text>
-          <Text style={styles.consultHint}>次に確認すること、窓口で聞くことを整理します。毎回ゼロから説明しなくて済みます。</Text>
-        </View>
-        <MaterialCommunityIcons color={colors.muted} name="chevron-right" size={22} />
-      </Pressable>
-    </Link>
+    <Pressable
+      onPress={() => router.push("/consult")}
+      style={({ pressed }) => [styles.consultCard, pressed && styles.consultCardPressed]}
+    >
+      <MaterialCommunityIcons color={colors.blue} name="comment-question-outline" size={26} />
+      <View style={styles.consultBody}>
+        <Text style={styles.consultTitle}>この記録を前提に相談する</Text>
+        <Text style={styles.consultHint}>次に確認すること、窓口で聞くことを整理します。毎回ゼロから説明しなくて済みます。</Text>
+      </View>
+      <MaterialCommunityIcons color={colors.muted} name="chevron-right" size={22} />
+    </Pressable>
   );
 }
 
 function CrisisBanner() {
+  const router = useRouter();
   return (
-    <Link asChild href="/crisis">
-      <Pressable style={({ pressed }) => [styles.crisisBanner, pressed && styles.crisisBannerPressed]}>
-        <View style={styles.crisisBadge}>
-          <Text style={styles.crisisBadgeText}>急なとき</Text>
-        </View>
-        <View style={styles.crisisBody}>
-          <Text style={styles.crisisTitle}>いま、急なことが起きている</Text>
-          <Text style={styles.crisisHint}>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</Text>
-        </View>
-        <MaterialCommunityIcons color={colors.clay} name="chevron-right" size={24} />
-      </Pressable>
-    </Link>
+    <Pressable
+      onPress={() => router.push("/crisis")}
+      style={({ pressed }) => [styles.crisisBanner, pressed && styles.crisisBannerPressed]}
+    >
+      <View style={styles.crisisBadge}>
+        <Text style={styles.crisisBadgeText}>急なとき</Text>
+      </View>
+      <View style={styles.crisisBody}>
+        <Text style={styles.crisisTitle}>いま、急なことが起きている</Text>
+        <Text style={styles.crisisHint}>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</Text>
+      </View>
+      <MaterialCommunityIcons color={colors.clay} name="chevron-right" size={24} />
+    </Pressable>
   );
 }
 
@@ -121,18 +129,22 @@ function pickNextAction(
 }
 
 function NextActionCard({ action }: { action: NextAction }) {
+  const router = useRouter();
   const alert = action.tone === "alert";
   return (
     <View style={[styles.nextCard, alert && styles.nextCardAlert]}>
-      <Text style={[styles.nextKicker, alert && styles.nextKickerAlert]}>つぎにやること</Text>
+      <View style={[styles.nextKicker, alert && styles.nextKickerAlert]}>
+        <Text style={[styles.nextKickerText, alert && styles.nextKickerTextAlert]}>つぎにやること</Text>
+      </View>
       <Text style={styles.nextTitle}>{action.title}</Text>
       <Text style={styles.nextHint}>{action.hint}</Text>
-      <Link asChild href={action.href}>
-        <Pressable style={({ pressed }) => [styles.nextButton, alert && styles.nextButtonAlert, pressed && styles.nextButtonPressed]}>
-          <Text style={styles.nextButtonText}>{action.ctaLabel}</Text>
-          <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
-        </Pressable>
-      </Link>
+      <Pressable
+        onPress={() => router.push(action.href)}
+        style={({ pressed }) => [styles.nextButton, alert && styles.nextButtonAlert, pressed && styles.nextButtonPressed]}
+      >
+        <Text style={styles.nextButtonText}>{action.ctaLabel}</Text>
+        <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
+      </Pressable>
     </View>
   );
 }
@@ -219,7 +231,9 @@ export default function DashboardScreen() {
             <MascotMark size={34} />
             <Text style={styles.kicker}>家族ボード</Text>
           </View>
-          <Text style={styles.statusBadge}>{statusLabel(data.person.currentStatus)}</Text>
+          <View style={styles.statusBadge}>
+            <Text style={styles.statusBadgeText}>{statusLabel(data.person.currentStatus)}</Text>
+          </View>
         </View>
         <Text style={styles.title}>{data.person.displayName}さんの今</Text>
         <Text style={styles.heroBody}>期限、担当、家族で確認したいことを、必要な時に戻れる形で残します。</Text>
@@ -375,18 +389,18 @@ const styles = StyleSheet.create({
     ...shadow
   },
   nextCardAlert: { backgroundColor: "#fff5f6", borderColor: "#c8546c" },
+  // iOSではTextに背景色とoverflow:hiddenを併用すると描画されない。
+  // 角丸の下地はViewで作り、文字はその中のTextに置く。
   nextKicker: {
     alignSelf: "flex-start",
     backgroundColor: "#e7f0e8",
     borderRadius: 999,
-    color: colors.greenDark,
-    fontSize: 12.5,
-    fontWeight: "900",
-    overflow: "hidden",
     paddingHorizontal: 11,
     paddingVertical: 5
   },
-  nextKickerAlert: { backgroundColor: "#fadfe4", color: "#9a3f56" },
+  nextKickerAlert: { backgroundColor: "#fadfe4" },
+  nextKickerText: { color: colors.greenDark, fontSize: 12.5, fontWeight: "900" },
+  nextKickerTextAlert: { color: "#9a3f56" },
   nextTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 30 },
   nextHint: { color: colors.muted, fontSize: 14.5, lineHeight: 23 },
   nextButton: {
@@ -432,7 +446,7 @@ const styles = StyleSheet.create({
   kicker: { color: colors.greenDark, fontWeight: "900" },
   kickerLight: { color: "#cfe2d7", fontWeight: "900" },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900" },
-  countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", minWidth: 34, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6, textAlign: "center" },
+  countBadge: { backgroundColor: colors.surfaceSoft, borderRadius: 14, color: colors.green, fontWeight: "900", minWidth: 34, overflow: "hidden", paddingHorizontal: 10, paddingVertical: 6, textAlign: "center" },
   dangerTitle: { color: "#9a3f56" },
   inlineLink: { color: colors.blue, fontWeight: "900", marginTop: 2 },
   body: { color: colors.muted, flex: 1, lineHeight: 22 },
@@ -474,10 +488,11 @@ const styles = StyleSheet.create({
   sectionTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   stepRow: { alignItems: "center", flexDirection: "row", gap: 10 },
   stepNumber: { backgroundColor: colors.surfaceSoft, borderRadius: 999, color: colors.green, fontWeight: "900", height: 28, lineHeight: 28, textAlign: "center", width: 28 },
-  statusBadge: { backgroundColor: "rgba(21,59,43,0.78)", borderColor: "rgba(255,255,255,0.32)", borderRadius: 999, borderWidth: 1, color: "#fff", fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 5 },
+  statusBadge: { backgroundColor: "rgba(21,59,43,0.78)", borderColor: "rgba(255,255,255,0.32)", borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 5 },
+  statusBadgeText: { color: "#fff", fontSize: 12, fontWeight: "900" },
   taskRow: { alignItems: "flex-start", backgroundColor: "#fffdf7", borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 12 },
   taskText: { flex: 1, gap: 4 },
   taskTitle: { color: colors.ink, fontWeight: "900", lineHeight: 21 },
-  unassignedBadge: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)", borderRadius: 999, borderWidth: 1, color: colors.gold, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
+  unassignedBadge: { backgroundColor: "#fff7e8", borderColor: "rgba(165,111,36,0.24)", borderRadius: 14, borderWidth: 1, color: colors.gold, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
   warningTitle: { color: colors.gold }
 });

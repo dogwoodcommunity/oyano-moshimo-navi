@@ -1,10 +1,14 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { useRouter } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { CRISIS_EMERGENCY_NOTE, CRISIS_SAFETY_NOTE, crisisScenarios } from "@oyano/shared";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function CrisisIndexScreen() {
+  // Link asChild は子へ style を渡すため、Pressable の関数形式の style が壊れる。
+  // 押した時の反応を残すため、遷移は router.push で行う。
+  const router = useRouter();
+
   return (
     <ScrollView contentContainerStyle={styles.content} style={styles.screen}>
       <View style={styles.hero}>
@@ -21,15 +25,17 @@ export default function CrisisIndexScreen() {
 
       <View style={styles.choices}>
         {crisisScenarios.map((scenario) => (
-          <Link asChild href={`/crisis/${scenario.key}`} key={scenario.key}>
-            <Pressable style={({ pressed }) => [styles.choice, pressed && styles.choicePressed]}>
-              <View style={styles.choiceBody}>
-                <Text style={styles.choiceTitle}>{scenario.label}</Text>
-                <Text style={styles.choiceHint}>{scenario.situation}</Text>
-              </View>
-              <MaterialCommunityIcons color={colors.clay} name="chevron-right" size={26} />
-            </Pressable>
-          </Link>
+          <Pressable
+            key={scenario.key}
+            onPress={() => router.push(`/crisis/${scenario.key}`)}
+            style={({ pressed }) => [styles.choice, pressed && styles.choicePressed]}
+          >
+            <View style={styles.choiceBody}>
+              <Text style={styles.choiceTitle}>{scenario.label}</Text>
+              <Text style={styles.choiceHint}>{scenario.situation}</Text>
+            </View>
+            <MaterialCommunityIcons color={colors.clay} name="chevron-right" size={26} />
+          </Pressable>
         ))}
       </View>
 
@@ -38,11 +44,9 @@ export default function CrisisIndexScreen() {
         <Text style={styles.noteBody}>
           まだ急ぎではない、でも不安があるという時は、対象者を1人登録して記録を残すところから始められます。
         </Text>
-        <Link asChild href="/(tabs)/dashboard">
-          <Pressable style={styles.noteButton}>
-            <Text style={styles.noteButtonText}>家族ボードへ</Text>
-          </Pressable>
-        </Link>
+        <Pressable onPress={() => router.push("/(tabs)/dashboard")} style={styles.noteButton}>
+          <Text style={styles.noteButtonText}>家族ボードへ</Text>
+        </Pressable>
       </View>
 
       <Text style={styles.safety}>{CRISIS_SAFETY_NOTE}</Text>

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, useLocalSearchParams } from "expo-router";
 import { Pressable, ScrollView, Share, StyleSheet, Text, TextInput, View } from "react-native";
+import { FREE_PLAN_MEMBER_LIMIT, MEMBER_LIMIT_MESSAGE } from "@oyano/shared";
 import {
   createFamilyInvite,
   fetchFamilyMembers,
@@ -54,7 +55,8 @@ export default function FamilyScreen() {
   const [promotingMemberId, setPromotingMemberId] = useState<string | null>(null);
   const canManageFamily = members.some((member) => member.isCurrentUser && ["owner", "admin"].includes(member.role));
   const invitedFamilyCount = members.filter((member) => member.role !== "owner").length;
-  const freeSlotsLeft = Math.max(0, 2 - invitedFamilyCount);
+  // 無料枠の人数はWeb・サーバーと同じ定数から取る。ここだけ数字を書くと食い違う。
+  const freeSlotsLeft = Math.max(0, FREE_PLAN_MEMBER_LIMIT - invitedFamilyCount);
 
   useEffect(() => {
     fetchFamilyMembers(params.id).then(setMembers);
@@ -79,7 +81,7 @@ export default function FamilyScreen() {
 
     if (result.limitReached) {
       setLimitReached(true);
-      setMessage("3人目以降を招待するにはFamily Plusが必要です。");
+      setMessage(MEMBER_LIMIT_MESSAGE);
       return;
     }
 
@@ -138,7 +140,7 @@ export default function FamilyScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>家族共有</Text>
         <Text style={styles.title}>家族で同じボードを見る</Text>
-        <Text style={styles.body}>担当、期限、写真、メモを家族で確認します。無料ではオーナー以外に2名まで招待できます。</Text>
+        <Text style={styles.body}>{`担当、期限、写真、メモを家族で確認します。無料ではあなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで招待できます。`}</Text>
       </View>
 
       <View style={styles.card}>

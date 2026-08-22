@@ -239,7 +239,7 @@ const styles = StyleSheet.create({
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   brandPill: { alignItems: "center", backgroundColor: "rgba(255,253,247,0.94)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
   brand: { color: colors.greenDark, fontSize: 13, fontWeight: "900" },
-  tag: { backgroundColor: "rgba(21,59,43,0.74)", borderRadius: 999, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
+  tag: { backgroundColor: "rgba(21,59,43,0.74)", borderRadius: 14, color: "#fff", fontSize: 13, fontWeight: "900", overflow: "hidden", paddingHorizontal: 12, paddingVertical: 6 },
   title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 41, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   lead: { color: "rgba(255,253,247,0.92)", fontSize: 16, fontWeight: "700", lineHeight: 26, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   handoffBox: { alignItems: "flex-start", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, flexDirection: "row", gap: 10, padding: 14 },

@@ -251,5 +251,5 @@ const styles = StyleSheet.create({
   itemHeader: { alignItems: "center", flexDirection: "row", gap: 8, justifyContent: "space-between" },
   itemTitle: { color: colors.ink, flex: 1, fontSize: 16, fontWeight: "900", lineHeight: 22 },
   itemMeta: { color: colors.green, fontSize: 12, fontWeight: "900" },
-  statusBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 }
+  statusBadge: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 14, borderWidth: 1, color: colors.greenDark, fontSize: 12, fontWeight: "900", overflow: "hidden", paddingHorizontal: 8, paddingVertical: 4 }
 });

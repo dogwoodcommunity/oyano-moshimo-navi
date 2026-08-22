@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   error: { color: colors.rose, fontSize: 13.5, fontWeight: "800", lineHeight: 22 },
   answerBody: { color: colors.ink, fontSize: 14.5, lineHeight: 26 },
   turnQuestion: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 6, marginBottom: 4, padding: 14 },
-  turnBadge: { alignSelf: "flex-start", backgroundColor: "#e7f0e8", borderRadius: 999, color: colors.greenDark, fontSize: 11.5, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 4 },
+  turnBadge: { alignSelf: "flex-start", backgroundColor: "#e7f0e8", borderRadius: 14, color: colors.greenDark, fontSize: 11.5, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 4 },
   turnQuestionText: { color: colors.ink, fontSize: 15, fontWeight: "800", lineHeight: 23 },
   check: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 4, padding: 14 },
   checkTitle: { color: colors.ink, fontSize: 14.5, fontWeight: "900", lineHeight: 23 },
