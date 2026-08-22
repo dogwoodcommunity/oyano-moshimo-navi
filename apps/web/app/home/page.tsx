@@ -53,6 +53,7 @@ type RecordFilter = "all" | "changed" | "attachments";
 type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
 type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
 type NotebookTab = "overview" | "record" | "profile" | "tasks" | "media";
+type HandbookStepState = "done" | "now" | "next";
 type NotebookSyncPayload = {
   cases: CaseRecord[];
   diaryEntries: DiaryEntry[];
@@ -65,6 +66,12 @@ const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
   { id: "tasks", label: "確認", note: "やること" },
   { id: "media", label: "写真", note: "資料" }
 ];
+
+const handbookStepLabels: Record<HandbookStepState, string> = {
+  done: "入力あり",
+  now: "次におすすめ",
+  next: "あとで"
+};
 
 const emptyDiaryForm: DiaryFormState = {
   body: "",
@@ -911,6 +918,8 @@ export default function FamilyBoardPage() {
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
   const visibleSupportActions = isSharedFamilyMember ? supportActions.filter((action) => action.href !== "/plans") : supportActions;
+  const activeCaseIndex = activeCase ? cases.findIndex((caseRecord) => caseRecord.id === activeCase.id) : -1;
+  const activeCaseOrdinal = activeCaseIndex >= 0 ? `${activeCaseIndex + 1}人目` : "この人";
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
   const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
   const unassignedTaskCount = openTasks.filter((task) => !task.assignee?.trim()).length;
@@ -935,6 +944,66 @@ export default function FamilyBoardPage() {
   const profileNextCopy = activeMissingProfileItems[0]
     ? `${activeMissingProfileItems[0]}を足すと、相談や共有がしやすくなります`
     : "基本情報はそろっています。変化があれば更新できます";
+  const handbookSteps = activeCase ? [
+    {
+      key: "profile",
+      title: "本人プロフィール",
+      body: profileNextCopy,
+      href: "#profile-edit-fields",
+      action: "編集する",
+      value: `${activeProfileCompletion.percent}%`,
+      state: activeProfileCompletion.percent >= 85 ? "done" : "now"
+    },
+    {
+      key: "record",
+      title: "日々の記録",
+      body: activeEntries.length > 0
+        ? `${activeEntries.length}件の記録があります。過去の変化を見返せます。`
+        : "今日の体調・発言・病院連絡を1行だけ残します。",
+      href: activeEntries.length > 0 ? "#diary-history" : "#today-diary",
+      action: activeEntries.length > 0 ? "見返す" : "書く",
+      value: `${activeEntries.length}件`,
+      state: activeEntries.length > 0 ? "done" : "now"
+    },
+    {
+      key: "tasks",
+      title: "確認リスト",
+      body: nextTaskCopy,
+      href: "#task-checklist",
+      action: "確認する",
+      value: `${openTasks.length}件`,
+      state: openTasks.length > 0 ? (unassignedTaskCount > 0 ? "now" : "done") : "next"
+    },
+    {
+      key: "media",
+      title: "写真・資料",
+      body: attachments.length > 0
+        ? "写真やPDFが日記にまとまっています。"
+        : "書類・部屋・施設からの紙を、日記に添付できます。",
+      href: "#media-library",
+      action: attachments.length > 0 ? "見る" : "使い方",
+      value: `${attachments.length}件`,
+      state: attachments.length > 0 ? "done" : "next"
+    }
+  ] satisfies {
+    key: string;
+    title: string;
+    body: string;
+    href: string;
+    action: string;
+    value: string;
+    state: HandbookStepState;
+  }[] : [];
+  const handbookDoneCount = handbookSteps.filter((step) => step.state === "done").length;
+  const handbookReadinessPercent = handbookSteps.length > 0 ? Math.round((handbookDoneCount / handbookSteps.length) * 100) : 0;
+  const handbookReadinessCopy = handbookDoneCount >= 3
+    ? "共有や相談に使える手帳に近づいています。変化があった日だけ追記すれば大丈夫です。"
+    : "まずは本人情報・今日の記録・確認リストをそろえると、この人の手帳として使いやすくなります。";
+  const handbookReadinessNote = isSharedFamilyMember
+    ? "あなたは共有メンバーとして、この人の記録・確認リスト・写真を一緒に更新できます。追加課金の手続きは不要です。"
+    : activeCaseIndex <= 0
+      ? "1人目は無料でここまで育てられます。家族に共有したい、2人目も管理したい、記録を前提に相談したいと思った時だけPlusで広げます。"
+      : "2人目以降も、プロフィール・記録・確認リスト・写真がそろうほど家族で使いやすくなります。支払いは家族手帳の作成者がまとめて管理します。";
 
   function tabForHash(hash: string): NotebookTab | undefined {
     if (hash === "#today-diary" || hash === "#diary-history") return "record";
@@ -1683,6 +1752,50 @@ export default function FamilyBoardPage() {
                   <small>日記に添付した写真やPDFを確認</small>
                 </a>
               </div>
+            </article>
+            <article className="nb-card handbook-readiness-panel" aria-label={`${activePersonName}の手帳の育ち具合`}>
+              <div className="handbook-readiness-head">
+                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                <div>
+                  <span>{activeCaseOrdinal}の手帳</span>
+                  <strong>この人の情報が育つほど、共有と相談が役に立ちます。</strong>
+                  <p>{handbookReadinessCopy}</p>
+                </div>
+              </div>
+              <div className="handbook-readiness-score">
+                <div>
+                  <span>手帳の育ち具合</span>
+                  <strong>{handbookReadinessPercent}%</strong>
+                </div>
+                <div className="handbook-readiness-track" aria-hidden="true">
+                  <span style={{ width: `${handbookReadinessPercent}%` }} />
+                </div>
+                <small>{handbookDoneCount}/{handbookSteps.length}項目が使える状態です</small>
+              </div>
+              <div className="handbook-step-list">
+                {handbookSteps.map((step) => (
+                  <a
+                    className={`handbook-step is-${step.state} is-${step.key}`}
+                    href={step.href}
+                    key={step.key}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection(step.href);
+                    }}
+                  >
+                    <span className="handbook-step-mark" aria-hidden="true" />
+                    <div>
+                      <small>{handbookStepLabels[step.state]} · {step.value}</small>
+                      <strong>{step.title}</strong>
+                      <p>{step.body}</p>
+                    </div>
+                    <em>{step.action}</em>
+                  </a>
+                ))}
+              </div>
+              <p className="handbook-readiness-note">
+                {handbookReadinessNote}
+              </p>
             </article>
             <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳の保存状態">
               <div className="cloud-backup-head">
