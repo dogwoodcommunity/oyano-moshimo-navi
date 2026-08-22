@@ -1656,6 +1656,91 @@ export default function FamilyBoardPage() {
             />
           </section>
 
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="記録から見えること">
+            <div className="nb-section-head">
+              <strong>記録から見えること</strong>
+              <span className="rule" aria-hidden="true" />
+              <a
+                className="aside-link"
+                href="#diary-history"
+                onClick={(event) => {
+                  event.preventDefault();
+                  openNotebookSection("#diary-history");
+                }}
+              >
+                過去の記録へ
+              </a>
+            </div>
+            {recordDigest ? (
+              <article className="record-digest-card overview-memory-card">
+                <div className="record-digest-head">
+                  <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                  <div>
+                    <span>最近のまとめ</span>
+                    <strong>{recordDigest.latestLabel}</strong>
+                  </div>
+                </div>
+                <p>{recordDigest.summary}</p>
+                <div className="record-digest-stats" aria-label="記録の集計">
+                  {recordDigest.stats.map((item) => (
+                    <div key={item.label}>
+                      <strong>{item.value}</strong>
+                      <span>{item.label}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="record-tags" aria-label="記録から見えるテーマ">
+                  {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
+                </div>
+                {notebookInsight ? (
+                  <div className="overview-memory-next">
+                    <span>次に見ておくこと</span>
+                    <strong>{notebookInsight.forecastTitle}</strong>
+                    <p>{notebookInsight.forecastBody}</p>
+                  </div>
+                ) : null}
+                <div className="overview-memory-actions">
+                  <a
+                    href="#diary-history"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#diary-history");
+                    }}
+                  >
+                    過去の記録を見る
+                  </a>
+                  <a
+                    href="#today-diary"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#today-diary");
+                    }}
+                  >
+                    今日の記録を書く
+                  </a>
+                </div>
+              </article>
+            ) : (
+              <article className="nb-card overview-empty-memory-card">
+                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                <div>
+                  <span>まだ記録はありません</span>
+                  <strong>まず今日の様子を1行だけ残すと、ここに振り返りが出ます。</strong>
+                  <p>体調、薬、病院とのやりとり、家族に頼んだこと。短くても、あとで見返せる手帳になります。</p>
+                </div>
+                <a
+                  href="#today-diary"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    openNotebookSection("#today-diary");
+                  }}
+                >
+                  今日の記録を書く
+                </a>
+              </article>
+            )}
+          </section>
+
           {supportActions.length > 0 ? (
             <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="次に備えること">
               <div className="nb-section-head">
