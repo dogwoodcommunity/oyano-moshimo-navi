@@ -188,6 +188,23 @@ export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries:
   writeDiaryEntries(input.diaryEntries);
 }
 
+export function resetLocalNotebookData() {
+  memoryCases = [];
+  memoryDiaryEntries = [];
+
+  const storage = getLocalStorage();
+  if (!storage) return;
+
+  try {
+    storage.removeItem(STORAGE_KEY);
+    storage.removeItem(DIARY_STORAGE_KEY);
+    storage.removeItem(PLAN_STORAGE_KEY);
+  } catch {
+    // If storage removal is blocked, the in-memory state above still gives
+    // the current session a fresh start.
+  }
+}
+
 export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
   const entry: DiaryEntry = {
     ...input,

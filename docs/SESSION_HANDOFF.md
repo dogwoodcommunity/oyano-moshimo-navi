@@ -5702,3 +5702,26 @@ xcrun simctl io $SIM screenshot /tmp/shot.png
    「今日の手帳」「次に整えること」が出ているか確認する。
 2. まだ「しょぼい」と感じる場合は、次はカードの見た目ではなく、日記の履歴表示を月別タイムライン化し、
    記録から「最近の変化」「次に家族へ聞くこと」がもっと目立つようにする。
+
+## 2026-08-22 追記 150 — レビュー用に0人状態から登録画面を開けるURLを追加
+
+ユーザーから「誰かにレビューしてもらう時、0から登録画面からにしてほしい」と依頼があった。
+レビュー相手に既存の家族ボードをいきなり見せるのではなく、最初の登録体験から確認してもらうため、
+以下を実装した。
+
+- ルート `/` は `/home` ではなく `/start` へredirectするように変更。
+- `/start?fresh=1` または `/start?reset=1` を開いた時だけ、その端末のローカル手帳データを削除して
+  0人状態から登録画面を表示する。
+- 削除対象はWeb/PWAのローカル保存だけ。`oyano_cases_v03`、`oyano_diary_entries_v01`、
+  `oyano_plan_v01` を消す。管理トークンやSupabaseセッションには触らない。
+- `fresh/reset` パラメータは実行後にURLから消す。
+
+レビュー相手へ送るURL:
+
+- 通常の登録画面: `https://oyano-moshimo-navi.vercel.app/start`
+- その端末の古いローカル手帳を消して0から見せるレビュー用:
+  `https://oyano-moshimo-navi.vercel.app/start?fresh=1`
+
+確認:
+
+- `apps/web`: `corepack pnpm exec tsc --noEmit` 通過。

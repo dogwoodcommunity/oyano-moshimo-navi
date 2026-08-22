@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
-import { createCase, notebookQuota, NotebookLimitError } from "@/lib/store";
+import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData } from "@/lib/store";
 
 type TocItem = {
   num: string;
@@ -46,10 +46,22 @@ export default function StartPage() {
   // 開いた時点で埋まっているなら、選ばせる前に伝える。
   // 11個の選択肢を読んで押してから断られるのは、いちばん徒労になる。
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("fresh") === "1" || params.get("reset") === "1") {
+      resetLocalNotebookData();
+      params.delete("fresh");
+      params.delete("reset");
+      const nextQuery = params.toString();
+      window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+    }
+
     const quota = notebookQuota();
     if (!quota.canCreate) {
       setChooseError(quota.message);
       setLimitReached(true);
+    } else {
+      setChooseError(null);
+      setLimitReached(false);
     }
   }, []);
 
