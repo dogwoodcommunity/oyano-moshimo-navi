@@ -6174,3 +6174,25 @@ Claude再レビューの「写真がlocalStorage base64だけで、消えない�
 
 - まだ「実機でログイン済み状態の写真追加 → Storage object作成 → 別端末復元」の実弾確認は未実施。
 - 未追跡の `review_exports/` はレビュー用生成物なのでコミット対象外。
+
+## 2026-08-23 追記 168 — Claudeレビュー提出資料を最新版で作成
+
+ユーザーから「資料は？」と聞かれたため、Claudeへ最新レビューを依頼するための資料セットを作成した。
+
+作成場所:
+
+- `review_exports/claude_review_2026-08-23/README_CLAUDE_REVIEW_2026-08-23.md`
+- `review_exports/claude_review_2026-08-23/CLAUDE_REVIEW_PROMPT_2026-08-23.md`
+- `review_exports/claude_review_2026-08-23/ENGINEER_REVIEW_BRIEF_2026-08-23.md`
+- `review_exports/claude_review_2026-08-23/PRODUCT_REVENUE_REVIEW_BRIEF_2026-08-23.md`
+- `review_exports/claude_review_2026-08-23/oyano-moshimo-navi-source-2026-08-23-41795f1.zip`
+
+レビュー対象コミット:
+
+- `41795f1 Record notebook photo storage deployment`
+
+資料の内容:
+
+- 8/22版のClaudeレビュー依頼に、日記写真Storage対応、sync時のbase64除去、Storage写真復元時の署名付きURL発行、consultモデルID修正、同期競合ガード、PDF添付一時停止を反映。
+- Claudeには、家族3組テスト可否、有料テスト可否、Storage/同期/データ消失、RLS/Auth/service role、課金価値、家族共有境界、UXを見てもらう構成。
+- `review_exports/` は従来どおりレビュー用生成物なのでGit管理外。必要ならユーザーがこのフォルダまたはZIPをClaudeに渡す。
