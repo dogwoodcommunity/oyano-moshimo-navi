@@ -9,6 +9,7 @@ import {
 } from "@oyano/shared";
 import { buildConsultPrompt, CONSULT_SYSTEM_PROMPT, CONSULT_TOOL } from "@/lib/consult";
 import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
+import { getServerSupabase } from "@/lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -31,6 +32,103 @@ const FAST_MODE = process.env.CONSULT_FAST_MODE === "1";
 
 function badRequest(message: string) {
   return NextResponse.json({ error: "invalid_request", message }, { status: 400 });
+}
+
+function jsonError(error: string, message: string, status: number) {
+  return NextResponse.json({ error, message }, { status });
+}
+
+async function authorizePlusConsult(request: NextRequest) {
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "長期相談の本人確認を準備中です。手帳への記録はこれまで通り使えます。",
+        503
+      )
+    };
+  }
+
+  const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
+  if (!token) {
+    return {
+      response: jsonError(
+        "login_required",
+        "長期相談は、保存された手帳を前提に使うPlus機能です。先に家族ボードでメール確認をしてください。",
+        401
+      )
+    };
+  }
+
+  const { data: userData, error: userError } = await supabase.auth.getUser(token);
+  const user = userData.user;
+  if (userError || !user) {
+    return {
+      response: jsonError(
+        "login_required",
+        "ログインが確認できませんでした。家族ボードでメール確認をやり直してください。",
+        401
+      )
+    };
+  }
+
+  const { data: memberships, error: membershipError } = await supabase
+    .from("family_members")
+    .select("family_id")
+    .eq("user_id", user.id);
+
+  if (membershipError) {
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
+        503
+      )
+    };
+  }
+
+  const familyIds = (memberships ?? [])
+    .map((membership) => typeof membership.family_id === "string" ? membership.family_id : "")
+    .filter(Boolean);
+
+  if (familyIds.length === 0) {
+    return {
+      response: jsonError(
+        "notebook_cloud_required",
+        "長期相談は、消えない手帳を前提に使います。先に家族ボードでクラウド控えを作ってください。",
+        403
+      )
+    };
+  }
+
+  const { data: families, error: familyError } = await supabase
+    .from("families")
+    .select("plan")
+    .in("id", familyIds);
+
+  if (familyError) {
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
+        503
+      )
+    };
+  }
+
+  const hasPlus = (families ?? []).some((family) => family.plan === "plus");
+  if (!hasPlus) {
+    return {
+      response: jsonError(
+        "plus_required",
+        "長期相談はPlusで使えます。1人目の手帳と基本の記録は無料のまま使えます。",
+        402
+      )
+    };
+  }
+
+  return { userId: user.id };
 }
 
 export async function POST(request: NextRequest) {
@@ -68,6 +166,10 @@ export async function POST(request: NextRequest) {
       return badRequest("相談の続きの情報を読み取れませんでした。");
     }
   }
+
+  const authorized = await authorizePlusConsult(request);
+  if ("response" in authorized) return authorized.response;
+
   if (!hasNotebookSubstance(payload)) {
     return NextResponse.json(
       {

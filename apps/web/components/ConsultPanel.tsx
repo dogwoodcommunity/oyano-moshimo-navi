@@ -10,6 +10,7 @@ import {
   hasNotebookSubstance,
   type ConsultAnswer
 } from "@oyano/shared";
+import { getBrowserSupabase } from "@/lib/browserSupabase";
 import { trackFunnel } from "@/lib/funnel";
 import {
   addDiaryEntry,
@@ -68,13 +69,30 @@ export function ConsultPanel() {
   const [errorMessage, setErrorMessage] = useState("");
   const [saved, setSaved] = useState(false);
   const [hasSubstance, setHasSubstance] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [signedInEmail, setSignedInEmail] = useState("");
 
   useEffect(() => {
+    let cancelled = false;
     const localCases = listLocalCases();
     setCases(localCases);
     setActiveCaseId(localCases[0]?.id);
     setConsent(readConsent());
     setLoaded(true);
+
+    const client = getBrowserSupabase();
+    if (!client) {
+      setAuthChecked(true);
+      return () => { cancelled = true; };
+    }
+
+    void client.auth.getSession().then(({ data }) => {
+      if (cancelled) return;
+      setSignedInEmail(data.session?.user.email ?? "");
+      setAuthChecked(true);
+    });
+
+    return () => { cancelled = true; };
   }, []);
 
   const activeCase = useMemo(
@@ -115,9 +133,29 @@ export function ConsultPanel() {
     }));
 
     try {
+      const client = getBrowserSupabase();
+      if (!client) {
+        setErrorMessage("長期相談の本人確認を準備中です。手帳への記録はこれまで通り使えます。");
+        setPhase("error");
+        return;
+      }
+
+      const { data: sessionData } = await client.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setSignedInEmail("");
+        setAuthChecked(true);
+        setErrorMessage("長期相談は、保存された手帳を前提に使います。先に家族ボードでクラウド控えを作ってください。");
+        setPhase("error");
+        return;
+      }
+
+      setSignedInEmail(sessionData.session?.user.email ?? "");
+      setAuthChecked(true);
+
       const response = await fetch("/api/consult", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({
           question: question.trim(),
           person: {
@@ -137,6 +175,7 @@ export function ConsultPanel() {
       const data = await response.json() as {
         answer?: ConsultAnswer;
         disclaimer?: string;
+        error?: string;
         message?: string;
       };
 
@@ -200,6 +239,21 @@ export function ConsultPanel() {
         </div>
       ) : null}
 
+      <section className="consult-plus-gate" aria-label="長期相談の利用条件">
+        <div>
+          <p className="consult-gate-kicker">Plus内機能</p>
+          <h2>この人の手帳を読んで、次の確認を整理します。</h2>
+          <p>
+            長期相談は、クラウドに控え保存された手帳を前提に使います。
+            {signedInEmail ? ` 現在は ${signedInEmail} で確認済みです。` : " 先に家族ボードでメール確認をしてください。"}
+          </p>
+        </div>
+        <div className="consult-gate-actions">
+          {!signedInEmail && authChecked ? <Link className="secondary" href="/home?cloud=1">クラウド控えを作る</Link> : null}
+          <Link className="secondary" href="/plans#plus">Plusを見る</Link>
+        </div>
+      </section>
+
       <section className="consult-disclosure" aria-label="送る情報">
         <h2>送る情報と、送らない情報</h2>
         <p>相談のたびに、下の内容だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。</p>
@@ -240,12 +294,17 @@ export function ConsultPanel() {
         <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
         <button
           className="consult-submit"
-          disabled={!consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
+          disabled={!authChecked || !signedInEmail || !consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
           onClick={submit}
           type="button"
         >
           {phase === "loading" ? "整理しています…" : "相談メモを作る"}
         </button>
+        {authChecked && !signedInEmail ? (
+          <p className="consult-hint">
+            長期相談は保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
+          </p>
+        ) : null}
         {!hasSubstance ? (
           <p className="consult-hint">
             先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。

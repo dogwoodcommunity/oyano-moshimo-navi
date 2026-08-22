@@ -4874,3 +4874,31 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - 家族ボードのクラウド控えは、ログイン済みなら初回同期・空端末なら復元・編集後はデバウンス自動保存まで入った。
   - 次に進めるなら、レビュー指摘の残りから「本物のAI相談の導線整理」「家族共有2名無料の体験確認」「対象者ページのタブ/手帳感のさらなる整理」の順が現実的。
   - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 115
+
+- 目的:
+  - 課金価値レビューで指摘された「AI相談をPlusの目玉にするなら、見せかけではなく本物のLLM相談として信頼できる境界を置く」に対応。
+  - 既にClaude APIを使う `POST /api/consult` は存在していたが、未ログイン・無料プランでも直接APIを叩ける状態だったため、サーバー側でPlus制限を追加した。
+- 実装:
+  - `apps/web/app/api/consult/route.ts`
+    - `getServerSupabase()` を使い、`Authorization: Bearer <access_token>` の本人確認を必須化。
+    - `family_members` 経由で参加中の家族を取得し、`families.plan` に `plus` が1つでもある場合だけClaudeへ進む。
+    - 未ログインは `401 login_required`、クラウド手帳未作成は `403 notebook_cloud_required`、無料プランは `402 plus_required` で止める。
+    - このチェックはClaude呼び出し・相談APIのレート枠消費より前に置いた。
+  - `apps/web/components/ConsultPanel.tsx`
+    - ブラウザSupabaseのセッションを確認し、相談APIへ `Authorization` ヘッダーを付ける。
+    - 未ログイン時は相談ボタンを押せないようにし、家族ボードのクラウド控え作成へ誘導。
+    - 相談画面上部に「Plus内機能」「クラウド控え保存された手帳が前提」の説明カードを追加。
+  - `apps/web/app/globals.css`
+    - Plus説明カードと未ログイン時ヒントのリンクスタイルを追加。
+- 確認:
+  - `npm run build --workspace web` OK。152ページ生成。
+  - `npm run typecheck --workspace web` OK。
+  - `git diff --check` OK。
+  - 最初にtypecheckとbuildを並列実行した際、buildが `.next/types` を作り直す途中でtypecheckが読み、`TS6053 .next/types... not found` が出た。単独再実行ではOK。
+  - build時のSupabase JS Node 20非推奨警告は継続して出るが、ビルドは成功。
+- 残状態:
+  - この追記時点ではcommit/push前。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+  - 次にやるなら、この差分をcommit/pushし、その後「対象者ページをプロフィール/記録/確認リスト/写真のタブ構成へ分ける」「記録一覧からAI要約・注意サインへ進む」を進める。
