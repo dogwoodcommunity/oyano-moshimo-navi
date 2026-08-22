@@ -6236,3 +6236,34 @@ Claude再レビューで「家族3組テストはOK。ただしlocalStorage prev
 2. 別端末/別ブラウザ復元で、Storage写真が署名URLで表示されることを確認。
 3. 409競合を意図的に起こし、未送信日記が復元後も残ることを確認。
 4. 有料テスト前には、consult実弾5回、Stripe E2E、メール通知の実装/確認がまだ必要。
+
+## 2026-08-23 追記 170 — post-hardening版Claude再レビュー資料を作成
+
+Claude再レビューで指摘された3組テスト前ブロッカー対応後の状態を、もう一度レビューしてもらうための資料セットを作成した。
+
+作成場所:
+
+- `review_exports/claude_review_2026-08-23-post-hardening/README_CLAUDE_REVIEW_2026-08-23_POST_HARDENING.md`
+- `review_exports/claude_review_2026-08-23-post-hardening/CLAUDE_REVIEW_PROMPT_2026-08-23_POST_HARDENING.md`
+- `review_exports/claude_review_2026-08-23-post-hardening/oyano-moshimo-navi-source-2026-08-23-5555ada.zip`
+
+レビュー対象:
+
+- コミット: `5555ada Harden notebook photo sync`
+- 本番URL: `https://oyano-moshimo-navi.vercel.app`
+- 初回導線: `https://oyano-moshimo-navi.vercel.app/start?fresh=1`
+- 家族ボード: `https://oyano-moshimo-navi.vercel.app/home`
+
+レビューで見てもらう中心:
+
+1. Storageアップロード後にdata URL previewがlocalStorageへ残らないか。
+2. 409復元時に未送信日記が消えないか。
+3. sync GETのStorage署名URL発行が同一family範囲に閉じているか。
+4. photo-upload-urlのレート制限と容量クォータが最低限足りているか。
+5. この状態で家族3組テストへ出してよいか。
+
+メモ:
+
+- `review_exports/` はレビュー用生成物のためGit管理外。
+- 最新のコード本体は `5555ada` でpush済み。
+- 有料テストはまだ不可。consult実弾5回、Stripe E2E、メール通知が残っている。
