@@ -1,0 +1,28 @@
+<svg viewBox="0 0 420 112" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="親のもしもナビ">
+  <rect width="420" height="112" rx="24" fill="#FFFDF8"/>
+  <g transform="translate(24 22)">
+    <circle cx="34" cy="34" r="32" fill="#fff" stroke="#33424A" stroke-width="3.6"/>
+    <clipPath id="hat-horizontal">
+      <rect x="0" y="0" width="68" height="17"/>
+    </clipPath>
+    <circle cx="34" cy="17" r="18" fill="#4A8FA6" clip-path="url(#hat-horizontal)"/>
+    <circle cx="21" cy="33" r="3.6" fill="#33424A"/>
+    <circle cx="47" cy="33" r="3.6" fill="#33424A"/>
+    <rect x="28.5" y="38" width="11" height="9.8" rx="2.4" fill="#E8A15D"/>
+    <rect x="28.5" y="40.4" width="11" height="7.2" rx="3.6" fill="#E8A15D"/>
+  </g>
+  <g transform="translate(110 26)">
+    <text x="0" y="30"
+      fill="#26353B"
+      font-family="'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif"
+      font-size="28"
+      font-weight="800"
+      letter-spacing="0">親のもしもナビ</text>
+    <text x="1" y="58"
+      fill="#66787D"
+      font-family="'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif"
+      font-size="13"
+      font-weight="700"
+      letter-spacing="0.18em">家族で進める親の管理帳</text>
+  </g>
+</svg>
