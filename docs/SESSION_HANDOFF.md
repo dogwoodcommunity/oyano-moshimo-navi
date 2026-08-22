@@ -5248,3 +5248,14 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - この追記を同コミットへamendしてから `origin/main` へpush予定。
 - 注意:
   - `review_exports/` は未追跡のまま残している。
+
+## 2026-08-22 追記 137
+
+- GitHub反映:
+  - amend後の実コミットは `a9a49fe Surface notebook cloud save status`。
+  - push結果: `2fcd1a3..a9a49fe main -> main`。
+  - 追記136に残っている `3174df0` はamend前の一時コミット番号。最終的にGitHubへ入ったのは `a9a49fe`。
+- 現在地:
+  - レビュー指摘の最重要点「記録が消えない信頼」に対して、まず画面上の保存状態・クラウド控え導線を上部へ出した。
+  - 次に進めるなら、localStorage依存をさらに減らすため、匿名開始データをSupabaseへ早期同期する実装、または本物のLLM相談のPlus導線を進める。
+  - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
