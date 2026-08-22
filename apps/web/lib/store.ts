@@ -74,6 +74,7 @@ export type DiaryEntry = {
   body: string;
   attachments: DiaryAttachment[];
   createdAt: string;
+  updatedAt?: string;
 };
 
 export type NotebookExport = {
@@ -198,6 +199,25 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
   return entry;
 }
 
+export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry, "id" | "caseId" | "createdAt">>): DiaryEntry | undefined {
+  const entries = readDiaryEntries();
+  const existing = entries.find((item) => item.id === entryId);
+  if (!existing) return undefined;
+
+  const updated: DiaryEntry = {
+    ...existing,
+    ...patch,
+    date: normalizedTaskText(patch.date, existing.date) ?? existing.date,
+    body: normalizedTaskText(patch.body, existing.body) ?? existing.body,
+    mood: patch.mood === "urgent" || patch.mood === "changed" || patch.mood === "stable" ? patch.mood : existing.mood,
+    attachments: Array.isArray(patch.attachments) ? patch.attachments : existing.attachments,
+    updatedAt: new Date().toISOString()
+  };
+
+  writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
+  return updated;
+}
+
 export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>): CaseRecord | undefined {
   const cases = readCases();
   const existing = cases.find((item) => item.id === caseId);
@@ -270,6 +290,39 @@ export function updateCaseTask(caseId: string, taskIndex: number, patch: Partial
     result: {
       ...existing.result,
       tasks
+    }
+  };
+
+  writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
+  return record;
+}
+
+export function addCaseTask(caseId: string, task: Partial<EditableTask> & Pick<EditableTask, "title">): CaseRecord | undefined {
+  const cases = readCases();
+  const existing = cases.find((item) => item.id === caseId);
+  if (!existing?.result) return undefined;
+
+  const now = new Date().toISOString();
+  const nextTask: EditableTask = {
+    status: existing.selectedStatus,
+    title: normalizedTaskText(task.title, "確認すること") ?? "確認すること",
+    description: normalizedTaskText(task.description, "") ?? "",
+    defaultDueOffsetDays: 0,
+    dueDate: normalizedTaskText(task.dueDate, todayDate()) ?? todayDate(),
+    priority: normalizeTaskPriority(task.priority),
+    category: normalizedTaskText(task.category, "diary") ?? "diary",
+    progress: normalizeTaskProgress(task.progress),
+    assignee: normalizedTaskText(task.assignee),
+    note: normalizedTaskText(task.note),
+    id: task.id ?? createLocalId("task"),
+    updatedAt: now
+  };
+
+  const record: CaseRecord = {
+    ...existing,
+    result: {
+      ...existing.result,
+      tasks: [nextTask, ...existing.result.tasks]
     }
   };
 

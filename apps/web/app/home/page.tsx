@@ -5,6 +5,7 @@ import Link from "next/link";
 import { statusLabel, targetLabel } from "@oyano/shared";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import {
+  addCaseTask,
   addDiaryEntry,
   createLocalId,
   diaryAdvice,
@@ -12,6 +13,7 @@ import {
   listDiaryEntries,
   listLocalCases,
   replaceLocalNotebook,
+  updateDiaryEntry,
   updateCaseProfile,
   writePlan,
   updateCaseTask,
@@ -27,6 +29,12 @@ type DiaryFormState = {
   body: string;
   mood: DiaryEntry["mood"];
   files: DiaryAttachment[];
+};
+
+type DiaryEditForm = {
+  date: string;
+  mood: DiaryEntry["mood"];
+  body: string;
 };
 
 type TaskWithDue = NonNullable<CaseRecord["result"]>["tasks"][number];
@@ -141,6 +149,12 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function dateInputAfterDays(days: number) {
+  const date = new Date(`${todayInputValue()}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
 function formatDate(dateString?: string) {
   if (!dateString) return "未設定";
   const date = new Date(`${dateString}T00:00:00`);
@@ -215,6 +229,24 @@ function taskFormSeed(task: TaskWithDue): TaskEditForm {
     assignee: task.assignee ?? "",
     note: task.note ?? ""
   };
+}
+
+function diaryEditSeed(entry: DiaryEntry): DiaryEditForm {
+  return {
+    date: entry.date,
+    mood: entry.mood,
+    body: entry.body
+  };
+}
+
+function diaryTaskTitle(entry: DiaryEntry) {
+  const text = entry.body;
+  if (/薬|服薬|飲み忘れ/.test(text)) return "薬・服薬について確認する";
+  if (/病院|退院|通院|医師|看護|訪問/.test(text)) return "病院・ケア先に次の予定を確認する";
+  if (/認知|忘れ|徘徊|怒|混乱|発言/.test(text)) return "気になる発言・様子を家族で共有する";
+  if (/支払|請求|保険|年金|通帳/.test(text)) return "支払い・書類の場所を確認する";
+  if (/家|実家|鍵|片付|写真|荷物|書類/.test(text)) return "実家・書類の場所を写真で残す";
+  return "この日の記録から家族で確認する";
 }
 
 function readFileAsDataUrl(file: File): Promise<string | undefined> {
@@ -728,6 +760,10 @@ export default function FamilyBoardPage() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<Record<string, DiaryEntry[]>>({});
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
+  const [diaryEditForms, setDiaryEditForms] = useState<Record<string, DiaryEditForm>>({});
+  const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
+  const [diarySavedId, setDiarySavedId] = useState<string | null>(null);
+  const [taskAddedEntryId, setTaskAddedEntryId] = useState<string | null>(null);
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
@@ -808,6 +844,9 @@ export default function FamilyBoardPage() {
 
   useEffect(() => {
     setProfileEditorOpen(false);
+    setEditingDiaryId(null);
+    setDiarySavedId(null);
+    setTaskAddedEntryId(null);
   }, [activeCase?.id]);
 
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
@@ -987,6 +1026,65 @@ export default function FamilyBoardPage() {
       ...current,
       [caseId]: emptyDiaryForm
     }));
+  }
+
+  function openDiaryEditor(entry: DiaryEntry) {
+    setDiaryEditForms((current) => ({
+      ...current,
+      [entry.id]: current[entry.id] ?? diaryEditSeed(entry)
+    }));
+    setEditingDiaryId(entry.id);
+    setDiarySavedId(null);
+  }
+
+  function updateDiaryEditForm(entryId: string, patch: Partial<DiaryEditForm>) {
+    setDiarySavedId(null);
+    setDiaryEditForms((current) => ({
+      ...current,
+      [entryId]: {
+        ...(current[entryId] ?? { date: todayInputValue(), mood: "stable", body: "" }),
+        ...patch
+      }
+    }));
+  }
+
+  function saveDiaryEdit(caseId: string, entryId: string) {
+    const form = diaryEditForms[entryId];
+    if (!form || !form.body.trim()) return;
+
+    const updated = updateDiaryEntry(entryId, {
+      date: form.date,
+      mood: form.mood,
+      body: form.body.trim()
+    });
+    if (!updated) return;
+
+    setDiaryEntries((current) => ({
+      ...current,
+      [caseId]: listDiaryEntries(caseId)
+    }));
+    setDiaryEditForms((current) => ({
+      ...current,
+      [entryId]: diaryEditSeed(updated)
+    }));
+    setEditingDiaryId(null);
+    setDiarySavedId(entryId);
+  }
+
+  function addDiaryTask(caseId: string, entry: DiaryEntry) {
+    const updated = addCaseTask(caseId, {
+      title: diaryTaskTitle(entry),
+      description: `${formatLongDate(entry.date)}の記録から追加: ${entry.body.slice(0, 90)}`,
+      dueDate: dateInputAfterDays(entry.mood === "urgent" ? 1 : 7),
+      priority: entry.mood === "urgent" ? 1 : 2,
+      progress: "todo",
+      assignee: "",
+      note: "日記から確認リストへ追加"
+    });
+    if (!updated) return;
+
+    replaceCaseInState(updated);
+    setTaskAddedEntryId(entry.id);
   }
 
   function reloadNotebookState(nextCases = listLocalCases()) {
@@ -1664,6 +1762,7 @@ export default function FamilyBoardPage() {
                   <div className="record-tags" aria-label="記録から見えるテーマ">
                     {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
                   </div>
+                  <p className="history-card-note">下の「すべての記録」で、過去の日記を直したり、この日のメモから確認リストを作れます。</p>
                   <Link className="record-digest-consult" href="/consult">この記録をもとに相談メモを作る</Link>
                 </div>
               ) : null}
@@ -1679,8 +1778,8 @@ export default function FamilyBoardPage() {
                 <p className="diary-empty">まだ記録はありません。今日の一言から手帳が育ちます。</p>
               )}
               {activeEntries.length > 0 ? (
-                <details className="history-drawer">
-                  <summary>過去の記録を月別にすべて見る ›</summary>
+                <details className="history-drawer" open>
+                  <summary>すべての記録を見返す・編集する ›</summary>
                   <div className="record-filter-tabs" aria-label="記録の絞り込み">
                     {([
                       ["all", "すべて"],
@@ -1706,31 +1805,83 @@ export default function FamilyBoardPage() {
                             <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
                           </div>
                           <MonthReview entries={group.items} profile={activeProfile} />
-                          {group.items.map((entry) => (
-                            <article className="diary-entry-card" key={entry.id}>
-                              <div className="diary-entry-meta">
-                                <time>{formatLongDate(entry.date)}</time>
-                                <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
-                              </div>
-                              <p>{entry.body}</p>
-                              {entry.attachments.length > 0 ? (
-                                <div className="entry-attachments">
-                                  {entry.attachments.slice(0, 3).map((file) => (
-                                    <span key={file.id}>
-                                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
-                                      {file.name}
-                                    </span>
-                                  ))}
+                          {group.items.map((entry) => {
+                            const editForm = diaryEditForms[entry.id] ?? diaryEditSeed(entry);
+                            const isEditing = editingDiaryId === entry.id;
+
+                            return (
+                              <article className={`diary-entry-card ${isEditing ? "is-editing" : ""}`} key={entry.id}>
+                                <div className="diary-entry-meta">
+                                  <time>{formatLongDate(entry.date)}</time>
+                                  <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
                                 </div>
-                              ) : null}
-                              <div className="entry-advice">
-                                <strong>この日のメモから</strong>
-                                <ul>
-                                  {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
-                                </ul>
-                              </div>
-                            </article>
-                          ))}
+                                {isEditing ? (
+                                  <div className="diary-edit-panel" aria-label="日記の編集">
+                                    <label>
+                                      日付
+                                      <input
+                                        type="date"
+                                        value={editForm.date}
+                                        onChange={(event) => updateDiaryEditForm(entry.id, { date: event.target.value })}
+                                      />
+                                    </label>
+                                    <label>
+                                      記録内容
+                                      <textarea
+                                        value={editForm.body}
+                                        onChange={(event) => updateDiaryEditForm(entry.id, { body: event.target.value })}
+                                      />
+                                    </label>
+                                    <div className="mood-segment" aria-label="記録の種類">
+                                      {([
+                                        ["stable", "通常"],
+                                        ["changed", "変化あり"],
+                                        ["urgent", "急ぎ"]
+                                      ] as const).map(([value, label]) => (
+                                        <button
+                                          className={editForm.mood === value ? "is-active" : ""}
+                                          key={value}
+                                          type="button"
+                                          onClick={() => updateDiaryEditForm(entry.id, { mood: value })}
+                                        >
+                                          {label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                    <div className="diary-edit-actions">
+                                      <button type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>記録を保存</button>
+                                      <button type="button" onClick={() => setEditingDiaryId(null)}>閉じる</button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <p>{entry.body}</p>
+                                )}
+                                {entry.attachments.length > 0 ? (
+                                  <div className="entry-attachments">
+                                    {entry.attachments.slice(0, 3).map((file) => (
+                                      <span key={file.id}>
+                                        {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
+                                        {file.name}
+                                      </span>
+                                    ))}
+                                  </div>
+                                ) : null}
+                                <div className="diary-entry-actions">
+                                  <button type="button" onClick={() => openDiaryEditor(entry)}>この記録を編集</button>
+                                  <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>確認リストに追加</button>
+                                  <Link href="/consult">相談メモへ</Link>
+                                </div>
+                                {diarySavedId === entry.id ? <small className="entry-feedback">記録を更新しました。</small> : null}
+                                {taskAddedEntryId === entry.id ? <small className="entry-feedback">確認リストに追加しました。</small> : null}
+                                <div className="entry-advice">
+                                  <strong>この日のメモから</strong>
+                                  <ul>
+                                    {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
+                                  </ul>
+                                </div>
+                              </article>
+                            );
+                          })}
                         </section>
                       ))}
                     </div>
