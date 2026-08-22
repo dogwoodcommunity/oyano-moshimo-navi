@@ -1769,6 +1769,29 @@ export default function FamilyBoardPage() {
                 </div>
                 <small>{activeProfileCompletion.filled}/{activeProfileCompletion.total}項目 入力済み</small>
               </div>
+              <div className="profile-edit-guide">
+                <div>
+                  <strong>基本情報を足すほど、日記・確認リスト・相談が使いやすくなります。</strong>
+                  <p>まずはフルネーム、病院・ケア先、緊急連絡先だけでも入れておくと、家族で同じ前提を持てます。</p>
+                </div>
+                <button type="button" onClick={() => setProfileEditorOpen(true)}>
+                  プロフィールを編集する
+                </button>
+              </div>
+              {activeMissingProfileItems.length > 0 ? (
+                <div className="profile-missing-box" aria-label="未入力のプロフィール項目">
+                  <span>まだ足せる項目</span>
+                  <div>
+                    {activeMissingProfileItems.slice(0, 5).map((item) => <b key={item}>{item}</b>)}
+                    {activeMissingProfileItems.length > 5 ? <b>ほか{activeMissingProfileItems.length - 5}項目</b> : null}
+                  </div>
+                </div>
+              ) : (
+                <div className="profile-missing-box is-complete">
+                  <span>プロフィール</span>
+                  <strong>必要な基本情報はそろっています。変化があればいつでも更新できます。</strong>
+                </div>
+              )}
               <div className="profile-row-grid compact-profile-rows">
                 {summarizeProfile(activeCase, activeProfile ?? {}).map((row) => (
                   <div className={row.value === "未入力" ? "is-missing" : ""} key={row.label}>
@@ -1782,7 +1805,7 @@ export default function FamilyBoardPage() {
                 open={profileEditorOpen || activeProfileCompletion.percent < 85}
                 onToggle={(event) => setProfileEditorOpen(event.currentTarget.open)}
               >
-                <summary>ここを押してプロフィールを編集する</summary>
+                <summary>編集欄を開く・閉じる</summary>
                 {activeProfile ? (
                   <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
                     <label>
