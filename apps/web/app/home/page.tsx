@@ -1851,6 +1851,17 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
+          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="緊急カード">
+            <article className="nb-card emergency-card-entry">
+              <div>
+                <p className="nb-eyebrow">緊急カード</p>
+                <h2>冷蔵庫や手帳に入れる1枚を作る</h2>
+                <p>緊急連絡先、病院・施設、薬の注意だけをA5サイズで印刷できます。重要書類の保管場所は載せません。</p>
+              </div>
+              <Link className="nb-save" href={`/emergency-card/${activeCase.id}`}>緊急カードを印刷する</Link>
+            </article>
+          </section>
+
           <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary">
             <div className="nb-section-head">
               <strong>今日の記録</strong>

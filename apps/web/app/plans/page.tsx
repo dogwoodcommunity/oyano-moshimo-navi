@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
+import { PlanCompletionNotice } from "@/components/PlanCompletionNotice";
 import { PlusUpgrade } from "@/components/PlusUpgrade";
 
 export const metadata: Metadata = {
@@ -7,16 +9,18 @@ export const metadata: Metadata = {
   description: "1人目の管理手帳、家族共有、長期相談。親のもしもナビでできることをまとめています。"
 };
 
+const plusPrice = process.env.NEXT_PUBLIC_PLUS_PRICE_LABEL?.trim() || "月額980円 / 年額9,800円";
+
 const plans = [
   {
     name: "無料",
     price: "0円",
     audience: "まず1人目を整理したい家族",
     items: [
-      "1人目の家族ボード",
-      "状況整理チェック",
-      "初回やることリスト",
-      "日々の記録"
+      "1人目の手帳と家族ボード",
+      `家族招待はあなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`,
+      "日々の記録・確認リスト",
+      "長期相談を初回1回だけおためし"
     ],
     cta: "無料で始める",
     href: "/home",
@@ -24,32 +28,18 @@ const plans = [
   },
   {
     name: "Family Plus",
-    // 価格を決めたら NEXT_PUBLIC_PLUS_PRICE_LABEL に入れる。未設定の間は準備中のまま。
-    price: process.env.NEXT_PUBLIC_PLUS_PRICE_LABEL?.trim() || "準備中",
+    price: plusPrice,
     audience: "2人目以降も管理したい家族",
     items: [
-      "複数対象者の管理",
+      "2人目以降の対象者管理",
+      "家族招待を増やす",
       "写真・PDF容量の拡張",
-      "家族会議用PDF",
-      "履歴保存とカスタム通知"
+      "長期相談を1日5回まで",
+      "家族会議用PDFと月次まとめ"
     ],
     cta: "Plusの手続きへ",
     href: "#plus",
     featured: true
-  },
-  {
-    name: "長期相談",
-    price: "Plus内機能",
-    audience: "毎回説明せずに相談したい人",
-    items: [
-      "対象者プロフィールと日々の記録を前提に整理",
-      "次に確認すること、窓口で聞くことを提示",
-      "今聞くべき質問の提案",
-      "専門判断は断定しない安全設計"
-    ],
-    cta: "相談してみる",
-    href: "/consult",
-    featured: false
   }
 ];
 
@@ -77,9 +67,43 @@ export default function PlansPage() {
           </article>
         ))}
       </section>
-    
-      <PlusUpgrade />
 
-      </main>
+      <section className="panel plan-trust-panel">
+        <p className="pill">解約しても読める</p>
+        <h2>手帳の記録は、あとから見返せることを優先します。</h2>
+        <p>
+          Family Plusをやめても、これまで残した基本の記録は読み返せます。
+          追加対象者、容量拡張、PDF、長期相談などのPlus機能だけが止まります。
+        </p>
+      </section>
+
+      <section className="panel plan-compare">
+        <h2>無料とFamily Plusの違い</h2>
+        <div className="plan-compare-row">
+          <span>対象者</span>
+          <strong>無料: 1人</strong>
+          <strong>Plus: 複数人</strong>
+        </div>
+        <div className="plan-compare-row">
+          <span>家族共有</span>
+          <strong>無料: あなたのほかに{FREE_PLAN_MEMBER_LIMIT}人</strong>
+          <strong>Plus: 人数を増やせる</strong>
+        </div>
+        <div className="plan-compare-row">
+          <span>相談</span>
+          <strong>無料: 初回1回</strong>
+          <strong>Plus: 1日5回</strong>
+        </div>
+        <div className="plan-compare-row">
+          <span>出力</span>
+          <strong>無料: 緊急カード</strong>
+          <strong>Plus: 家族会議PDF</strong>
+        </div>
+      </section>
+
+      <PlanCompletionNotice />
+
+      <PlusUpgrade />
+    </main>
   );
 }

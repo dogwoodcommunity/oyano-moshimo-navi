@@ -1,6 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function PlanTab() {
@@ -17,10 +18,10 @@ export default function PlanTab() {
           <MaterialCommunityIcons color="#fff" name="account-heart-outline" size={24} />
           <Text style={styles.cardTitleLight}>Free</Text>
         </View>
-        <Text style={styles.bodyLight}>親1名、家族招待2名まで、基本の期限通知と家族ボードを使えます。</Text>
+        <Text style={styles.bodyLight}>対象者1名、家族招待はあなたのほかに{FREE_PLAN_MEMBER_LIMIT}人まで、基本の期限通知と家族ボードを使えます。</Text>
         <View style={styles.usageRow}>
           <UsageItem label="親の登録" value="1名" />
-          <UsageItem label="家族招待" value="2名まで" />
+          <UsageItem label="家族招待" value={`${FREE_PLAN_MEMBER_LIMIT}名まで`} />
           <UsageItem label="写真" value="10枚目安" />
         </View>
         <Link href="/account/plan" style={styles.linkLight}>詳しい状態を見る</Link>
@@ -31,15 +32,16 @@ export default function PlanTab() {
           <MaterialCommunityIcons color={colors.green} name="account-group-outline" size={23} />
           <Text style={styles.cardTitle}>Family Plusで扱う範囲</Text>
         </View>
-        <Feature text="複数の親を管理する" />
+        <Feature text="2人目以降を管理する" />
         <Feature text="家族招待を増やす" />
         <Feature text="写真容量と履歴を増やす" />
+        <Feature text="AI相談を1日5回まで使う" />
         <Feature text="家族会議用PDFを出す" />
       </View>
 
       <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>発動サポートパック</Text>
-        <Text style={styles.noticeText}>アプリでは受付済み・確認中・完了などの状態だけを表示します。購入導線は置きません。</Text>
+        <Text style={styles.noticeTitle}>解約しても読める</Text>
+        <Text style={styles.noticeText}>Plusをやめても、これまで残した基本の記録は読み返せます。追加対象者、容量、PDF、AI相談などのPlus機能だけが止まります。</Text>
       </View>
     </ScrollView>
   );

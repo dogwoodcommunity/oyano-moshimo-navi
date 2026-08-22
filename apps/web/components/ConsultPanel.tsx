@@ -31,6 +31,13 @@ const suggestedQuestions = [
 
 type Phase = "idle" | "loading" | "done" | "error";
 type SaveSyncPhase = "idle" | "saving" | "saved" | "local-only" | "error";
+type ConsultAccess = {
+  signedIn: boolean;
+  plan: "free" | "plus";
+  trialAvailable: boolean;
+  trialUsedAt: string | null;
+  canConsult: boolean;
+};
 
 function readConsent(): boolean {
   if (typeof window === "undefined") return false;
@@ -78,6 +85,7 @@ export function ConsultPanel() {
   const [hasSubstance, setHasSubstance] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState("");
+  const [consultAccess, setConsultAccess] = useState<ConsultAccess | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -93,9 +101,15 @@ export function ConsultPanel() {
       return () => { cancelled = true; };
     }
 
-    void client.auth.getSession().then(({ data }) => {
+    void client.auth.getSession().then(async ({ data }) => {
       if (cancelled) return;
+      const token = data.session?.access_token;
       setSignedInEmail(data.session?.user.email ?? "");
+      if (token) {
+        const response = await fetch("/api/consult", { headers: { Authorization: `Bearer ${token}` } });
+        const access = await response.json().catch(() => null) as ConsultAccess | null;
+        if (!cancelled && response.ok && access?.signedIn) setConsultAccess(access);
+      }
       setAuthChecked(true);
     });
 
@@ -196,6 +210,9 @@ export function ConsultPanel() {
 
       setAnswer(data.answer);
       setDisclaimer(data.disclaimer ?? "");
+      const accessResponse = await fetch("/api/consult", { headers: { Authorization: `Bearer ${accessToken}` } });
+      const access = await accessResponse.json().catch(() => null) as ConsultAccess | null;
+      if (accessResponse.ok && access?.signedIn) setConsultAccess(access);
       trackFunnel("consult_asked");
       setPhase("done");
     } catch {
@@ -303,6 +320,7 @@ export function ConsultPanel() {
             長期相談は、クラウドに控え保存された手帳を前提に使います。
             {signedInEmail ? ` 現在は ${signedInEmail} で確認済みです。` : " 先に家族ボードでメール確認をしてください。"}
           </p>
+          {consultAccess ? <ConsultAccessNote access={consultAccess} /> : null}
         </div>
         <div className="consult-gate-actions">
           {!signedInEmail && authChecked ? <Link className="secondary" href="/home?cloud=1">クラウド控えを作る</Link> : null}
@@ -445,4 +463,14 @@ export function ConsultPanel() {
       ) : null}
     </div>
   );
+}
+
+function ConsultAccessNote({ access }: { access: ConsultAccess }) {
+  if (access.plan === "plus") {
+    return <p className="consult-access-note">Family Plusで利用中です。1日5回まで相談できます。</p>;
+  }
+  if (access.trialAvailable) {
+    return <p className="consult-access-note">この家族では、AI相談を1回だけ無料でためせます。成功した時だけ消費します。</p>;
+  }
+  return <p className="consult-access-note">おためし相談は使いました。続きはPlusで使えます。手帳と記録は無料のまま残ります。</p>;
 }

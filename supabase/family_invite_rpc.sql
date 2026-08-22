@@ -92,7 +92,7 @@ begin
   end if;
 
   -- 無料で招待できる人数。packages/shared/src/plan.ts の FREE_PLAN_MEMBER_LIMIT と揃えること。
-  v_limit := case when v_plan = 'plus' then null else 2 end;
+  v_limit := case when v_plan = 'plus' then null else 1 end;
 
   if v_limit is not null then
     select
@@ -196,7 +196,7 @@ begin
           and fm.user_id is distinct from f.owner_user_id
       -- 無料で受け入れられる人数。packages/shared/src/plan.ts の
       -- FREE_PLAN_MEMBER_LIMIT および create_family_invite の v_limit と揃えること。
-      ) < 2
+      ) < 1
     );
 
   if not found then

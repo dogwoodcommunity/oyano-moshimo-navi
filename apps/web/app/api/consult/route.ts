@@ -21,6 +21,19 @@ const PER_CLIENT_DAILY_LIMIT = Number(process.env.CONSULT_CLIENT_DAILY_LIMIT ?? 
 const SERVICE_DAILY_LIMIT = Number(process.env.CONSULT_DAILY_LIMIT ?? 200);
 const ONE_DAY_SECONDS = 86_400;
 
+type ConsultAccessState = {
+  userId: string;
+  familyId: string;
+  plan: "free" | "plus";
+  trialUsedAt: string | null;
+  trialAvailable: boolean;
+  canConsult: boolean;
+  mode: "plus" | "trial" | "locked";
+  trialFamilyId?: string;
+};
+
+type ConsultAccessResult = ConsultAccessState | { response: NextResponse };
+
 /**
  * 時間を食っているのは推論ではなく出力の生成（日本語で約1,800文字）。
  * effortを下げても29秒台のままだったため、出力速度そのものを上げる設定を用意する。
@@ -38,7 +51,11 @@ function jsonError(error: string, message: string, status: number) {
   return NextResponse.json({ error, message }, { status });
 }
 
-async function authorizePlusConsult(request: NextRequest) {
+function isAccessError(result: ConsultAccessResult): result is { response: NextResponse } {
+  return "response" in result;
+}
+
+async function readConsultAccess(request: NextRequest): Promise<ConsultAccessResult> {
   const supabase = getServerSupabase();
   if (!supabase) {
     return {
@@ -104,7 +121,7 @@ async function authorizePlusConsult(request: NextRequest) {
 
   const { data: families, error: familyError } = await supabase
     .from("families")
-    .select("plan")
+    .select("id, plan, consult_trial_used_at")
     .in("id", familyIds);
 
   if (familyError) {
@@ -117,18 +134,79 @@ async function authorizePlusConsult(request: NextRequest) {
     };
   }
 
-  const hasPlus = (families ?? []).some((family) => family.plan === "plus");
-  if (!hasPlus) {
+  const familyRows = (families ?? [])
+    .map((family) => ({
+      id: typeof family.id === "string" ? family.id : "",
+      plan: family.plan === "plus" ? "plus" as const : "free" as const,
+      trialUsedAt: typeof family.consult_trial_used_at === "string" ? family.consult_trial_used_at : null
+    }))
+    .filter((family) => family.id);
+  const plusFamily = familyRows.find((family) => family.plan === "plus");
+  const trialFamily = familyRows.find((family) => !family.trialUsedAt);
+  const primaryFamily = plusFamily ?? trialFamily ?? familyRows[0];
+
+  if (!primaryFamily) {
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
+        503
+      )
+    };
+  }
+
+  if (plusFamily) {
+    return {
+      userId: user.id,
+      familyId: plusFamily.id,
+      plan: "plus",
+      trialUsedAt: plusFamily.trialUsedAt,
+      trialAvailable: false,
+      canConsult: true,
+      mode: "plus"
+    };
+  }
+
+  return {
+    userId: user.id,
+    familyId: primaryFamily.id,
+    plan: "free",
+    trialUsedAt: primaryFamily.trialUsedAt,
+    trialAvailable: Boolean(trialFamily),
+    canConsult: Boolean(trialFamily),
+    mode: trialFamily ? "trial" : "locked",
+    trialFamilyId: trialFamily?.id
+  };
+}
+
+async function authorizePlusConsult(request: NextRequest): Promise<ConsultAccessResult> {
+  const access = await readConsultAccess(request);
+  if (isAccessError(access)) return access;
+
+  if (!access.canConsult) {
     return {
       response: jsonError(
         "plus_required",
-        "長期相談はPlusで使えます。1人目の手帳と基本の記録は無料のまま使えます。",
+        "おためし相談は使いました。続きはPlusで使えます。手帳と記録はこのまま無料で使えます。",
         402
       )
     };
   }
 
-  return { userId: user.id };
+  return access;
+}
+
+export async function GET(request: NextRequest) {
+  const access = await readConsultAccess(request);
+  if (isAccessError(access)) return access.response;
+
+  return NextResponse.json({
+    signedIn: true,
+    plan: access.plan,
+    trialAvailable: access.trialAvailable,
+    trialUsedAt: access.trialUsedAt,
+    canConsult: access.canConsult
+  });
 }
 
 export async function POST(request: NextRequest) {
@@ -168,7 +246,7 @@ export async function POST(request: NextRequest) {
   }
 
   const authorized = await authorizePlusConsult(request);
-  if ("response" in authorized) return authorized.response;
+  if (isAccessError(authorized)) return authorized.response;
 
   if (!hasNotebookSubstance(payload)) {
     return NextResponse.json(
@@ -263,7 +341,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({ answer, disclaimer: CONSULT_DISCLAIMER, model: MODEL });
+    if (authorized.trialFamilyId) {
+      const supabase = getServerSupabase();
+      const usedAt = new Date().toISOString();
+      const { error: trialError } = await supabase!.from("families")
+        .update({ consult_trial_used_at: usedAt, updated_at: usedAt })
+        .eq("id", authorized.trialFamilyId)
+        .is("consult_trial_used_at", null);
+      if (trialError) {
+        console.error("[consult] failed to mark consult trial", trialError);
+      }
+    }
+
+    return NextResponse.json({
+      answer,
+      disclaimer: CONSULT_DISCLAIMER,
+      model: MODEL,
+      consult: {
+        mode: authorized.mode,
+        trialConsumed: Boolean(authorized.trialFamilyId)
+      }
+    });
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
       return NextResponse.json(

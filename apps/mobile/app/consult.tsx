@@ -12,7 +12,13 @@ import {
   CONSULT_WITHHELD_FIELDS,
   type ConsultAnswer
 } from "@oyano/shared";
-import { readConsultConsent, requestConsult, writeConsultConsent } from "@/lib/consult";
+import {
+  fetchConsultAccess,
+  readConsultConsent,
+  requestConsult,
+  writeConsultConsent,
+  type ConsultAccess
+} from "@/lib/consult";
 import { trackFunnel } from "@/lib/funnel";
 import {
   addTimelineEntry,
@@ -45,17 +51,28 @@ export default function ConsultScreen() {
   const [turns, setTurns] = useState<ConsultTurn[]>([]);
   const [disclaimer, setDisclaimer] = useState("");
   const [message, setMessage] = useState("");
+  const [access, setAccess] = useState<ConsultAccess>({
+    signedIn: false,
+    plan: "free",
+    trialAvailable: false,
+    trialUsedAt: null,
+    canConsult: false
+  });
 
   useEffect(() => {
     let mounted = true;
 
     async function load() {
       setConsent(await readConsultConsent());
-      const data = await fetchDashboardData();
+      const [data, consultAccess] = await Promise.all([
+        fetchDashboardData(),
+        fetchConsultAccess()
+      ]);
       if (!mounted) return;
 
       const active = data.person ?? data.people[0] ?? null;
       setPerson(active);
+      setAccess(consultAccess);
 
       if (active) {
         const timeline = await fetchTimelineEntries(active.id);
@@ -121,6 +138,7 @@ export default function ConsultScreen() {
     ]);
     setDisclaimer(result.disclaimer);
     setQuestion("");
+    setAccess(await fetchConsultAccess());
     void trackFunnel("consult_asked");
     setPhase("done");
   }
@@ -175,6 +193,7 @@ export default function ConsultScreen() {
           この人のプロフィールと最近の記録を前提に、いま確認するとよいこと、窓口で聞くこと、相談先の候補を整理します。
           診断や法律・税務の結論は出しません。
         </Text>
+        <ConsultAccessNotice access={access} />
       </View>
 
       <View style={styles.card}>
@@ -263,9 +282,56 @@ export default function ConsultScreen() {
         ) : null}
         {!consent ? <Text style={styles.hint}>送る内容に同意すると押せます。</Text> : null}
         {phase === "asking" ? <Text style={styles.hint}>記録を読んでいます。30秒ほどかかることがあります。</Text> : null}
-        {phase === "error" ? <Text style={styles.error}>{message}</Text> : null}
+        {phase === "error" ? (
+          <View style={styles.errorBox}>
+            <Text style={styles.error}>{message}</Text>
+            {message.includes("Plus") ? (
+              <Link asChild href="/account/plan">
+                <Pressable style={styles.plusButton}>
+                  <Text style={styles.plusButtonText}>Plusの内容を見る</Text>
+                </Pressable>
+              </Link>
+            ) : null}
+          </View>
+        ) : null}
       </View>
     </ScrollView>
+  );
+}
+
+function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
+  if (access.plan === "plus") {
+    return (
+      <View style={styles.accessNotice}>
+        <Text style={styles.accessTitle}>Family Plusで利用中</Text>
+        <Text style={styles.accessText}>1日5回まで、この人の記録をもとに相談できます。</Text>
+      </View>
+    );
+  }
+
+  if (access.trialAvailable) {
+    return (
+      <View style={styles.accessNotice}>
+        <Text style={styles.accessTitle}>1回だけ無料でためせます</Text>
+        <Text style={styles.accessText}>相談に成功した時だけ、おためし枠を使います。失敗では消費しません。</Text>
+      </View>
+    );
+  }
+
+  if (access.signedIn) {
+    return (
+      <View style={styles.accessNoticeMuted}>
+        <Text style={styles.accessTitle}>おためし相談は使いました</Text>
+        <Text style={styles.accessText}>続きはPlusで使えます。手帳と記録はこのまま無料で使えます。</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.accessNoticeMuted}>
+      <Text style={styles.accessTitle}>メール確認後に使えます</Text>
+      <Text style={styles.accessText}>長期相談は、消えない手帳を前提にします。先に家族ボードでメール確認をしてください。</Text>
+    </View>
   );
 }
 
@@ -368,6 +434,10 @@ const styles = StyleSheet.create({
   disclosureItem: { color: colors.muted, fontSize: 12.5, lineHeight: 20 },
   consent: { alignItems: "flex-start", flexDirection: "row", gap: 10, paddingVertical: 4 },
   consentText: { color: colors.ink, flex: 1, fontSize: 13.5, fontWeight: "700", lineHeight: 22 },
+  accessNotice: { backgroundColor: "#eef8ef", borderColor: "#cfe6d4", borderRadius: radius.control, borderWidth: 1, gap: 4, padding: 13 },
+  accessNoticeMuted: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, gap: 4, padding: 13 },
+  accessTitle: { color: colors.greenDark, fontSize: 14, fontWeight: "900" },
+  accessText: { color: colors.muted, fontSize: 12.5, fontWeight: "700", lineHeight: 20 },
   suggestions: { gap: 8 },
   suggestion: { backgroundColor: colors.surfaceSoft, borderRadius: 999, paddingHorizontal: 14, paddingVertical: 10 },
   suggestionText: { color: colors.green, fontSize: 13, fontWeight: "800" },
@@ -402,7 +472,10 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: { color: colors.green, fontSize: 15, fontWeight: "900" },
   hint: { color: colors.muted, fontSize: 12.5, lineHeight: 21 },
+  errorBox: { gap: 10 },
   error: { color: colors.rose, fontSize: 13.5, fontWeight: "800", lineHeight: 22 },
+  plusButton: { alignItems: "center", borderColor: colors.green, borderRadius: 999, borderWidth: 1.5, paddingVertical: 12 },
+  plusButtonText: { color: colors.green, fontSize: 14, fontWeight: "900" },
   answerBody: { color: colors.ink, fontSize: 14.5, lineHeight: 26 },
   turnQuestion: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 6, marginBottom: 4, padding: 14 },
   turnBadge: { alignSelf: "flex-start", backgroundColor: "#e7f0e8", borderRadius: 14, color: colors.greenDark, fontSize: 11.5, fontWeight: "900", overflow: "hidden", paddingHorizontal: 10, paddingVertical: 4 },

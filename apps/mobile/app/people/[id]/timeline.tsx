@@ -218,6 +218,7 @@ export default function TimelineScreen() {
           style={styles.textarea}
           value={body}
         />
+        <Text style={styles.voiceHint}>キーボードのマイクボタンで、話すだけでも書けます。</Text>
 
         <View style={styles.attachmentRow}>
           <Pressable onPress={() => addAttachmentMemo("photo")} style={styles.attachmentButton}>
@@ -288,6 +289,7 @@ const styles = StyleSheet.create({
   kicker: { color: colors.green, fontWeight: "900" },
   title: { color: colors.ink, fontSize: 30, fontWeight: "900", lineHeight: 36 },
   body: { color: colors.muted, lineHeight: 22 },
+  voiceHint: { color: colors.greenDark, fontSize: 12.5, fontWeight: "800", lineHeight: 20, marginTop: -4 },
   card: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 12, padding: 16, ...shadow },
   cardTitleRow: { alignItems: "center", flexDirection: "row", gap: 8 },
   cardTitle: { color: colors.ink, fontSize: 22, fontWeight: "900", lineHeight: 28 },

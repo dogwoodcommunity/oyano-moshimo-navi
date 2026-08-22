@@ -265,7 +265,7 @@ export function FamilyShare() {
         </button>
         {isFull ? (
           <p className="family-note">
-            無料の枠が埋まっています。3人目以降は <Link href="/plans">Plus</Link> で広げられます。
+            無料の枠が埋まっています。さらに家族を招待する場合は <Link href="/plans">Plus</Link> で広げられます。
           </p>
         ) : null}
         {message ? <p className="family-error" role="status">{message}</p> : null}
