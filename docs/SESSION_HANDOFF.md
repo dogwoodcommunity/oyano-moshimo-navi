@@ -26,6 +26,8 @@
   - 記録なし: キャラ付きで「今日の記録を書く」CTAを表示。
   - 検証: `git diff --check` OK、`npm run typecheck --workspace web` OK、`npm run build --workspace web` OK。
   - GitHub: 実装コミット `92de614 Surface notebook record summary` を `main` へpush済み。
+  - 本番デプロイ: `npx vercel --prod --yes` 成功。Deployment ID `dpl_EdFb3i5PFtzwq8GAHT7JtzYYTLvw`、Production URL `https://oyano-moshimo-navi.vercel.app`、Deployment URL `https://oyano-moshimo-navi-8r9m4bdwp-dogwoodcommunity1.vercel.app`。
+  - 本番確認: `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` OK。`curl`で `/home` HTML内の「記録から見えること」文字列確認を試したが、`/home` はクライアント描画中心のため静的HTMLには直接出ず。
 - ユーザー要望: 「レビューしてもらうから資料だして」。
 - 直近のプロダクト判断:
   - 初期の `Web入口 + Expo継続アプリ` 方針から、現在は **PWA/アプリのみで完結する家族の手帳** へ寄せている。
