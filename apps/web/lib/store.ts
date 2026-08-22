@@ -13,6 +13,20 @@ import {
   type ParentStatus
 } from "@oyano/shared";
 
+export type TaskProgress = "todo" | "doing" | "done" | "skipped";
+
+export type EditableTask = DiagnosisResult["tasks"][number] & {
+  id?: string;
+  progress?: TaskProgress;
+  assignee?: string;
+  note?: string;
+  updatedAt?: string;
+};
+
+export type LocalDiagnosisResult = Omit<DiagnosisResult, "tasks"> & {
+  tasks: EditableTask[];
+};
+
 export type CaseRecord = {
   id: string;
   selectedStatus: ParentStatus;
@@ -22,7 +36,7 @@ export type CaseRecord = {
   contactEmail?: string;
   status: "draft" | "submitted" | "result_ready" | "converted";
   createdAt: string;
-  result?: DiagnosisResult;
+  result?: LocalDiagnosisResult;
   handoffToken?: string;
   supportPackStatus?: "none" | "requested" | "paid" | "reviewing" | "report_ready";
 };
@@ -200,6 +214,71 @@ export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>)
 
   writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
   return record;
+}
+
+function normalizeTaskProgress(value: unknown): TaskProgress {
+  return value === "doing" || value === "done" || value === "skipped" ? value : "todo";
+}
+
+function normalizeTaskPriority(value: unknown): 1 | 2 | 3 {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 2;
+  if (numeric <= 1) return 1;
+  if (numeric >= 3) return 3;
+  return 2;
+}
+
+function normalizedTaskText(value: unknown, fallback?: string) {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed ? trimmed : fallback;
+}
+
+export function updateCaseTask(caseId: string, taskIndex: number, patch: Partial<EditableTask>): CaseRecord | undefined {
+  const cases = readCases();
+  const existing = cases.find((item) => item.id === caseId);
+  if (!existing?.result || taskIndex < 0 || taskIndex >= existing.result.tasks.length) return undefined;
+
+  const now = new Date().toISOString();
+  const tasks = existing.result.tasks.map((task, index) => {
+    if (index !== taskIndex) return task;
+
+    const nextTask: EditableTask = {
+      ...task,
+      ...patch,
+      id: task.id ?? patch.id ?? createLocalId("task"),
+      title: normalizedTaskText(patch.title, task.title) ?? "確認すること",
+      description: normalizedTaskText(patch.description, task.description) ?? "",
+      dueDate: normalizedTaskText(patch.dueDate, task.dueDate) ?? todayDate(),
+      priority: normalizeTaskPriority(patch.priority ?? task.priority),
+      progress: normalizeTaskProgress(patch.progress ?? task.progress),
+      updatedAt: now
+    };
+
+    if (Object.prototype.hasOwnProperty.call(patch, "assignee")) {
+      nextTask.assignee = normalizedTaskText(patch.assignee);
+    }
+    if (Object.prototype.hasOwnProperty.call(patch, "note")) {
+      nextTask.note = normalizedTaskText(patch.note);
+    }
+
+    return nextTask;
+  });
+
+  const record: CaseRecord = {
+    ...existing,
+    result: {
+      ...existing.result,
+      tasks
+    }
+  };
+
+  writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
+  return record;
+}
+
+function todayDate() {
+  return new Date().toISOString().slice(0, 10);
 }
 
 export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] {

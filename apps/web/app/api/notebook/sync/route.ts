@@ -11,12 +11,17 @@ import { getServerSupabase } from "@/lib/serverSupabase";
 type AnyRecord = Record<string, any>;
 
 type LocalTask = {
+  id?: string;
   title?: string;
   description?: string;
   dueDate?: string;
   priority?: number;
   category?: string;
   requiresProfessional?: boolean;
+  progress?: string;
+  assignee?: string;
+  note?: string;
+  updatedAt?: string;
 };
 
 type LocalCase = {
@@ -97,6 +102,30 @@ function clampPriority(value: unknown) {
   return Math.min(3, Math.max(1, Math.round(numeric)));
 }
 
+function normalizeTaskProgress(value: unknown) {
+  return value === "doing" || value === "done" || value === "skipped" ? value : "todo";
+}
+
+function safeText(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function taskSnapshot(localCase: LocalCase) {
+  return asArray<LocalTask>(localCase.result?.tasks).slice(0, 40).map((task, index) => ({
+    id: safeText(task.id) || `task-${index}`,
+    title: safeText(task.title) || "確認すること",
+    description: safeText(task.description),
+    dueDate: safeDate(task.dueDate),
+    priority: clampPriority(task.priority),
+    category: safeText(task.category) || "notebook",
+    requiresProfessional: Boolean(task.requiresProfessional),
+    progress: normalizeTaskProgress(task.progress),
+    assignee: safeText(task.assignee),
+    note: safeText(task.note),
+    updatedAt: safeIso(task.updatedAt)
+  }));
+}
+
 function displayNameForCase(localCase: LocalCase) {
   const profile = asRecord(localCase.personProfile);
   const answers = asRecord(localCase.answers);
@@ -122,6 +151,7 @@ function profilePayload(localCase: LocalCase, now: string) {
     localAnswers: asRecord(localCase.answers),
     personProfile: asRecord(localCase.personProfile),
     localResultSummary: localCase.result?.summary ?? null,
+    localTasks: taskSnapshot(localCase),
     syncedAt: now,
     source: "pwa-notebook"
   };
@@ -227,15 +257,30 @@ export async function GET(request: NextRequest) {
     const personProfile = asRecord(profile.personProfile);
     const answers = asRecord(profile.localAnswers);
     const selectedStatus = normalizeStatus(person.current_status || answers.selectedStatus);
-    const localTasks = (tasksByPerson.get(person.id) ?? []).map((task) => ({
+    const profileTasks = asArray<LocalTask>(profile.localTasks).map((task) => ({
+      status: selectedStatus,
+      id: safeText(task.id),
+      title: safeText(task.title) || "確認すること",
+      description: safeText(task.description),
+      defaultDueOffsetDays: 0,
+      priority: clampPriority(task.priority),
+      category: safeText(task.category) || "notebook",
+      requiresProfessional: Boolean(task.requiresProfessional),
+      dueDate: safeDate(task.dueDate),
+      progress: normalizeTaskProgress(task.progress),
+      assignee: safeText(task.assignee),
+      note: safeText(task.note),
+      updatedAt: safeIso(task.updatedAt)
+    }));
+    const dbTasks = (tasksByPerson.get(person.id) ?? []).map((task) => ({
       status: selectedStatus,
       title: task.title,
       description: task.description ?? "",
       defaultDueOffsetDays: 0,
       priority: clampPriority(task.priority),
       category: task.category ?? "notebook",
-      requiresProfessional: Boolean(task.requires_professional),
-      dueDate: safeDate(task.due_date)
+      dueDate: safeDate(task.due_date),
+      progress: normalizeTaskProgress(task.status)
     }));
     const fallbackResult = buildDiagnosisResult({
       selectedStatus,
@@ -260,7 +305,7 @@ export async function GET(request: NextRequest) {
       result: {
         ...fallbackResult,
         summary: String(profile.localResultSummary || fallbackResult.summary),
-        tasks: localTasks.length > 0 ? localTasks : fallbackResult.tasks
+        tasks: profileTasks.length > 0 ? profileTasks : dbTasks.length > 0 ? dbTasks : fallbackResult.tasks
       },
       supportPackStatus: "none"
     };
@@ -375,7 +420,7 @@ export async function POST(request: NextRequest) {
     if (existingTasksError) return jsonError(existingTasksError.message, 500);
 
     const existingTaskRows = asArray<AnyRecord>(existingTasks);
-    for (const task of asArray<LocalTask>(localCase.result?.tasks).slice(0, 40)) {
+    for (const task of taskSnapshot(localCase)) {
       if (!task.title) continue;
       const dueDate = safeDate(task.dueDate);
       const existingTask = existingTaskRows.find((row) => row.title === task.title && safeDate(row.due_date) === dueDate);
@@ -384,10 +429,9 @@ export async function POST(request: NextRequest) {
         title: task.title,
         description: task.description ?? "",
         due_date: dueDate,
-        status: "todo",
+        status: normalizeTaskProgress(task.progress),
         priority: clampPriority(task.priority),
         category: task.category ?? "notebook",
-        requires_professional: Boolean(task.requiresProfessional),
         created_by: user.id,
         updated_at: now
       };

@@ -4779,3 +4779,52 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - `/admin/funnel` を開くための `ADMIN_ACCESS_TOKEN`。値が不明なら再設定する。
 - プレミアプランを作るかどうか。中身が決まっていない。
 - 次に見る数字: `/admin/funnel` の「7日以内に2件目を書いた」割合。
+
+## 2026-08-22 追記 110
+
+- ユーザー依頼:
+  - 「確認リスト」の項目を編集できるようにしてほしい。
+  - プロフィール変更・過去の記録・日記からの相談メモ/アラートが分かりにくいので、Petterの「私のうちの子ログ」のような手帳体験へ近づけたい。
+  - まずは目の前の不整合として、`緊急連絡先と看取り方針を共有する` などの確認リストをその場で直せるようにする。
+- 対応:
+  - `apps/web/lib/store.ts`
+    - `EditableTask` / `TaskProgress` / `LocalDiagnosisResult` を追加。
+    - 確認リストの `title`、`description`、`dueDate`、`priority`、`progress`、`assignee`、`note`、`updatedAt` をローカル手帳に保存できるようにした。
+    - `updateCaseTask(caseId, taskIndex, patch)` を追加し、確認リスト1件単位で更新できるようにした。
+  - `apps/web/app/home/page.tsx`
+    - 確認リストを単なるリンク表示から、編集可能なカードUIへ変更。
+    - 各カードで `進行中`、`完了` の即時更新ができる。
+    - `編集する` から、項目名、内容、期限、担当者、状態、優先度、家族メモを編集できる。
+    - 変更後は画面状態とローカル手帳を更新し、保存完了メッセージを表示する。
+  - `apps/web/app/api/notebook/sync/route.ts`
+    - クラウド同期時に確認リストの編集内容も失われないよう、`people.profile.localTasks` に編集済みタスクスナップショットを保存。
+    - 復元時は `profile.localTasks` を優先し、なければDBの `tasks`、さらに無ければ診断結果の初期タスクから復元する。
+    - `tasks.requires_professional` は本番schemaに存在しないため、同期insert/update対象から外した。
+  - `apps/web/app/globals.css`
+    - 確認リストカード、状態チップ、編集フォーム、スマホ表示用のCSSを追加。
+- 確認:
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。
+  - `git diff --check` OK。
+  - build時にSupabase JSのNode 20非推奨警告は継続して出るが、ビルド自体は成功。
+- 未完了:
+  - まだこの追記時点ではcommit/push前。
+  - Vercel production反映は引き続きVercel認証が必要。GitHub push後にVercel連携が自動deployする可能性はあるが、CLIからの手動本番deployは未認証で止まる。
+  - 次にやるなら、プロフィール編集導線の明確化、過去記録タブ、日記の月別一覧、記録からの注意サイン/相談メモの強化を進める。
+
+## 2026-08-22 追記 111
+
+- 追記110の後処理:
+  - `Make notebook tasks editable` をGitHub側の最新 `main` にrebaseした。
+  - rebase中に `apps/web/app/home/page.tsx` と `docs/SESSION_HANDOFF.md` が競合したが、GitHub側の最新実装（長期相談・危機モード・家族共有など）を残しながら、確認リスト編集機能を統合した。
+  - rebase後のcommitは `e549949 Make notebook tasks editable`。
+- 確認:
+  - `pnpm install` を再実行し、欠けていた `@anthropic-ai/sdk` を含む依存関係を復旧した。
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成、`/guides/[slug]` は100件以上のガイドを生成。
+  - `git diff --check` OK。
+  - build時のSupabase JS Node 20非推奨警告は継続して出るが、ビルドは成功。
+- Git状態:
+  - この追記時点で `main` は `origin/main` より1commit先行。
+  - 未追跡の `review_exports/` は既存のレビュー出力フォルダとして残っているが、今回のcommitには含めない。
+  - 次の操作は `git push origin main`。

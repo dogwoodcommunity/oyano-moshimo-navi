@@ -14,10 +14,13 @@ import {
   replaceLocalNotebook,
   updateCaseProfile,
   writePlan,
+  updateCaseTask,
   type CaseRecord,
   type DiaryAttachment,
   type DiaryEntry,
-  type PersonProfile
+  type EditableTask,
+  type PersonProfile,
+  type TaskProgress
 } from "@/lib/store";
 
 type DiaryFormState = {
@@ -27,6 +30,15 @@ type DiaryFormState = {
 };
 
 type TaskWithDue = NonNullable<CaseRecord["result"]>["tasks"][number];
+type TaskEditForm = {
+  title: string;
+  description: string;
+  dueDate: string;
+  priority: "1" | "2" | "3";
+  progress: Exclude<TaskProgress, "skipped">;
+  assignee: string;
+  note: string;
+};
 type RecordFilter = "all" | "changed" | "attachments";
 type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
 
@@ -161,6 +173,43 @@ function dueText(task?: TaskWithDue) {
   if (days < 0) return `${Math.abs(days)}日超過`;
   if (days === 0) return "今日";
   return `あと${days}日`;
+}
+
+function taskEditKey(caseId: string, taskIndex: number) {
+  return `${caseId}:${taskIndex}`;
+}
+
+function taskPriorityValue(value: TaskEditForm["priority"]): 1 | 2 | 3 {
+  if (value === "1") return 1;
+  if (value === "3") return 3;
+  return 2;
+}
+
+function taskPriorityText(priority?: number) {
+  if (priority === 1) return "急ぎ";
+  if (priority === 3) return "あとで";
+  return "通常";
+}
+
+function taskProgressLabel(progress?: TaskProgress) {
+  if (progress === "done") return "完了";
+  if (progress === "doing") return "進行中";
+  if (progress === "skipped") return "不要";
+  return "未着手";
+}
+
+function taskFormSeed(task: TaskWithDue): TaskEditForm {
+  const priority = task.priority === 1 ? "1" : task.priority === 3 ? "3" : "2";
+  const progress = task.progress === "doing" || task.progress === "done" ? task.progress : "todo";
+  return {
+    title: task.title ?? "",
+    description: task.description ?? "",
+    dueDate: task.dueDate ?? todayInputValue(),
+    priority,
+    progress,
+    assignee: task.assignee ?? "",
+    note: task.note ?? ""
+  };
 }
 
 function readFileAsDataUrl(file: File): Promise<string | undefined> {
@@ -410,8 +459,8 @@ function buildSupportActions(
     actions.push({
       title: "確認リストの担当を決める",
       body: "期限つきの項目は、誰が見るか決めるだけで家族の不安が減ります。",
-      href: `/result/${caseId}`,
-      label: "見る"
+      href: "#task-checklist",
+      label: "決める"
     });
   }
 
@@ -494,7 +543,7 @@ function buildNotebookInsight(
       tone: nextTaskDays < 0 ? "urgent" : "warning",
       title: nextTaskDays < 0 ? "期限を過ぎた確認があります" : "近い期限があります",
       body: `${nextTask.title} は ${dueText(nextTask)} です。担当者を決めて進めましょう。`,
-      href: `/result/${caseId}`
+      href: "#task-checklist"
     });
   }
 
@@ -593,6 +642,9 @@ export default function FamilyBoardPage() {
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
+  const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
+  const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
+  const [taskSavedKey, setTaskSavedKey] = useState<string | null>(null);
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
@@ -715,6 +767,84 @@ export default function FamilyBoardPage() {
       [caseId]: profileSeed(updated)
     }));
     setProfileSavedCaseId(caseId);
+  }
+
+  function openTaskEditor(caseId: string, taskIndex: number, task: TaskWithDue) {
+    const key = taskEditKey(caseId, taskIndex);
+    setTaskForms((current) => ({
+      ...current,
+      [key]: current[key] ?? taskFormSeed(task)
+    }));
+    setEditingTaskKey(key);
+    setTaskSavedKey(null);
+  }
+
+  function updateTaskForm(key: string, patch: Partial<TaskEditForm>) {
+    setTaskSavedKey(null);
+    setTaskForms((current) => ({
+      ...current,
+      [key]: {
+        ...(current[key] ?? {
+          title: "",
+          description: "",
+          dueDate: todayInputValue(),
+          priority: "2",
+          progress: "todo",
+          assignee: "",
+          note: ""
+        }),
+        ...patch
+      }
+    }));
+  }
+
+  function replaceCaseInState(updated: CaseRecord) {
+    setCases((current) => [updated, ...current.filter((item) => item.id !== updated.id)]);
+  }
+
+  function saveTaskEdit(caseId: string, taskIndex: number) {
+    const key = taskEditKey(caseId, taskIndex);
+    const form = taskForms[key];
+    if (!form) return;
+
+    const patch: Partial<EditableTask> = {
+      title: form.title,
+      description: form.description,
+      dueDate: form.dueDate,
+      priority: taskPriorityValue(form.priority),
+      progress: form.progress,
+      assignee: form.assignee,
+      note: form.note
+    };
+    const updated = updateCaseTask(caseId, taskIndex, patch);
+    if (!updated) return;
+
+    const nextTask = updated.result?.tasks[taskIndex];
+    replaceCaseInState(updated);
+    if (nextTask) {
+      setTaskForms((current) => ({
+        ...current,
+        [key]: taskFormSeed(nextTask)
+      }));
+    }
+    setEditingTaskKey(null);
+    setTaskSavedKey(key);
+  }
+
+  function quickUpdateTask(caseId: string, taskIndex: number, patch: Partial<EditableTask>) {
+    const updated = updateCaseTask(caseId, taskIndex, patch);
+    if (!updated) return;
+
+    const key = taskEditKey(caseId, taskIndex);
+    const nextTask = updated.result?.tasks[taskIndex];
+    replaceCaseInState(updated);
+    if (nextTask) {
+      setTaskForms((current) => ({
+        ...current,
+        [key]: taskFormSeed(nextTask)
+      }));
+    }
+    setTaskSavedKey(key);
   }
 
   async function attachFiles(caseId: string, fileList: FileList | null) {
@@ -1472,7 +1602,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className="nb-section">
+          <section className="nb-section" id="task-checklist">
             <div className="nb-section-head">
               <strong>確認リスト</strong>
               <span className="rule" aria-hidden="true" />
@@ -1480,19 +1610,123 @@ export default function FamilyBoardPage() {
             </div>
             <article className="nb-card task-list-card">
               {activeTasks.length > 0 ? (
-                activeTasks.slice(0, 5).map((task) => {
+                activeTasks.slice(0, 8).map((task, taskIndex) => {
+                  const key = taskEditKey(activeCase.id, taskIndex);
                   const dateParts = taskDateParts(task.dueDate);
                   const dueDays = daysUntil(task.dueDate);
+                  const form = taskForms[key] ?? taskFormSeed(task);
+                  const isEditing = editingTaskKey === key;
+                  const progress = task.progress ?? "todo";
                   return (
-                    <Link className="nb-row task-row" href={`/result/${activeCase.id}`} key={`${task.title}-${task.dueDate}`}>
-                      <span className={`task-date ${dueDays !== null && dueDays <= 3 ? "is-near" : ""}`}>
-                        <small>{dateParts.month}</small>
-                        <b>{dateParts.day}</b>
-                      </span>
-                      <strong>{task.title}</strong>
-                      <span className="assignee-chip">担当が決まっていません</span>
-                      <span className="chev" aria-hidden="true">›</span>
-                    </Link>
+                    <div className={`task-edit-card is-${progress}`} key={task.id ?? `${task.title}-${task.dueDate}-${taskIndex}`}>
+                      <button
+                        aria-expanded={isEditing}
+                        className="task-open-button"
+                        type="button"
+                        onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
+                      >
+                        <span className={`task-date ${dueDays !== null && dueDays <= 3 && progress !== "done" ? "is-near" : ""}`}>
+                          <small>{dateParts.month}</small>
+                          <b>{dateParts.day}</b>
+                        </span>
+                        <span className="task-copy">
+                          <strong>{task.title}</strong>
+                          <small>{task.description}</small>
+                        </span>
+                        <span className={`task-progress-chip is-${progress}`}>{taskProgressLabel(progress)}</span>
+                      </button>
+                      <div className="task-card-meta">
+                        <span className={task.assignee ? "is-set" : "is-empty"}>{task.assignee ? `担当: ${task.assignee}` : "担当未定"}</span>
+                        <span>優先度: {taskPriorityText(task.priority)}</span>
+                        {task.note ? <span>メモあり</span> : null}
+                      </div>
+                      <div className="task-quick-actions" aria-label={`${task.title}の状態変更`}>
+                        <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "doing" })}>
+                          進行中
+                        </button>
+                        <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "done" })}>
+                          完了
+                        </button>
+                        <button type="button" onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}>
+                          編集する
+                        </button>
+                        {taskSavedKey === key ? <span>保存しました</span> : null}
+                      </div>
+                      {isEditing ? (
+                        <div className="task-edit-panel">
+                          <label className="task-edit-field task-edit-wide">
+                            <span>やること</span>
+                            <input
+                              value={form.title}
+                              onChange={(event) => updateTaskForm(key, { title: event.target.value })}
+                            />
+                          </label>
+                          <label className="task-edit-field task-edit-wide">
+                            <span>説明</span>
+                            <textarea
+                              value={form.description}
+                              onChange={(event) => updateTaskForm(key, { description: event.target.value })}
+                            />
+                          </label>
+                          <div className="task-edit-grid">
+                            <label className="task-edit-field">
+                              <span>期限</span>
+                              <input
+                                type="date"
+                                value={form.dueDate}
+                                onChange={(event) => updateTaskForm(key, { dueDate: event.target.value })}
+                              />
+                            </label>
+                            <label className="task-edit-field">
+                              <span>担当</span>
+                              <input
+                                placeholder="例: 自分 / 長男 / 妹"
+                                value={form.assignee}
+                                onChange={(event) => updateTaskForm(key, { assignee: event.target.value })}
+                              />
+                            </label>
+                            <label className="task-edit-field">
+                              <span>状態</span>
+                              <select
+                                value={form.progress}
+                                onChange={(event) => updateTaskForm(key, { progress: event.target.value as TaskEditForm["progress"] })}
+                              >
+                                <option value="todo">未着手</option>
+                                <option value="doing">進行中</option>
+                                <option value="done">完了</option>
+                              </select>
+                            </label>
+                            <label className="task-edit-field">
+                              <span>優先度</span>
+                              <select
+                                value={form.priority}
+                                onChange={(event) => updateTaskForm(key, { priority: event.target.value as TaskEditForm["priority"] })}
+                              >
+                                <option value="1">急ぎ</option>
+                                <option value="2">通常</option>
+                                <option value="3">あとで</option>
+                              </select>
+                            </label>
+                          </div>
+                          <label className="task-edit-field task-edit-wide">
+                            <span>家族メモ</span>
+                            <textarea
+                              placeholder="例: 病院に確認済み。次は長女が書類を持って行く。"
+                              value={form.note}
+                              onChange={(event) => updateTaskForm(key, { note: event.target.value })}
+                            />
+                          </label>
+                          <div className="task-edit-footer">
+                            <button type="button" onClick={() => saveTaskEdit(activeCase.id, taskIndex)}>
+                              保存する
+                            </button>
+                            <button type="button" onClick={() => setEditingTaskKey(null)}>
+                              閉じる
+                            </button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </div>
                   );
                 })
               ) : (
