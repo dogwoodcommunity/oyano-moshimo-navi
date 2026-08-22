@@ -5827,3 +5827,22 @@ xcrun simctl io $SIM screenshot /tmp/shot.png
 
 - 既存の見守り鳥キャラをブランドの核として使い、先頭の漢字アイコンのような硬い印象は避ける。
 - 印刷会社へ渡す場合はSVGをPDFまたはPNGに書き出して使う。
+
+## 2026-08-22 追記 156 — ロゴをスマホ保存しやすいPNGでも出力
+
+ユーザーから「画像でダウンロードできない」と指摘があった。
+SVGだけではスマホで保存・共有しづらいため、同じロゴをPNG画像として追加した。
+
+対応:
+
+- `docs/marketing/logo_assets/oyano-moshimo-logo-horizontal.png` を追加。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-horizontal-transparent.png` を追加。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-stacked.png` を追加。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-mark.png` を追加。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-png.zip` を追加。
+- `docs/marketing/logo_assets/README.md` に、スマホ保存はPNG、印刷・デザイン用途はSVGという使い分けを追記。
+
+判断:
+
+- ユーザーがスマホやチャットで即共有できるよう、PNG一式とZIPを残した。
+- 透過背景が必要な場面に備えて、横組みは通常背景版と透過版の両方を用意した。
