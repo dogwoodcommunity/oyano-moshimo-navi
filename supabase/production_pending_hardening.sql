@@ -362,8 +362,10 @@ alter table cases
 create index if not exists idx_consent_logs_case_type
 on consent_logs(case_id, consent_type, created_at desc);
 
--- 3. Home photo direct client uploads are disabled. Uploads should go through
--- the Web API that verifies family membership before issuing a signed URL.
+-- 3. Home photo direct client uploads are disabled. Legacy home_photos records
+-- are protected by storage policies. Notebook diary photos use
+-- home-photos/notebook/{user_id}/... and must go through the Web API that
+-- verifies auth + family scope before issuing signed upload/read URLs.
 drop policy if exists "home photos upload authenticated" on storage.objects;
 
 -- 4. Family owner succession is explicit.

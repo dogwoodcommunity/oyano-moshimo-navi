@@ -1432,10 +1432,13 @@ export default function FamilyBoardPage() {
 
       if (error) throw error;
 
+      const storedAttachment = { ...item.attachment };
+      delete storedAttachment.previewUrl;
+
       return {
         ...item,
         attachment: {
-          ...item.attachment,
+          ...storedAttachment,
           storageBucket: result.bucket,
           storagePath: result.storagePath,
           uploadedAt: new Date().toISOString(),
@@ -1723,15 +1726,12 @@ export default function FamilyBoardPage() {
       const restoredEntries = Array.isArray(result.diaryEntries) ? result.diaryEntries : [];
       writePlan(result.plan);
       applyFamilyBillingState(result);
-      replaceLocalNotebook({
+      const restoredNotebook = replaceLocalNotebook({
         cases: restoredCases,
         diaryEntries: restoredEntries
       });
       reloadNotebookState(restoredCases);
-      lastSyncedPayloadRef.current = notebookPayloadSignature({
-        cases: restoredCases,
-        diaryEntries: restoredEntries
-      });
+      lastSyncedPayloadRef.current = notebookPayloadSignature(restoredNotebook);
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");

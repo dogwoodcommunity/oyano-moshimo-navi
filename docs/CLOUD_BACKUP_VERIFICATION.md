@@ -103,5 +103,6 @@ delete from people where profile->>'localCaseId' = '<case-id>';
 ## 5. 既知の注意点
 
 - `/api/notebook/sync` は対象者を `profile->>localCaseId` で突き合わせます。端末のlocalStorageを消してから作り直した手帳は、別の対象者として増えます。JSON控えから戻すか、クラウドから復元してから使ってください。
-- 日記の添付（写真・PDF）は、いまは端末内のデータURLのまま同期しています。容量が大きい手帳では、同期に時間がかかります。Storageへの移行は別途検討が必要です。
+- 日記写真は、メール確認済みならSupabase Storageへ保存し、同期データにはbucket/pathだけを残します。クラウド復元時は1時間の署名URLで表示します。未ログイン状態の写真だけは端末内プレビューに残ります。
+- PDF添付は3組テスト前は一時停止しています。ファイル名だけ保存される状態を避けるため、UIでもPDF追加は受け付けません。
 - Route Handler内のSupabaseへのGETは、Next.jsのData Cacheに載ると古い値を返します。`lib/serverSupabase.ts` で `cache: "no-store"` を強制しているので、ここを外さないでください。

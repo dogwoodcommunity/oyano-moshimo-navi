@@ -6196,3 +6196,43 @@ Claude再レビューの「写真がlocalStorage base64だけで、消えない�
 - 8/22版のClaudeレビュー依頼に、日記写真Storage対応、sync時のbase64除去、Storage写真復元時の署名付きURL発行、consultモデルID修正、同期競合ガード、PDF添付一時停止を反映。
 - Claudeには、家族3組テスト可否、有料テスト可否、Storage/同期/データ消失、RLS/Auth/service role、課金価値、家族共有境界、UXを見てもらう構成。
 - `review_exports/` は従来どおりレビュー用生成物なのでGit管理外。必要ならユーザーがこのフォルダまたはZIPをClaudeに渡す。
+
+## 2026-08-23 追記 169 — Claude再レビューの3組テスト前ブロッカー対応
+
+Claude再レビューで「家族3組テストはOK。ただしlocalStorage preview残り、409復元時の日記消失、Storage署名/アップロードURLの安全化を先に」と指摘されたため、3組テスト前の信用部分だけを小さく修正した。
+
+変更:
+
+- `apps/web/app/home/page.tsx`
+  - メール確認済みで写真をSupabase Storageへアップロードできた場合、添付からdata URLの `previewUrl` を削除するよう変更。
+  - これにより、アップロード済み写真のbase64がlocalStorageに残り続ける問題を防ぐ。
+  - クラウド復元時は `replaceLocalNotebook()` の戻り値を同期済みsignatureに使うよう変更。
+- `apps/web/lib/store.ts`
+  - `replaceLocalNotebook()` を全置換から、日記だけ `id` でunion mergeする形へ変更。
+  - クラウド復元しても、その端末にだけ残っていた未送信日記を消さない。
+- `apps/web/app/api/notebook/sync/route.ts`
+  - Storage写真署名前に、`home-photos/notebook/{user_id}/...` の `user_id` が同じfamilyのメンバーか確認するよう変更。
+  - 不正なbucket/pathやfamily外userのpathは署名URL化しない。
+  - POSTでは既存手帳の日記を、プロフィール/タスクの409競合判定より先にupsertするよう変更。
+  - 競合で409を返す場合でも、その直前に書いた日記は先にクラウドへ退避される。
+- `apps/web/app/api/notebook/photo-upload-url/route.ts`
+  - 署名付きアップロードURL発行にIP単位とuser単位のレート制限を追加。
+  - Supabase Storage上の `notebook/{user_id}` 使用量を概算し、freeは50MB、plusは500MBを超えるアップロードURL発行を止める。
+- `supabase/storage_setup.sql`
+  - `home_photos` policyと手帳日記写真の守り方が違うことをコメントで明記。
+- `supabase/home_photo_security_hardening.sql` / `supabase/production_pending_hardening.sql`
+  - 直接Storage upload policyを削除し、手帳写真はWeb APIのauth + family scope検証で守る説明へ修正。
+- `docs/CLOUD_BACKUP_VERIFICATION.md` / `docs/PRIVACY_AND_REVIEW_GUARDRAILS.md`
+  - 古い「日記添付はdata URL同期」説明を現状に合わせて更新。
+
+検証:
+
+- `corepack pnpm exec tsc --noEmit` in `apps/web` 成功。
+- `corepack pnpm exec tsc --noEmit` in `apps/mobile` 成功。
+
+残り:
+
+1. 実機で、ログイン済み写真追加後にlocalStorageへdata URLが残らないことを確認。
+2. 別端末/別ブラウザ復元で、Storage写真が署名URLで表示されることを確認。
+3. 409競合を意図的に起こし、未送信日記が復元後も残ることを確認。
+4. 有料テスト前には、consult実弾5回、Stripe E2E、メール通知の実装/確認がまだ必要。

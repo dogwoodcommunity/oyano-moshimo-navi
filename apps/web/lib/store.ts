@@ -213,9 +213,28 @@ export function exportNotebookData(): NotebookExport {
   };
 }
 
+function mergeDiaryEntries(remoteEntries: DiaryEntry[], localEntries: DiaryEntry[]) {
+  const merged = new Map<string, DiaryEntry>();
+
+  remoteEntries.forEach((entry) => merged.set(entry.id, entry));
+  localEntries.forEach((entry) => {
+    if (!merged.has(entry.id)) merged.set(entry.id, entry);
+  });
+
+  return Array.from(merged.values())
+    .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
+}
+
 export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
+  const mergedDiaryEntries = mergeDiaryEntries(input.diaryEntries, readDiaryEntries());
+
   writeCases(input.cases);
-  writeDiaryEntries(input.diaryEntries);
+  writeDiaryEntries(mergedDiaryEntries);
+
+  return {
+    cases: input.cases,
+    diaryEntries: mergedDiaryEntries
+  };
 }
 
 export function resetLocalNotebookData() {

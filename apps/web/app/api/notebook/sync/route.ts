@@ -79,6 +79,8 @@ const parentStatuses = new Set<ParentStatus>([
   "completed"
 ]);
 
+const notebookPhotoBucket = "home-photos";
+
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
 }
@@ -139,23 +141,46 @@ function taskSnapshot(localCase: LocalCase) {
   }));
 }
 
-function attachmentSnapshot(value: unknown): NotebookAttachmentSnapshot[] {
+function notebookPhotoOwnerId(storagePath: string) {
+  const parts = storagePath.split("/");
+  return parts[0] === "notebook" && parts[1] ? parts[1] : null;
+}
+
+function canUseNotebookPhoto(
+  storageBucket: string,
+  storagePath: string,
+  allowedNotebookPhotoUserIds?: Set<string>
+) {
+  if (storageBucket !== notebookPhotoBucket) return false;
+
+  const ownerId = notebookPhotoOwnerId(storagePath);
+  if (!ownerId) return false;
+
+  return allowedNotebookPhotoUserIds ? allowedNotebookPhotoUserIds.has(ownerId) : true;
+}
+
+function attachmentSnapshot(value: unknown, allowedNotebookPhotoUserIds?: Set<string>): NotebookAttachmentSnapshot[] {
   return asArray<AnyRecord>(value).slice(0, 10).map((attachment, index) => {
     const storageBucket = safeText(attachment.storageBucket);
     const storagePath = safeText(attachment.storagePath);
+    const canKeepStorage = Boolean(
+      storageBucket &&
+      storagePath &&
+      canUseNotebookPhoto(storageBucket, storagePath, allowedNotebookPhotoUserIds)
+    );
     const snapshot: NotebookAttachmentSnapshot = {
       id: safeText(attachment.id) || `attachment-${index}`,
       name: safeText(attachment.name) || "写真",
       type: safeText(attachment.type) || "image/jpeg",
       size: Number.isFinite(Number(attachment.size)) ? Number(attachment.size) : 0,
-      uploadStatus: storageBucket && storagePath ? "uploaded" : "local"
+      uploadStatus: canKeepStorage ? "uploaded" : "local"
     };
 
-    if (storageBucket && storagePath) {
+    if (canKeepStorage) {
       snapshot.storageBucket = storageBucket;
       snapshot.storagePath = storagePath;
       snapshot.uploadedAt = safeText(attachment.uploadedAt) || undefined;
-    } else {
+    } else if (!storageBucket && !storagePath) {
       const previewUrl = safeText(attachment.previewUrl);
       if (previewUrl) snapshot.previewUrl = previewUrl;
     }
@@ -164,10 +189,18 @@ function attachmentSnapshot(value: unknown): NotebookAttachmentSnapshot[] {
   });
 }
 
-async function attachSignedPhotoPreviews(supabase: ServerSupabase, value: unknown): Promise<NotebookAttachmentSnapshot[]> {
-  const attachments = attachmentSnapshot(value);
+async function attachSignedPhotoPreviews(
+  supabase: ServerSupabase,
+  value: unknown,
+  allowedNotebookPhotoUserIds: Set<string>
+): Promise<NotebookAttachmentSnapshot[]> {
+  const attachments = attachmentSnapshot(value, allowedNotebookPhotoUserIds);
   return Promise.all(attachments.map(async (attachment) => {
-    if (!attachment.storageBucket || !attachment.storagePath) return attachment;
+    if (
+      !attachment.storageBucket ||
+      !attachment.storagePath ||
+      !canUseNotebookPhoto(attachment.storageBucket, attachment.storagePath, allowedNotebookPhotoUserIds)
+    ) return attachment;
 
     const { data, error } = await supabase.storage
       .from(attachment.storageBucket)
@@ -322,6 +355,21 @@ async function billingContextForFamily(
   };
 }
 
+async function notebookPhotoOwnerIdsForFamilies(
+  supabase: ServerSupabase,
+  familyIds: string[]
+) {
+  if (familyIds.length === 0) return new Set<string>();
+
+  const { data, error } = await supabase
+    .from("family_members")
+    .select("user_id")
+    .in("family_id", familyIds);
+  if (error) throw error;
+
+  return new Set(asArray<AnyRecord>(data).map((row) => safeText(row.user_id)).filter(Boolean));
+}
+
 export async function GET(request: NextRequest) {
   const authorized = await authorize(request);
   if ("error" in authorized) return authorized.error;
@@ -348,6 +396,12 @@ export async function GET(request: NextRequest) {
   // これが無いと、クライアントは上限を知らないまま2冊目を作らせてしまう。
   const billing = await billingContextForFamilies(supabase, familyIds, user.id);
   const { plan } = billing;
+  let allowedNotebookPhotoUserIds: Set<string>;
+  try {
+    allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, familyIds);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "写真の閲覧権限を確認できませんでした。", 500);
+  }
 
   const { data: people, error: peopleError } = await supabase
     .from("people")
@@ -453,7 +507,7 @@ export async function GET(request: NextRequest) {
       date: safeDate(event.event_date),
       mood: ["stable", "changed", "urgent"].includes(event.mood) ? event.mood : "stable",
       body: String(event.body || event.title || ""),
-      attachments: await attachSignedPhotoPreviews(supabase, event.attachments),
+      attachments: await attachSignedPhotoPreviews(supabase, event.attachments, allowedNotebookPhotoUserIds),
       createdAt: safeIso(event.created_at)
     };
   }));
@@ -465,6 +519,54 @@ export async function GET(request: NextRequest) {
     isFamilyOwner: billing.isFamilyOwner,
     canManageFamilyBilling: billing.isFamilyOwner
   });
+}
+
+async function syncDiaryEntriesForPerson(input: {
+  supabase: ServerSupabase;
+  personId: string;
+  userId: string;
+  localCaseId: string;
+  diaryEntries: LocalDiaryEntry[];
+  now: string;
+  allowedNotebookPhotoUserIds: Set<string>;
+}) {
+  const { supabase, personId, userId, localCaseId, diaryEntries, now, allowedNotebookPhotoUserIds } = input;
+  const { data: existingEvents, error: existingEventsError } = await supabase
+    .from("timeline_events")
+    .select("id,metadata")
+    .eq("person_id", personId)
+    .eq("event_type", "diary");
+
+  if (existingEventsError) throw existingEventsError;
+
+  let syncedEntries = 0;
+  const existingEventRows = asArray<AnyRecord>(existingEvents);
+  for (const entry of diaryEntries.filter((item) => item.caseId === localCaseId).slice(0, 500)) {
+    const localDiaryId = String(entry.id || `${localCaseId}-${entry.date || now}`);
+    const existingEvent = existingEventRows.find((row) => asRecord(row.metadata).localDiaryId === localDiaryId);
+    const eventRow = {
+      person_id: personId,
+      event_type: "diary",
+      event_date: safeDate(entry.date),
+      title: entry.mood === "urgent" ? "急ぎの記録" : entry.mood === "changed" ? "変化の記録" : "日々の記録",
+      body: String(entry.body || "記録"),
+      mood: ["stable", "changed", "urgent"].includes(entry.mood ?? "") ? entry.mood : "stable",
+      attachments: attachmentSnapshot(entry.attachments, allowedNotebookPhotoUserIds),
+      metadata: { localDiaryId, localCaseId, syncedAt: now },
+      created_by: userId
+    };
+
+    if (existingEvent?.id) {
+      const { error } = await supabase.from("timeline_events").update(eventRow).eq("id", existingEvent.id);
+      if (error) throw error;
+    } else {
+      const { error } = await supabase.from("timeline_events").insert(eventRow);
+      if (error) throw error;
+    }
+    syncedEntries += 1;
+  }
+
+  return syncedEntries;
 }
 
 export async function POST(request: NextRequest) {
@@ -511,6 +613,12 @@ export async function POST(request: NextRequest) {
     .eq("family_id", familyId);
   if (currentPeopleError) return jsonError(currentPeopleError.message, 500);
   let peopleInCloud = asArray<AnyRecord>(currentPeople).length;
+  let allowedNotebookPhotoUserIds: Set<string>;
+  try {
+    allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, [familyId]);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "写真の保存権限を確認できませんでした。", 500);
+  }
 
   let syncedPeople = 0;
   let syncedTasks = 0;
@@ -547,6 +655,22 @@ export async function POST(request: NextRequest) {
 
     const existingPerson = existingPeople?.[0];
     const existingPersonId = existingPerson?.id;
+
+    if (existingPersonId) {
+      try {
+        syncedEntries += await syncDiaryEntriesForPerson({
+          supabase,
+          personId: existingPersonId,
+          userId: user.id,
+          localCaseId,
+          diaryEntries,
+          now,
+          allowedNotebookPhotoUserIds
+        });
+      } catch (error) {
+        return jsonError(error instanceof Error ? error.message : "日記をクラウドへ保存できませんでした。", 500);
+      }
+    }
 
     if (existingPersonId && isStaleNotebookWrite(asRecord(existingPerson.profile), incomingLocalUpdatedAt)) {
       return NextResponse.json(
@@ -611,38 +735,20 @@ export async function POST(request: NextRequest) {
       syncedTasks += 1;
     }
 
-    const { data: existingEvents, error: existingEventsError } = await supabase
-      .from("timeline_events")
-      .select("id,metadata")
-      .eq("person_id", personId)
-      .eq("event_type", "diary");
-
-    if (existingEventsError) return jsonError(existingEventsError.message, 500);
-
-    const existingEventRows = asArray<AnyRecord>(existingEvents);
-    for (const entry of diaryEntries.filter((item) => item.caseId === localCaseId).slice(0, 500)) {
-      const localDiaryId = String(entry.id || `${localCaseId}-${entry.date || now}`);
-      const existingEvent = existingEventRows.find((row) => asRecord(row.metadata).localDiaryId === localDiaryId);
-      const eventRow = {
-        person_id: personId,
-        event_type: "diary",
-        event_date: safeDate(entry.date),
-        title: entry.mood === "urgent" ? "急ぎの記録" : entry.mood === "changed" ? "変化の記録" : "日々の記録",
-        body: String(entry.body || "記録"),
-        mood: ["stable", "changed", "urgent"].includes(entry.mood ?? "") ? entry.mood : "stable",
-        attachments: attachmentSnapshot(entry.attachments),
-        metadata: { localDiaryId, localCaseId, syncedAt: now },
-        created_by: user.id
-      };
-
-      if (existingEvent?.id) {
-        const { error } = await supabase.from("timeline_events").update(eventRow).eq("id", existingEvent.id);
-        if (error) return jsonError(error.message, 500);
-      } else {
-        const { error } = await supabase.from("timeline_events").insert(eventRow);
-        if (error) return jsonError(error.message, 500);
+    if (!existingPersonId) {
+      try {
+        syncedEntries += await syncDiaryEntriesForPerson({
+          supabase,
+          personId,
+          userId: user.id,
+          localCaseId,
+          diaryEntries,
+          now,
+          allowedNotebookPhotoUserIds
+        });
+      } catch (error) {
+        return jsonError(error instanceof Error ? error.message : "日記をクラウドへ保存できませんでした。", 500);
       }
-      syncedEntries += 1;
     }
   }
 

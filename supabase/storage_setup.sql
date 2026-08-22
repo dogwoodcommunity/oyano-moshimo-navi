@@ -1,5 +1,12 @@
 -- Storage setup for 親のもしもナビ v0.3
 -- Run after schema.sql and production_rls.sql.
+--
+-- Note:
+-- - home_photos rows are protected by the storage.objects policies below.
+-- - Notebook diary photos are stored under home-photos/notebook/{user_id}/...
+--   and are intentionally accessed only through signed URLs issued by the Web
+--   API after auth + family membership checks. They are not covered by the
+--   home_photos table policies below.
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
