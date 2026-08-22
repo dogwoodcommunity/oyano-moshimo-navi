@@ -8204,6 +8204,66 @@ textarea {
   overflow-wrap: anywhere;
 }
 
+.cloud-auto-line {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(15, 95, 65, 0.14);
+  border-radius: 999px;
+  display: inline-flex;
+  gap: 8px;
+  justify-self: start;
+  margin-top: 0.55rem;
+  min-height: 32px;
+  padding: 5px 10px;
+}
+
+.cloud-auto-line span {
+  background: #16754e;
+  border-radius: 50%;
+  display: block;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
+.cloud-auto-line em {
+  color: #174535;
+  font-size: 0.78rem;
+  font-style: normal;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.cloud-auto-line.is-saving span {
+  animation: cloudPulse 1s ease-in-out infinite;
+}
+
+.cloud-auto-line.is-error {
+  background: #fff5ef;
+  border-color: rgba(166, 80, 38, 0.24);
+}
+
+.cloud-auto-line.is-error span {
+  background: #b35a2a;
+}
+
+.cloud-auto-line.is-error em {
+  color: #91481f;
+}
+
+@keyframes cloudPulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.9);
+  }
+
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
 .cloud-form {
   display: grid;
   gap: 10px;

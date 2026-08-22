@@ -4837,3 +4837,30 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
 - 直後の残状態:
   - 未追跡の `review_exports/` は残っている。今回の作業対象外のためcommitしていない。
   - VercelはGitHub連携が有効なら自動デプロイ待ち。CLI手動deployは引き続きVercel認証が必要。
+
+## 2026-08-22 追記 113
+
+- 目的:
+  - 課金価値レビューで最重要指摘だった「localStorageだけでは手帳を名乗れない」に対応するため、PWAの家族ボードでクラウド控え保存を“任意の手動ボタン”から“本人確認後は自動で守る”体験へ寄せた。
+- 実装:
+  - `apps/web/app/home/page.tsx`
+    - `CloudAutoStatus` と `NotebookSyncPayload` を追加。
+    - メール確認後または既存ログイン時の文言を「変更のたびに自動で控え保存」に変更。
+    - ログイン済みでローカル手帳が空なら `/api/notebook/sync` からクラウド控えを自動復元。
+    - ログイン済みでローカル手帳がある場合は初回に自動保存。
+    - `cases` / `diaryEntries` の変更を1.2秒デバウンスして自動保存。
+    - 保存中にさらに変更が入った場合は `pendingAutoSyncPayloadRef` に保持し、保存完了後に再保存する。
+    - 復元中は空データでクラウドを上書きしないよう `cloudRestoringRef` で保護。
+    - 保存先メール、保存状態（自動保存中・最終保存時刻・エラー）をクラウド控えカードに表示。
+    - 手動の「今すぐ保存」「クラウドから復元」は残したが、主役は自動保存に変更。
+  - `apps/web/app/globals.css`
+    - 自動保存ステータス行 `.cloud-auto-line` を追加。
+    - 保存中の小さなパルス表示とエラー色を追加。
+- 確認:
+  - `npm run typecheck --workspace web` OK。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - `git diff --check` OK。
+  - build時のSupabase JS Node 20非推奨警告は継続して出るが、ビルドは成功。
+- 残状態:
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残っている。今回もcommit対象外。
+  - 次の操作はcommit/push。

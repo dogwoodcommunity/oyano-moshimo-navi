@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { statusLabel, targetLabel } from "@oyano/shared";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
@@ -41,6 +41,11 @@ type TaskEditForm = {
 };
 type RecordFilter = "all" | "changed" | "attachments";
 type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
+type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
+type NotebookSyncPayload = {
+  cases: CaseRecord[];
+  diaryEntries: DiaryEntry[];
+};
 
 const emptyDiaryForm: DiaryFormState = {
   body: "",
@@ -352,6 +357,19 @@ function boardDateLabel() {
   return `${today.getMonth() + 1}/${today.getDate()}(${weekdays[today.getDay()]})`;
 }
 
+function cloudSyncTimeLabel(value?: string | null) {
+  if (!value) return "未保存";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "保存済み";
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  return `${date.getMonth() + 1}/${date.getDate()} ${hours}:${minutes}`;
+}
+
+function notebookPayloadSignature(payload: NotebookSyncPayload) {
+  return JSON.stringify(payload);
+}
+
 function taskDateParts(dateString?: string) {
   if (!dateString) return { month: "--", day: "--" };
   const date = new Date(`${dateString}T00:00:00`);
@@ -651,6 +669,14 @@ export default function FamilyBoardPage() {
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
   const [cloudMessage, setCloudMessage] = useState("この端末だけにある記録を、あとからクラウドに控え保存できます。");
+  const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
+  const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
+  const autoSyncTimerRef = useRef<number | null>(null);
+  const lastSyncedPayloadRef = useRef("");
+  const cloudSyncInFlightRef = useRef(false);
+  const pendingAutoSyncPayloadRef = useRef<NotebookSyncPayload | null>(null);
+  const cloudRestoringRef = useRef(false);
+  const firstCloudLoadDoneRef = useRef(false);
 
   useEffect(() => {
     const localCases = listLocalCases();
@@ -681,13 +707,21 @@ export default function FamilyBoardPage() {
       setCloudEmail((current) => current || session?.user.email || "");
       setCloudStatus("idle");
       if (handled && session) {
-        setCloudMessage("メール確認できました。下の「今すぐクラウドに保存」で、この手帳を控え保存できます。");
+        setCloudMessage("メール確認できました。この手帳は変更のたびに自動で控え保存されます。");
+      } else if (session) {
+        setCloudMessage("ログイン済みです。この手帳は変更のたびに自動で控え保存されます。");
       }
     });
 
     const { data } = client.auth.onAuthStateChange((_event, session) => {
       setCloudUserEmail(session?.user.email ?? null);
       setCloudEmail((current) => current || session?.user.email || "");
+      if (!session) {
+        firstCloudLoadDoneRef.current = false;
+        lastSyncedPayloadRef.current = "";
+        setLastCloudSyncedAt(null);
+        setCloudAutoStatus("idle");
+      }
     });
 
     return () => {
@@ -891,19 +925,37 @@ export default function FamilyBoardPage() {
     return Object.values(diaryEntries).flat();
   }
 
-  async function getAccessToken() {
+  function notebookSyncPayload(
+    nextCases = cases,
+    nextDiaryEntries = allDiaryEntriesForSync()
+  ): NotebookSyncPayload {
+    return {
+      cases: nextCases,
+      diaryEntries: nextDiaryEntries
+    };
+  }
+
+  async function getAccessToken(options: { silent?: boolean } = {}) {
     const client = getBrowserSupabase();
     if (!client) {
-      setCloudStatus("error");
-      setCloudMessage("クラウド保存の環境設定がまだありません。");
+      if (options.silent) {
+        setCloudAutoStatus("error");
+      } else {
+        setCloudStatus("error");
+        setCloudMessage("クラウド保存の環境設定がまだありません。");
+      }
       return null;
     }
 
     const { data } = await client.auth.getSession();
     const token = data.session?.access_token;
     if (!token) {
-      setCloudStatus("error");
-      setCloudMessage("先にメール確認をしてください。確認後、この画面に戻ると保存できます。");
+      if (options.silent) {
+        setCloudAutoStatus("idle");
+      } else {
+        setCloudStatus("error");
+        setCloudMessage("先にメール確認をしてください。確認後、この画面に戻ると保存できます。");
+      }
       return null;
     }
 
@@ -931,65 +983,156 @@ export default function FamilyBoardPage() {
     setCloudMessage("本人確認メールを送りました。メール内のリンクを開くと、この手帳をクラウドへ保存できます。");
   }
 
-  async function syncNotebookToCloud() {
-    const token = await getAccessToken();
-    if (!token) return;
+  async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
+    const payload = options.payload ?? notebookSyncPayload();
+    const signature = notebookPayloadSignature(payload);
 
-    setCloudStatus("syncing");
-    setCloudMessage("クラウドに控え保存しています。");
-    const response = await fetch("/api/notebook/sync", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        cases,
-        diaryEntries: allDiaryEntriesForSync()
-      })
-    });
-
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setCloudStatus("error");
-      setCloudMessage(result.error ?? "クラウド保存に失敗しました。");
+    if (cloudSyncInFlightRef.current) {
+      if (options.silent) pendingAutoSyncPayloadRef.current = payload;
       return;
     }
 
-    writePlan(result.plan);
-    setCloudStatus("synced");
-    // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
-    const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
-    setCloudMessage(
-      `クラウドに控え保存しました。対象者${result.syncedPeople ?? cases.length}人、記録${result.syncedEntries ?? allDiaryEntriesForSync().length}件。${notice}`
-    );
-  }
-
-  async function restoreNotebookFromCloud() {
-    const token = await getAccessToken();
+    const token = await getAccessToken({ silent: options.silent });
     if (!token) return;
 
-    setCloudStatus("syncing");
-    setCloudMessage("クラウドの控えを読み込んでいます。");
-    const response = await fetch("/api/notebook/sync", {
-      headers: { Authorization: `Bearer ${token}` }
-    });
-    const result = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      setCloudStatus("error");
-      setCloudMessage(result.error ?? "クラウドから復元できませんでした。");
+    cloudSyncInFlightRef.current = true;
+    if (options.silent) {
+      setCloudAutoStatus("saving");
+    } else {
+      setCloudStatus("syncing");
+      setCloudMessage("クラウドに控え保存しています。");
+    }
+
+    try {
+      const response = await fetch("/api/notebook/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setCloudAutoStatus("error");
+        if (!options.silent) {
+          setCloudStatus("error");
+          setCloudMessage(result.error ?? "クラウド保存に失敗しました。");
+        }
+        return;
+      }
+
+      writePlan(result.plan);
+      lastSyncedPayloadRef.current = signature;
+      setLastCloudSyncedAt(new Date().toISOString());
+      setCloudAutoStatus("saved");
+      setCloudStatus("synced");
+      // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
+      const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
+      if (!options.silent || notice) {
+        setCloudMessage(
+          `クラウドに控え保存しました。対象者${result.syncedPeople ?? payload.cases.length}人、記録${result.syncedEntries ?? payload.diaryEntries.length}件。${notice}`
+        );
+      } else {
+        setCloudMessage("ログイン済みです。変更は自動で控え保存されています。");
+      }
+    } finally {
+      cloudSyncInFlightRef.current = false;
+      const pendingPayload = pendingAutoSyncPayloadRef.current;
+      pendingAutoSyncPayloadRef.current = null;
+      if (pendingPayload) {
+        const pendingSignature = notebookPayloadSignature(pendingPayload);
+        if (pendingSignature !== lastSyncedPayloadRef.current) {
+          window.setTimeout(() => {
+            void syncNotebookToCloud({ silent: true, payload: pendingPayload });
+          }, 150);
+        }
+      }
+    }
+  }
+
+  async function restoreNotebookFromCloud(options: { silent?: boolean } = {}) {
+    const token = await getAccessToken({ silent: options.silent });
+    if (!token) return;
+
+    cloudRestoringRef.current = true;
+    if (options.silent) {
+      setCloudAutoStatus("saving");
+    } else {
+      setCloudStatus("syncing");
+      setCloudMessage("クラウドの控えを読み込んでいます。");
+    }
+
+    try {
+      const response = await fetch("/api/notebook/sync", {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setCloudAutoStatus("error");
+        if (!options.silent) {
+          setCloudStatus("error");
+          setCloudMessage(result.error ?? "クラウドから復元できませんでした。");
+        }
+        return;
+      }
+
+      const restoredCases = Array.isArray(result.cases) ? result.cases : [];
+      const restoredEntries = Array.isArray(result.diaryEntries) ? result.diaryEntries : [];
+      writePlan(result.plan);
+      replaceLocalNotebook({
+        cases: restoredCases,
+        diaryEntries: restoredEntries
+      });
+      reloadNotebookState(restoredCases);
+      lastSyncedPayloadRef.current = notebookPayloadSignature({
+        cases: restoredCases,
+        diaryEntries: restoredEntries
+      });
+      setLastCloudSyncedAt(new Date().toISOString());
+      setCloudAutoStatus("saved");
+      setCloudStatus("synced");
+      setCloudMessage(options.silent ? "クラウドの控えを読み込みました。これからの変更は自動で保存されます。" : "クラウドの控えをこの端末に戻しました。");
+    } finally {
+      cloudRestoringRef.current = false;
+    }
+  }
+
+  useEffect(() => {
+    if (!loaded || !cloudUserEmail || firstCloudLoadDoneRef.current) return;
+
+    firstCloudLoadDoneRef.current = true;
+    const payload = notebookSyncPayload();
+    if (payload.cases.length === 0) {
+      void restoreNotebookFromCloud({ silent: true });
       return;
     }
 
-    writePlan(result.plan);
-    replaceLocalNotebook({
-      cases: Array.isArray(result.cases) ? result.cases : [],
-      diaryEntries: Array.isArray(result.diaryEntries) ? result.diaryEntries : []
-    });
-    reloadNotebookState();
-    setCloudStatus("synced");
-    setCloudMessage("クラウドの控えをこの端末に戻しました。");
-  }
+    void syncNotebookToCloud({ silent: true, payload });
+  }, [loaded, cloudUserEmail, cases.length]);
+
+  useEffect(() => {
+    if (!loaded || !cloudUserEmail || !firstCloudLoadDoneRef.current || cloudRestoringRef.current) return undefined;
+
+    const payload = notebookSyncPayload();
+    const signature = notebookPayloadSignature(payload);
+    if (signature === lastSyncedPayloadRef.current) return undefined;
+
+    if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+    setCloudAutoStatus("saving");
+    autoSyncTimerRef.current = window.setTimeout(() => {
+      autoSyncTimerRef.current = null;
+      void syncNotebookToCloud({ silent: true, payload });
+    }, 1200);
+
+    return () => {
+      if (autoSyncTimerRef.current) {
+        window.clearTimeout(autoSyncTimerRef.current);
+        autoSyncTimerRef.current = null;
+      }
+    };
+  }, [loaded, cloudUserEmail, cases, diaryEntries]);
 
   function downloadNotebookExport() {
     const data = exportNotebookData();
@@ -1143,14 +1286,30 @@ export default function FamilyBoardPage() {
                 </div>
                 <div>
                   <p className="nb-eyebrow">大事な記録を消さない</p>
-                  <h2>この手帳のクラウド控えを作る</h2>
-                  <p>今はこの端末にも保存されています。メール確認をして控えを作ると、機種変更や履歴削除に備えられます。</p>
+                  <h2>{cloudUserEmail ? "この手帳は自動で控え保存されます" : "この手帳のクラウド控えを作る"}</h2>
+                  <p>
+                    {cloudUserEmail
+                      ? "プロフィール、日記、写真メモ、確認リストの変更はクラウドにも控えます。機種変更や履歴削除に備えられます。"
+                      : "今はこの端末にも保存されています。メール確認をして控えを作ると、機種変更や履歴削除に備えられます。"}
+                  </p>
                 </div>
               </div>
               {cloudUserEmail ? (
                 <div className="cloud-linked-box">
                   <span>控え保存先</span>
                   <strong>{cloudUserEmail}</strong>
+                  <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
+                    <span aria-hidden="true" />
+                    <em>
+                      {cloudAutoStatus === "saving"
+                        ? "自動保存中です"
+                        : cloudAutoStatus === "error"
+                          ? "自動保存を確認してください"
+                          : lastCloudSyncedAt
+                            ? `最終保存 ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
+                            : "変更が入ると自動で保存します"}
+                    </em>
+                  </div>
                 </div>
               ) : (
                 <div className="cloud-form">
@@ -1171,10 +1330,10 @@ export default function FamilyBoardPage() {
               )}
               <p className="cloud-message">{cloudMessage}</p>
               <div className="cloud-action-row">
-                <button type="button" onClick={syncNotebookToCloud} disabled={!cloudUserEmail || cloudStatus === "syncing"}>
+                <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                   今すぐクラウドに保存
                 </button>
-                <button type="button" onClick={restoreNotebookFromCloud} disabled={!cloudUserEmail || cloudStatus === "syncing"}>
+                <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                   クラウドから復元
                 </button>
                 <button type="button" onClick={downloadNotebookExport}>
