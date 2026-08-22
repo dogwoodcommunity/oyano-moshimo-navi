@@ -8075,6 +8075,24 @@ textarea {
   width: 22px;
 }
 
+.record-storage-message {
+  background: #eef8f1;
+  border: 1px solid rgba(15, 95, 65, 0.18);
+  border-radius: 14px;
+  color: #0d5c3e;
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.7;
+  margin: 0;
+  padding: 10px 12px;
+}
+
+.record-storage-message.is-warning {
+  background: #fff7ed;
+  border-color: rgba(174, 91, 34, 0.28);
+  color: #874216;
+}
+
 .nb-save {
   align-items: center;
   background: #2f6e82;

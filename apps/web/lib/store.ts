@@ -39,6 +39,7 @@ export type CaseRecord = {
   result?: LocalDiagnosisResult;
   handoffToken?: string;
   supportPackStatus?: "none" | "requested" | "paid" | "reviewing" | "report_ready";
+  updatedAt?: string;
 };
 
 export type PersonProfile = {
@@ -90,6 +91,17 @@ const FAMILY_BILLING_MANAGER_STORAGE_KEY = "oyano_family_billing_manager_v01";
 const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
 let memoryCases: CaseRecord[] = [];
 let memoryDiaryEntries: DiaryEntry[] = [];
+let lastNotebookStorageWarning: string | null = null;
+
+function storageWarningMessage() {
+  return "端末内の保存容量が足りず、今回の変更を端末に残せていない可能性があります。写真を減らすか、クラウド控えを作ってからもう一度保存してください。";
+}
+
+export function consumeNotebookStorageWarning(): string | null {
+  const message = lastNotebookStorageWarning;
+  lastNotebookStorageWarning = null;
+  return message;
+}
 
 export function createLocalId(prefix = "local"): string {
   const randomUUID = globalThis.crypto?.randomUUID;
@@ -132,8 +144,9 @@ function writeCases(cases: CaseRecord[]) {
 
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(cases));
+    lastNotebookStorageWarning = null;
   } catch {
-    // Private browsing or embedded browsers can reject storage writes.
+    lastNotebookStorageWarning = storageWarningMessage();
   }
 }
 
@@ -164,9 +177,21 @@ function writeDiaryEntries(entries: DiaryEntry[]) {
 
   try {
     storage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries));
+    lastNotebookStorageWarning = null;
   } catch {
-    // Keep the in-memory copy for the current app session.
+    lastNotebookStorageWarning = storageWarningMessage();
   }
+}
+
+function touchCaseUpdatedAt(caseId: string, updatedAt: string) {
+  const cases = readCases();
+  const existing = cases.find((item) => item.id === caseId);
+  if (!existing) return;
+
+  writeCases([
+    { ...existing, updatedAt },
+    ...cases.filter((item) => item.id !== caseId)
+  ]);
 }
 
 export function listDiaryEntries(caseId: string): DiaryEntry[] {
@@ -207,12 +232,17 @@ export function resetLocalNotebookData() {
 }
 
 export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
+  const now = new Date().toISOString();
   const entry: DiaryEntry = {
     ...input,
     id: createLocalId("diary"),
-    createdAt: new Date().toISOString()
+    createdAt: now,
+    updatedAt: now
   };
   writeDiaryEntries([entry, ...readDiaryEntries()]);
+  const diaryStorageWarning = lastNotebookStorageWarning;
+  touchCaseUpdatedAt(input.caseId, now);
+  if (diaryStorageWarning) lastNotebookStorageWarning = diaryStorageWarning;
   trackFunnel("record_written");
   return entry;
 }
@@ -222,6 +252,7 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
   const existing = entries.find((item) => item.id === entryId);
   if (!existing) return undefined;
 
+  const now = new Date().toISOString();
   const updated: DiaryEntry = {
     ...existing,
     ...patch,
@@ -229,10 +260,13 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
     body: normalizedTaskText(patch.body, existing.body) ?? existing.body,
     mood: patch.mood === "urgent" || patch.mood === "changed" || patch.mood === "stable" ? patch.mood : existing.mood,
     attachments: Array.isArray(patch.attachments) ? patch.attachments : existing.attachments,
-    updatedAt: new Date().toISOString()
+    updatedAt: now
   };
 
   writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
+  const diaryStorageWarning = lastNotebookStorageWarning;
+  touchCaseUpdatedAt(existing.caseId, now);
+  if (diaryStorageWarning) lastNotebookStorageWarning = diaryStorageWarning;
   return updated;
 }
 
@@ -241,12 +275,14 @@ export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>)
   const existing = cases.find((item) => item.id === caseId);
   if (!existing) return undefined;
 
+  const now = new Date().toISOString();
   const record: CaseRecord = {
     ...existing,
+    updatedAt: now,
     personProfile: {
       ...(existing.personProfile ?? {}),
       ...patch,
-      updatedAt: new Date().toISOString()
+      updatedAt: now
     }
   };
 
@@ -305,6 +341,7 @@ export function updateCaseTask(caseId: string, taskIndex: number, patch: Partial
 
   const record: CaseRecord = {
     ...existing,
+    updatedAt: now,
     result: {
       ...existing.result,
       tasks
@@ -338,6 +375,7 @@ export function addCaseTask(caseId: string, task: Partial<EditableTask> & Pick<E
 
   const record: CaseRecord = {
     ...existing,
+    updatedAt: now,
     result: {
       ...existing.result,
       tasks: [nextTask, ...existing.result.tasks]
@@ -460,12 +498,14 @@ export async function createCase(selectedStatus: ParentStatus): Promise<CaseReco
     throw new NotebookLimitError();
   }
 
+  const now = new Date().toISOString();
   const record: CaseRecord = {
     id: createLocalId("case"),
     selectedStatus,
     answers: { selectedStatus },
     status: "draft",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
     supportPackStatus: "none"
   };
 
@@ -486,11 +526,12 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
   const handoffToken = createHandoffToken(caseId);
   const cases = readCases();
   const existing = cases.find((item) => item.id === caseId);
+  const now = new Date().toISOString();
   const record: CaseRecord = {
     ...(existing ?? {
       id: caseId,
       selectedStatus: answers.selectedStatus,
-      createdAt: new Date().toISOString(),
+      createdAt: now,
       supportPackStatus: "none" as const
     }),
     selectedStatus: answers.selectedStatus,
@@ -499,7 +540,8 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
     contactEmail: answers.contactEmail,
     status: "result_ready",
     result,
-    handoffToken
+    handoffToken,
+    updatedAt: now
   };
 
   const next = [record, ...cases.filter((item) => item.id !== caseId)];
@@ -510,6 +552,7 @@ export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers)
 
 export function createLocalDemoCase(): CaseRecord {
   const id = createLocalId("case");
+  const now = new Date().toISOString();
   const answers: DiagnosisAnswers = {
     selectedStatus: "home_clearance",
     parentSituation: "実家が空き家になりそうで、家財整理と名義確認を家族で進めたい。",
@@ -531,7 +574,8 @@ export function createLocalDemoCase(): CaseRecord {
     contactName: answers.contactName,
     contactEmail: answers.contactEmail,
     status: "result_ready",
-    createdAt: new Date().toISOString(),
+    createdAt: now,
+    updatedAt: now,
     result: buildDiagnosisResult(answers),
     handoffToken: createHandoffToken(id),
     supportPackStatus: "requested"

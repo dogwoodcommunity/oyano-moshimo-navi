@@ -31,6 +31,7 @@ type LocalCase = {
   personProfile?: AnyRecord;
   status?: string;
   createdAt?: string;
+  updatedAt?: string;
   result?: {
     summary?: string;
     tasks?: LocalTask[];
@@ -126,6 +127,38 @@ function taskSnapshot(localCase: LocalCase) {
   }));
 }
 
+function newestIso(values: unknown[], fallback = new Date().toISOString()) {
+  let newest = 0;
+  values.forEach((value) => {
+    if (typeof value !== "string") return;
+    const timestamp = new Date(value).getTime();
+    if (!Number.isNaN(timestamp)) newest = Math.max(newest, timestamp);
+  });
+  return newest > 0 ? new Date(newest).toISOString() : fallback;
+}
+
+function localCaseUpdatedAt(localCase: LocalCase, fallback = new Date().toISOString()) {
+  const profile = asRecord(localCase.personProfile);
+  const tasks = asArray<LocalTask>(localCase.result?.tasks);
+  return newestIso([
+    localCase.updatedAt,
+    localCase.createdAt,
+    profile.updatedAt,
+    ...tasks.map((task) => task.updatedAt)
+  ], fallback);
+}
+
+function isStaleNotebookWrite(remoteProfile: AnyRecord, incomingLocalUpdatedAt: string) {
+  const remoteLocalUpdatedAt = remoteProfile.localUpdatedAt;
+  if (typeof remoteLocalUpdatedAt !== "string") return false;
+
+  const remoteTime = new Date(remoteLocalUpdatedAt).getTime();
+  const incomingTime = new Date(incomingLocalUpdatedAt).getTime();
+  if (Number.isNaN(remoteTime) || Number.isNaN(incomingTime)) return false;
+
+  return remoteTime > incomingTime + 1000;
+}
+
 function displayNameForCase(localCase: LocalCase) {
   const profile = asRecord(localCase.personProfile);
   const answers = asRecord(localCase.answers);
@@ -145,9 +178,11 @@ function relationshipForCase(localCase: LocalCase) {
 }
 
 function profilePayload(localCase: LocalCase, now: string) {
+  const localUpdatedAt = localCaseUpdatedAt(localCase, now);
   return {
     localCaseId: localCase.id,
     localCreatedAt: localCase.createdAt,
+    localUpdatedAt,
     localAnswers: asRecord(localCase.answers),
     personProfile: asRecord(localCase.personProfile),
     localResultSummary: localCase.result?.summary ?? null,
@@ -326,7 +361,8 @@ export async function GET(request: NextRequest) {
       priority: clampPriority(task.priority),
       category: task.category ?? "notebook",
       dueDate: safeDate(task.due_date),
-      progress: normalizeTaskProgress(task.status)
+      progress: normalizeTaskProgress(task.status),
+      updatedAt: safeIso(task.updated_at)
     }));
     const fallbackResult = buildDiagnosisResult({
       selectedStatus,
@@ -348,10 +384,11 @@ export async function GET(request: NextRequest) {
       personProfile,
       status: "result_ready",
       createdAt: safeIso(profile.localCreatedAt || person.created_at),
+      updatedAt: safeIso(profile.localUpdatedAt || person.profile_updated_at || person.updated_at || profile.localCreatedAt || person.created_at),
       result: {
         ...fallbackResult,
         summary: String(profile.localResultSummary || fallbackResult.summary),
-        tasks: profileTasks.length > 0 ? profileTasks : dbTasks.length > 0 ? dbTasks : fallbackResult.tasks
+        tasks: profileTasks.length > 0 ? profileTasks : dbTasks.length > 0 ? dbTasks : []
       },
       supportPackStatus: "none"
     };
@@ -436,10 +473,11 @@ export async function POST(request: NextRequest) {
     const displayName = displayNameForCase(localCase);
     const relationship = relationshipForCase(localCase);
     const profile = profilePayload(localCase, now);
+    const incomingLocalUpdatedAt = safeIso(profile.localUpdatedAt);
 
     const { data: existingPeople, error: existingPeopleError } = await supabase
       .from("people")
-      .select("id")
+      .select("id, profile")
       .eq("family_id", familyId)
       .eq("profile->>localCaseId", localCaseId)
       .limit(1);
@@ -456,7 +494,18 @@ export async function POST(request: NextRequest) {
       updated_at: now
     };
 
-    const existingPersonId = existingPeople?.[0]?.id;
+    const existingPerson = existingPeople?.[0];
+    const existingPersonId = existingPerson?.id;
+
+    if (existingPersonId && isStaleNotebookWrite(asRecord(existingPerson.profile), incomingLocalUpdatedAt)) {
+      return NextResponse.json(
+        {
+          error: "notebook_conflict",
+          message: "別の端末で新しい更新があります。先にクラウドの控えを復元してから、もう一度保存してください。"
+        },
+        { status: 409 }
+      );
+    }
 
     if (!existingPersonId && !billing.isFamilyOwner) {
       skippedPeople += 1;

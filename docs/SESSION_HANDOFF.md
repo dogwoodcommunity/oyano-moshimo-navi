@@ -6024,3 +6024,48 @@ Claudeに渡す時の優先順:
 2. `docs/CLAUDE_PRODUCT_REVIEW_BRIEF_2026-08-22.md`
 3. コードZIP
 4. 必要なら `docs/MONETIZATION.md` と `docs/SESSION_HANDOFF.md`
+
+## 2026-08-22 追記 164 — Claude再レビューの致命傷を先に補修
+
+ユーザーがClaude再レビュー結果を貼り付けた。主な指摘は「消えない手帳」を名乗るには、写真/PDFのlocalStorage保存、存在しないconsultモデルID、家族同時編集の丸上書きが危ないというもの。
+
+対応:
+
+- `apps/web/app/api/consult/route.ts`
+  - `claude-opus-5` 固定をやめ、`ANTHROPIC_MODEL` 環境変数、未設定時 `claude-sonnet-4-6` に変更した。
+  - これで存在しないモデルID固定によるPlus相談の即死を避ける。
+- `apps/web/app/home/page.tsx`
+  - 日記添付を当面「写真のみ」に絞った。
+  - PDF添付UIは一旦隠し、メッセージも「写真」に統一した。
+  - 画像は追加時に長辺1280px、JPEG品質0.78で圧縮する。
+  - 端末保存中は写真3枚までに制限し、4枚目以降やPDFは「クラウド保管へ移行するまで一時停止」と明示する。
+  - 保存容量不足時の警告を記録画面に表示する。
+- `apps/web/lib/store.ts`
+  - `CaseRecord.updatedAt` を追加した。
+  - プロフィール、タスク、日記作成/編集で対象者手帳の `updatedAt` が進むようにした。
+  - localStorage保存失敗時の警告を握りつぶさず、UIが表示できるよう `consumeNotebookStorageWarning()` を追加した。
+- `apps/web/app/api/notebook/sync/route.ts`
+  - クラウド同期の `people.profile.localUpdatedAt` に端末側の最終更新時刻を保存するようにした。
+  - 既存クラウド手帳より古い端末からPOSTされた場合は `409 notebook_conflict` を返し、「先にクラウドの控えを復元してから保存」と案内する。
+  - GET復元時、ユーザーが消したタスクをテンプレfallbackで復活させないよう、クラウドにもprofileにもタスクがない時は空配列にした。
+
+判断:
+
+- これはSupabase Storage本移行ではなく、3組テスト前の応急補修。
+- 「写真/PDF添付」は、現時点では「写真3枚まで」に表現を下げるのが正しい。
+- 有料テスト前には、Supabase Storageへの写真本移行、メール通知、consult実API複数回確認がまだ必要。
+
+検証:
+
+- `git diff --check` 成功。
+- `corepack pnpm --dir apps/web exec tsc --noEmit` 成功。
+- `corepack pnpm --dir apps/mobile exec tsc --noEmit` 成功。
+- `corepack pnpm --dir apps/web run build` 成功。
+  - Supabase SDKからNode 20非推奨警告は出るが、ビルド自体は成功。
+
+次に残ること:
+
+1. consultを本番環境の実APIで5回程度叩き、応答品質とエラー率を見る。
+2. 写真をSupabase Storageへ移す。本実装ではlocalStorageにbase64を残さない。
+3. 期限通知/月1確認の受け皿を、PWA方針に合わせてメール通知へ寄せる。
+4. `apps/web/app/home/page.tsx` が大きくなりすぎているので、`ProfileTab` / `RecordTab` / `TasksTab` / `MediaTab` / hooks に分割する。

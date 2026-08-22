@@ -7,6 +7,7 @@ import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMag
 import {
   addCaseTask,
   addDiaryEntry,
+  consumeNotebookStorageWarning,
   createLocalId,
   diaryAdvice,
   exportNotebookData,
@@ -64,7 +65,7 @@ const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
   { id: "record", label: "記録", note: "書く・見返す" },
   { id: "profile", label: "基本情報", note: "プロフィール" },
   { id: "tasks", label: "確認", note: "やること" },
-  { id: "media", label: "写真", note: "資料" }
+  { id: "media", label: "写真", note: "アルバム" }
 ];
 
 const handbookStepLabels: Record<HandbookStepState, string> = {
@@ -77,6 +78,15 @@ const emptyDiaryForm: DiaryFormState = {
   body: "",
   mood: "stable",
   files: []
+};
+
+const MAX_LOCAL_PHOTO_COUNT = 3;
+const MAX_LOCAL_PHOTO_EDGE = 1280;
+const LOCAL_PHOTO_QUALITY = 0.78;
+
+type PreparedPhoto = {
+  attachment: DiaryAttachment;
+  warning?: string;
 };
 
 const healthNotes = [
@@ -94,7 +104,7 @@ const setupPreviewItems = [
   "病院・施設・主な連絡先",
   "薬や注意点",
   "書類・鍵の保管メモ",
-  "写真・PDF付きの日記"
+  "写真付きの日記"
 ];
 
 const journeyCopy = {
@@ -286,13 +296,61 @@ function diaryTaskTitle(entry: DiaryEntry) {
 }
 
 function readFileAsDataUrl(file: File): Promise<string | undefined> {
-  if (!file.type.startsWith("image/")) return Promise.resolve(undefined);
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : undefined);
     reader.onerror = () => resolve(undefined);
     reader.readAsDataURL(file);
   });
+}
+
+async function prepareLocalPhoto(file: File): Promise<PreparedPhoto | null> {
+  if (!file.type.startsWith("image/")) return null;
+
+  const fallbackUrl = await readFileAsDataUrl(file);
+  let previewUrl = fallbackUrl;
+  let compressedSize = file.size;
+  let warning: string | undefined;
+
+  if (typeof document !== "undefined" && fallbackUrl) {
+    try {
+      const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = fallbackUrl;
+      });
+      const scale = Math.min(1, MAX_LOCAL_PHOTO_EDGE / Math.max(image.naturalWidth, image.naturalHeight));
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      if (context) {
+        context.drawImage(image, 0, 0, width, height);
+        previewUrl = canvas.toDataURL("image/jpeg", LOCAL_PHOTO_QUALITY);
+        compressedSize = Math.round((previewUrl.length * 3) / 4);
+      }
+    } catch {
+      warning = "写真を軽くできませんでした。容量が大きい場合は保存できないことがあります。";
+    }
+  }
+
+  if (file.size > compressedSize + 64_000) {
+    warning = "写真を軽くして追加しました。正式な写真保管はクラウド保存の本移行で対応します。";
+  }
+
+  return {
+    attachment: {
+      id: createLocalId("attachment"),
+      name: file.name,
+      type: "image/jpeg",
+      size: compressedSize,
+      previewUrl
+    },
+    warning
+  };
 }
 
 function personName(caseRecord: CaseRecord) {
@@ -421,7 +479,7 @@ function buildMonthReview(entries: DiaryEntry[], profile: PersonProfile | undefi
   const facts = [
     `${entries.length}件の記録`,
     `変化 ${changedCount + urgentCount}件`,
-    `写真・資料 ${attachmentCount}件`
+    `写真 ${attachmentCount}件`
   ];
   let tone: "urgent" | "changed" | "steady" = "steady";
   let title = "この月は、日々の様子を見返せます";
@@ -672,7 +730,7 @@ function buildRecordDigest(entries: DiaryEntry[], profile: PersonProfile | undef
     stats: [
       { label: "記録", value: `${entries.length}` },
       { label: "変化", value: `${changedCount + urgentCount}` },
-      { label: "写真・PDF", value: `${attachmentCount}` }
+      { label: "写真", value: `${attachmentCount}` }
     ],
     tags: concernTags.length > 0 ? concernTags.slice(0, 4) : [profile?.careStatus || "日々の様子"]
   };
@@ -902,6 +960,8 @@ export default function FamilyBoardPage() {
   const [newTaskForm, setNewTaskForm] = useState<TaskEditForm>(() => blankTaskForm());
   const [newTaskSaved, setNewTaskSaved] = useState(false);
   const [familyMessageCopied, setFamilyMessageCopied] = useState(false);
+  const [recordStorageMessage, setRecordStorageMessage] = useState<string | null>(null);
+  const [recordStorageTone, setRecordStorageTone] = useState<"info" | "warning">("info");
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("overview");
   const [loaded, setLoaded] = useState(false);
@@ -989,6 +1049,8 @@ export default function FamilyBoardPage() {
     setNewTaskForm(blankTaskForm());
     setNewTaskSaved(false);
     setFamilyMessageCopied(false);
+    setRecordStorageMessage(null);
+    setRecordStorageTone("info");
     setActiveNotebookTab("overview");
   }, [activeCase?.id]);
 
@@ -1076,10 +1138,10 @@ export default function FamilyBoardPage() {
     },
     {
       key: "media",
-      title: "写真・資料",
+      title: "写真",
       body: attachments.length > 0
-        ? "写真やPDFが日記にまとまっています。"
-        : "書類・部屋・施設からの紙を、日記に添付できます。",
+        ? "写真が日記にまとまっています。"
+        : "部屋・書類・施設からの紙は、まず写真で日記に添付できます。",
       href: "#media-library",
       action: attachments.length > 0 ? "見る" : "使い方",
       value: `${attachments.length}件`,
@@ -1284,16 +1346,32 @@ export default function FamilyBoardPage() {
   }
 
   async function attachFiles(caseId: string, fileList: FileList | null) {
-    const files = Array.from(fileList ?? []).slice(0, 4);
-    const nextAttachments = await Promise.all(files.map(async (file) => ({
-      id: createLocalId("attachment"),
-      name: file.name,
-      type: file.type || "application/octet-stream",
-      size: file.size,
-      previewUrl: await readFileAsDataUrl(file)
-    } satisfies DiaryAttachment)));
     const current = forms[caseId] ?? emptyDiaryForm;
-    updateForm(caseId, { files: [...current.files, ...nextAttachments].slice(0, 6) });
+    const slots = Math.max(0, MAX_LOCAL_PHOTO_COUNT - current.files.length);
+    if (slots === 0) {
+      setRecordStorageTone("warning");
+      setRecordStorageMessage("写真は3枚までにしています。大事な写真だけ残して、正式な写真保管はクラウド移行で対応します。");
+      return;
+    }
+
+    const allFiles = Array.from(fileList ?? []);
+    const imageFiles = allFiles.filter((file) => file.type.startsWith("image/")).slice(0, slots);
+    const ignoredCount = allFiles.length - imageFiles.length;
+    const prepared = (await Promise.all(imageFiles.map(prepareLocalPhoto))).filter(Boolean) as PreparedPhoto[];
+    const warnings = prepared.map((item) => item.warning).filter(Boolean) as string[];
+
+    updateForm(caseId, { files: [...current.files, ...prepared.map((item) => item.attachment)].slice(0, MAX_LOCAL_PHOTO_COUNT) });
+
+    if (ignoredCount > 0) {
+      warnings.push("PDFと4枚目以降の写真は、クラウド保管へ移行するまで一時停止しています。いまは写真3枚まで追加できます。");
+    }
+    if (warnings.length > 0) {
+      setRecordStorageTone("warning");
+      setRecordStorageMessage(Array.from(new Set(warnings)).join(" "));
+    } else if (prepared.length > 0) {
+      setRecordStorageTone("info");
+      setRecordStorageMessage("写真を追加しました。保存ボタンを押すと今日の記録に残ります。");
+    }
   }
 
   function saveDiary(caseId: string) {
@@ -1303,9 +1381,10 @@ export default function FamilyBoardPage() {
       caseId,
       date: todayInputValue(),
       mood: form.mood,
-      body: form.body.trim() || "写真・資料を追加しました。",
+      body: form.body.trim() || "写真を追加しました。",
       attachments: form.files
     });
+    const storageWarning = consumeNotebookStorageWarning();
     setDiaryEntries((current) => ({
       ...current,
       [caseId]: [entry, ...(current[caseId] ?? [])]
@@ -1314,6 +1393,13 @@ export default function FamilyBoardPage() {
       ...current,
       [caseId]: emptyDiaryForm
     }));
+    if (storageWarning) {
+      setRecordStorageTone("warning");
+      setRecordStorageMessage(storageWarning);
+    } else {
+      setRecordStorageTone("info");
+      setRecordStorageMessage("今日の記録を保存しました。クラウド控えを作ると、機種変更や履歴削除にも備えられます。");
+    }
   }
 
   function openDiaryEditor(entry: DiaryEntry) {
@@ -1346,6 +1432,7 @@ export default function FamilyBoardPage() {
       body: form.body.trim()
     });
     if (!updated) return;
+    const storageWarning = consumeNotebookStorageWarning();
 
     setDiaryEntries((current) => ({
       ...current,
@@ -1357,6 +1444,10 @@ export default function FamilyBoardPage() {
     }));
     setEditingDiaryId(null);
     setDiarySavedId(entryId);
+    if (storageWarning) {
+      setRecordStorageTone("warning");
+      setRecordStorageMessage(storageWarning);
+    }
   }
 
   function addDiaryTask(caseId: string, entry: DiaryEntry) {
@@ -1487,9 +1578,9 @@ export default function FamilyBoardPage() {
       const result = await response.json().catch(() => ({}));
       if (!response.ok) {
         setCloudAutoStatus("error");
-        if (!options.silent) {
+        if (!options.silent || result.error === "notebook_conflict") {
           setCloudStatus("error");
-          setCloudMessage(result.error ?? "クラウド保存に失敗しました。");
+          setCloudMessage(result.message ?? result.error ?? "クラウド保存に失敗しました。");
         }
         return;
       }
@@ -1723,7 +1814,7 @@ export default function FamilyBoardPage() {
                 <div>
                   <p className="nb-eyebrow">この人の手帳</p>
                   <h1>{notebookTitle(activePersonName)}を育てる場所です。</h1>
-                  <p>プロフィール、日記、確認リスト、写真・資料をここから更新できます。記録が増えるほど、あとで家族に説明しやすくなります。</p>
+                  <p>プロフィール、日記、確認リスト、写真をここから更新できます。記録が増えるほど、あとで家族に説明しやすくなります。</p>
                 </div>
               </div>
               <div className="person-command-stats" aria-label="手帳の状態">
@@ -1741,7 +1832,7 @@ export default function FamilyBoardPage() {
                 </div>
                 <div>
                   <strong>{attachments.length}</strong>
-                  <span>写真・資料</span>
+                  <span>写真</span>
                 </div>
               </div>
               <div className="person-daily-board" aria-label={`${activePersonName}の今日の手帳`}>
@@ -1858,8 +1949,8 @@ export default function FamilyBoardPage() {
                   }}
                 >
                   <span className="command-icon is-media" aria-hidden="true" />
-                  <strong>写真・資料を見る</strong>
-                  <small>日記に添付した写真やPDFを確認</small>
+                  <strong>写真を見る</strong>
+                  <small>日記に添付した写真を確認</small>
                 </a>
               </div>
             </article>
@@ -2275,9 +2366,9 @@ export default function FamilyBoardPage() {
                   ))}
                 </div>
                 <label className="file-button">
-                  写真・PDF
+                  写真を追加
                   <input
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     multiple
                     type="file"
                     onChange={(event) => {
@@ -2296,6 +2387,9 @@ export default function FamilyBoardPage() {
                     </span>
                   ))}
                 </div>
+              ) : null}
+              {recordStorageMessage ? (
+                <p className={`record-storage-message is-${recordStorageTone}`}>{recordStorageMessage}</p>
               ) : null}
               <button className="nb-save" type="button" onClick={() => saveDiary(activeCase.id)}>
                 {notebookTitle(activePersonName)}に残す
@@ -2414,7 +2508,7 @@ export default function FamilyBoardPage() {
                     {([
                       ["all", "すべて"],
                       ["changed", "変化・急ぎ"],
-                      ["attachments", "写真・PDF"]
+                      ["attachments", "写真"]
                     ] as const).map(([value, label]) => (
                       <button
                         className={recordFilter === value ? "is-active" : ""}
@@ -2432,7 +2526,7 @@ export default function FamilyBoardPage() {
                         <section className="diary-month-group" key={group.month}>
                           <div className="diary-month-head">
                             <h3>{monthLabel(group.month)}</h3>
-                            <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真・資料 {group.attachmentCount}件</p>
+                            <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真 {group.attachmentCount}件</p>
                           </div>
                           <MonthReview entries={group.items} profile={activeProfile} />
                           {group.items.map((entry) => {
@@ -2490,7 +2584,7 @@ export default function FamilyBoardPage() {
                                   <div className="entry-attachments">
                                     {entry.attachments.slice(0, 3).map((file) => (
                                       <span key={file.id}>
-                                        {file.previewUrl ? <img alt="" src={file.previewUrl} /> : "PDF"}
+                                        {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
                                         {file.name}
                                       </span>
                                     ))}
@@ -2958,7 +3052,7 @@ export default function FamilyBoardPage() {
 
           <section className={`nb-section ${activeNotebookTab === "media" ? "" : "is-hidden-tab"}`} id="media-library">
             <div className="nb-section-head">
-              <strong>写真・資料</strong>
+              <strong>写真</strong>
               <span className="rule" aria-hidden="true" />
               <span className="aside">{attachments.length}件</span>
             </div>
@@ -2967,13 +3061,13 @@ export default function FamilyBoardPage() {
                 <div className="media-grid">
                   {attachments.slice(0, 6).map((file) => (
                     <div className="media-tile" key={`${file.id}-${file.entryDate}`}>
-                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : <span>PDF</span>}
+                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : <span>写真</span>}
                       <small>{formatDate(file.entryDate)}</small>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="diary-empty">日記に写真やPDFを追加すると、ここにまとまります。</p>
+                <p className="diary-empty">日記に写真を追加すると、ここにまとまります。</p>
               )}
               <MascotNote
                 label="写真の使い方"
