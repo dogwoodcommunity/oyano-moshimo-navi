@@ -5846,3 +5846,20 @@ SVGだけではスマホで保存・共有しづらいため、同じロゴをPN
 
 - ユーザーがスマホやチャットで即共有できるよう、PNG一式とZIPを残した。
 - 透過背景が必要な場面に備えて、横組みは通常背景版と透過版の両方を用意した。
+
+## 2026-08-22 追記 157 — 横組みロゴPNGの上下余白を拡張
+
+ユーザーから、横組みロゴ画像について「上下の幅を広げて」と指摘があった。
+
+対応:
+
+- `docs/marketing/logo_assets/oyano-moshimo-logo-horizontal.svg` のviewBoxを `420×148` に広げ、鳥と文字を縦方向中央へ配置し直した。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-horizontal.png` を `1680×592` で再生成した。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-horizontal-transparent.png` も同じ `1680×592` で再生成した。
+- `docs/marketing/logo_assets/oyano-moshimo-logo-png.zip` を新しいPNG込みで作り直した。
+- `docs/marketing/logo_assets/README.md` に、横組みPNGは上下余白を広めに取った版であることを追記した。
+
+判断:
+
+- 前の `1680×448` 版はスマホ表示や資料貼り付け時に上下が詰まって見えた。
+- 新しい横組みPNGは白い角丸背景の上下余白を広げ、チラシやレビュー資料に置いた時に窮屈に見えないようにした。

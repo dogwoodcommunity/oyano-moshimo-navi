@@ -7,9 +7,9 @@
 - `oyano-moshimo-logo-horizontal.svg`
   - チラシ、資料、Webヘッダー向けの横組みロゴ。
 - `oyano-moshimo-logo-horizontal.png`
-  - チラシ、資料、Notion、Googleスライドなどにそのまま貼れる横組みPNG。
+  - チラシ、資料、Notion、Googleスライドなどにそのまま貼れる横組みPNG。上下余白を広めに取っています。
 - `oyano-moshimo-logo-horizontal-transparent.png`
-  - 背景透過の横組みPNG。色付き背景やCanvaに載せる時はこちら。
+  - 背景透過の横組みPNG。色付き背景やCanvaに載せる時はこちら。通常版と同じ上下余白です。
 - `oyano-moshimo-logo-stacked.svg`
   - 表紙、SNS画像、カードの中央配置向けの縦組みロゴ。
 - `oyano-moshimo-logo-stacked.png`

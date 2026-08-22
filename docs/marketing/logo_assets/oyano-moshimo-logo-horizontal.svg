@@ -1,6 +1,6 @@
-<svg viewBox="0 0 420 112" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="親のもしもナビ">
-  <rect width="420" height="112" rx="24" fill="#FFFDF8"/>
-  <g transform="translate(24 22)">
+<svg viewBox="0 0 420 148" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="親のもしもナビ">
+  <rect width="420" height="148" rx="30" fill="#FFFDF8"/>
+  <g transform="translate(24 40)">
     <circle cx="34" cy="34" r="32" fill="#fff" stroke="#33424A" stroke-width="3.6"/>
     <clipPath id="hat-horizontal">
       <rect x="0" y="0" width="68" height="17"/>
@@ -11,7 +11,7 @@
     <rect x="28.5" y="38" width="11" height="9.8" rx="2.4" fill="#E8A15D"/>
     <rect x="28.5" y="40.4" width="11" height="7.2" rx="3.6" fill="#E8A15D"/>
   </g>
-  <g transform="translate(110 26)">
+  <g transform="translate(110 44)">
     <text x="0" y="30"
       fill="#26353B"
       font-family="'Hiragino Sans','Yu Gothic','Noto Sans JP',sans-serif"
