@@ -1910,125 +1910,147 @@ export default function FamilyBoardPage() {
             </div>
             <article className="nb-card task-list-card">
               {activeTasks.length > 0 ? (
-                activeTasks.slice(0, 8).map((task, taskIndex) => {
-                  const key = taskEditKey(activeCase.id, taskIndex);
-                  const dateParts = taskDateParts(task.dueDate);
-                  const dueDays = daysUntil(task.dueDate);
-                  const form = taskForms[key] ?? taskFormSeed(task);
-                  const isEditing = editingTaskKey === key;
-                  const progress = task.progress ?? "todo";
-                  return (
-                    <div className={`task-edit-card is-${progress}`} key={task.id ?? `${task.title}-${task.dueDate}-${taskIndex}`}>
-                      <button
-                        aria-expanded={isEditing}
-                        className="task-open-button"
-                        type="button"
-                        onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
+                <>
+                  <p className="task-list-help">
+                    確認リストはあとから直せます。カードを押すと、内容・期限・担当・家族メモを編集できます。
+                  </p>
+                  {activeTasks.slice(0, 8).map((task, taskIndex) => {
+                    const key = taskEditKey(activeCase.id, taskIndex);
+                    const dateParts = taskDateParts(task.dueDate);
+                    const dueDays = daysUntil(task.dueDate);
+                    const form = taskForms[key] ?? taskFormSeed(task);
+                    const isEditing = editingTaskKey === key;
+                    const progress = task.progress ?? "todo";
+                    return (
+                      <div
+                        className={`task-edit-card is-${progress} ${isEditing ? "is-open" : ""}`}
+                        key={task.id ?? `${task.title}-${task.dueDate}-${taskIndex}`}
                       >
-                        <span className={`task-date ${dueDays !== null && dueDays <= 3 && progress !== "done" ? "is-near" : ""}`}>
-                          <small>{dateParts.month}</small>
-                          <b>{dateParts.day}</b>
-                        </span>
-                        <span className="task-copy">
-                          <strong>{task.title}</strong>
-                          <small>{task.description}</small>
-                        </span>
-                        <span className={`task-progress-chip is-${progress}`}>{taskProgressLabel(progress)}</span>
-                      </button>
-                      <div className="task-card-meta">
-                        <span className={task.assignee ? "is-set" : "is-empty"}>{task.assignee ? `担当: ${task.assignee}` : "担当未定"}</span>
-                        <span>優先度: {taskPriorityText(task.priority)}</span>
-                        {task.note ? <span>メモあり</span> : null}
-                      </div>
-                      <div className="task-quick-actions" aria-label={`${task.title}の状態変更`}>
-                        <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "doing" })}>
-                          進行中
-                        </button>
-                        <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "done" })}>
-                          完了
-                        </button>
-                        <button type="button" onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}>
-                          編集する
-                        </button>
-                        {taskSavedKey === key ? <span>保存しました</span> : null}
-                      </div>
-                      {isEditing ? (
-                        <div className="task-edit-panel">
-                          <label className="task-edit-field task-edit-wide">
-                            <span>やること</span>
-                            <input
-                              value={form.title}
-                              onChange={(event) => updateTaskForm(key, { title: event.target.value })}
-                            />
-                          </label>
-                          <label className="task-edit-field task-edit-wide">
-                            <span>説明</span>
-                            <textarea
-                              value={form.description}
-                              onChange={(event) => updateTaskForm(key, { description: event.target.value })}
-                            />
-                          </label>
-                          <div className="task-edit-grid">
-                            <label className="task-edit-field">
-                              <span>期限</span>
-                              <input
-                                type="date"
-                                value={form.dueDate}
-                                onChange={(event) => updateTaskForm(key, { dueDate: event.target.value })}
-                              />
-                            </label>
-                            <label className="task-edit-field">
-                              <span>担当</span>
-                              <input
-                                placeholder="例: 自分 / 長男 / 妹"
-                                value={form.assignee}
-                                onChange={(event) => updateTaskForm(key, { assignee: event.target.value })}
-                              />
-                            </label>
-                            <label className="task-edit-field">
-                              <span>状態</span>
-                              <select
-                                value={form.progress}
-                                onChange={(event) => updateTaskForm(key, { progress: event.target.value as TaskEditForm["progress"] })}
-                              >
-                                <option value="todo">未着手</option>
-                                <option value="doing">進行中</option>
-                                <option value="done">完了</option>
-                              </select>
-                            </label>
-                            <label className="task-edit-field">
-                              <span>優先度</span>
-                              <select
-                                value={form.priority}
-                                onChange={(event) => updateTaskForm(key, { priority: event.target.value as TaskEditForm["priority"] })}
-                              >
-                                <option value="1">急ぎ</option>
-                                <option value="2">通常</option>
-                                <option value="3">あとで</option>
-                              </select>
-                            </label>
-                          </div>
-                          <label className="task-edit-field task-edit-wide">
-                            <span>家族メモ</span>
-                            <textarea
-                              placeholder="例: 病院に確認済み。次は長女が書類を持って行く。"
-                              value={form.note}
-                              onChange={(event) => updateTaskForm(key, { note: event.target.value })}
-                            />
-                          </label>
-                          <div className="task-edit-footer">
-                            <button type="button" onClick={() => saveTaskEdit(activeCase.id, taskIndex)}>
-                              保存する
-                            </button>
-                            <button type="button" onClick={() => setEditingTaskKey(null)}>
-                              閉じる
-                            </button>
-                          </div>
+                        <div className="task-card-top">
+                          <button
+                            aria-expanded={isEditing}
+                            className="task-open-button"
+                            type="button"
+                            onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
+                          >
+                            <span className={`task-date ${dueDays !== null && dueDays <= 3 && progress !== "done" ? "is-near" : ""}`}>
+                              <small>{dateParts.month}</small>
+                              <b>{dateParts.day}</b>
+                            </span>
+                            <span className="task-copy">
+                              <span className="task-tap-hint">押すと編集できます</span>
+                              <strong>{task.title}</strong>
+                              <small>{task.description}</small>
+                            </span>
+                            <span className={`task-progress-chip is-${progress}`}>{taskProgressLabel(progress)}</span>
+                          </button>
+                          <button
+                            className="task-edit-entry"
+                            type="button"
+                            onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
+                          >
+                            内容を編集
+                          </button>
                         </div>
-                      ) : null}
-                    </div>
-                  );
-                })
+                        <div className="task-card-meta">
+                          <span className={task.assignee ? "is-set" : "is-empty"}>{task.assignee ? `担当: ${task.assignee}` : "担当未定"}</span>
+                          <span>優先度: {taskPriorityText(task.priority)}</span>
+                          {task.note ? <span>メモあり</span> : null}
+                        </div>
+                        <div className="task-quick-actions" aria-label={`${task.title}の状態変更`}>
+                          <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "doing" })}>
+                            進行中
+                          </button>
+                          <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "done" })}>
+                            完了
+                          </button>
+                          <button type="button" onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}>
+                            期限・担当を直す
+                          </button>
+                          {taskSavedKey === key ? <span>保存しました</span> : null}
+                        </div>
+                        {isEditing ? (
+                          <div className="task-edit-panel">
+                            <div className="task-edit-panel-head">
+                              <strong>この確認項目を編集</strong>
+                              <span>家族で分かる言葉に直して、担当や期限を入れておけます。</span>
+                            </div>
+                            <label className="task-edit-field task-edit-wide">
+                              <span>やること</span>
+                              <input
+                                value={form.title}
+                                onChange={(event) => updateTaskForm(key, { title: event.target.value })}
+                              />
+                            </label>
+                            <label className="task-edit-field task-edit-wide">
+                              <span>説明</span>
+                              <textarea
+                                value={form.description}
+                                onChange={(event) => updateTaskForm(key, { description: event.target.value })}
+                              />
+                            </label>
+                            <div className="task-edit-grid">
+                              <label className="task-edit-field">
+                                <span>期限</span>
+                                <input
+                                  type="date"
+                                  value={form.dueDate}
+                                  onChange={(event) => updateTaskForm(key, { dueDate: event.target.value })}
+                                />
+                              </label>
+                              <label className="task-edit-field">
+                                <span>担当</span>
+                                <input
+                                  placeholder="例: 自分 / 長男 / 妹"
+                                  value={form.assignee}
+                                  onChange={(event) => updateTaskForm(key, { assignee: event.target.value })}
+                                />
+                              </label>
+                              <label className="task-edit-field">
+                                <span>状態</span>
+                                <select
+                                  value={form.progress}
+                                  onChange={(event) => updateTaskForm(key, { progress: event.target.value as TaskEditForm["progress"] })}
+                                >
+                                  <option value="todo">未着手</option>
+                                  <option value="doing">進行中</option>
+                                  <option value="done">完了</option>
+                                </select>
+                              </label>
+                              <label className="task-edit-field">
+                                <span>優先度</span>
+                                <select
+                                  value={form.priority}
+                                  onChange={(event) => updateTaskForm(key, { priority: event.target.value as TaskEditForm["priority"] })}
+                                >
+                                  <option value="1">急ぎ</option>
+                                  <option value="2">通常</option>
+                                  <option value="3">あとで</option>
+                                </select>
+                              </label>
+                            </div>
+                            <label className="task-edit-field task-edit-wide">
+                              <span>家族メモ</span>
+                              <textarea
+                                placeholder="例: 病院に確認済み。次は長女が書類を持って行く。"
+                                value={form.note}
+                                onChange={(event) => updateTaskForm(key, { note: event.target.value })}
+                              />
+                            </label>
+                            <div className="task-edit-footer">
+                              <button type="button" onClick={() => saveTaskEdit(activeCase.id, taskIndex)}>
+                                変更を保存
+                              </button>
+                              <button type="button" onClick={() => setEditingTaskKey(null)}>
+                                編集を閉じる
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </>
               ) : (
                 <p className="diary-empty">まだタスクはありません。</p>
               )}

@@ -7662,6 +7662,18 @@ textarea {
   padding: 12px;
 }
 
+.task-list-help {
+  background: #f6f8f0;
+  border: 1px solid rgba(209, 224, 205, 0.95);
+  border-radius: 14px;
+  color: var(--ink-sub);
+  font-size: 13.5px;
+  font-weight: 900;
+  line-height: 1.7;
+  margin: 0;
+  padding: 12px 14px;
+}
+
 .task-row {
   grid-template-columns: auto minmax(0, 1fr) auto auto;
 }
@@ -7706,25 +7718,44 @@ textarea {
   padding: 10px;
 }
 
+.task-edit-card.is-open {
+  border-color: #0f6a45;
+  box-shadow: 0 12px 24px rgba(15, 106, 69, 0.12);
+}
+
 .task-edit-card.is-done {
   background: #f8fbf5;
 }
 
+.task-card-top {
+  display: grid;
+  gap: 8px;
+  position: relative;
+}
+
 .task-open-button {
   align-items: center;
-  background: transparent;
-  border: 0;
+  background: #f9fbf6;
+  border: 1.5px solid rgba(214, 226, 213, 0.96);
+  border-radius: 14px;
   color: inherit;
   cursor: pointer;
   display: grid;
   font: inherit;
   gap: 11px;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: auto minmax(0, 1fr);
   min-height: 68px;
-  padding: 0;
+  padding: 12px 12px 13px;
   text-align: left;
   touch-action: manipulation;
   width: 100%;
+}
+
+.task-open-button:hover,
+.task-open-button:focus-visible {
+  border-color: #0f6a45;
+  box-shadow: 0 0 0 4px rgba(15, 106, 69, 0.1);
+  outline: none;
 }
 
 .task-open-button:active {
@@ -7736,6 +7767,14 @@ textarea {
   display: grid;
   gap: 4px;
   min-width: 0;
+}
+
+.task-tap-hint {
+  color: #0f6a45;
+  font-size: 11.5px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1.2;
 }
 
 .task-copy strong {
@@ -7763,8 +7802,10 @@ textarea {
   color: var(--tab-sand-ink);
   font-size: 12px;
   font-weight: 900;
+  grid-column: 2;
   padding: 7px 10px;
   white-space: nowrap;
+  width: fit-content;
 }
 
 .task-progress-chip.is-doing {
@@ -7781,7 +7822,7 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
-  padding-left: 59px;
+  padding-left: 62px;
 }
 
 .task-card-meta span {
@@ -7809,7 +7850,32 @@ textarea {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  padding-left: 59px;
+  padding-left: 62px;
+}
+
+.task-edit-entry {
+  align-items: center;
+  background: #0f6a45;
+  border: 0;
+  border-radius: 999px;
+  box-shadow: 0 8px 16px rgba(15, 106, 69, 0.18);
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 900;
+  justify-content: center;
+  justify-self: end;
+  min-height: 38px;
+  padding: 9px 13px;
+  touch-action: manipulation;
+}
+
+.task-edit-entry:hover,
+.task-edit-entry:focus-visible {
+  box-shadow: 0 0 0 4px rgba(15, 106, 69, 0.13);
+  outline: none;
 }
 
 .task-quick-actions button,
@@ -7847,6 +7913,25 @@ textarea {
   display: grid;
   gap: 12px;
   padding: 12px;
+}
+
+.task-edit-panel-head {
+  display: grid;
+  gap: 4px;
+}
+
+.task-edit-panel-head strong {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: 17px;
+  line-height: 1.35;
+}
+
+.task-edit-panel-head span {
+  color: var(--ink-sub);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.6;
 }
 
 .task-edit-grid {
