@@ -800,7 +800,7 @@ export default function FamilyBoardPage() {
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
-  const [cloudMessage, setCloudMessage] = useState("この端末だけにある記録を、あとからクラウドに控え保存できます。");
+  const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。1分でクラウド控えを作れます。");
   const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
   const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
   const autoSyncTimerRef = useRef<number | null>(null);
@@ -1593,10 +1593,25 @@ export default function FamilyBoardPage() {
                   <p>
                     {cloudUserEmail
                       ? "プロフィール、日記、写真メモ、確認リストの変更は自動で控え保存されます。"
-                      : "機種変更やブラウザの履歴削除に備えて、メール確認でクラウド控えを作れます。"}
+                      : "このままでも使えます。ただ、履歴削除・機種変更・端末故障で消えることがあるため、1人目を作ったら控え保存まで済ませておくのがおすすめです。"}
                   </p>
                 </div>
               </div>
+              <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "控え保存でできること" : "控え保存をおすすめする理由"}>
+                {cloudUserEmail ? (
+                  <>
+                    <li>変更のたびに自動で控え保存します</li>
+                    <li>機種変更後もメール確認で復元できます</li>
+                    <li>家族共有の土台になります</li>
+                  </>
+                ) : (
+                  <>
+                    <li>メール確認だけで始められます</li>
+                    <li>確認後は日記・プロフィール・確認リストを自動保存します</li>
+                    <li>心配な時はJSON控えもダウンロードできます</li>
+                  </>
+                )}
+              </ul>
               {cloudUserEmail ? (
                 <div className="cloud-linked-box">
                   <span>控え保存先</span>
@@ -1627,7 +1642,7 @@ export default function FamilyBoardPage() {
                     />
                   </label>
                   <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
-                    控えを作る
+                    {cloudStatus === "sending" ? "送信中" : "メールで控え保存を始める"}
                   </button>
                 </div>
               )}

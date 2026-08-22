@@ -9151,6 +9151,40 @@ textarea {
   margin: 0;
 }
 
+.cloud-trust-list {
+  display: grid;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 0.9rem;
+  padding: 0;
+}
+
+.cloud-trust-list li {
+  align-items: center;
+  background: rgba(246, 251, 248, 0.86);
+  border: 1px solid rgba(15, 95, 65, 0.14);
+  border-radius: 14px;
+  color: #174535;
+  display: flex;
+  gap: 9px;
+  font-size: 0.84rem;
+  font-weight: 900;
+  line-height: 1.55;
+  min-height: 42px;
+  padding: 0.62rem 0.75rem;
+}
+
+.cloud-trust-list li::before {
+  background: #16754e;
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgba(22, 117, 78, 0.1);
+  content: "";
+  display: block;
+  flex: 0 0 auto;
+  height: 8px;
+  width: 8px;
+}
+
 .cloud-linked-box {
   background: #eef7f2;
   border: 1px solid rgba(15, 95, 65, 0.18);

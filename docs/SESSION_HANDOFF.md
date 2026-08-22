@@ -5337,3 +5337,42 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - 本番SupabaseのDB関数だけは、SQL Editorで `supabase/free_plan_member_limit.sql` を実行するまで旧上限のままになる可能性がある。
   - 次に進めるなら、本番SupabaseへこのSQLを流すか、レビューの最重要点である匿名開始データの早期クラウド同期をさらに詰める。
   - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 142
+
+- 目的:
+  - 課金価値レビューで最重要とされた「手帳なのに消えそうに見える」不安を、まず手帳画面の導線から減らす。
+  - 現状はクラウド控え機能自体はあるが、未ログイン時に「端末だけ保存のリスク」と「控え保存で何が守られるか」が弱く見えるため、1人目登録後に自然に控え保存へ進める表示へ直す。
+- 実装内容:
+  - `/home` の保存状態カードの初期メッセージを、履歴削除・機種変更・端末故障で消えるリスクを明示する文言へ変更。
+  - 未ログイン時は「メール確認だけ」「確認後は日記・プロフィール・確認リストを自動保存」「JSON控えも取れる」を短いチェック項目として表示。
+  - ログイン済み時は「変更のたびに自動保存」「機種変更後も復元」「家族共有の土台」を表示。
+  - メール送信ボタンを `メールで控え保存を始める` に変更し、押す意味を明確化。
+  - 関連CSSとして `cloud-trust-list` を追加。
+- 変更対象:
+  - `apps/web/app/home/page.tsx`
+  - `apps/web/app/globals.css`
+  - `docs/SESSION_HANDOFF.md`
+- 検証結果:
+  - `git diff --check` OK。
+  - 初回の `npm run typecheck --workspace web` は `.next/types` の生成物が消えていたため TS6053 で失敗。
+  - `npm run build --workspace web` OK。152ページ生成。
+  - build後に `.next/types` が再生成され、再実行した `npm run typecheck --workspace web` はOK。
+  - build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 残状態:
+  - この追記時点ではcommit/push前。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 143
+
+- GitHub反映準備:
+  - コミット `6c4239e Clarify notebook cloud backup` を作成。
+  - 内容は、手帳の保存状態カードで端末保存リスク、クラウド控えの効果、メール確認ボタンの意味を明確化する変更。
+  - この追記を同コミットへamendしてから `origin/main` へpush予定。
+- 検証:
+  - `git diff --check` OK。
+  - `npm run build --workspace web` OK。
+  - `npm run typecheck --workspace web` OK。
+- 注意:
+  - 初回typecheckだけ `.next/types` 欠落で失敗したが、buildで再生成後は成功。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
