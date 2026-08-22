@@ -30,6 +30,7 @@ const suggestedQuestions = [
 ];
 
 type Phase = "idle" | "loading" | "done" | "error";
+type SaveSyncPhase = "idle" | "saving" | "saved" | "local-only" | "error";
 
 function readConsent(): boolean {
   if (typeof window === "undefined") return false;
@@ -57,6 +58,10 @@ function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
 }
 
+function allDiaryEntriesForSync(cases: CaseRecord[]) {
+  return cases.flatMap((caseRecord) => listDiaryEntries(caseRecord.id));
+}
+
 export function ConsultPanel() {
   const [loaded, setLoaded] = useState(false);
   const [cases, setCases] = useState<CaseRecord[]>([]);
@@ -68,6 +73,8 @@ export function ConsultPanel() {
   const [disclaimer, setDisclaimer] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [saved, setSaved] = useState(false);
+  const [saveSyncPhase, setSaveSyncPhase] = useState<SaveSyncPhase>("idle");
+  const [saveSyncMessage, setSaveSyncMessage] = useState("");
   const [hasSubstance, setHasSubstance] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState("");
@@ -121,6 +128,8 @@ export function ConsultPanel() {
     setErrorMessage("");
     setAnswer(null);
     setSaved(false);
+    setSaveSyncPhase("idle");
+    setSaveSyncMessage("");
 
     const entries = listDiaryEntries(activeCase.id).slice(0, 20).map((entry) => ({
       date: entry.date,
@@ -195,7 +204,7 @@ export function ConsultPanel() {
     }
   }
 
-  function saveToNotebook() {
+  async function saveToNotebook() {
     if (!activeCase || !answer) return;
 
     addDiaryEntry({
@@ -206,6 +215,53 @@ export function ConsultPanel() {
       attachments: []
     });
     setSaved(true);
+    setSaveSyncPhase("saving");
+    setSaveSyncMessage("クラウド控えにも保存しています。");
+
+    try {
+      const client = getBrowserSupabase();
+      if (!client) {
+        setSaveSyncPhase("local-only");
+        setSaveSyncMessage("この端末の手帳に残しました。クラウド控えは家族ボードでメール確認後に保存されます。");
+        return;
+      }
+
+      const { data: sessionData } = await client.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
+      if (!accessToken) {
+        setSignedInEmail("");
+        setSaveSyncPhase("local-only");
+        setSaveSyncMessage("この端末の手帳に残しました。クラウド控えは家族ボードでメール確認後に保存されます。");
+        return;
+      }
+
+      setSignedInEmail(sessionData.session?.user.email ?? "");
+
+      const nextCases = listLocalCases();
+      const response = await fetch("/api/notebook/sync", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          cases: nextCases,
+          diaryEntries: allDiaryEntriesForSync(nextCases)
+        })
+      });
+
+      if (!response.ok) {
+        setSaveSyncPhase("error");
+        setSaveSyncMessage("この端末の手帳には残しました。クラウド控えは家族ボードで確認してください。");
+        return;
+      }
+
+      setSaveSyncPhase("saved");
+      setSaveSyncMessage("クラウド控えにも保存しました。");
+    } catch {
+      setSaveSyncPhase("error");
+      setSaveSyncMessage("この端末の手帳には残しました。通信できる場所で家族ボードを開くと控え保存できます。");
+    }
   }
 
   if (!loaded) {
@@ -372,9 +428,15 @@ export function ConsultPanel() {
           ) : null}
 
           <div className="consult-save">
-            <button onClick={saveToNotebook} type="button">この相談メモを手帳に残す</button>
+            <button disabled={saved || saveSyncPhase === "saving"} onClick={saveToNotebook} type="button">
+              {saveSyncPhase === "saving" ? "手帳に残しています…" : "この相談メモを手帳に残す"}
+            </button>
             {saved ? (
-              <p role="status">手帳に残しました。<Link href="/home#diary-history">手帳で見る</Link></p>
+              <p role="status">
+                手帳に残しました。
+                {saveSyncMessage ? <span>{saveSyncMessage}</span> : null}
+                <Link href="/home#diary-history">手帳で見る</Link>
+              </p>
             ) : null}
           </div>
 

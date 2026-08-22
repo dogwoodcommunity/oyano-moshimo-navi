@@ -9877,14 +9877,28 @@ textarea {
   width: 100%;
 }
 
+.consult-save button:disabled {
+  background: #eef3ee;
+  color: rgba(35, 70, 52, 0.58);
+  cursor: not-allowed;
+}
+
 .consult-save p {
   color: var(--tab-teal-ink);
   font-size: 14px;
   font-weight: 800;
+  line-height: 1.75;
   margin: 0;
 }
 
+.consult-save p span {
+  color: var(--ink-sub);
+  display: block;
+}
+
 .consult-save a {
+  display: inline-block;
+  margin-top: 4px;
   text-decoration: underline;
 }
 

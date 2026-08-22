@@ -4959,3 +4959,22 @@ node scripts/run-sql.mjs supabase/free_plan_member_limit.sql
   - 過去記録は「過去の記録を月別にすべて見る」として入口文言を明確化。
   - 次にやるなら、レビューで最重要だった「localStorageではなくクラウド保存がプロフィール/タスク編集まで確実に同期されるか」をコード上で点検し、不足があれば修正する。
   - 未追跡の `review_exports/` は引き続き既存レビュー出力フォルダとして残している。
+
+## 2026-08-22 追記 119
+
+- 目的:
+  - 課金価値レビューで最重要指摘だった「手帳が消えないこと」のうち、AI相談メモ保存時の穴を修正。
+  - `/home` のプロフィール編集・タスク編集・日記追加は `cases` / `diaryEntries` state変更を通じて自動クラウド同期されることを確認済み。
+  - ただし `apps/web/components/ConsultPanel.tsx` の「この相談メモを手帳に残す」は `addDiaryEntry()` だけで、相談画面上ではクラウド同期していなかった。
+- 実装:
+  - `apps/web/components/ConsultPanel.tsx`
+    - 相談メモ保存時に、ローカル日記へ追加した直後、ログイン済みなら `listLocalCases()` と全対象者の `listDiaryEntries()` をまとめて `/api/notebook/sync` へPOSTするよう変更。
+    - Supabaseセッションがない場合は「端末の手帳には残ったが、クラウド控えは家族ボードでメール確認後」と表示。
+    - 同期成功時は「クラウド控えにも保存しました」と表示。
+    - 保存中/保存済みはボタンを無効化して、同じ相談メモの二重保存を避ける。
+  - `apps/web/app/globals.css`
+    - 相談メモ保存ボタンのdisabled表示と、クラウド保存結果メッセージの読みやすさを調整。
+- 残状態:
+  - この追記時点ではcommit/push前。
+  - 次に `git diff --check`、`npm run typecheck --workspace web`、`npm run build --workspace web` を実行して確認する。
+  - 未追跡の `review_exports/` は既存レビュー出力フォルダとして残している。
