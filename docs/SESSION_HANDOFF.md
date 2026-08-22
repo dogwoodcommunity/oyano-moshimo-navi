@@ -6143,3 +6143,34 @@ Claude再レビューの「写真がlocalStorage base64だけで、消えない�
 2. Supabase Storage上に `notebook/{userId}/...` のobjectができているか確認する。
 3. 別端末/別ブラウザでクラウド復元し、写真が署名付きURLで表示されるか確認する。
 4. 期限通知/月1確認をPWA方針に合わせてメール通知へ寄せる。
+
+## 2026-08-23 追記 167 — 日記写真Storage対応を本番へ反映
+
+追記166の変更をコミット、pushし、本番Vercelへ反映した。
+
+コミット:
+
+- `679f0d4 Store notebook photos in Supabase Storage`
+- push先: `origin main`
+
+本番:
+
+- 通常URL: `https://oyano-moshimo-navi.vercel.app`
+- Vercel deployment: `https://oyano-moshimo-navi-6nzbud7xw-dogwoodcommunity1.vercel.app`
+- Vercel inspect: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi/61Mt2ArA2VTCaDLvuUQbnvpE8Lsy`
+- readyState: `READY`
+
+本番確認:
+
+- `npx vercel --prod --yes` の本番ビルド成功。
+- `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` は主要ページ/APIガードまで成功確認後、終端が戻らなかったため手動停止した。
+  - 確認できた範囲: `/home`, `/start`, `/guides`, `/consult`, `/family`, `/plans`, `/diagnosis`, `/support-pack`, `/manifest.webmanifest`, `/sw.js`, `/api/health` は期待通り。
+  - 認証必須APIは401、空相談は400など期待通り。
+- 新規API `/api/notebook/photo-upload-url`
+  - GETは405。Route Handlerは本番に載っている。
+  - 未認証POSTは401 `{ "error": "Authorization bearer token is required" }`。
+
+注意:
+
+- まだ「実機でログイン済み状態の写真追加 → Storage object作成 → 別端末復元」の実弾確認は未実施。
+- 未追跡の `review_exports/` はレビュー用生成物なのでコミット対象外。
