@@ -6972,3 +6972,33 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 - ユーザーの手帳、日記、写真、危機モード、AI相談途中にはスポンサー広告を出さない。
 - 初期の `/sponsors` は営業リストと枠需要の先行把握であり、利用者への事業者紹介や成約課金ではない。
 - 本番で申請を保存するには、Supabaseに `supabase/sponsor_applications.sql` を適用する必要がある。未適用の場合、公開フォームは `sponsor_applications_not_ready` を返す。
+
+## 2026-08-23 追記 193 — スポンサー枠申請フローをGitHubとVercel本番へ反映
+
+追記192のスポンサー枠申請フローをGitHubとVercel本番へ反映した。
+
+実行:
+
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+- `git commit -m "Add sponsor slot application flow"`
+- commit: `e2e5448`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+デプロイ:
+
+- Vercel deployment id: `dpl_91cGC4Ux4LnDjSJDmgaJeYuYZNTo`
+- Production URL: `https://oyano-moshimo-navi-6omdo7dmi-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+
+確認:
+
+- `https://oyano-moshimo-navi.vercel.app/sponsors?v=sponsor-slots-192` がHTTP 200。
+- `https://oyano-moshimo-navi.vercel.app/admin/sponsor-applications?v=sponsor-slots-192` がHTTP 200。
+
+注意:
+
+- 最初に `apps/web` 直下からVercelへ投げたデプロイは、Vercelが `npm install` を使って `workspace:*` を読めず失敗した。正しいデプロイはリポジトリルートから `npx vercel --prod --yes`。
+- 本番DBへ保存するには、Supabase SQL Editorで `supabase/sponsor_applications.sql` を適用する必要がある。未適用の場合、公開フォームは案内付きで保存準備中エラーになる。
