@@ -6694,3 +6694,32 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 注意:
 
 - `/home?reset=1` はローカルの手帳データを消して初回見え方に戻すレビュー用URL。自分の保存データを残したい端末では通常の `https://oyano-moshimo-navi.vercel.app/home` を使う。
+
+## 2026-08-23 追記 184 — 初回画面を「完全なゼロ登録画面」に切り直し
+
+ユーザーが実機スクショを見て「合ってる？何も変わってないような」と指摘。前回の記録ファースト修正では、初回状態でも濃紺の手帳表紙、急なときバナー、旧カードの雰囲気が残り、初めて使う人には「どこから登録するか」がまだ弱かった。
+
+対応:
+
+- `apps/web/app/home/page.tsx`
+  - 未登録時は `notebook-cover` を出さないようにし、「最初の手帳を作る」濃紺表紙を完全に非表示。
+  - 未登録時の大きい `crisis-banner` を外し、主導線を1人目登録に集中。
+  - 未登録時専用の `first-run-screen` を追加。
+  - 見出しを「まず、1人分だけ手帳を作ります。」に変更。
+  - CTAを「1人目の登録を始める」に一本化し、登録後にその人専用の記録手帳ができることを明記。
+  - 「呼び名と関係を入れる」「今日の記録を1行残す」「必要な確認だけ開く」の3ステップを表示。
+  - 急なときは主導線ではなく小さな補助リンクに変更。
+  - 使わなくなった `setupPreviewItems` を削除。
+- `apps/web/app/globals.css`
+  - `first-run-screen` / `first-run-hero` / `first-run-primary` / `first-run-steps` / `first-run-crisis` のスタイルを追加。
+  - 初回画面は白・生成り・緑を基調にして、旧手帳表紙とは別物に見えるようにした。
+
+確認:
+
+- `corepack pnpm --dir apps/web exec tsc --noEmit`
+- `git diff --check`
+
+注意:
+
+- ローカルNext devを `127.0.0.1:3006` で試したが、環境側で `EMFILE: too many open files, watch` が出て `/home` が404になったため、ローカルdev画面ではなくVercel本番デプロイ後の実機確認を正とする。
+- 次の確認URLはデプロイ後に `https://oyano-moshimo-navi.vercel.app/home?reset=1&v=first-run-184` を使う。

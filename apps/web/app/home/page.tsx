@@ -100,15 +100,6 @@ const healthNotes = [
   { tone: "contact", title: "病院・介護先", note: "病院・介護先から連絡があった" }
 ];
 
-const setupPreviewItems = [
-  "フルネーム・呼び名・続柄",
-  "生年月日・今の状態",
-  "病院・施設・主な連絡先",
-  "薬や注意点",
-  "書類・鍵の保管メモ",
-  "写真付きの日記"
-];
-
 const journeyCopy = {
   status: {
     label: "最初",
@@ -1833,21 +1824,21 @@ export default function FamilyBoardPage() {
 
   return (
     <main className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
-      <section className="notebook-cover" aria-label="親のもしもナビの手帳表紙">
-        <span className="ribbon" aria-hidden="true" />
-        <div className="cover-brand">
-          <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-          <span>親のもしもナビ</span>
-        </div>
-        <div className="cover-person">
-          <div className="cover-person-photo" aria-hidden="true">
-            <img src="/brand/watch-bird-mark.svg" alt="" />
+      {activeCase ? (
+        <section className="notebook-cover" aria-label="親のもしもナビの手帳表紙">
+          <span className="ribbon" aria-hidden="true" />
+          <div className="cover-brand">
+            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+            <span>親のもしもナビ</span>
           </div>
-          <div className="cover-person-meta">
-            <span>{activeCase ? `${activeRelationship} · ${activeCareStatus}` : "親の状況を1人ずつ残す手帳"}</span>
-            <strong>{activeCase ? notebookTitle(activePersonName) : "最初の手帳を作る"}</strong>
-          </div>
-          {activeCase ? (
+          <div className="cover-person">
+            <div className="cover-person-photo" aria-hidden="true">
+              <img src="/brand/watch-bird-mark.svg" alt="" />
+            </div>
+            <div className="cover-person-meta">
+              <span>{`${activeRelationship} · ${activeCareStatus}`}</span>
+              <strong>{notebookTitle(activePersonName)}</strong>
+            </div>
             <a
               className="cover-profile-link"
               href="#person-profile"
@@ -1858,15 +1849,11 @@ export default function FamilyBoardPage() {
             >
               プロフィール
             </a>
-          ) : (
-            <Link className="cover-profile-link" href="/start">手帳を作る</Link>
-          )}
-        </div>
-        <div className="cover-mascot-line">
-          <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-          <span>{activeCase ? "今日は、まず記録を書けば大丈夫です。必要な確認はあとから開けます。" : "最初に入れるのは呼び名と関係だけ。詳しい情報はあとから足せます。"}</span>
-        </div>
-        {activeCase ? (
+          </div>
+          <div className="cover-mascot-line">
+            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+            <span>今日は、まず記録を書けば大丈夫です。必要な確認はあとから開けます。</span>
+          </div>
           <nav className="cover-tabs" aria-label="手帳の切り替え">
             {cases.map((caseRecord) => (
               <button
@@ -1879,18 +1866,7 @@ export default function FamilyBoardPage() {
               </button>
             ))}
           </nav>
-        ) : null}
-      </section>
-
-      {!activeCase ? (
-        <Link className="crisis-banner" href="/crisis">
-          <span className="crisis-banner-badge">急なとき</span>
-          <span className="crisis-banner-body">
-            <strong>いま、急なことが起きている</strong>
-            <small>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</small>
-          </span>
-          <span className="crisis-banner-chev" aria-hidden="true">›</span>
-        </Link>
+        </section>
       ) : null}
 
       {!loaded ? (
@@ -1900,22 +1876,56 @@ export default function FamilyBoardPage() {
       ) : null}
 
       {loaded && !activeCase ? (
-        <section className="nb-section empty-notebook-section">
-          <article className="nb-card empty-notebook-card">
-            <div>
-              <p className="nb-eyebrow">はじめの一冊</p>
-              <h1>まず1人目の手帳を作ります。</h1>
-              <p>父母、義父母、祖父母、親戚など、気になる人を1人だけ選びます。最初は呼び名と関係だけで大丈夫。登録後、この画面がその人の記録手帳になります。</p>
+        <section className="first-run-screen" aria-label="はじめての登録">
+          <article className="first-run-hero">
+            <div className="first-run-mascot" aria-hidden="true">
+              <img src="/brand/watch-bird-mark.svg" alt="" />
             </div>
-            <MascotNote
-              label="ナビから"
-              title="詳しい情報は、手帳を作ってから足せます。"
-              body="毎日の記録、写真、確認リスト、プロフィールを1人ずつ分けて残せます。"
-            />
-            <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
-              {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
-            </div>
-            <Link className="nb-save empty-start-button" href="/start">1人目の手帳を作る</Link>
+            <p className="nb-eyebrow">はじめて使う方へ</p>
+            <h1>まず、1人分だけ手帳を作ります。</h1>
+            <p>
+              父母、義父母、祖父母、親戚など、気になる人を1人だけ選びます。
+              最初は呼び名と関係だけで大丈夫です。
+            </p>
+            <Link className="first-run-primary" href="/start">
+              <strong>1人目の登録を始める</strong>
+              <span>登録すると、その人専用の記録手帳ができます</span>
+            </Link>
+          </article>
+          <article className="first-run-steps">
+            <h2>この順番で進みます</h2>
+            <ol>
+              <li>
+                <span>1</span>
+                <div>
+                  <strong>呼び名と関係を入れる</strong>
+                  <small>本名や詳しい情報はあとから足せます。</small>
+                </div>
+              </li>
+              <li>
+                <span>2</span>
+                <div>
+                  <strong>今日の記録を1行残す</strong>
+                  <small>体調、病院からの連絡、家族に頼んだことを残します。</small>
+                </div>
+              </li>
+              <li>
+                <span>3</span>
+                <div>
+                  <strong>必要な確認だけ開く</strong>
+                  <small>プロフィール、確認リスト、写真は手帳の中で整理します。</small>
+                </div>
+              </li>
+            </ol>
+          </article>
+          <Link className="first-run-crisis" href="/crisis">
+            <span>入院・危篤・亡くなった直後など、今すぐ確認したい時はこちら</span>
+            <strong>急なときの確認へ</strong>
+            <i aria-hidden="true">›</i>
+          </Link>
+          <article className="first-run-note">
+            <strong>この画面は初めて使う人だけに出ます。</strong>
+            <p>すでに手帳がある人は、次回からその人の記録画面が開きます。</p>
           </article>
         </section>
       ) : null}
