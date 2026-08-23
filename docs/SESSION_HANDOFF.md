@@ -7192,3 +7192,33 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - commit / push / Vercel本番反映。
 - 本番DBで実際の利用者数カラムを返すには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を再適用する必要がある。未適用中はAPI側フォールバックで利用者数=世帯数として表示される。
+
+## 2026-08-23 追記 199 — 利用者/世帯併記をGitHubとVercel本番へ反映
+
+追記198の「利用者◯人（◯世帯）」表示統一をGitHubとVercel本番へ反映した。
+
+実行:
+
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+- `git commit -m "Show regional users and households"`
+- commit: `de84929`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+デプロイ:
+
+- Vercel deployment id: `dpl_5xjfg3wgDALBX3SPCDyiUBU7bAih`
+- Production URL: `https://oyano-moshimo-navi-4yuqnrks4-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+
+確認:
+
+- `https://oyano-moshimo-navi.vercel.app/sponsors?v=regional-usage-198` がHTTP 200。
+- `https://oyano-moshimo-navi.vercel.app/admin/regional-sponsors?v=regional-usage-198` がHTTP 200。
+
+注意:
+
+- ワークツリーには未追跡の `review_exports/` が残っている。今回の実装とは別出力と判断して触っていない。
+- 本番DBの `prefecture_active_family_counts` view に `active_users` 等を実際に追加するには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` の再適用が必要。コード側はSQL未適用でも落ちないようにフォールバック済み。
