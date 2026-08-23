@@ -114,6 +114,7 @@ export function ConsultPanel() {
   const [authChecked, setAuthChecked] = useState(false);
   const [signedInEmail, setSignedInEmail] = useState("");
   const [consultAccess, setConsultAccess] = useState<ConsultAccess | null>(null);
+  const [openedFromRecord, setOpenedFromRecord] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -129,6 +130,7 @@ export function ConsultPanel() {
     setActiveCaseId(initialCase);
     if (requestedQuestion) {
       setQuestion(requestedQuestion.slice(0, CONSULT_MAX_QUESTION_LENGTH));
+      setOpenedFromRecord(true);
     }
     setConsent(readConsent());
     setLoaded(true);
@@ -360,9 +362,71 @@ export function ConsultPanel() {
         </div>
       ) : null}
 
+      <section className="consult-form" aria-label="相談する">
+        {openedFromRecord ? (
+          <div className="consult-ready-card" role="status">
+            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+            <div>
+              <span>記録から相談</span>
+              <strong>質問文は入っています。下の緑のボタンで相談できます。</strong>
+              <p>記録した内容と手帳のプロフィールを前提に、次に確認することを整理します。</p>
+            </div>
+          </div>
+        ) : null}
+        <h2>この人のことで、AIに聞きたいことを書いてください</h2>
+        <div className="consult-suggestions">
+          {suggestedQuestions.map((item) => (
+            <button key={item} onClick={() => setQuestion(item)} type="button">{item}</button>
+          ))}
+        </div>
+        <textarea
+          maxLength={CONSULT_MAX_QUESTION_LENGTH}
+          onChange={(event) => setQuestion(event.target.value)}
+          placeholder="例: 退院の話が出ていますが、家に戻れるのか判断がつきません。何から確認すればいいですか。"
+          rows={5}
+          value={question}
+        />
+        <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
+        <label className="consult-consent">
+          <input checked={consent} onChange={(event) => toggleConsent(event.target.checked)} type="checkbox" />
+          <span>手帳の内容をAI相談に送ることに同意します。</span>
+        </label>
+        <p className="consult-plus-note">
+          {!authChecked || !consultAccess
+            ? "利用条件を確認しています。"
+            : consultAccess.plan === "plus"
+              ? "Family Plusで利用中です。1日5回まで、この手帳を読んだ相談ができます。"
+              : consultAccess.trialAvailable
+                ? "AI相談はこの家族で初回1回無料です。2回目以降はFamily Plus（月980円・年9,800円）で使えます。"
+                : "おためし相談は使用済みです。続けて相談する場合はFamily Plus（月980円・年9,800円）で使えます。"}
+        </p>
+        <button
+          className="consult-submit"
+          disabled={!authChecked || !signedInEmail || !consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
+          onClick={submit}
+          type="button"
+        >
+          {phase === "loading" ? "整理しています…" : consultAccess?.trialAvailable ? "初回無料でAI相談する" : "AI相談をはじめる"}
+        </button>
+        {authChecked && !signedInEmail ? (
+          <p className="consult-hint">
+            AI相談チャットは保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
+          </p>
+        ) : null}
+        {!hasSubstance ? (
+          <p className="consult-hint">
+            先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。
+            <Link href="/home#today-diary">今日の記録を書く</Link>
+          </p>
+        ) : null}
+        {!consent ? <p className="consult-hint">送る内容に同意すると押せます。</p> : null}
+        {phase === "loading" ? <p className="consult-hint">記録を読んでいます。30秒ほどかかることがあります。</p> : null}
+        {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
+      </section>
+
       <section className="consult-plus-gate" aria-label="長期相談の利用条件">
         <div>
-          <p className="consult-gate-kicker">使う前に</p>
+          <p className="consult-gate-kicker">Plusでできること</p>
           <h2>AI相談チャットは「手帳を読んで答える」機能です。</h2>
           <p>
             プロフィールと最近の記録を前提に、次に確認すること、窓口で聞くこと、家族へ共有することを整理します。
@@ -393,49 +457,6 @@ export function ConsultPanel() {
             </ul>
           </div>
         </div>
-        <label className="consult-consent">
-          <input checked={consent} onChange={(event) => toggleConsent(event.target.checked)} type="checkbox" />
-          <span>上の内容を送ることに同意します。（いつでも外せます）</span>
-        </label>
-      </section>
-
-      <section className="consult-form" aria-label="相談する">
-        <h2>この人のことで、AIに聞きたいことを書いてください</h2>
-        <div className="consult-suggestions">
-          {suggestedQuestions.map((item) => (
-            <button key={item} onClick={() => setQuestion(item)} type="button">{item}</button>
-          ))}
-        </div>
-        <textarea
-          maxLength={CONSULT_MAX_QUESTION_LENGTH}
-          onChange={(event) => setQuestion(event.target.value)}
-          placeholder="例: 退院の話が出ていますが、家に戻れるのか判断がつきません。何から確認すればいいですか。"
-          rows={5}
-          value={question}
-        />
-        <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
-        <button
-          className="consult-submit"
-          disabled={!authChecked || !signedInEmail || !consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
-          onClick={submit}
-          type="button"
-        >
-          {phase === "loading" ? "整理しています…" : "AI相談をはじめる"}
-        </button>
-        {authChecked && !signedInEmail ? (
-          <p className="consult-hint">
-            AI相談チャットは保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
-          </p>
-        ) : null}
-        {!hasSubstance ? (
-          <p className="consult-hint">
-            先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。
-            <Link href="/home#today-diary">今日の記録を書く</Link>
-          </p>
-        ) : null}
-        {!consent ? <p className="consult-hint">送る内容に同意すると押せます。</p> : null}
-        {phase === "loading" ? <p className="consult-hint">記録を読んでいます。30秒ほどかかることがあります。</p> : null}
-        {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
       </section>
 
       {answer ? (
@@ -499,7 +520,7 @@ export function ConsultPanel() {
             </button>
             {saved ? (
               <p role="status">
-                手帳に残しました。
+                AI相談の回答を、今日の記録として手帳に残しました。
                 {saveSyncMessage ? <span>{saveSyncMessage}</span> : null}
                 <Link href="/home#diary-history">手帳で見る</Link>
               </p>
