@@ -37,6 +37,7 @@ with required_tables(name) as (
     ('audit_logs'),
     ('account_delete_requests'),
     ('products'),
+    ('partners'),
     ('purchases'),
     ('subscriptions')
 )
@@ -89,6 +90,7 @@ where n.nspname = 'public'
     'audit_logs',
     'account_delete_requests',
     'products',
+    'partners',
     'purchases',
     'subscriptions'
   )
@@ -115,6 +117,7 @@ with policy_tables(name) as (
     ('provider_categories'),
     ('providers'),
     ('products'),
+    ('partners'),
     ('cases'),
     ('case_results'),
     ('support_packs'),
@@ -148,6 +151,8 @@ with required_columns(table_name, column_name) as (
     ('case_results', 'app_handoff_consumed_at'),
     ('people', 'profile'),
     ('people', 'profile_updated_at'),
+    ('people', 'prefecture'),
+    ('people', 'city'),
     ('timeline_events', 'mood'),
     ('timeline_events', 'attachments'),
     ('timeline_events', 'metadata'),
@@ -173,6 +178,8 @@ with required_indexes(name) as (
     ('idx_case_results_handoff_valid'),
     ('idx_consent_logs_case_type'),
     ('idx_people_profile_updated_at'),
+    ('idx_people_prefecture'),
+    ('idx_partners_region_category_status'),
     ('idx_timeline_events_person_date')
 )
 select
@@ -214,6 +221,11 @@ select
   count(*) > 0 as ok,
   count(*) as rows
 from public.products;
+
+select
+  'view_exists' as check_type,
+  'prefecture_active_family_counts' as target,
+  (to_regclass('public.prefecture_active_family_counts') is not null) as ok;
 
 select
   'security_check' as check_type,

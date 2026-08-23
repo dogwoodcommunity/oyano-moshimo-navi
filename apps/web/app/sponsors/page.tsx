@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { SponsorApplicationForm } from "@/components/SponsorApplicationForm";
+import { publicPrefectureUsageThreshold } from "@/lib/prefectures";
 
 export const metadata: Metadata = {
   title: "スポンサー枠の申請",
@@ -17,15 +18,18 @@ const fields = [
 ];
 
 export default function SponsorsPage() {
+  const threshold = publicPrefectureUsageThreshold();
+
   return (
     <main className="container sponsors-page">
       <section className="sponsor-hero">
         <p className="pill">Local sponsor</p>
-        <h1>地域ごとのスポンサー枠を、先に申請できます。</h1>
+        <h1>親御さんの地域ごとのスポンサー枠を、先に申請できます。</h1>
         <p>
           親のもしもナビは、家族が親の状況を記録し、次に確認することを整理する手帳です。
-          スポンサー枠は、利用者の記録画面に広告を出すものではありません。地域ガイド、
-          相談先一覧、印刷物など、家族が明示的に相談先を探す場面だけで扱います。
+          スポンサー枠は、利用者本人の住所ではなく、親御さんの居住都道府県を基準に扱います。
+          利用者の記録画面に広告を出すものではなく、地域ガイド、相談先一覧、印刷物など、
+          家族が明示的に相談先を探す場面だけで扱います。
         </p>
         <div className="sponsor-hero-actions">
           <a className="primary-cta" href="#apply">申請する</a>
@@ -41,14 +45,29 @@ export default function SponsorsPage() {
         </article>
         <article>
           <span>02</span>
-          <strong>都道府県×分野で枠を管理</strong>
-          <p>同じ県、同じ分野で枠を絞り、問い合わせ実績を見ながら地域ごとに広げます。</p>
+          <strong>親の居住都道府県×分野で枠を管理</strong>
+          <p>同じ県、同じ分野で枠を絞り、親御さんの地域で発生する相談に合わせます。</p>
         </article>
         <article>
           <span>03</span>
-          <strong>初期から申請受付</strong>
-          <p>会員数が増える前から希望地域を受け付け、兵庫・神戸から優先的に検証します。</p>
+          <strong>公開数字は閾値制</strong>
+          <p>管理画面では生数字を見ますが、公開側では一定数を超えた県だけ利用数を表示します。</p>
         </article>
+      </section>
+
+      <section className="panel sponsor-field-panel sponsor-threshold-panel">
+        <div className="section-head">
+          <div>
+            <p className="eyebrow">Regional data</p>
+            <h2>会員数は、親御さんの居住地で集計します</h2>
+          </div>
+          <span className="hint">公開は{threshold}家族以上</span>
+        </div>
+        <p>
+          管理画面では全都道府県の生数字と前月比を確認します。公開側では、
+          有効会員{threshold}家族以上の県だけ「◯◯県:△△家族が利用中」と表示し、
+          閾値未満の県は「募集中」として扱います。
+        </p>
       </section>
 
       <section className="panel sponsor-field-panel">

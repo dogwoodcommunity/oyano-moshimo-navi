@@ -989,6 +989,7 @@
 }
 
 .profile-form-grid input,
+.profile-form-grid select,
 .profile-form-grid textarea {
   background: #fff;
   border: 1.5px solid rgba(94, 126, 100, 0.68);
@@ -1007,6 +1008,19 @@
   color: rgba(46, 59, 55, 0.45);
 }
 
+.profile-form-grid select {
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(46, 59, 55, 0.7) 50%),
+    linear-gradient(135deg, rgba(46, 59, 55, 0.7) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 21px,
+    calc(100% - 14px) 21px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 34px;
+}
+
 .profile-form-grid textarea {
   line-height: 1.6;
   min-height: 92px;
@@ -1014,6 +1028,7 @@
 }
 
 .profile-form-grid input:focus,
+.profile-form-grid select:focus,
 .profile-form-grid textarea:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 4px rgba(39, 100, 71, 0.12);
@@ -1807,6 +1822,7 @@
 
   .profile-row-grid,
   .profile-form-grid,
+  .parent-prefecture-form,
   .health-chip-grid,
   .media-grid,
   .empty-feature-grid {
@@ -4739,6 +4755,73 @@ textarea {
   background: #fff7e8;
   border-color: rgba(165, 111, 36, 0.24);
   color: var(--gold);
+}
+
+.admin-metrics-summary {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 16px;
+}
+
+.admin-metrics-summary article {
+  background: #fbfdf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+}
+
+.admin-metrics-summary span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.admin-metrics-summary strong {
+  color: var(--green-dark);
+  font-size: 32px;
+  line-height: 1;
+}
+
+.admin-metrics-summary p,
+.admin-metrics-note {
+  color: var(--muted);
+  line-height: 1.55;
+  margin: 0;
+}
+
+.admin-metrics-actions {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.admin-public-visible,
+.admin-public-hidden {
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 900;
+  padding: 6px 9px;
+}
+
+.admin-public-visible {
+  background: #edf7ef;
+  color: var(--green);
+}
+
+.admin-public-hidden {
+  background: #f3f1eb;
+  color: var(--muted);
+}
+
+.admin-table .numeric {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
 }
 
 .admin-control-panel {
@@ -8494,6 +8577,104 @@ textarea {
   font-weight: 800;
   line-height: 1.75;
   margin: 8px 0 0;
+}
+
+.parent-prefecture-prompt {
+  background:
+    linear-gradient(145deg, rgba(255, 253, 248, 0.99), rgba(247, 251, 246, 0.99)),
+    radial-gradient(circle at 100% 0%, rgba(215, 164, 67, 0.18), transparent 34%);
+  border: 2px solid rgba(47, 110, 130, 0.24);
+  display: grid;
+  gap: 14px;
+  margin-top: 12px;
+  padding: 16px;
+}
+
+.parent-prefecture-prompt h2 {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: clamp(21px, 5.4vw, 29px);
+  line-height: 1.35;
+  margin: 2px 0 0;
+}
+
+.parent-prefecture-prompt p {
+  color: var(--ink-sub);
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.75;
+  margin: 8px 0 0;
+}
+
+.parent-prefecture-form {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.parent-prefecture-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.parent-prefecture-form label span {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.parent-prefecture-form input,
+.parent-prefecture-form select {
+  appearance: none;
+  background: #fff;
+  border: 1.5px solid rgba(94, 126, 100, 0.62);
+  border-radius: 15px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 800;
+  min-height: 50px;
+  padding: 12px 14px;
+  width: 100%;
+}
+
+.parent-prefecture-form select {
+  background-image:
+    linear-gradient(45deg, transparent 50%, rgba(46, 59, 55, 0.7) 50%),
+    linear-gradient(135deg, rgba(46, 59, 55, 0.7) 50%, transparent 50%);
+  background-position:
+    calc(100% - 20px) 22px,
+    calc(100% - 14px) 22px;
+  background-repeat: no-repeat;
+  background-size: 6px 6px, 6px 6px;
+  padding-right: 34px;
+}
+
+.parent-prefecture-form input:focus,
+.parent-prefecture-form select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(39, 100, 71, 0.12);
+  outline: none;
+}
+
+.parent-prefecture-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.parent-prefecture-actions .secondary {
+  background: #fff;
+  border: 1.5px solid rgba(94, 126, 100, 0.42);
+  border-radius: 999px;
+  color: var(--primary-dark);
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 10px 16px;
 }
 
 .handbook-readiness-score {

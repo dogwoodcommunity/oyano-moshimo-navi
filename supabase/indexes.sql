@@ -7,6 +7,7 @@ create index if not exists idx_family_invites_family_status on family_invites(fa
 create unique index if not exists idx_family_invites_token_unique on family_invites(token);
 create index if not exists idx_people_family_id on people(family_id);
 create index if not exists idx_people_current_status on people(current_status);
+create index if not exists idx_people_prefecture on people(prefecture);
 create index if not exists idx_people_profile_updated_at on people(profile_updated_at);
 create index if not exists idx_person_status_events_person_id on person_status_events(person_id);
 create index if not exists idx_task_templates_status on task_templates(status);
@@ -31,6 +32,7 @@ create index if not exists idx_provider_recommendations_case_id on provider_reco
 create index if not exists idx_purchases_provider_checkout_id on purchases(provider_checkout_id);
 create index if not exists idx_sponsor_applications_region_category on sponsor_applications(prefecture, category, status);
 create index if not exists idx_sponsor_applications_created_at on sponsor_applications(created_at desc);
+create index if not exists idx_partners_region_category_status on partners(prefecture, category, status);
 create index if not exists idx_account_delete_requests_status_due on account_delete_requests(status, due_at);
 create index if not exists idx_account_delete_requests_user_status on account_delete_requests(user_id, status);
 create unique index if not exists idx_account_delete_requests_one_open

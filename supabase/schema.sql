@@ -49,6 +49,8 @@ create table if not exists people (
   relationship_to_family text,
   age_band text,
   residence_area text,
+  prefecture text,
+  city text,
   current_status text not null default 'preparing',
   profile jsonb not null default '{}'::jsonb,
   profile_updated_at timestamptz,
@@ -352,6 +354,78 @@ create table if not exists sponsor_applications (
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+create table if not exists partners (
+  id uuid primary key default uuid_generate_v4(),
+  prefecture text not null,
+  city text,
+  category text not null,
+  company_name text not null,
+  contact_email text,
+  website text,
+  status text not null default 'open',
+  page_views integer not null default 0,
+  taps integer not null default 0,
+  inquiries integer not null default 0,
+  starts_on date,
+  ends_on date,
+  admin_note text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now(),
+  unique(prefecture, category)
+);
+
+create or replace view prefecture_active_family_counts as
+with prefectures(prefecture) as (
+  values
+    ('北海道'), ('青森県'), ('岩手県'), ('宮城県'), ('秋田県'), ('山形県'), ('福島県'),
+    ('茨城県'), ('栃木県'), ('群馬県'), ('埼玉県'), ('千葉県'), ('東京都'), ('神奈川県'),
+    ('新潟県'), ('富山県'), ('石川県'), ('福井県'), ('山梨県'), ('長野県'), ('岐阜県'),
+    ('静岡県'), ('愛知県'), ('三重県'), ('滋賀県'), ('京都府'), ('大阪府'), ('兵庫県'),
+    ('奈良県'), ('和歌山県'), ('鳥取県'), ('島根県'), ('岡山県'), ('広島県'), ('山口県'),
+    ('徳島県'), ('香川県'), ('愛媛県'), ('高知県'), ('福岡県'), ('佐賀県'), ('長崎県'),
+    ('熊本県'), ('大分県'), ('宮崎県'), ('鹿児島県'), ('沖縄県')
+),
+eligible_families as (
+  select distinct p.family_id, p.prefecture, p.created_at
+  from people p
+  where coalesce(p.prefecture, '') <> ''
+    and (
+      exists (
+        select 1
+        from family_members fm
+        where fm.family_id = p.family_id
+          and fm.role <> 'owner'
+      )
+      or exists (
+        select 1
+        from family_invites fi
+        where fi.family_id = p.family_id
+          and fi.status = 'pending'
+          and fi.created_at > now() - interval '7 days'
+      )
+    )
+),
+current_counts as (
+  select prefecture, count(distinct family_id)::integer as active_families
+  from eligible_families
+  group by prefecture
+),
+previous_counts as (
+  select prefecture, count(distinct family_id)::integer as previous_month_families
+  from eligible_families
+  where created_at < date_trunc('month', now())
+  group by prefecture
+)
+select
+  prefectures.prefecture,
+  coalesce(current_counts.active_families, 0) as active_families,
+  coalesce(previous_counts.previous_month_families, 0) as previous_month_families,
+  coalesce(current_counts.active_families, 0) - coalesce(previous_counts.previous_month_families, 0)
+    as month_over_month_families
+from prefectures
+left join current_counts on current_counts.prefecture = prefectures.prefecture
+left join previous_counts on previous_counts.prefecture = prefectures.prefecture;
 
 create table if not exists consent_logs (
   id uuid primary key default uuid_generate_v4(),

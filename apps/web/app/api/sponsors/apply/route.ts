@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
+import { PREFECTURES, SPONSOR_APPLICATION_CATEGORIES } from "@/lib/prefectures";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 export const dynamic = "force-dynamic";
 
-const allowedCategories = new Set(["葬儀", "相続士業", "家族信託", "ホーム紹介", "保険", "遺品整理", "その他"]);
+const allowedPrefectures = new Set<string>(PREFECTURES);
+const allowedCategories = new Set<string>(SPONSOR_APPLICATION_CATEGORIES);
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function text(value: unknown, maxLength: number) {
@@ -39,7 +41,14 @@ export async function POST(request: Request) {
   const message = text(payload.message, 1200);
   const consent = payload.consent === "yes" || payload.consent === true;
 
-  if (!companyName || !contactName || !emailPattern.test(email) || !prefecture || !allowedCategories.has(category) || !slotType || !consent) {
+  if (!companyName
+    || !contactName
+    || !emailPattern.test(email)
+    || !allowedPrefectures.has(prefecture)
+    || !allowedCategories.has(category)
+    || !slotType
+    || !consent
+  ) {
     return NextResponse.json({ error: "required_fields_missing" }, { status: 400 });
   }
 

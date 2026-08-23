@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
+import { PREFECTURES } from "@/lib/prefectures";
 import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData, type PersonProfile } from "@/lib/store";
 
 type TocItem = {
@@ -48,6 +49,9 @@ function compactProfile(profile: Partial<PersonProfile>, status: ParentStatus): 
   const fullName = profile.fullName?.trim();
   const relationship = profile.relationship?.trim();
   const birthDate = profile.birthDate?.trim();
+  const parentPrefecture = profile.parentPrefecture?.trim();
+  const parentCity = profile.parentCity?.trim();
+  const userPrefecture = profile.userPrefecture?.trim();
   const careStatus = profile.careStatus?.trim();
 
   return {
@@ -55,6 +59,9 @@ function compactProfile(profile: Partial<PersonProfile>, status: ParentStatus): 
     fullName: fullName || undefined,
     relationship: relationship || undefined,
     birthDate: birthDate || undefined,
+    parentPrefecture: parentPrefecture || undefined,
+    parentCity: parentCity || undefined,
+    userPrefecture: userPrefecture || undefined,
     careStatus: careStatus || statusTitle(status)
   };
 }
@@ -68,7 +75,9 @@ export default function StartPage() {
     displayName: "",
     fullName: "",
     relationship: "",
-    birthDate: ""
+    birthDate: "",
+    parentPrefecture: "",
+    parentCity: ""
   });
 
   // 開いた時点で埋まっているなら、選ばせる前に伝える。
@@ -104,6 +113,10 @@ export default function StartPage() {
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
     setChooseError(null);
+    if (!profileDraft.displayName?.trim() || !profileDraft.relationship?.trim() || !profileDraft.parentPrefecture?.trim()) {
+      setChooseError("先に、呼び名・関係・親御さんの都道府県を入力してください。詳しい情報はあとから足せます。");
+      return;
+    }
     setChoosingStatus(status);
     try {
       const record = await createCase(status, compactProfile(profileDraft, status));
@@ -159,12 +172,12 @@ export default function StartPage() {
       <section className="notebook-card start-profile-card" aria-label="管理する人の基本情報">
         <div className="start-section-heading">
           <span>1. 誰の手帳ですか</span>
-          <h2>あとで見返せるように、分かる範囲で入力してください。</h2>
-          <p>未入力でも進めます。フルネームや生年月日は、手帳を作ったあとに何度でも編集できます。</p>
+          <h2>最初は3つだけ入れれば大丈夫です。</h2>
+          <p>呼び名、関係、親御さんの都道府県を入れてください。フルネームや生年月日は、手帳を作ったあとに何度でも編集できます。</p>
         </div>
         <div className="start-profile-grid">
           <label>
-            <span>呼び名</span>
+            <span>呼び名（必須）</span>
             <input
               autoComplete="off"
               inputMode="text"
@@ -174,13 +187,33 @@ export default function StartPage() {
             />
           </label>
           <label>
-            <span>関係</span>
+            <span>関係（必須）</span>
             <input
               autoComplete="off"
               inputMode="text"
               onChange={(event) => updateProfileDraft("relationship", event.target.value)}
               placeholder="例：母、父、義母、叔父"
               value={profileDraft.relationship ?? ""}
+            />
+          </label>
+          <label>
+            <span>親御さんの都道府県（必須）</span>
+            <select
+              onChange={(event) => updateProfileDraft("parentPrefecture", event.target.value)}
+              value={profileDraft.parentPrefecture ?? ""}
+            >
+              <option value="">選択してください</option>
+              {PREFECTURES.map((prefecture) => <option key={prefecture} value={prefecture}>{prefecture}</option>)}
+            </select>
+          </label>
+          <label>
+            <span>市区町村（任意）</span>
+            <input
+              autoComplete="address-level2"
+              inputMode="text"
+              onChange={(event) => updateProfileDraft("parentCity", event.target.value)}
+              placeholder="例：神戸市、西宮市"
+              value={profileDraft.parentCity ?? ""}
             />
           </label>
           <label>
@@ -194,7 +227,7 @@ export default function StartPage() {
             />
           </label>
           <label>
-            <span>生年月日</span>
+            <span>生年月日（任意）</span>
             <input
               onChange={(event) => updateProfileDraft("birthDate", event.target.value)}
               type="date"

@@ -7002,3 +7002,68 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - 最初に `apps/web` 直下からVercelへ投げたデプロイは、Vercelが `npm install` を使って `workspace:*` を読めず失敗した。正しいデプロイはリポジトリルートから `npx vercel --prod --yes`。
 - 本番DBへ保存するには、Supabase SQL Editorで `supabase/sponsor_applications.sql` を適用する必要がある。未適用の場合、公開フォームは案内付きで保存準備中エラーになる。
+
+## 2026-08-23 追記 194 — 地域スポンサー枠を親の居住都道府県ベースで配線
+
+ユーザーから、スポンサー枠は「本人の住所」ではなく、葬儀・施設・相続などが実際に発生する「親御さんの居住都道府県」を基準にする、という仕様確定があった。全国の会員数を貯めながら、都道府県×6分野のスポンサー枠を最初から申請・集計できるように配線した。
+
+実装:
+
+- `apps/web/lib/prefectures.ts`
+  - 47都道府県、スポンサー6分野、申請用カテゴリ、公開表示閾値ヘルパーを共通化。
+- `apps/web/app/start/page.tsx`
+  - 初回登録で `呼び名`、`関係`、`親御さんの居住都道府県` を必須化。
+  - 市区町村は任意。整理結果と手帳作成の基準は親の居住地。
+- `apps/web/app/home/page.tsx`
+  - 既存ユーザーに親御さんの都道府県入力を1回促すモーダルを追加。
+  - プロフィール編集で親の都道府県・市区町村、利用者本人の都道府県を更新可能にした。
+- `apps/web/lib/store.ts`
+  - `PersonProfile` に `parentPrefecture`、`parentCity`、`userPrefecture` を追加。
+- `apps/web/app/api/notebook/sync/route.ts`
+  - `personProfile.parentPrefecture/parentCity` を Supabase `people.prefecture/city` と同期。
+  - 既存DBにまだカラムが無い場合は location カラムなしで再試行し、画面を止めないフォールバックを入れた。
+- `apps/web/components/SponsorApplicationForm.tsx` / `apps/web/app/api/sponsors/apply/route.ts`
+  - 都道府県とカテゴリを共通定義から使うように変更。
+  - API側でも47都道府県と申請カテゴリを検証し、不正な地域・カテゴリで営業データが汚れないようにした。
+- `apps/web/app/sponsors/page.tsx`
+  - スポンサー説明を「親の居住都道府県×分野」の枠に更新。
+  - 公開数字は閾値制で、閾値未満の県は生数字を出さない方針を明記。
+- `apps/web/app/admin/regional-sponsors/page.tsx`
+  - 管理画面に地域スポンサー集計ページを追加。
+- `apps/web/components/AdminRegionalSponsorMetrics.tsx`
+  - 都道府県×6分野の有効会員数、前月比、公開状態、スポンサー状態、表示数、タップ数、問い合わせ数を一覧化。
+  - 営業資料用CSVを出力可能。
+- `apps/web/app/api/admin/regional-sponsor-metrics/route.ts`
+  - `prefecture_active_family_counts` view と `partners` を読み、管理画面用の地域スポンサー指標を返す。
+  - DB未適用時は `source: not_ready` で空行を返し、管理画面が落ちないようにした。
+- `apps/web/app/admin/page.tsx`
+  - 管理トップから regional metrics に入れる導線を追加。
+- `supabase/schema.sql`
+  - `people.prefecture/city`、`partners` テーブル、`prefecture_active_family_counts` view を追加。
+- `supabase/regional_sponsor_data.sql`
+  - 既存本番DB向けの追加SQLを作成。Supabase SQL Editorで適用する。
+- `supabase/indexes.sql` / `supabase/production_rls.sql` / `supabase/verify_setup.sql` / `supabase/verify_compact.sql`
+  - 地域スポンサー用のindex、RLS、検証SQLを追加。
+- `docs/MONETIZATION.md`
+  - 2026/8/23のP1仕様として、登録フロー、DB、2段階表示、CSVエクスポートを追記。
+
+重要な仕様:
+
+- 集計・掲載マッチングの基準はすべて「親御さんの居住都道府県」。
+- 管理画面は全都道府県の生数字を表示する。
+- 公開側は `PUBLIC_PREFECTURE_USAGE_THRESHOLD` または `NEXT_PUBLIC_PREFECTURE_USAGE_THRESHOLD` 以上の県だけ「利用中家族数」を表示する。未設定時の閾値は100。
+- 手帳、日記、急なとき、AI相談の途中にはスポンサー広告を出さない。スポンサー申請と集計枠はB2B営業用の土台。
+
+確認:
+
+- `corepack pnpm --filter mobile run typecheck` 成功。
+- `corepack pnpm --filter web run typecheck` 成功。
+- `git diff --check` 成功。
+- `corepack pnpm --filter web run build` 成功。
+  - Supabase JS由来の Node.js 20以下非推奨警告は出るが、今回の修正起因ではない。
+
+次に必要:
+
+- commit / push / Vercel本番反映。
+- 本番Supabaseへ `supabase/regional_sponsor_data.sql` を適用。
+- 適用後に `supabase/verify_compact.sql` または `supabase/verify_setup.sql` で `partners`、`people.prefecture/city`、`prefecture_active_family_counts` が true になることを確認。

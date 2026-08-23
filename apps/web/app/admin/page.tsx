@@ -15,6 +15,7 @@ export default function AdminPage() {
           <Link className="secondary" href="/admin/cases">cases</Link>
           <Link className="secondary" href="/admin/support-packs">support packs</Link>
           <Link className="secondary" href="/admin/sponsor-applications">sponsor slots</Link>
+          <Link className="secondary" href="/admin/regional-sponsors">regional metrics</Link>
           <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
           <Link className="secondary" href="/admin/providers">providers</Link>
           <Link className="secondary" href="/admin/env">env</Link>
@@ -45,6 +46,11 @@ export default function AdminPage() {
           <span>05</span>
           <strong>Sponsor slots</strong>
           <p>都道府県×分野で届いたスポンサー枠の申請を確認します。</p>
+        </article>
+        <article className="admin-stat">
+          <span>06</span>
+          <strong>Regional metrics</strong>
+          <p>親の居住地ベースで、県×分野の会員数と営業用CSVを確認します。</p>
         </article>
       </section>
       <AdminTokenControl />

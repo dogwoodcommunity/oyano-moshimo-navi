@@ -261,6 +261,35 @@ function relationshipForCase(localCase: LocalCase) {
   return String(profile.relationship || answers.targetRelationship || "家族");
 }
 
+function parentLocationForCase(localCase: LocalCase) {
+  const profile = asRecord(localCase.personProfile);
+  return {
+    prefecture: safeText(profile.parentPrefecture),
+    city: safeText(profile.parentCity)
+  };
+}
+
+function postgrestMessage(error: unknown) {
+  if (error instanceof Error) return error.message;
+  if (error && typeof error === "object") {
+    const record = error as AnyRecord;
+    return [record.message, record.details, record.hint, record.code].filter(Boolean).join(" ");
+  }
+  return String(error ?? "");
+}
+
+function isPeopleLocationSchemaError(error: unknown) {
+  const message = postgrestMessage(error);
+  return /people|schema cache|column/i.test(message) && /prefecture|city/i.test(message);
+}
+
+function personRowWithoutLocation(row: AnyRecord) {
+  const copy = { ...row };
+  delete copy.prefecture;
+  delete copy.city;
+  return copy;
+}
+
 function profilePayload(localCase: LocalCase, now: string) {
   const localUpdatedAt = localCaseUpdatedAt(localCase, now);
   return {
@@ -440,7 +469,14 @@ export async function GET(request: NextRequest) {
     const profile = asRecord(person.profile);
     const localCaseId = String(profile.localCaseId || person.id);
     personToLocalCaseId.set(person.id, localCaseId);
-    const personProfile = asRecord(profile.personProfile);
+    const rawPersonProfile = asRecord(profile.personProfile);
+    const parentPrefecture = safeText(rawPersonProfile.parentPrefecture) || safeText(person.prefecture);
+    const parentCity = safeText(rawPersonProfile.parentCity) || safeText(person.city);
+    const personProfile: AnyRecord = {
+      ...rawPersonProfile,
+      ...(parentPrefecture ? { parentPrefecture } : {}),
+      ...(parentCity ? { parentCity } : {})
+    };
     const answers = asRecord(profile.localAnswers);
     const selectedStatus = normalizeStatus(person.current_status || answers.selectedStatus);
     const profileTasks = asArray<LocalTask>(profile.localTasks).map((task) => ({
@@ -631,6 +667,7 @@ export async function POST(request: NextRequest) {
     const selectedStatus = normalizeStatus(localCase.selectedStatus || localCase.answers?.selectedStatus);
     const displayName = displayNameForCase(localCase);
     const relationship = relationshipForCase(localCase);
+    const parentLocation = parentLocationForCase(localCase);
     const profile = profilePayload(localCase, now);
     const incomingLocalUpdatedAt = safeIso(profile.localUpdatedAt);
 
@@ -647,6 +684,8 @@ export async function POST(request: NextRequest) {
       family_id: familyId,
       display_name: displayName,
       relationship_to_family: relationship,
+      prefecture: parentLocation.prefecture || null,
+      city: parentLocation.city || null,
       current_status: selectedStatus,
       profile,
       profile_updated_at: now,
@@ -771,22 +810,39 @@ export async function POST(request: NextRequest) {
 }
 
 async function updatePerson(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, id: string, row: AnyRecord) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("people")
     .update(row)
     .eq("id", id)
     .select("id")
     .single();
+  if (error && isPeopleLocationSchemaError(error)) {
+    ({ data, error } = await supabase
+      .from("people")
+      .update(personRowWithoutLocation(row))
+      .eq("id", id)
+      .select("id")
+      .single());
+  }
   if (error) throw error;
+  if (!data) throw new Error("person_update_failed");
   return data.id as string;
 }
 
 async function insertPerson(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, row: AnyRecord) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("people")
     .insert(row)
     .select("id")
     .single();
+  if (error && isPeopleLocationSchemaError(error)) {
+    ({ data, error } = await supabase
+      .from("people")
+      .insert(personRowWithoutLocation(row))
+      .select("id")
+      .single());
+  }
   if (error) throw error;
+  if (!data) throw new Error("person_insert_failed");
   return data.id as string;
 }

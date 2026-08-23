@@ -48,6 +48,9 @@ export type PersonProfile = {
   displayName?: string;
   relationship?: string;
   birthDate?: string;
+  parentPrefecture?: string;
+  parentCity?: string;
+  userPrefecture?: string;
   careStatus?: string;
   keyContact?: string;
   hospitalOrFacility?: string;
@@ -579,6 +582,9 @@ function cleanInitialProfile(profile: Partial<PersonProfile>, selectedStatus: Pa
     displayName: textOrUndefined(profile.displayName) || textOrUndefined(profile.fullName),
     relationship: textOrUndefined(profile.relationship),
     birthDate: textOrUndefined(profile.birthDate),
+    parentPrefecture: textOrUndefined(profile.parentPrefecture),
+    parentCity: textOrUndefined(profile.parentCity),
+    userPrefecture: textOrUndefined(profile.userPrefecture),
     careStatus: textOrUndefined(profile.careStatus) || statusLabel(selectedStatus),
     keyContact: textOrUndefined(profile.keyContact),
     hospitalOrFacility: textOrUndefined(profile.hospitalOrFacility),

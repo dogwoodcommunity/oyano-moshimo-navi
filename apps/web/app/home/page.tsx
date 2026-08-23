@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
+import { PREFECTURES } from "@/lib/prefectures";
 import {
   addCaseTask,
   addDiaryEntry,
@@ -68,6 +69,10 @@ type NotebookSyncPayload = {
   cases: CaseRecord[];
   diaryEntries: DiaryEntry[];
 };
+type PrefecturePromptDraft = {
+  parentPrefecture: string;
+  parentCity: string;
+};
 
 type DiaryCalendarCell = {
   key: string;
@@ -105,6 +110,7 @@ const emptyDiaryForm: DiaryFormState = blankDiaryForm();
 const MAX_LOCAL_PHOTO_COUNT = 3;
 const MAX_LOCAL_PHOTO_EDGE = 1280;
 const LOCAL_PHOTO_QUALITY = 0.78;
+const PREFECTURE_PROMPT_SKIP_KEY = "oyano_parent_prefecture_prompt_skipped_v01";
 
 type PreparedPhoto = {
   attachment: DiaryAttachment;
@@ -401,6 +407,26 @@ function relationshipName(caseRecord: CaseRecord) {
   return relationshipLabels[relationship] ?? "家族";
 }
 
+function readPrefecturePromptSkipped(): Record<string, true> {
+  if (typeof window === "undefined") return {};
+
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(PREFECTURE_PROMPT_SKIP_KEY) ?? "{}");
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    return parsed as Record<string, true>;
+  } catch {
+    return {};
+  }
+}
+
+function writePrefecturePromptSkipped(value: Record<string, true>) {
+  try {
+    window.localStorage.setItem(PREFECTURE_PROMPT_SKIP_KEY, JSON.stringify(value));
+  } catch {
+    // This prompt is convenience-only. If browser storage is blocked, the profile itself still saves.
+  }
+}
+
 function profileSeed(caseRecord: CaseRecord): PersonProfile {
   const profile = caseRecord.personProfile ?? {};
   const targetName = caseRecord.answers.targetName?.trim() ?? "";
@@ -409,6 +435,9 @@ function profileSeed(caseRecord: CaseRecord): PersonProfile {
     displayName: profile.displayName ?? personName(caseRecord),
     relationship: profile.relationship ?? relationshipName(caseRecord),
     birthDate: profile.birthDate ?? "",
+    parentPrefecture: profile.parentPrefecture ?? "",
+    parentCity: profile.parentCity ?? "",
+    userPrefecture: profile.userPrefecture ?? "",
     careStatus: profile.careStatus ?? statusLabel(caseRecord.selectedStatus),
     keyContact: profile.keyContact ?? "",
     hospitalOrFacility: profile.hospitalOrFacility ?? "",
@@ -426,6 +455,7 @@ function profileCompletion(profile: PersonProfile) {
     profile.fullName,
     profile.displayName,
     profile.relationship,
+    profile.parentPrefecture,
     profile.birthDate,
     profile.careStatus,
     profile.keyContact,
@@ -451,6 +481,7 @@ function missingProfileItems(profile: PersonProfile) {
     ["フルネーム", profile.fullName],
     ["呼び名", profile.displayName],
     ["関係", profile.relationship],
+    ["親御さんの都道府県", profile.parentPrefecture],
     ["生年月日", profile.birthDate],
     ["いまの状態", profile.careStatus],
     ["主な連絡窓口", profile.keyContact],
@@ -469,6 +500,12 @@ function missingProfileItems(profile: PersonProfile) {
 function summarizeProfile(caseRecord: CaseRecord, profile: PersonProfile) {
   return [
     { label: "呼び名", value: profile.displayName || personName(caseRecord) },
+    {
+      label: "親の地域",
+      value: profile.parentPrefecture
+        ? `${profile.parentPrefecture}${profile.parentCity ? ` ${profile.parentCity}` : ""}`
+        : "未入力"
+    },
     { label: "生年月日", value: profile.birthDate || "未入力" },
     { label: "病院・ケア", value: profile.hospitalOrFacility || "未入力" },
     { label: "緊急連絡", value: profile.emergencyContact || profile.keyContact || "未入力" },
@@ -1160,6 +1197,8 @@ export default function FamilyBoardPage() {
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
+  const [prefecturePromptSkipped, setPrefecturePromptSkipped] = useState<Record<string, true>>({});
+  const [prefecturePromptDrafts, setPrefecturePromptDrafts] = useState<Record<string, PrefecturePromptDraft>>({});
   const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
   const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
   const [taskSavedKey, setTaskSavedKey] = useState<string | null>(null);
@@ -1204,6 +1243,14 @@ export default function FamilyBoardPage() {
     setActiveCaseId((current) => current ?? localCases[0]?.id ?? null);
     setDiaryEntries(Object.fromEntries(localCases.map((item) => [item.id, listDiaryEntries(item.id)])));
     setProfileForms(Object.fromEntries(localCases.map((item) => [item.id, profileSeed(item)])));
+    setPrefecturePromptSkipped(readPrefecturePromptSkipped());
+    setPrefecturePromptDrafts(Object.fromEntries(localCases.map((item) => {
+      const profile = profileSeed(item);
+      return [item.id, {
+        parentPrefecture: profile.parentPrefecture ?? "",
+        parentCity: profile.parentCity ?? ""
+      }];
+    })));
     setLoaded(true);
   }, []);
 
@@ -1281,6 +1328,18 @@ export default function FamilyBoardPage() {
   const nextTask = activeTasks[0];
   const activeForm = activeCase ? forms[activeCase.id] ?? emptyDiaryForm : emptyDiaryForm;
   const activeProfile = activeCase ? profileForms[activeCase.id] ?? profileSeed(activeCase) : undefined;
+  const activePrefecturePromptDraft = activeCase
+    ? prefecturePromptDrafts[activeCase.id] ?? {
+        parentPrefecture: activeProfile?.parentPrefecture ?? "",
+        parentCity: activeProfile?.parentCity ?? ""
+      }
+    : { parentPrefecture: "", parentCity: "" };
+  const shouldPromptParentPrefecture = Boolean(
+    activeCase &&
+    activeProfile &&
+    !activeProfile.parentPrefecture?.trim() &&
+    !prefecturePromptSkipped[activeCase.id]
+  );
   const activeProfileCompletion = activeProfile ? profileCompletion(activeProfile) : { filled: 0, total: 0, percent: 0 };
   const activeMissingProfileItems = activeProfile ? missingProfileItems(activeProfile) : [];
   const attachments = activeEntries.flatMap((entry) =>
@@ -1468,7 +1527,7 @@ export default function FamilyBoardPage() {
     updateForm(caseId, { body });
   }
 
-  function updateProfileForm(caseId: string, patch: PersonProfile) {
+  function updateProfileForm(caseId: string, patch: Partial<PersonProfile>) {
     setProfileSavedCaseId(null);
     setProfileForms((current) => ({
       ...current,
@@ -1477,6 +1536,44 @@ export default function FamilyBoardPage() {
         ...patch
       }
     }));
+  }
+
+  function updatePrefecturePromptDraft(caseId: string, patch: Partial<PrefecturePromptDraft>) {
+    setPrefecturePromptDrafts((current) => ({
+      ...current,
+      [caseId]: {
+        ...(current[caseId] ?? { parentPrefecture: "", parentCity: "" }),
+        ...patch
+      }
+    }));
+  }
+
+  function skipParentPrefecturePrompt(caseId: string) {
+    const next = { ...prefecturePromptSkipped, [caseId]: true as const };
+    setPrefecturePromptSkipped(next);
+    writePrefecturePromptSkipped(next);
+  }
+
+  function saveParentPrefecturePrompt(caseId: string) {
+    const draft = prefecturePromptDrafts[caseId];
+    if (!draft?.parentPrefecture?.trim()) return;
+
+    const profile = profileForms[caseId] ?? {};
+    const nextProfile = {
+      ...profile,
+      parentPrefecture: draft.parentPrefecture.trim(),
+      parentCity: draft.parentCity.trim()
+    };
+    const updated = updateCaseProfile(caseId, nextProfile);
+    if (!updated) return;
+
+    setCases((current) => [updated, ...current.filter((item) => item.id !== caseId)]);
+    setProfileForms((current) => ({
+      ...current,
+      [caseId]: profileSeed(updated)
+    }));
+    setProfileSavedCaseId(caseId);
+    skipParentPrefecturePrompt(caseId);
   }
 
   function saveProfile(caseId: string) {
@@ -1492,6 +1589,7 @@ export default function FamilyBoardPage() {
       [caseId]: profileSeed(updated)
     }));
     setProfileSavedCaseId(caseId);
+    if (profile.parentPrefecture?.trim()) skipParentPrefecturePrompt(caseId);
   }
 
   function openTaskEditor(caseId: string, taskIndex: number, task: TaskWithDue) {
@@ -2300,6 +2398,53 @@ export default function FamilyBoardPage() {
                 {handbookReadinessNote}
               </p>
             </article>
+            {shouldPromptParentPrefecture && activeCase ? (
+              <article className="nb-card parent-prefecture-prompt" aria-label="親御さんの都道府県入力">
+                <div>
+                  <p className="nb-eyebrow">地域設定</p>
+                  <h2>親御さんの都道府県を入れてください。</h2>
+                  <p>
+                    葬儀・施設・相続などの案内は、利用者ではなく親御さんの居住地を基準に整理します。
+                    市区町村は任意です。
+                  </p>
+                </div>
+                <div className="parent-prefecture-form">
+                  <label>
+                    <span>都道府県</span>
+                    <select
+                      value={activePrefecturePromptDraft.parentPrefecture}
+                      onChange={(event) => updatePrefecturePromptDraft(activeCase.id, { parentPrefecture: event.target.value })}
+                    >
+                      <option value="">選択してください</option>
+                      {PREFECTURES.map((prefecture) => (
+                        <option key={prefecture} value={prefecture}>{prefecture}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span>市区町村（任意）</span>
+                    <input
+                      placeholder="例: 神戸市、西宮市"
+                      value={activePrefecturePromptDraft.parentCity}
+                      onChange={(event) => updatePrefecturePromptDraft(activeCase.id, { parentCity: event.target.value })}
+                    />
+                  </label>
+                </div>
+                <div className="parent-prefecture-actions">
+                  <button
+                    className="profile-save-button"
+                    type="button"
+                    disabled={!activePrefecturePromptDraft.parentPrefecture}
+                    onClick={() => saveParentPrefecturePrompt(activeCase.id)}
+                  >
+                    保存する
+                  </button>
+                  <button className="secondary" type="button" onClick={() => skipParentPrefecturePrompt(activeCase.id)}>
+                    あとで入力する
+                  </button>
+                </div>
+              </article>
+            ) : null}
             <details className="cloud-backup-disclosure">
               <summary>
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
@@ -3113,6 +3258,38 @@ export default function FamilyBoardPage() {
                         value={activeProfile.relationship ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { relationship: event.target.value })}
                       />
+                    </label>
+                    <label>
+                      <span>親御さんの居住都道府県</span>
+                      <select
+                        value={activeProfile.parentPrefecture ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { parentPrefecture: event.target.value })}
+                      >
+                        <option value="">選択してください</option>
+                        {PREFECTURES.map((prefecture) => (
+                          <option key={prefecture} value={prefecture}>{prefecture}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      <span>市区町村</span>
+                      <input
+                        placeholder="例: 神戸市、西宮市"
+                        value={activeProfile.parentCity ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { parentCity: event.target.value })}
+                      />
+                    </label>
+                    <label>
+                      <span>あなたの都道府県（任意）</span>
+                      <select
+                        value={activeProfile.userPrefecture ?? ""}
+                        onChange={(event) => updateProfileForm(activeCase.id, { userPrefecture: event.target.value })}
+                      >
+                        <option value="">選択しない</option>
+                        {PREFECTURES.map((prefecture) => (
+                          <option key={prefecture} value={prefecture}>{prefecture}</option>
+                        ))}
+                      </select>
                     </label>
                     <label>
                       <span>生年月日</span>
