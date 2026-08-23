@@ -1848,9 +1848,16 @@ body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   letter-spacing: 0;
+}
+
+@media (max-width: 760px) {
+  body {
+    -webkit-text-size-adjust: 112%;
+    text-size-adjust: 112%;
+  }
 }
 
 a {
@@ -9546,7 +9553,7 @@ textarea {
 .record-ai-head span {
   color: #2f6e82;
   display: inline-block;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 950;
   letter-spacing: 0.08em;
   margin-bottom: 4px;
@@ -9555,14 +9562,14 @@ textarea {
 .record-ai-head strong {
   color: var(--ink);
   display: block;
-  font-size: 16.5px;
+  font-size: 19px;
   font-weight: 950;
   line-height: 1.55;
 }
 
 .record-ai-head p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 7px 0 0;
@@ -9582,10 +9589,10 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 950;
   justify-content: center;
-  min-height: 44px;
+  min-height: 54px;
   padding: 10px 14px;
   text-decoration: none;
   touch-action: manipulation;
@@ -9605,7 +9612,7 @@ textarea {
 
 .record-ai-card > small {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -9642,7 +9649,7 @@ textarea {
 .diary-save-complete-head span {
   color: #0f6f49;
   display: inline-block;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 950;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -9651,14 +9658,14 @@ textarea {
 .diary-save-complete-head strong {
   color: var(--ink);
   display: block;
-  font-size: 18px;
+  font-size: 21px;
   font-weight: 950;
   line-height: 1.5;
 }
 
 .diary-save-complete-head p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 6px 0 0;
@@ -9675,7 +9682,7 @@ textarea {
 
 .diary-save-complete-body p {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 750;
   line-height: 1.85;
   margin: 0;
@@ -9697,10 +9704,10 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 950;
   justify-content: center;
-  min-height: 46px;
+  min-height: 54px;
   padding: 10px 14px;
   touch-action: manipulation;
 }
@@ -9714,7 +9721,7 @@ textarea {
 
 .diary-save-complete-card > small {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.65;
 }
@@ -12788,6 +12795,7 @@ textarea {
 /* 長期相談 */
 .consult-page {
   display: grid;
+  font-size: 18px;
   gap: 18px;
   max-width: 720px;
   padding-bottom: 56px;
@@ -12805,7 +12813,7 @@ textarea {
 
 .consult-eyebrow {
   color: var(--tab-teal-ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
@@ -12820,7 +12828,7 @@ textarea {
 
 .consult-lead {
   color: var(--ink-sub);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -12854,13 +12862,13 @@ textarea {
 
 .consult-empty h2 {
   font-family: var(--font-serif), serif;
-  font-size: 20px;
+  font-size: 23px;
   margin: 0;
 }
 
 .consult-empty p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0;
@@ -12895,7 +12903,7 @@ textarea {
   border-radius: 999px;
   color: #fffdf6;
   display: inline-flex;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   height: 34px;
   justify-content: center;
@@ -12910,13 +12918,13 @@ textarea {
 
 .consult-step-head strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 900;
 }
 
 .consult-step-head small {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   margin-top: 2px;
 }
@@ -12931,8 +12939,8 @@ textarea {
   font: inherit;
   gap: 3px;
   justify-items: start;
-  min-height: 66px;
-  padding: 11px 13px;
+  min-height: 76px;
+  padding: 14px 15px;
   text-align: left;
   touch-action: manipulation;
 }
@@ -12946,14 +12954,14 @@ textarea {
 
 .consult-case-tabs button strong {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.35;
 }
 
 .consult-case-tabs button small {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -12984,7 +12992,7 @@ textarea {
 .consult-ready-card span {
   color: #2f6e82;
   display: inline-block;
-  font-size: 12px;
+  font-size: 15px;
   font-weight: 950;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -12993,14 +13001,14 @@ textarea {
 .consult-ready-card strong {
   color: var(--ink);
   display: block;
-  font-size: 17px;
+  font-size: 19px;
   font-weight: 950;
   line-height: 1.5;
 }
 
 .consult-ready-card p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 6px 0 0;
@@ -13034,7 +13042,7 @@ textarea {
 .consult-plus-gate h2 {
   color: var(--ink);
   font-family: var(--font-serif), serif;
-  font-size: 19px;
+  font-size: 23px;
   font-weight: 700;
   line-height: 1.45;
   margin: 0;
@@ -13042,7 +13050,7 @@ textarea {
 
 .consult-plus-gate p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 8px 0 0;
@@ -13050,7 +13058,7 @@ textarea {
 
 .consult-gate-kicker {
   color: var(--tab-teal-ink) !important;
-  font-size: 12px !important;
+  font-size: 15px !important;
   font-weight: 900 !important;
   letter-spacing: 0 !important;
   margin: 0 0 8px !important;
@@ -13067,7 +13075,7 @@ textarea {
 .consult-answer h2 {
   color: var(--ink);
   font-family: var(--font-serif), serif;
-  font-size: 18px;
+  font-size: 22px;
   font-weight: 700;
   line-height: 1.4;
   margin: 0;
@@ -13075,7 +13083,7 @@ textarea {
 
 .consult-disclosure > p {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0;
@@ -13100,7 +13108,7 @@ textarea {
 .consult-disclosure-grid strong {
   color: var(--ink);
   display: block;
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 900;
   margin-bottom: 8px;
 }
@@ -13115,7 +13123,7 @@ textarea {
 
 .consult-disclosure-grid li {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
   padding-left: 14px;
@@ -13148,7 +13156,7 @@ textarea {
 
 .consult-consent span {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.7;
 }
@@ -13165,10 +13173,10 @@ textarea {
   border-radius: 999px;
   color: var(--tab-teal-ink);
   cursor: pointer;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
-  min-height: 40px;
-  padding: 10px 14px;
+  min-height: 50px;
+  padding: 12px 16px;
   text-align: left;
 }
 
@@ -13177,7 +13185,7 @@ textarea {
   border: 1.5px solid rgba(203, 221, 227, 0.9);
   border-radius: 14px;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.8;
   padding: 14px;
@@ -13192,7 +13200,7 @@ textarea {
 
 .consult-count {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 15px;
   font-weight: 800;
   margin: 0;
   text-align: right;
@@ -13203,7 +13211,7 @@ textarea {
   border: 1px solid #e5ddcd;
   border-radius: 13px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 850;
   line-height: 1.65;
   margin: 0;
@@ -13216,9 +13224,9 @@ textarea {
   border-radius: 14px;
   color: #fff;
   cursor: pointer;
-  font-size: 16.5px;
+  font-size: 19px;
   font-weight: 900;
-  min-height: 56px;
+  min-height: 64px;
   padding: 14px 18px;
   width: 100%;
 }
@@ -13239,7 +13247,8 @@ textarea {
 
 .consult-hint {
   color: var(--ink-faint);
-  font-size: 13.5px;
+  font-size: 16px;
+  line-height: 1.75;
   font-weight: 800;
   margin: 0;
 }
@@ -13253,7 +13262,7 @@ textarea {
   background: var(--urgent-bg);
   border-radius: 12px;
   color: #8d3f1e;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -13272,7 +13281,7 @@ textarea {
 
 .consult-answer-block > p {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.9;
   margin: 0;
@@ -13296,14 +13305,14 @@ textarea {
 
 .consult-checks strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.55;
 }
 
 .consult-checks small {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.8;
 }
@@ -13318,7 +13327,7 @@ textarea {
 
 .consult-list li {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.8;
   padding-left: 18px;
@@ -13346,7 +13355,7 @@ textarea {
   background: var(--primary-tint);
   border-radius: 999px;
   color: var(--tab-teal-ink);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   padding: 8px 14px;
 }
@@ -13364,9 +13373,9 @@ textarea {
   border-radius: 999px;
   color: #0f6b45;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 18px;
   font-weight: 900;
-  min-height: 50px;
+  min-height: 58px;
   padding: 12px 18px;
   width: 100%;
 }
@@ -13379,7 +13388,7 @@ textarea {
 
 .consult-save p {
   color: var(--tab-teal-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -13398,7 +13407,7 @@ textarea {
 
 .consult-disclaimer {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13409,7 +13418,7 @@ textarea {
   border: 1px solid rgba(203, 221, 227, 0.9);
   border-radius: 12px;
   color: var(--tab-teal-ink);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.65;
   margin: 10px 0 0;

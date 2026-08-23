@@ -146,22 +146,24 @@ export function ConsultPanel() {
     setLoaded(true);
 
     const client = getBrowserSupabase();
-    if (!client) {
-      setAuthChecked(true);
-      return () => { cancelled = true; };
-    }
-
-    void client.auth.getSession().then(async ({ data }) => {
-      if (cancelled) return;
-      const token = data.session?.access_token;
-      setSignedInEmail(data.session?.user.email ?? "");
-      if (token) {
-        const response = await fetch("/api/consult", { headers: { Authorization: `Bearer ${token}` } });
+    void (async () => {
+      try {
+        const data = client ? (await client.auth.getSession()).data : null;
+        if (cancelled) return;
+        const token = data?.session?.access_token;
+        setSignedInEmail(data?.session?.user.email ?? "");
+        const response = await fetch("/api/consult", {
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined
+        });
         const access = await response.json().catch(() => null) as ConsultAccess | null;
-        if (!cancelled && response.ok && access?.signedIn) setConsultAccess(access);
+        if (!cancelled && response.ok && access) setConsultAccess(access);
+      } catch {
+        // 利用条件の確認に失敗しても、送信時にAPI側で再判定できる。
+        if (!cancelled) setConsultAccess(null);
+      } finally {
+        if (!cancelled) setAuthChecked(true);
       }
-      setAuthChecked(true);
-    });
+    })();
 
     return () => { cancelled = true; };
   }, []);
@@ -170,8 +172,7 @@ export function ConsultPanel() {
     () => cases.find((item) => item.id === activeCaseId),
     [cases, activeCaseId]
   );
-  const needsCloudBackup = authChecked && !signedInEmail;
-  const needsPlus = Boolean(authChecked && signedInEmail && consultAccess && !consultAccess.canConsult);
+  const needsPlus = Boolean(authChecked && consultAccess && !consultAccess.canConsult);
   const submitDisabled = !authChecked
     || !consent
     || !hasSubstance
@@ -221,28 +222,17 @@ export function ConsultPanel() {
 
     try {
       const client = getBrowserSupabase();
-      if (!client) {
-        setErrorMessage("長期相談の本人確認を準備中です。手帳への記録はこれまで通り使えます。");
-        setPhase("error");
-        return;
-      }
-
-      const { data: sessionData } = await client.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
-        setSignedInEmail("");
-        setAuthChecked(true);
-        setErrorMessage("長期相談は、保存された手帳を前提に使います。先に家族ボードでクラウド控えを作ってください。");
-        setPhase("error");
-        return;
-      }
-
-      setSignedInEmail(sessionData.session?.user.email ?? "");
+      const sessionData = client ? (await client.auth.getSession()).data : null;
+      const accessToken = sessionData?.session?.access_token;
+      setSignedInEmail(sessionData?.session?.user.email ?? "");
       setAuthChecked(true);
 
       const response = await fetch("/api/consult", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+        },
         body: JSON.stringify({
           question: question.trim(),
           person: {
@@ -274,11 +264,16 @@ export function ConsultPanel() {
 
       setAnswer(data.answer);
       setDisclaimer(data.disclaimer ?? "");
-      const accessResponse = await fetch("/api/consult", { headers: { Authorization: `Bearer ${accessToken}` } });
+      const accessResponse = await fetch("/api/consult", {
+        headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
+      });
       const access = await accessResponse.json().catch(() => null) as ConsultAccess | null;
-      if (accessResponse.ok && access?.signedIn) setConsultAccess(access);
+      if (accessResponse.ok && access) setConsultAccess(access);
       trackFunnel("consult_asked");
       setPhase("done");
+      window.setTimeout(() => {
+        document.querySelector(".consult-answer")?.scrollIntoView({ block: "start", behavior: "smooth" });
+      }, 80);
     } catch {
       setErrorMessage("通信できませんでした。電波のよい場所でもう一度お試しください。");
       setPhase("error");
@@ -418,21 +413,15 @@ export function ConsultPanel() {
         <p className="consult-plus-note">
           {!authChecked
             ? "利用条件を確認しています。"
-            : needsCloudBackup
-              ? "AI相談は保存済みの手帳を前提に使います。先にクラウド控えを作ると使えます。"
-              : !consultAccess
+            : !consultAccess
                 ? "利用条件を確認できませんでした。下のボタンを押すと再確認します。"
             : consultAccess.plan === "plus"
               ? "Family Plusで利用中です。1日5回まで、この手帳を読んだ相談ができます。"
               : consultAccess.trialAvailable
-                ? "AI相談はこの家族で初回1回無料です。2回目以降はFamily Plus（月980円・年9,800円）で使えます。"
+                ? "初回1回は無料です。メール確認なしで、そのままAIに相談できます。2回目以降はFamily Plus（月980円・年9,800円）です。"
                 : "おためし相談は使用済みです。続けて相談する場合はFamily Plus（月980円・年9,800円）で使えます。"}
         </p>
-        {needsCloudBackup ? (
-          <Link className="consult-submit consult-submit-link" href="/home?cloud=1#cloud-backup">
-            先にクラウド控えを作る
-          </Link>
-        ) : needsPlus ? (
+        {needsPlus ? (
           <Link className="consult-submit consult-submit-link" href="/plans#plus">
             Plusを見る（AI相談を続ける）
           </Link>
@@ -446,11 +435,9 @@ export function ConsultPanel() {
             {consultButtonLabel}
           </button>
         )}
-        {needsCloudBackup ? (
-          <p className="consult-hint">
-            押すと家族ボードの保存欄へ移動します。メール確認が終わると、この手帳を読んだAI相談が使えます。
-          </p>
-        ) : null}
+        <p className="consult-hint consult-direct-hint">
+          保存したプロフィールと最近の記録は、すぐこの相談に反映されます。メール確認はAI相談の前提ではありません。
+        </p>
         {!hasSubstance ? (
           <p className="consult-hint">
             先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。
@@ -468,12 +455,11 @@ export function ConsultPanel() {
           <h2>AI相談チャットは「手帳を読んで答える」機能です。</h2>
           <p>
             プロフィールと最近の記録を前提に、次に確認すること、窓口で聞くこと、家族へ共有することを整理します。
-            {signedInEmail ? ` 現在は ${signedInEmail} で確認済みです。` : " 先に家族ボードでメール確認をしてください。"}
+            {signedInEmail ? ` 現在は ${signedInEmail} でクラウド控えも利用中です。` : " メール確認なしでも、まず1回その場で相談できます。"}
           </p>
           {consultAccess ? <ConsultAccessNote access={consultAccess} /> : null}
         </div>
         <div className="consult-gate-actions">
-          {!signedInEmail && authChecked ? <Link className="secondary" href="/home?cloud=1">クラウド控えを作る</Link> : null}
           <Link className="secondary" href="/plans#plus">Plusを見る</Link>
         </div>
       </section>
@@ -577,7 +563,7 @@ function ConsultAccessNote({ access }: { access: ConsultAccess }) {
     return <p className="consult-access-note">Family Plusで利用中です。1日5回まで相談できます。</p>;
   }
   if (access.trialAvailable) {
-    return <p className="consult-access-note">この家族では、AI相談を1回だけ無料でためせます。成功した時だけ消費します。</p>;
+    return <p className="consult-access-note">初回は、AI相談を1回だけ無料でためせます。メール確認は不要で、回答できた時だけ消費します。</p>;
   }
   return <p className="consult-access-note">おためし相談は使いました。続きはPlusで使えます。手帳と記録は無料のまま残ります。</p>;
 }

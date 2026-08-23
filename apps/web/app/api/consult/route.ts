@@ -20,15 +20,16 @@ const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 const PER_CLIENT_DAILY_LIMIT = Number(process.env.CONSULT_CLIENT_DAILY_LIMIT ?? 5);
 const SERVICE_DAILY_LIMIT = Number(process.env.CONSULT_DAILY_LIMIT ?? 200);
 const ONE_DAY_SECONDS = 86_400;
+const DEVICE_TRIAL_COOKIE = "oyano_consult_trial_used_v01";
 
 type ConsultAccessState = {
-  userId: string;
-  familyId: string;
+  userId?: string;
+  familyId?: string;
   plan: "free" | "plus";
   trialUsedAt: string | null;
   trialAvailable: boolean;
   canConsult: boolean;
-  mode: "plus" | "trial" | "locked";
+  mode: "plus" | "trial" | "device-trial" | "locked";
   trialFamilyId?: string;
 };
 
@@ -55,27 +56,28 @@ function isAccessError(result: ConsultAccessResult): result is { response: NextR
   return "response" in result;
 }
 
-async function readConsultAccess(request: NextRequest): Promise<ConsultAccessResult> {
-  const supabase = getServerSupabase();
-  if (!supabase) {
-    return {
-      response: jsonError(
-        "consult_unavailable",
-        "長期相談の本人確認を準備中です。手帳への記録はこれまで通り使えます。",
-        503
-      )
-    };
-  }
+function readDeviceTrialAccess(request: NextRequest, userId?: string): ConsultAccessState {
+  const trialUsedAt = request.cookies.get(DEVICE_TRIAL_COOKIE)?.value ?? null;
+  return {
+    userId,
+    plan: "free",
+    trialUsedAt,
+    trialAvailable: !trialUsedAt,
+    canConsult: !trialUsedAt,
+    mode: trialUsedAt ? "locked" : "device-trial"
+  };
+}
 
+async function readConsultAccess(request: NextRequest): Promise<ConsultAccessResult> {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) {
-    return {
-      response: jsonError(
-        "login_required",
-        "長期相談は、保存された手帳を前提に使うPlus機能です。先に家族ボードでメール確認をしてください。",
-        401
-      )
-    };
+    return readDeviceTrialAccess(request);
+  }
+
+  const supabase = getServerSupabase();
+  if (!supabase) {
+    // クラウドの利用状況を確認できない時も、端末のおためし相談まで止めない。
+    return readDeviceTrialAccess(request);
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
@@ -110,13 +112,7 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .filter(Boolean);
 
   if (familyIds.length === 0) {
-    return {
-      response: jsonError(
-        "notebook_cloud_required",
-        "長期相談は、消えない手帳を前提に使います。先に家族ボードでクラウド控えを作ってください。",
-        403
-      )
-    };
+    return readDeviceTrialAccess(request, user.id);
   }
 
   const { data: families, error: familyError } = await supabase
@@ -201,7 +197,7 @@ export async function GET(request: NextRequest) {
   if (isAccessError(access)) return access.response;
 
   return NextResponse.json({
-    signedIn: true,
+    signedIn: Boolean(access.userId),
     plan: access.plan,
     trialAvailable: access.trialAvailable,
     trialUsedAt: access.trialUsedAt,
@@ -353,15 +349,25 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    const result = NextResponse.json({
       answer,
       disclaimer: CONSULT_DISCLAIMER,
       model: MODEL,
       consult: {
         mode: authorized.mode,
-        trialConsumed: Boolean(authorized.trialFamilyId)
+        trialConsumed: authorized.mode !== "plus"
       }
     });
+    if (authorized.mode !== "plus") {
+      result.cookies.set(DEVICE_TRIAL_COOKIE, new Date().toISOString(), {
+        httpOnly: true,
+        maxAge: 60 * 60 * 24 * 365,
+        sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
+        path: "/"
+      });
+    }
+    return result;
   } catch (error) {
     if (error instanceof Anthropic.RateLimitError) {
       return NextResponse.json(

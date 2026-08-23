@@ -1822,7 +1822,7 @@ export default function FamilyBoardPage() {
       setRecordStorageMessage(storageWarning);
     } else {
       setRecordStorageTone("info");
-      setRecordStorageMessage(`${formatLongDate(entry.date)}の記録を保存しました。カレンダーからあとで見返せます。クラウド控えを作ると、機種変更や履歴削除にも備えられます。`);
+      setRecordStorageMessage(`${formatLongDate(entry.date)}の記録を保存しました。カレンダーからあとで見返せます。AI相談にも今すぐ反映されています。メール確認済みの手帳はクラウドにも自動保存します。`);
     }
     window.setTimeout(() => {
       document.querySelector("#diary-save-complete")?.scrollIntoView({ block: "center", behavior: "smooth" });
