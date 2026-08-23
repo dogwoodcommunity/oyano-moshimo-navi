@@ -160,6 +160,20 @@ export function ConsultPanel() {
     () => cases.find((item) => item.id === activeCaseId),
     [cases, activeCaseId]
   );
+  const needsCloudBackup = authChecked && !signedInEmail;
+  const needsPlus = Boolean(authChecked && signedInEmail && consultAccess && !consultAccess.canConsult);
+  const submitDisabled = !authChecked
+    || !consent
+    || !hasSubstance
+    || question.trim().length < 4
+    || phase === "loading";
+  const consultButtonLabel = phase === "loading"
+    ? "整理しています…"
+    : !authChecked
+      ? "利用条件を確認しています…"
+      : consultAccess?.trialAvailable
+        ? "初回無料でAI相談する"
+        : "AI相談をはじめる";
 
   useEffect(() => {
     if (!activeCase) return;
@@ -392,25 +406,39 @@ export function ConsultPanel() {
           <span>手帳の内容をAI相談に送ることに同意します。</span>
         </label>
         <p className="consult-plus-note">
-          {!authChecked || !consultAccess
+          {!authChecked
             ? "利用条件を確認しています。"
+            : needsCloudBackup
+              ? "AI相談は保存済みの手帳を前提に使います。先にクラウド控えを作ると使えます。"
+              : !consultAccess
+                ? "利用条件を確認できませんでした。下のボタンを押すと再確認します。"
             : consultAccess.plan === "plus"
               ? "Family Plusで利用中です。1日5回まで、この手帳を読んだ相談ができます。"
               : consultAccess.trialAvailable
                 ? "AI相談はこの家族で初回1回無料です。2回目以降はFamily Plus（月980円・年9,800円）で使えます。"
                 : "おためし相談は使用済みです。続けて相談する場合はFamily Plus（月980円・年9,800円）で使えます。"}
         </p>
-        <button
-          className="consult-submit"
-          disabled={!authChecked || !signedInEmail || !consent || !hasSubstance || question.trim().length < 4 || phase === "loading"}
-          onClick={submit}
-          type="button"
-        >
-          {phase === "loading" ? "整理しています…" : consultAccess?.trialAvailable ? "初回無料でAI相談する" : "AI相談をはじめる"}
-        </button>
-        {authChecked && !signedInEmail ? (
+        {needsCloudBackup ? (
+          <Link className="consult-submit consult-submit-link" href="/home?cloud=1#cloud-backup">
+            先にクラウド控えを作る
+          </Link>
+        ) : needsPlus ? (
+          <Link className="consult-submit consult-submit-link" href="/plans#plus">
+            Plusを見る（AI相談を続ける）
+          </Link>
+        ) : (
+          <button
+            className="consult-submit"
+            disabled={submitDisabled}
+            onClick={submit}
+            type="button"
+          >
+            {consultButtonLabel}
+          </button>
+        )}
+        {needsCloudBackup ? (
           <p className="consult-hint">
-            AI相談チャットは保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
+            押すと家族ボードの保存欄へ移動します。メール確認が終わると、この手帳を読んだAI相談が使えます。
           </p>
         ) : null}
         {!hasSubstance ? (

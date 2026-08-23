@@ -13223,6 +13223,14 @@ textarea {
   width: 100%;
 }
 
+.consult-submit-link {
+  align-items: center;
+  box-sizing: border-box;
+  display: flex;
+  justify-content: center;
+  text-decoration: none;
+}
+
 .consult-submit:disabled {
   background: #d9e2dc;
   color: #8b968f;

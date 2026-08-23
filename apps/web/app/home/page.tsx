@@ -1227,10 +1227,18 @@ export default function FamilyBoardPage() {
   const cloudRestoringRef = useRef(false);
   const firstCloudLoadDoneRef = useRef(false);
   const skipInitialCloudRestoreRef = useRef(false);
+  const cloudBackupRef = useRef<HTMLDetailsElement | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
+      if (params.get("cloud") === "1" || window.location.hash === "#cloud-backup") {
+        window.setTimeout(() => {
+          if (!cloudBackupRef.current) return;
+          cloudBackupRef.current.open = true;
+          cloudBackupRef.current.scrollIntoView({ block: "start", behavior: "smooth" });
+        }, 80);
+      }
       if (params.get("reset") === "1") {
         resetLocalNotebookData();
         skipInitialCloudRestoreRef.current = true;
@@ -2445,7 +2453,7 @@ export default function FamilyBoardPage() {
                 </div>
               </article>
             ) : null}
-            <details className="cloud-backup-disclosure">
+            <details className="cloud-backup-disclosure" id="cloud-backup" ref={cloudBackupRef}>
               <summary>
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <span>保存状態</span>

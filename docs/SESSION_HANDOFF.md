@@ -7098,3 +7098,28 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - ワークツリーには未追跡の `review_exports/` が残っている。今回の実装とは別出力と判断して触っていない。
 - 本番DBへ保存・集計を有効化するには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を適用する必要がある。
+
+## 2026-08-23 追記 196 — AI相談の未ログイン時ボタンを押せる導線に変更
+
+ユーザー実機で `/consult` の緑ボタンが灰色のまま押せず、「利用条件を確認しています」と見える問題を確認。原因は、AI相談が保存済み手帳を前提にしているのに、未ログイン・未クラウド控え状態では `button disabled` だけを表示していたこと。
+
+修正:
+
+- `apps/web/components/ConsultPanel.tsx`
+  - 未ログイン時は無効ボタンではなく、`/home?cloud=1#cloud-backup` へ遷移する「先にクラウド控えを作る」ボタンを表示。
+  - Plus権限不足時は「Plusを見る（AI相談を続ける）」リンクを表示。
+  - 通常のAI相談ボタンは、本人確認済みかつ同意・質問文字数・手帳内容の条件が揃った時だけ表示。
+  - 未ログイン時の説明文を「押すと家族ボードの保存欄へ移動します」に変更。
+- `apps/web/app/home/page.tsx`
+  - クラウド保存欄に `id="cloud-backup"` と ref を付与。
+  - `/home?cloud=1` または `#cloud-backup` で開いた時に保存状態パネルを開き、自動スクロールするようにした。
+- `apps/web/app/globals.css`
+  - リンク版の相談CTAを通常ボタンと同じ見た目で中央揃えにした。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+
+次:
+
+- 本番へpush/deployして、実機で「AI相談 → 先にクラウド控えを作る → 保存状態が開く」ことを確認する。
