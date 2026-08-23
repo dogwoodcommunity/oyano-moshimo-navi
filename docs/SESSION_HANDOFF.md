@@ -6418,3 +6418,29 @@ Claude再レビューで「家族3組テスト: GO。コード側ブロッカー
 
 - ユーザーが相談ページやPlusページを見ていても「いまは家族ボード側にいる」と分かる。
 - 「急なとき」は緊急導線であり、現在地ではないことを明確にする。
+
+## 2026-08-23 追記 176 — 本番Vercelの古いナビ表示を手動再デプロイで解消
+
+ユーザーが実機スクショで、まだ旧ナビ（`家族ボード / 読む / 急なとき` のみ、`表示中` ラベルなし）が表示されていると報告。
+
+確認:
+
+- `curl -I https://oyano-moshimo-navi.vercel.app/home` で最初は古いVercelキャッシュが返っていた。
+- HTML上も旧ナビのままで、`nav-link` / `nav-current-label` が本番に出ていなかった。
+
+対応:
+
+- `npx vercel --prod --yes` は `Not authorized` で失敗。
+- Vercel CLIは `dogwoodcommunity` でログイン済みだったが、チームスコープ指定が必要だった。
+- `npx vercel --prod --yes --scope dogwoodcommunity1` で本番デプロイ成功。
+- 本番URL `https://oyano-moshimo-navi.vercel.app` に最新ビルドがエイリアスされた。
+
+再確認:
+
+- `curl -sL https://oyano-moshimo-navi.vercel.app/home` で `nav-link`、`is-active`、`nav-current-label`、`表示中` が返ることを確認。
+- `curl -I` でも `age: 0`、`x-vercel-cache: PRERENDER` の新しいレスポンスを確認。
+
+ユーザーへの案内:
+
+- iPhone側でまだ古く見える場合は、同じタブを引っ張って再読み込みする。
+- それでも古い場合は一度タブを閉じて、`https://oyano-moshimo-navi.vercel.app/home?v=nav2` で開く。
