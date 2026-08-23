@@ -28,7 +28,7 @@ function matchesAny(pathname: string, paths: string[]) {
 const navItems: NavItem[] = [
   {
     href: "/home",
-    label: "家族ボード",
+    label: "手帳",
     match: (pathname) => matchesAny(pathname, boardPaths)
   },
   {

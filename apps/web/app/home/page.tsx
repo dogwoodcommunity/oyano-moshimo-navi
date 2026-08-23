@@ -15,6 +15,7 @@ import {
   listLocalCases,
   readCanManageFamilyBilling,
   replaceLocalNotebook,
+  resetLocalNotebookData,
   updateDiaryEntry,
   updateCaseProfile,
   writeCanManageFamilyBilling,
@@ -1004,7 +1005,7 @@ export default function FamilyBoardPage() {
   const [recordStorageMessage, setRecordStorageMessage] = useState<string | null>(null);
   const [recordStorageTone, setRecordStorageTone] = useState<"info" | "warning">("info");
   const [recordFilter, setRecordFilter] = useState<RecordFilter>("all");
-  const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("overview");
+  const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("record");
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
@@ -1019,8 +1020,18 @@ export default function FamilyBoardPage() {
   const pendingAutoSyncPayloadRef = useRef<NotebookSyncPayload | null>(null);
   const cloudRestoringRef = useRef(false);
   const firstCloudLoadDoneRef = useRef(false);
+  const skipInitialCloudRestoreRef = useRef(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("reset") === "1") {
+        resetLocalNotebookData();
+        skipInitialCloudRestoreRef.current = true;
+        window.history.replaceState(null, "", window.location.pathname);
+      }
+    }
+
     const localCases = listLocalCases();
     setCases(localCases);
     setActiveCaseId((current) => current ?? localCases[0]?.id ?? null);
@@ -1092,7 +1103,7 @@ export default function FamilyBoardPage() {
     setFamilyMessageCopied(false);
     setRecordStorageMessage(null);
     setRecordStorageTone("info");
-    setActiveNotebookTab("overview");
+    setActiveNotebookTab("record");
   }, [activeCase?.id]);
 
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
@@ -1116,7 +1127,7 @@ export default function FamilyBoardPage() {
   const activeRelationship = activeCase ? activeProfile?.relationship || relationshipName(activeCase) : "";
   const activeCareStatus = activeCase ? activeProfile?.careStatus || statusLabel(activeCase.selectedStatus) : "";
   const todayRows = notebookInsight?.alerts.slice(0, 2) ?? [];
-  const recentEntries = activeEntries.slice(0, 2);
+  const recentEntries = activeEntries.slice(0, 3);
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
@@ -1770,6 +1781,13 @@ export default function FamilyBoardPage() {
     if (!loaded || !cloudUserEmail || firstCloudLoadDoneRef.current) return;
 
     firstCloudLoadDoneRef.current = true;
+    if (skipInitialCloudRestoreRef.current) {
+      skipInitialCloudRestoreRef.current = false;
+      setCloudMessage("初めて使う人の見え方で表示しています。手帳を作ると、この端末とクラウド控えに保存できます。");
+      setCloudStatus("idle");
+      return;
+    }
+
     const payload = notebookSyncPayload();
     const shouldRestoreFromCloud = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cloud") === "1";
     if (shouldRestoreFromCloud || payload.cases.length === 0) {
@@ -1826,8 +1844,8 @@ export default function FamilyBoardPage() {
             <img src="/brand/watch-bird-mark.svg" alt="" />
           </div>
           <div className="cover-person-meta">
-            <span>{activeCase ? `${activeRelationship} · ${activeCareStatus}` : "家族で進める親の管理帳"}</span>
-            <strong>{activeCase ? notebookTitle(activePersonName) : "まず1人分の手帳から"}</strong>
+            <span>{activeCase ? `${activeRelationship} · ${activeCareStatus}` : "親の状況を1人ずつ残す手帳"}</span>
+            <strong>{activeCase ? notebookTitle(activePersonName) : "最初の手帳を作る"}</strong>
           </div>
           {activeCase ? (
             <a
@@ -1841,45 +1859,39 @@ export default function FamilyBoardPage() {
               プロフィール
             </a>
           ) : (
-            <Link className="cover-profile-link" href="/start">情報を入力</Link>
+            <Link className="cover-profile-link" href="/start">手帳を作る</Link>
           )}
         </div>
         <div className="cover-mascot-line">
           <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-          <span>{activeCase ? "今日は、記録・気づき・確認リストの順に見れば大丈夫です。" : "まず1人だけ登録すると、その人専用の手帳ができます。"}</span>
+          <span>{activeCase ? "今日は、まず記録を書けば大丈夫です。必要な確認はあとから開けます。" : "最初に入れるのは呼び名と関係だけ。詳しい情報はあとから足せます。"}</span>
         </div>
-        <nav className="cover-tabs" aria-label="手帳の切り替え">
-          {activeCase ? (
-            <>
-              {cases.map((caseRecord) => (
-                <button
-                  className={caseRecord.id === activeCase.id ? "is-active" : ""}
-                  key={caseRecord.id}
-                  type="button"
-                  onClick={() => setActiveCaseId(caseRecord.id)}
-                >
-                  {personName(caseRecord)}
-                </button>
-              ))}
-              {isSharedFamilyMember ? null : <Link href="/plans">＋ 手帳を追加</Link>}
-            </>
-          ) : (
-            <>
-              <span className="is-active">はじめる</span>
-              <Link href="/guides">読む</Link>
-            </>
-          )}
-        </nav>
+        {activeCase ? (
+          <nav className="cover-tabs" aria-label="手帳の切り替え">
+            {cases.map((caseRecord) => (
+              <button
+                className={caseRecord.id === activeCase.id ? "is-active" : ""}
+                key={caseRecord.id}
+                type="button"
+                onClick={() => setActiveCaseId(caseRecord.id)}
+              >
+                {personName(caseRecord)}
+              </button>
+            ))}
+          </nav>
+        ) : null}
       </section>
 
-      <Link className="crisis-banner" href="/crisis">
-        <span className="crisis-banner-badge">急なとき</span>
-        <span className="crisis-banner-body">
-          <strong>いま、急なことが起きている</strong>
-          <small>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</small>
-        </span>
-        <span className="crisis-banner-chev" aria-hidden="true">›</span>
-      </Link>
+      {!activeCase ? (
+        <Link className="crisis-banner" href="/crisis">
+          <span className="crisis-banner-badge">急なとき</span>
+          <span className="crisis-banner-body">
+            <strong>いま、急なことが起きている</strong>
+            <small>入院した夜、危篤と言われた時、亡くなった直後に、やることだけを順番に出します。</small>
+          </span>
+          <span className="crisis-banner-chev" aria-hidden="true">›</span>
+        </Link>
+      ) : null}
 
       {!loaded ? (
         <section className="nb-card board-empty">
@@ -1892,18 +1904,18 @@ export default function FamilyBoardPage() {
           <article className="nb-card empty-notebook-card">
             <div>
               <p className="nb-eyebrow">はじめの一冊</p>
-              <h1>この画面が、その人専用の手帳になります。</h1>
-              <p>父母、義父母、祖父母、親戚など、まず気になる人を1人だけ登録します。次の画面で呼び名・関係・生年月日を入れてから、近い状況を選びます。</p>
+              <h1>まず1人目の手帳を作ります。</h1>
+              <p>父母、義父母、祖父母、親戚など、気になる人を1人だけ選びます。最初は呼び名と関係だけで大丈夫。登録後、この画面がその人の記録手帳になります。</p>
             </div>
             <MascotNote
               label="ナビから"
-              title="入力した情報はあとから直せます。"
-              body="まず誰の手帳かを決めると、プロフィール、日記、写真、確認リストをその人ごとに育てられます。"
+              title="詳しい情報は、手帳を作ってから足せます。"
+              body="毎日の記録、写真、確認リスト、プロフィールを1人ずつ分けて残せます。"
             />
             <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
               {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
             </div>
-            <Link className="nb-save empty-start-button" href="/start">親の情報を入力して始める</Link>
+            <Link className="nb-save empty-start-button" href="/start">1人目の手帳を作る</Link>
           </article>
         </section>
       ) : null}
@@ -1911,95 +1923,54 @@ export default function FamilyBoardPage() {
       {activeCase ? (
         <div className="notebook-workspace" aria-label={`${activePersonName}の管理手帳`}>
           <section className="nb-section person-command-section" aria-label={`${activePersonName}の手帳メニュー`}>
-            <article className="nb-card person-command-card">
-              <div className="person-command-head">
+            <article className="nb-card person-command-card record-first-card">
+              <div className="record-first-head">
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <div>
                   <p className="nb-eyebrow">この人の手帳</p>
-                  <h1>{notebookTitle(activePersonName)}を育てる場所です。</h1>
-                  <p>プロフィール、日記、確認リスト、写真をここから更新できます。記録が増えるほど、あとで家族に説明しやすくなります。</p>
+                  <h1>今日あったことを、まず1行残します。</h1>
+                  <p>体調、発言、病院・介護先からの連絡、家族に頼んだこと。短くても大丈夫です。</p>
                 </div>
               </div>
-              <div className="person-command-stats" aria-label="手帳の状態">
-                <div>
-                  <strong>{activeProfileCompletion.percent}%</strong>
-                  <span>プロフィール</span>
-                </div>
-                <div>
-                  <strong>{activeEntries.length}</strong>
-                  <span>過去の記録</span>
-                </div>
-                <div>
-                  <strong>{activeTasks.filter((task) => (task.progress ?? "todo") !== "done").length}</strong>
-                  <span>未完了リスト</span>
-                </div>
-                <div>
-                  <strong>{attachments.length}</strong>
-                  <span>写真</span>
-                </div>
+              <button
+                className="record-first-primary"
+                type="button"
+                onClick={() => openNotebookSection("#today-diary")}
+              >
+                <span>まずここ</span>
+                <strong>今日の記録を書く</strong>
+                <small>書くと、次に確認することが整理されます</small>
+              </button>
+              <div className={`record-first-latest ${latestEntry ? "has-entry" : "is-empty"}`}>
+                <span>{latestEntryLabel}</span>
+                <strong>{latestEntrySummary}</strong>
+                <button
+                  type="button"
+                  onClick={() => openNotebookSection(latestEntry ? "#diary-history" : "#today-diary")}
+                >
+                  {latestEntry ? "記録を見る" : "1行だけ書く"}
+                </button>
               </div>
-              <div className="person-daily-board" aria-label={`${activePersonName}の今日の手帳`}>
-                <div className="person-daily-main">
-                  <span>今日の手帳</span>
-                  <strong>{latestEntryLabel}</strong>
-                  <p>{latestEntrySummary}</p>
-                </div>
-                <div className="person-daily-actions" aria-label="よく使う操作">
+              {latestEntry && notebookInsight ? (
+                <div className="record-first-next">
+                  <span>記録から見える次の一歩</span>
+                  <strong>{notebookInsight.primaryAction.title}</strong>
+                  <p>{notebookInsight.primaryAction.body}</p>
                   <a
-                    href="#today-diary"
+                    href={notebookInsight.primaryAction.href}
                     onClick={(event) => {
+                      if (!notebookInsight.primaryAction.href.startsWith("#")) return;
                       event.preventDefault();
-                      openNotebookSection("#today-diary");
+                      openNotebookSection(notebookInsight.primaryAction.href);
                     }}
                   >
-                    今日の記録を書く
-                  </a>
-                  <a
-                    href="#diary-history"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#diary-history");
-                    }}
-                  >
-                    過去の記録を見る
+                    {notebookInsight.primaryAction.label}
                   </a>
                 </div>
-              </div>
-              <div className="person-next-panel" aria-label="次に整えること">
-                <div>
-                  <span>1. 今日の記録</span>
-                  <strong>まず今日あったことを1行だけ残す</strong>
-                  <button
-                    type="button"
-                    onClick={() => openNotebookSection("#today-diary")}
-                  >
-                    書く
-                  </button>
-                </div>
-                <div>
-                  <span>2. 基本情報</span>
-                  <strong>{profileNextCopy}</strong>
-                  <button
-                    type="button"
-                    onClick={() => openNotebookSection("#profile-edit-fields")}
-                  >
-                    編集する
-                  </button>
-                </div>
-                <div>
-                  <span>3. 確認リスト</span>
-                  <strong>{nextTaskCopy}</strong>
-                  <button
-                    type="button"
-                    onClick={() => openNotebookSection("#task-checklist")}
-                  >
-                    見る
-                  </button>
-                </div>
-              </div>
-              <details className="person-more-actions">
-                <summary>写真・過去の記録など、ほかの操作を見る</summary>
-                <div className="person-command-grid" aria-label="手帳でできること">
+              ) : null}
+              <details className="record-first-drawer">
+                <summary>プロフィール・確認リスト・写真を開く</summary>
+                <div className="record-first-menu" aria-label="必要な時だけ開く操作">
                   <a
                     href="#person-profile"
                     onClick={(event) => {
@@ -2007,33 +1978,8 @@ export default function FamilyBoardPage() {
                       openNotebookSection("#person-profile");
                     }}
                   >
-                    <span className="command-icon is-profile" aria-hidden="true">
-                      <img src="/brand/watch-bird-mark.svg" alt="" />
-                    </span>
-                    <strong>プロフィールを編集</strong>
-                    <small>名前・続柄・病院・薬・連絡先を更新</small>
-                  </a>
-                  <a
-                    href="#today-diary"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#today-diary");
-                    }}
-                  >
-                    <span className="command-icon is-diary" aria-hidden="true" />
-                    <strong>今日の記録を書く</strong>
-                    <small>体調・発言・病院連絡を1行で残す</small>
-                  </a>
-                  <a
-                    href="#diary-history"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#diary-history");
-                    }}
-                  >
-                    <span className="command-icon is-history" aria-hidden="true" />
-                    <strong>過去の記録を見る</strong>
-                    <small>月別・変化あり・写真つきで振り返る</small>
+                    <strong>この人の情報を整える</strong>
+                    <small>呼び名、関係、病院、薬、連絡先</small>
                   </a>
                   <a
                     href="#task-checklist"
@@ -2042,9 +1988,8 @@ export default function FamilyBoardPage() {
                       openNotebookSection("#task-checklist");
                     }}
                   >
-                    <span className="command-icon is-task" aria-hidden="true" />
-                    <strong>確認リストを編集</strong>
-                    <small>期限・担当・状態を家族で更新</small>
+                    <strong>確認リストを見る</strong>
+                    <small>{nextTaskCopy}</small>
                   </a>
                   <a
                     href="#media-library"
@@ -2053,10 +1998,25 @@ export default function FamilyBoardPage() {
                       openNotebookSection("#media-library");
                     }}
                   >
-                    <span className="command-icon is-media" aria-hidden="true" />
-                    <strong>写真を見る</strong>
-                    <small>日記に添付した写真を確認</small>
+                    <strong>写真・資料を見る</strong>
+                    <small>{attachments.length > 0 ? `${attachments.length}件あります` : "日記に添付した写真がここにまとまります"}</small>
                   </a>
+                  <a
+                    href="#diary-history"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#diary-history");
+                    }}
+                  >
+                    <strong>過去の記録を見る</strong>
+                    <small>{activeEntries.length > 0 ? `${activeEntries.length}件の記録` : "まだ記録はありません"}</small>
+                  </a>
+                  {isSharedFamilyMember ? null : (
+                    <Link href="/plans">
+                      <strong>別の人の手帳を追加する</strong>
+                      <small>2人目以降はFamily Plusで管理します</small>
+                    </Link>
+                  )}
                 </div>
               </details>
             </article>
@@ -2104,84 +2064,91 @@ export default function FamilyBoardPage() {
                 {handbookReadinessNote}
               </p>
             </article>
-            <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳の保存状態">
-              <div className="cloud-backup-head">
-                <div className="cloud-backup-icon" aria-hidden="true">
-                  <img src="/brand/watch-bird-mark.svg" alt="" />
-                </div>
-                <div>
-                  <p className="nb-eyebrow">{cloudUserEmail ? "控え保存中" : "保存状態"}</p>
-                  <h2>{cloudUserEmail ? "この手帳はクラウドにも残ります" : "今はこの端末だけに保存されています"}</h2>
-                  <p>
-                    {cloudUserEmail
-                      ? "プロフィール、日記、写真メモ、確認リストの変更は自動で控え保存されます。"
-                      : "このままでも使えます。ただ、履歴削除・機種変更・端末故障で消えることがあるため、1人目を作ったら控え保存まで済ませておくのがおすすめです。"}
-                  </p>
-                </div>
-              </div>
-              <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "控え保存でできること" : "控え保存をおすすめする理由"}>
-                {cloudUserEmail ? (
-                  <>
-                    <li>変更のたびに自動で控え保存します</li>
-                    <li>機種変更後もメール確認で復元できます</li>
-                    <li>家族共有の土台になります</li>
-                  </>
-                ) : (
-                  <>
-                    <li>メール確認だけで始められます</li>
-                    <li>確認後は日記・プロフィール・確認リストを自動保存します</li>
-                    <li>心配な時はJSON控えもダウンロードできます</li>
-                  </>
-                )}
-              </ul>
-              {cloudUserEmail ? (
-                <div className="cloud-linked-box">
-                  <span>控え保存先</span>
-                  <strong>{cloudUserEmail}</strong>
-                  <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
-                    <span aria-hidden="true" />
-                    <em>
-                      {cloudAutoStatus === "saving"
-                        ? "自動保存中です"
-                        : cloudAutoStatus === "error"
-                          ? "自動保存を確認してください"
-                          : lastCloudSyncedAt
-                            ? `最終保存 ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
-                            : "変更が入ると自動で保存します"}
-                    </em>
+            <details className="cloud-backup-disclosure">
+              <summary>
+                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                <span>保存状態</span>
+                <strong>{cloudUserEmail ? "クラウド控え中" : "控え保存はあとで設定できます"}</strong>
+              </summary>
+              <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳の保存状態">
+                <div className="cloud-backup-head">
+                  <div className="cloud-backup-icon" aria-hidden="true">
+                    <img src="/brand/watch-bird-mark.svg" alt="" />
+                  </div>
+                  <div>
+                    <p className="nb-eyebrow">{cloudUserEmail ? "控え保存中" : "保存状態"}</p>
+                    <h2>{cloudUserEmail ? "この手帳はクラウドにも残ります" : "今はこの端末だけに保存されています"}</h2>
+                    <p>
+                      {cloudUserEmail
+                        ? "プロフィール、日記、写真メモ、確認リストの変更は自動で控え保存されます。"
+                        : "このままでも使えます。ただ、履歴削除・機種変更・端末故障で消えることがあるため、1人目を作ったら控え保存まで済ませておくのがおすすめです。"}
+                    </p>
                   </div>
                 </div>
-              ) : (
-                <div className="cloud-form">
-                  <label>
-                    <span>控え保存に使うメールアドレス</span>
-                    <input
-                      inputMode="email"
-                      placeholder="例: family@example.com"
-                      type="email"
-                      value={cloudEmail}
-                      onChange={(event) => setCloudEmail(event.target.value)}
-                    />
-                  </label>
-                  <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
-                    {cloudStatus === "sending" ? "送信中" : "メールで控え保存を始める"}
+                <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "控え保存でできること" : "控え保存をおすすめする理由"}>
+                  {cloudUserEmail ? (
+                    <>
+                      <li>変更のたびに自動で控え保存します</li>
+                      <li>機種変更後もメール確認で復元できます</li>
+                      <li>家族共有の土台になります</li>
+                    </>
+                  ) : (
+                    <>
+                      <li>メール確認だけで始められます</li>
+                      <li>確認後は日記・プロフィール・確認リストを自動保存します</li>
+                      <li>心配な時はJSON控えもダウンロードできます</li>
+                    </>
+                  )}
+                </ul>
+                {cloudUserEmail ? (
+                  <div className="cloud-linked-box">
+                    <span>控え保存先</span>
+                    <strong>{cloudUserEmail}</strong>
+                    <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
+                      <span aria-hidden="true" />
+                      <em>
+                        {cloudAutoStatus === "saving"
+                          ? "自動保存中です"
+                          : cloudAutoStatus === "error"
+                            ? "自動保存を確認してください"
+                            : lastCloudSyncedAt
+                              ? `最終保存 ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
+                              : "変更が入ると自動で保存します"}
+                      </em>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="cloud-form">
+                    <label>
+                      <span>控え保存に使うメールアドレス</span>
+                      <input
+                        inputMode="email"
+                        placeholder="例: family@example.com"
+                        type="email"
+                        value={cloudEmail}
+                        onChange={(event) => setCloudEmail(event.target.value)}
+                      />
+                    </label>
+                    <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
+                      {cloudStatus === "sending" ? "送信中" : "メールで控え保存を始める"}
+                    </button>
+                  </div>
+                )}
+                <p className="cloud-message">{cloudMessage}</p>
+                <div className="cloud-action-row">
+                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                    今すぐ保存
+                  </button>
+                  <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                    復元
+                  </button>
+                  <button type="button" onClick={downloadNotebookExport}>
+                    ダウンロード
                   </button>
                 </div>
-              )}
-              <p className="cloud-message">{cloudMessage}</p>
-              <div className="cloud-action-row">
-                <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
-                  今すぐ保存
-                </button>
-                <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
-                  復元
-                </button>
-                <button type="button" onClick={downloadNotebookExport}>
-                  ダウンロード
-                </button>
-              </div>
-              <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
-            </article>
+                <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
+              </article>
+            </details>
             <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`}>
               {notebookTabs.map((tab) => (
                 <button
@@ -2422,14 +2389,14 @@ export default function FamilyBoardPage() {
 
           <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary">
             <div className="nb-section-head">
-              <strong>今日の記録</strong>
+              <strong>今日あったことを書く</strong>
               <span className="rule" aria-hidden="true" />
               <span className="aside">{activeEntries.length}件</span>
             </div>
             <article className="nb-card today-record-card">
               <div className="record-guide">
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                <p className="record-help">当てはまるものを押すと、下の記録欄に入ります。最後に一言だけ足して保存してください。</p>
+                <p className="record-help">体調、会話、病院や介護先からの連絡を短く残します。迷ったら下のボタンを押して、一言だけ足してください。</p>
               </div>
               <div className="record-chip-grid" aria-label="今日の記録に追加する項目">
                 {healthNotes.map((item) => (
@@ -2481,9 +2448,9 @@ export default function FamilyBoardPage() {
               {activeForm.files.length > 0 ? (
                 <div className="attachment-strip">
                   {activeForm.files.map((file) => (
-                    <span className={file.previewUrl ? "has-preview" : undefined} key={file.id}>
-                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
-                      <small>{file.name}</small>
+                    <span className={file.previewUrl ? "has-preview" : file.storagePath ? "is-uploaded-photo" : undefined} key={file.id}>
+                      {file.previewUrl ? <img alt="" src={file.previewUrl} /> : file.storagePath ? <img alt="" src="/brand/watch-bird-mark.svg" /> : null}
+                      <small>{file.previewUrl ? file.name : file.storagePath ? "写真を保存済み" : file.name}</small>
                     </span>
                   ))}
                 </div>
@@ -2492,12 +2459,12 @@ export default function FamilyBoardPage() {
                 <p className={`record-storage-message is-${recordStorageTone}`}>{recordStorageMessage}</p>
               ) : null}
               <button className="nb-save" type="button" onClick={() => saveDiary(activeCase.id)}>
-                {notebookTitle(activePersonName)}に残す
+                この人の手帳に残す
               </button>
             </article>
           </section>
 
-          {notebookInsight ? (
+          {latestEntry && notebookInsight ? (
             <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} aria-label="気づきメモ">
               <article className="kizuki-card">
                 <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
@@ -2683,9 +2650,9 @@ export default function FamilyBoardPage() {
                                 {entry.attachments.length > 0 ? (
                                   <div className="entry-attachments">
                                     {entry.attachments.slice(0, 3).map((file) => (
-                                      <span className={file.previewUrl ? "has-preview" : undefined} key={file.id}>
-                                        {file.previewUrl ? <img alt="" src={file.previewUrl} /> : null}
-                                        <small>{file.name}</small>
+                                      <span className={file.previewUrl ? "has-preview" : file.storagePath ? "is-uploaded-photo" : undefined} key={file.id}>
+                                        {file.previewUrl ? <img alt="" src={file.previewUrl} /> : file.storagePath ? <img alt="" src="/brand/watch-bird-mark.svg" /> : null}
+                                        <small>{file.previewUrl ? file.name : file.storagePath ? "写真を保存済み" : file.name}</small>
                                       </span>
                                     ))}
                                   </div>

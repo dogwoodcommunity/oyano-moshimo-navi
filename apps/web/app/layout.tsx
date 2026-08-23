@@ -21,7 +21,7 @@ const criticalCss = `
   .nav-link.is-active{background:#0d4f34;border-color:#0d4f34;box-shadow:0 8px 20px rgba(13,79,52,.22);color:#fffdf6}
   .nav-link.is-active::after{background:#0d4f34;border-radius:999px;bottom:-9px;content:"";height:4px;left:18px;position:absolute;right:18px}
   .nav-current-label{background:rgba(255,253,246,.92);border-radius:999px;color:#0d4f34;font-size:11px;font-weight:900;line-height:1;padding:4px 7px}
-  .nav-crisis{background:#fffdf8;border-color:rgba(180,86,46,.28);color:#934f2f;padding-inline:13px}
+  .nav-crisis{background:transparent;border-color:transparent;color:#68736d;padding-inline:13px}
   .nav-crisis.is-active{background:#b4562e;border-color:#b4562e;color:#fffdf6}
   .nav-crisis.is-active::after{background:#b4562e}
   .nav-crisis.is-active .nav-current-label{color:#934f2f}
@@ -122,7 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
-            <Link href="/home">家族ボード</Link>
+            <Link href="/home">手帳</Link>
           </footer>
         </div>
         <PwaRegister />
