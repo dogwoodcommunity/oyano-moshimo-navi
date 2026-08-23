@@ -4,6 +4,7 @@ import {
   hasNotebookSubstance,
   normalizeConsultAnswer,
   CONSULT_DISCLAIMER,
+  CONSULT_MAX_HISTORY,
   CONSULT_MAX_QUESTION_LENGTH,
   type ConsultRequest
 } from "@oyano/shared";
@@ -16,9 +17,24 @@ export const maxDuration = 60;
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 
+function readBoundedNumber(value: string | undefined, fallback: number, min: number, max: number): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.min(max, Math.max(min, Math.floor(parsed)));
+}
+
 /** 1回ごとに外部APIの費用が出るため、利用者ごとと、サービス全体の両方に1日の上限を置く。 */
-const PER_CLIENT_DAILY_LIMIT = Number(process.env.CONSULT_CLIENT_DAILY_LIMIT ?? 5);
-const SERVICE_DAILY_LIMIT = Number(process.env.CONSULT_DAILY_LIMIT ?? 200);
+const PER_CLIENT_DAILY_LIMIT = readBoundedNumber(process.env.CONSULT_CLIENT_DAILY_LIMIT, 5, 1, 10);
+// 初期運用では想定外の請求を防ぐため全体50回/日。利用実績を見て環境変数から引き上げる。
+const SERVICE_DAILY_LIMIT = readBoundedNumber(process.env.CONSULT_DAILY_LIMIT, 50, 1, 5_000);
+/**
+ * 構造化された日本語回答には5,000 tokenは過剰だった。
+ * 品質を維持できる1,600を既定とし、環境変数でも2,000を超えないようにする。
+ */
+const MAX_OUTPUT_TOKENS = readBoundedNumber(process.env.CONSULT_MAX_OUTPUT_TOKENS, 1_600, 800, 2_000);
+// Claude Sonnet 4.6 standard pricing as of 2026-08-23. MODELを変える時は同時に更新する。
+const INPUT_USD_PER_MILLION_TOKENS = 3;
+const OUTPUT_USD_PER_MILLION_TOKENS = 15;
 const ONE_DAY_SECONDS = 86_400;
 const DEVICE_TRIAL_COOKIE = "oyano_consult_trial_used_v01";
 
@@ -34,6 +50,47 @@ type ConsultAccessState = {
 };
 
 type ConsultAccessResult = ConsultAccessState | { response: NextResponse };
+
+async function recordConsultUsage(params: {
+  access: ConsultAccessState;
+  inputTokens: number;
+  outputTokens: number;
+  fastMode: boolean;
+  historyTurns: number;
+}) {
+  const speedMultiplier = params.fastMode ? 2 : 1;
+  const estimatedCostUsd = speedMultiplier * (
+    params.inputTokens * INPUT_USD_PER_MILLION_TOKENS
+    + params.outputTokens * OUTPUT_USD_PER_MILLION_TOKENS
+  ) / 1_000_000;
+  const metadata = {
+    model: MODEL,
+    input_tokens: params.inputTokens,
+    output_tokens: params.outputTokens,
+    max_output_tokens: MAX_OUTPUT_TOKENS,
+    history_turns: params.historyTurns,
+    fast_mode: params.fastMode,
+    estimated_cost_usd: Number(estimatedCostUsd.toFixed(6)),
+    plan: params.access.plan,
+    mode: params.access.mode
+  };
+
+  console.info("[consult] usage", metadata);
+
+  const supabase = getServerSupabase();
+  if (!supabase) return;
+  const { error } = await supabase.from("audit_logs").insert({
+    actor_user_id: params.access.userId ?? null,
+    action: "ai_consult_usage",
+    target_type: params.access.familyId ? "family" : "device_trial",
+    target_id: params.access.familyId ?? null,
+    metadata
+  });
+  if (error) {
+    // 原価ログの失敗で、利用者への回答まで失敗させない。
+    console.error("[consult] failed to record usage", error);
+  }
+}
 
 /**
  * 時間を食っているのは推論ではなく出力の生成（日本語で約1,800文字）。
@@ -283,7 +340,7 @@ export async function POST(request: NextRequest) {
   try {
     const params = {
       model: MODEL,
-      max_tokens: 5000,
+      max_tokens: MAX_OUTPUT_TOKENS,
       // 本番で29〜49秒かかり、48秒台では空で返った。60秒の実行上限に近すぎる。
       // 出力の形はシステムプロンプトとstrict schemaで固定してあるので、
       // 推論の深さを下げても崩れにくいと判断してlowにする。
@@ -295,11 +352,15 @@ export async function POST(request: NextRequest) {
     };
 
     // 高速版が使えない環境では黙って通常版へ落とす。速さのために機能ごと止めない。
+    let usedFastMode = false;
     const response = FAST_MODE
       ? await client.beta.messages.create({
           ...params,
           betas: ["fast-mode-2026-02-01"],
           speed: "fast"
+        }).then((message) => {
+          usedFastMode = true;
+          return message;
         }).catch((error: unknown) => {
           // 使えない場合（BadRequest）だけでなく、高速枠が混んでいる場合（RateLimit）も落とす。
           // 高速枠は通常枠と別に数えられるため、ここで諦めると通常なら通る相談まで失敗する。
@@ -310,6 +371,14 @@ export async function POST(request: NextRequest) {
           throw error;
         })
       : await client.messages.create(params);
+
+    await recordConsultUsage({
+      access: authorized,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      fastMode: usedFastMode,
+      historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0
+    });
 
     if (response.stop_reason === "refusal") {
       return NextResponse.json(

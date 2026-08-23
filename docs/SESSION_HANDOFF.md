@@ -7595,3 +7595,55 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 - 会話履歴は相談ページを開いている間のセッション内で保持する。残したい回答は各回答の「この回答を手帳に残す」を使う。
 - 対象者の切り替え時に会話をリセットする仕様は、異なる対象者の要配慮情報がAI文脈へ混ざることを防ぐため意図的なもの。
 - `review_exports/` は未追跡のレビュー成果物であり、今回もcommit対象外。
+
+## 2026-08-23 追記 210 — AI相談チャットのトークン原価を制御・記録
+
+継続チャット化後に、利用者から「トークン費用が大きくならないか」と指摘があった。
+調査すると、従来は1回答の `max_tokens` が5,000、会話履歴が直近6ターン、
+サービス全体の既定上限が200回/日で、有料初期運用には余裕が大きすぎた。
+
+変更:
+
+- `apps/web/app/api/consult/route.ts`
+  - 1回答の最大出力を5,000tokenから1,600tokenへ変更。
+  - `CONSULT_MAX_OUTPUT_TOKENS` で調整できるが、コード側で800〜2,000に制限。
+  - 利用者ごとの上限は5回/日のまま維持。
+  - サービス全体の既定上限を200回/日から50回/日へ変更。
+  - Anthropic応答の実入力・実出力token、モデル、履歴数、高速モード、推定USD原価を
+    `audit_logs` の `ai_consult_usage` とサーバーログへ記録する。
+  - 原価ログ保存に失敗しても、利用者への相談回答は失敗させない。
+- `packages/shared/src/consult.ts`
+  - 続きの相談で送る会話履歴を直近6ターンから4ターンへ短縮。
+- `apps/web/lib/consult.ts`
+  - 回答全体を日本語約1,000文字までにし、次の確認3件、質問2〜3件、相談先2件、
+    注意点2件へ整理。重複説明を避ける指示を追加。
+- `docs/MONETIZATION.md` / `docs/ENVIRONMENT_MATRIX.md` / `apps/web/.env.example`
+  - 新しい原価管理方針と環境変数を反映。
+
+原価判断:
+
+- Claude Sonnet 4.6標準料金（2026-08-23時点）は入力$3/100万token、
+  出力$15/100万token。高速モードは料金2倍なので既定OFFを維持する。
+- 出力上限だけで比べると、5,000token時の最大$0.075/回から、
+  1,600token時の最大$0.024/回へ68%削減した。入力tokenの費用は別途加わる。
+- 5回/日を毎日使う利用者は¥980の採算を超える可能性が残るため、
+  月間上限はまだ推測で決めず、`ai_consult_usage` の実測後に判断する。
+- Family Plus 1世帯あたりのAI原価目標は月¥200〜300以内。
+
+注意:
+
+- `max_tokens` は上限であり、毎回その量を消費するわけではない。
+- `ANTHROPIC_MODEL` をSonnet 4.6以外へ変える場合は、コード内の原価単価も同時に更新する。
+- 過去の引き継ぎ追記に残る「全体200回/日」は当時の履歴。現行仕様は本追記の50回/日が正。
+
+確認:
+
+- `apps/web`: `corepack pnpm exec tsc --noEmit` 成功。
+- `apps/mobile`: `corepack pnpm exec tsc --noEmit` 成功。
+- `apps/web`: `corepack pnpm build` 成功。156ページを生成。
+- `git diff --check` 成功。
+
+本番反映:
+
+- deployment ID: `dpl_2WBKFLooytnappBT7ymphqVybbfw`
+- production alias: `https://oyano-moshimo-navi.vercel.app`

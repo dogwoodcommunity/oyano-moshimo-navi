@@ -49,7 +49,7 @@ export const CONSULT_MAX_QUESTION_LENGTH = 600;
 export const CONSULT_MAX_ENTRIES = 12;
 export const CONSULT_MAX_ENTRY_LENGTH = 400;
 /** 続きの相談で遡って渡す前回までのやりとりの数。増やすほど読む時間と費用が伸びる。 */
-export const CONSULT_MAX_HISTORY = 6;
+export const CONSULT_MAX_HISTORY = 4;
 
 export const CONSULT_DISCLAIMER =
   "これは家族が次に動くための整理メモです。診断、法律判断、税務判断ではありません。医療は主治医や看護師へ、手続きは役所や専門家へ確認してください。";

@@ -14,7 +14,8 @@
 | `CRON_SECRET` | notification時 | no | Cron手動実行保護 |
 | `ANTHROPIC_API_KEY` | 長期相談時 | no | `/api/consult` からClaude APIを呼ぶ |
 | `CONSULT_CLIENT_DAILY_LIMIT` | 任意 | no | 利用者ごとの相談回数/日。既定5 |
-| `CONSULT_DAILY_LIMIT` | 任意 | no | サービス全体の相談回数/日。既定200 |
+| `CONSULT_DAILY_LIMIT` | 任意 | no | サービス全体の相談回数/日。既定50。想定外の請求を防ぐ緊急上限 |
+| `CONSULT_MAX_OUTPUT_TOKENS` | 任意 | no | AI相談1回答の最大出力。既定1,600、コード側上限2,000 |
 | `CONSULT_FAST_MODE` | 任意 | no | `1` で出力を最大2.5倍速に。料金は2倍。使えない環境では通常速度へ自動で落ちる |
 | `NEXT_PUBLIC_IOS_APP_URL` | 公開後 | no | Web入口からApp Storeへ送る。未設定なら導線を出さない |
 | `NEXT_PUBLIC_ANDROID_APP_URL` | 公開後 | no | 同上（Google Play） |
