@@ -1841,7 +1841,7 @@ export default function FamilyBoardPage() {
               プロフィール
             </a>
           ) : (
-            <Link className="cover-profile-link" href="/start">作る</Link>
+            <Link className="cover-profile-link" href="/start">情報を入力</Link>
           )}
         </div>
         <div className="cover-mascot-line">
@@ -1893,17 +1893,17 @@ export default function FamilyBoardPage() {
             <div>
               <p className="nb-eyebrow">はじめの一冊</p>
               <h1>この画面が、その人専用の手帳になります。</h1>
-              <p>父母、義父母、祖父母、親戚など、まず気になる人を1人だけ登録します。状況を選ぶと、確認リストと毎日の記録欄ができます。</p>
+              <p>父母、義父母、祖父母、親戚など、まず気になる人を1人だけ登録します。次の画面で呼び名・関係・生年月日を入れてから、近い状況を選びます。</p>
             </div>
             <MascotNote
               label="ナビから"
-              title="最初は細かく入力しなくて大丈夫です。"
-              body="いま一番近い状況を選ぶだけで、あとからプロフィール、日記、写真、確認リストを育てられます。"
+              title="入力した情報はあとから直せます。"
+              body="まず誰の手帳かを決めると、プロフィール、日記、写真、確認リストをその人ごとに育てられます。"
             />
             <div className="setup-preview-grid" aria-label="登録後に入れられる情報">
               {setupPreviewItems.map((item) => <span key={item}>{item}</span>)}
             </div>
-            <Link className="nb-save empty-start-button" href="/start">1人目の手帳を作る</Link>
+            <Link className="nb-save empty-start-button" href="/start">親の情報を入力して始める</Link>
           </article>
         </section>
       ) : null}

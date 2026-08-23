@@ -5816,7 +5816,7 @@ textarea {
   margin: 0;
 }
 
-.toc-header p:last-child {
+.toc-header > p:not(.toc-kicker) {
   color: var(--ink-sub);
   font-size: clamp(16px, 4vw, 20px);
   font-weight: 700;
@@ -5844,6 +5844,97 @@ textarea {
   color: var(--ink);
   font-size: clamp(16px, 4vw, 19px);
   line-height: 1.5;
+}
+
+.start-profile-card {
+  display: grid;
+  gap: 18px;
+  margin-bottom: 18px;
+  padding: clamp(18px, 4vw, 30px);
+}
+
+.start-section-heading {
+  display: grid;
+  gap: 8px;
+}
+
+.start-section-heading span {
+  color: var(--primary-deep);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.start-section-heading h2 {
+  color: var(--ink);
+  font-size: clamp(24px, 5.6vw, 36px);
+  line-height: 1.22;
+  margin: 0;
+}
+
+.start-section-heading p {
+  color: var(--ink-sub);
+  font-size: clamp(15px, 3.8vw, 18px);
+  font-weight: 700;
+  line-height: 1.75;
+  margin: 0;
+}
+
+.start-profile-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.start-profile-grid label {
+  background: #fbfcf8;
+  border: 1.5px solid rgba(154, 174, 159, 0.42);
+  border-radius: 18px;
+  display: grid;
+  gap: 8px;
+  padding: 13px 14px;
+}
+
+.start-profile-grid label:focus-within {
+  background: #fff;
+  border-color: rgba(39, 100, 71, 0.72);
+  box-shadow: 0 0 0 4px rgba(39, 100, 71, 0.1);
+}
+
+.start-profile-grid span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.start-profile-grid input {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 900;
+  min-height: 36px;
+  outline: 0;
+  padding: 0;
+  width: 100%;
+}
+
+.start-profile-grid input::placeholder {
+  color: rgba(46, 61, 70, 0.42);
+  font-weight: 800;
+}
+
+.start-profile-note {
+  background: #eef7f1;
+  border: 1px solid rgba(39, 100, 71, 0.14);
+  border-radius: 14px;
+  color: var(--primary-deep);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.65;
+  margin: 0;
+  padding: 11px 13px;
 }
 
 .toc-book {
@@ -6598,6 +6689,15 @@ textarea {
     gap: 16px;
     padding-left: 14px;
     padding-right: 14px;
+  }
+
+  .start-profile-card {
+    padding-left: 14px;
+    padding-right: 14px;
+  }
+
+  .start-profile-grid {
+    grid-template-columns: 1fr;
   }
 
   .toc-chapter {

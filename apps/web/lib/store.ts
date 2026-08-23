@@ -7,6 +7,7 @@ import {
   createHandoffToken,
   NOTEBOOK_LIMIT_MESSAGE,
   SENSITIVE_INFO_CONSENT_VERSION,
+  statusLabel,
   type FamilyPlan,
   type DiagnosisAnswers,
   type DiagnosisResult,
@@ -542,19 +543,81 @@ export class NotebookLimitError extends Error {
   }
 }
 
-export async function createCase(selectedStatus: ParentStatus): Promise<CaseRecord> {
+function textOrUndefined(value?: string) {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : undefined;
+}
+
+function cleanInitialProfile(profile: Partial<PersonProfile>, selectedStatus: ParentStatus, now: string): PersonProfile {
+  return {
+    fullName: textOrUndefined(profile.fullName),
+    displayName: textOrUndefined(profile.displayName) || textOrUndefined(profile.fullName),
+    relationship: textOrUndefined(profile.relationship),
+    birthDate: textOrUndefined(profile.birthDate),
+    careStatus: textOrUndefined(profile.careStatus) || statusLabel(selectedStatus),
+    keyContact: textOrUndefined(profile.keyContact),
+    hospitalOrFacility: textOrUndefined(profile.hospitalOrFacility),
+    medicationNote: textOrUndefined(profile.medicationNote),
+    documentLocationNote: textOrUndefined(profile.documentLocationNote),
+    familyStructureNote: textOrUndefined(profile.familyStructureNote),
+    emergencyContact: textOrUndefined(profile.emergencyContact),
+    carePreference: textOrUndefined(profile.carePreference),
+    importantPeopleNote: textOrUndefined(profile.importantPeopleNote),
+    updatedAt: now
+  };
+}
+
+function relationshipForDiagnosis(profile: PersonProfile): DiagnosisAnswers["targetRelationship"] | undefined {
+  const value = `${profile.relationship ?? ""} ${profile.displayName ?? ""} ${profile.fullName ?? ""}`;
+  if (value.includes("義母")) return "mother_in_law";
+  if (value.includes("義父")) return "father_in_law";
+  if (value.includes("祖父") || value.includes("祖母") || value.includes("祖")) return "grandparent";
+  if (value.includes("母") || value.includes("ママ") || value.includes("おかあ") || value.includes("お母")) return "mother";
+  if (value.includes("父") || value.includes("パパ") || value.includes("おとう") || value.includes("お父")) return "father";
+  return profile.relationship || profile.displayName || profile.fullName ? "other" : undefined;
+}
+
+function initialAnswersForCase(selectedStatus: ParentStatus, profile: PersonProfile): DiagnosisAnswers {
+  return {
+    selectedStatus,
+    targetRelationship: relationshipForDiagnosis(profile),
+    targetName: profile.displayName || profile.fullName,
+    parentSituation: profile.careStatus || statusLabel(selectedStatus),
+    familyStructure: profile.familyStructureNote || "未入力",
+    hasHome: "unknown",
+    knowsAssets: "unknown",
+    concerns: ["確認リスト", "日々の記録", "家族での共有"],
+    homeClearance: "未入力"
+  };
+}
+
+export async function createCase(selectedStatus: ParentStatus, initialProfile: Partial<PersonProfile> = {}): Promise<CaseRecord> {
   if (!notebookQuota().canCreate) {
     throw new NotebookLimitError();
   }
 
   const now = new Date().toISOString();
+  const id = createLocalId("case");
+  const personProfile = cleanInitialProfile(initialProfile, selectedStatus, now);
+  const answers = initialAnswersForCase(selectedStatus, personProfile);
+  const result = buildDiagnosisResult(answers);
   const record: CaseRecord = {
-    id: createLocalId("case"),
+    id,
     selectedStatus,
-    answers: { selectedStatus },
-    status: "draft",
+    answers,
+    personProfile,
+    status: "result_ready",
     createdAt: now,
     updatedAt: now,
+    result: {
+      ...result,
+      tasks: result.tasks.map((task) => ({
+        ...task,
+        id: createLocalId("task"),
+        progress: "todo" as const
+      }))
+    },
+    handoffToken: createHandoffToken(id),
     supportPackStatus: "none"
   };
 

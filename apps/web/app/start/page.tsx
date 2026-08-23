@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
-import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData } from "@/lib/store";
+import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData, type PersonProfile } from "@/lib/store";
 
 type TocItem = {
   num: string;
@@ -37,11 +37,39 @@ const moreItems: TocItem[] = [
   { num: "11", key: "completed", title: "整理が終わった", hint: "家族で見返せるように保管", icon: "check" }
 ];
 
+const allStatusItems = [...primaryItems, ...moreItems];
+
+function statusTitle(status: ParentStatus) {
+  return allStatusItems.find((item) => item.key === status)?.title ?? "現在の状況";
+}
+
+function compactProfile(profile: Partial<PersonProfile>, status: ParentStatus): Partial<PersonProfile> {
+  const displayName = profile.displayName?.trim();
+  const fullName = profile.fullName?.trim();
+  const relationship = profile.relationship?.trim();
+  const birthDate = profile.birthDate?.trim();
+  const careStatus = profile.careStatus?.trim();
+
+  return {
+    displayName: displayName || fullName || undefined,
+    fullName: fullName || undefined,
+    relationship: relationship || undefined,
+    birthDate: birthDate || undefined,
+    careStatus: careStatus || statusTitle(status)
+  };
+}
+
 export default function StartPage() {
   const router = useRouter();
   const [choosingStatus, setChoosingStatus] = useState<ParentStatus | null>(null);
   const [chooseError, setChooseError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [profileDraft, setProfileDraft] = useState<Partial<PersonProfile>>({
+    displayName: "",
+    fullName: "",
+    relationship: "",
+    birthDate: ""
+  });
 
   // 開いた時点で埋まっているなら、選ばせる前に伝える。
   // 11個の選択肢を読んで押してから断られるのは、いちばん徒労になる。
@@ -66,16 +94,20 @@ export default function StartPage() {
   }, []);
 
   useEffect(() => {
-    router.prefetch("/diagnosis");
+    router.prefetch("/home");
   }, [router]);
+
+  function updateProfileDraft(field: keyof PersonProfile, value: string) {
+    setProfileDraft((current) => ({ ...current, [field]: value }));
+  }
 
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
     setChooseError(null);
     setChoosingStatus(status);
     try {
-      const record = await createCase(status);
-      router.push(`/diagnosis?caseId=${record.id}&status=${status}`);
+      const record = await createCase(status, compactProfile(profileDraft, status));
+      router.push(`/home?created=${record.id}#person-profile`);
     } catch (error) {
       // 上限に当たったときは、失敗ではなく案内として見せる。
       // 押した人は何も間違えていないので、原因と次の一手だけを出す。
@@ -89,6 +121,8 @@ export default function StartPage() {
     }
   }
 
+  const personLabel = profileDraft.displayName?.trim() || profileDraft.fullName?.trim() || "この人";
+
   return (
     <main className="paper-bg notebook-start-page">
       <section className="toc-header">
@@ -100,16 +134,16 @@ export default function StartPage() {
           </span>
         </div>
         <p className="toc-kicker">ここから始めます</p>
-        <h1>まずは1人だけ、家族の手帳を作ります。</h1>
-        <p>父母、義父母、親戚など、誰でも大丈夫です。最初は名前を入れず、近い状況を1つ選ぶだけで始められます。</p>
+        <h1>まず、管理する人の情報を入れます。</h1>
+        <p>父母、義父母、祖父母、親戚など、誰でも大丈夫です。名前や関係を入れてから、今の状況を1つ選ぶと、その人専用の手帳ができます。</p>
         <div className="toc-first-step" aria-label="最初にすること">
-          <span>最初にすること</span>
-          <strong>下のカードから、いま一番近い状況を1つ押してください。</strong>
+          <span>今日やること</span>
+          <strong>1. 誰の手帳か入力 → 2. 近い状況を選ぶ → 3. 家族ボードで管理</strong>
         </div>
       </section>
 
       <section className="start-urgent" aria-label="いま起きている場合">
-        <p className="start-urgent-lead">いま起きている場合は、登録より先にこちらです。</p>
+        <p className="start-urgent-lead">いま急いでいる場合は、情報入力より先にこちらです。</p>
         {urgentRoutes.map((item) => (
           <Link className="start-urgent-row" href={item.href} key={item.href}>
             <span className="start-urgent-badge">急なとき</span>
@@ -122,7 +156,61 @@ export default function StartPage() {
         ))}
       </section>
 
+      <section className="notebook-card start-profile-card" aria-label="管理する人の基本情報">
+        <div className="start-section-heading">
+          <span>1. 誰の手帳ですか</span>
+          <h2>あとで見返せるように、分かる範囲で入力してください。</h2>
+          <p>未入力でも進めます。フルネームや生年月日は、手帳を作ったあとに何度でも編集できます。</p>
+        </div>
+        <div className="start-profile-grid">
+          <label>
+            <span>呼び名</span>
+            <input
+              autoComplete="off"
+              inputMode="text"
+              onChange={(event) => updateProfileDraft("displayName", event.target.value)}
+              placeholder="例：お母さん、義父さん"
+              value={profileDraft.displayName ?? ""}
+            />
+          </label>
+          <label>
+            <span>関係</span>
+            <input
+              autoComplete="off"
+              inputMode="text"
+              onChange={(event) => updateProfileDraft("relationship", event.target.value)}
+              placeholder="例：母、父、義母、叔父"
+              value={profileDraft.relationship ?? ""}
+            />
+          </label>
+          <label>
+            <span>フルネーム</span>
+            <input
+              autoComplete="name"
+              inputMode="text"
+              onChange={(event) => updateProfileDraft("fullName", event.target.value)}
+              placeholder="例：山田 花子"
+              value={profileDraft.fullName ?? ""}
+            />
+          </label>
+          <label>
+            <span>生年月日</span>
+            <input
+              onChange={(event) => updateProfileDraft("birthDate", event.target.value)}
+              type="date"
+              value={profileDraft.birthDate ?? ""}
+            />
+          </label>
+        </div>
+        <p className="start-profile-note">入力した内容は、登録後のプロフィール欄でそのまま編集できます。</p>
+      </section>
+
       <section className="notebook-card toc-book" aria-label="親の状況を選ぶ">
+        <div className="start-section-heading">
+          <span>2. いまの状況を選ぶ</span>
+          <h2>{personLabel}に一番近いカードを1つ押してください。</h2>
+          <p>押すと、この人の手帳と確認リストを作って家族ボードに戻ります。</p>
+        </div>
         <div className="toc-chapter">
           <h2 className="chapter-tab teal">これから備える</h2>
           <div className="toc-list">
@@ -189,6 +277,7 @@ function StatusRow({
     <button
       className={`toc-row ${tone} ${isChoosing ? "is-opening" : ""}`}
       disabled={Boolean(choosingStatus) || Boolean(disabled)}
+      aria-label={`${item.title}でこの人の手帳を作る`}
       onClick={() => onChoose(item.key)}
       type="button"
     >
@@ -198,7 +287,7 @@ function StatusRow({
       <span className="toc-main">
         <strong className="toc-title">{item.title}</strong>
         <span className="toc-hint">{item.hint}</span>
-        <span className="toc-action-text">この状況で登録する</span>
+        <span className="toc-action-text">この人の手帳を作る</span>
       </span>
       <span className="toc-arrow" aria-hidden="true">
         →
