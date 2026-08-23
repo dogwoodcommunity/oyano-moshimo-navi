@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { Noto_Sans_JP, Shippori_Mincho, Zen_Maru_Gothic } from "next/font/google";
+import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
@@ -15,7 +16,11 @@ const criticalCss = `
   .app-brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
   .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
   .app-brand-logo{display:block;height:44px;width:44px}
-  .navlinks{color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:18px}
+  .navlinks{align-items:center;color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:10px}
+  .nav-link{align-items:center;border:1px solid transparent;border-radius:999px;color:#68736d;display:inline-flex;min-height:34px;padding:6px 11px}
+  .nav-link.is-active{background:#174f39;border-color:#174f39;box-shadow:0 7px 18px rgba(23,79,57,.18);color:#fffdf6}
+  .nav-crisis{background:#fff8f1;border-color:rgba(180,86,46,.2);color:#a55b33;padding-inline:13px}
+  .nav-crisis.is-active{background:#b4562e;border-color:#b4562e;color:#fffdf6}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}
   .shell:has(.entry-screen) .navlinks{display:none}
@@ -36,8 +41,6 @@ const criticalCss = `
   .entry-how-card li{background:#f5f8f3;border-radius:14px;display:grid;gap:4px;padding:14px}
   .entry-how-card strong{font-size:17px}
   .entry-board-link,.secondary{align-items:center;background:#fff;border:1.5px solid rgba(39,100,71,.32);border-radius:999px;color:#0f6b45;display:inline-flex;font-weight:900;justify-content:center;min-height:48px;padding:12px 18px}
-  .navlinks{align-items:center}
-  .nav-crisis{align-items:center;background:#fbeadf;border:1px solid rgba(180,86,46,.28);border-radius:999px;color:#b4562e;display:inline-flex;min-height:34px;padding:6px 14px}
   .footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:28px 24px;color:#6f7974;font-size:13px;font-weight:800}
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
 `;
@@ -106,11 +109,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </span>
               <span>親のもしもナビ</span>
             </Link>
-            <nav className="navlinks" aria-label="main">
-              <Link href="/home">家族ボード</Link>
-              <Link href="/guides">読む</Link>
-              <Link className="nav-crisis" href="/crisis">急なとき</Link>
-            </nav>
+            <MainNav />
           </header>
           {children}
           <footer className="footer">
