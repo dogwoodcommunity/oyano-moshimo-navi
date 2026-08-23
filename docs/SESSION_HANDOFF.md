@@ -7357,3 +7357,35 @@ Claudeへ渡す時:
 
 - `review_exports/` はローカル提出物フォルダで、GitHubには基本入れない。
 - 本番DBにはまだ `supabase/regional_sponsor_data.sql` の再適用が必要。
+
+## 2026-08-23 追記 203 — GitHub pushとVercel本番デプロイ完了
+
+Claudeレビュー指摘への追加対応をGitHubへpushし、Vercel本番にも反映した。
+
+GitHub:
+
+- repository: `https://github.com/dogwoodcommunity/oyano-moshimo-navi`
+- pushed branch: `main`
+- pushed commits:
+  - `92ba97e` Harden sponsor metrics and consult privacy
+  - `755420d` Record sponsor review package
+
+Vercel:
+
+- production URL: `https://oyano-moshimo-navi.vercel.app`
+- deployment URL: `https://oyano-moshimo-navi-r8qg51sgm-dogwoodcommunity1.vercel.app`
+- inspector: `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi/2aDsf2ivyaA7sQhHkM6RKWrTLAxn`
+- deployment state: `READY`
+
+確認済み:
+
+- `corepack pnpm --filter web run typecheck`
+- `corepack pnpm --filter mobile run typecheck`
+- `git diff --check`
+- `npx vercel --prod --yes`
+
+残っている外部作業:
+
+- 本番Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を再適用。
+- 適用後に `supabase/verify_setup.sql` または `supabase/verify_compact.sql` を実行。
+- 月次スナップショット運用として `select capture_prefecture_usage_snapshot();` をcron化、または月初手動実行。
