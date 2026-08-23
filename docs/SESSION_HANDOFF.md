@@ -6667,3 +6667,30 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 - 登録後、最初に「今日の記録を書く」が見えるか。
 - プロフィールや確認リストが迷わず折りたたみから開けるか。
 - 写真添付の表示が「UUIDファイル名」ではなく利用者に分かる表示になっているか。
+
+## 2026-08-23 追記 183 — 記録ファースト版をVercel本番へ手動デプロイ
+
+`fc2f386 Make notebook home record-first` はGitHubへpush済みだったが、公開URL `https://oyano-moshimo-navi.vercel.app/home?reset=1` が古い `/home` chunk (`page-fe4d097a9a337c86.js`) を返していたため、Vercel CLIで本番デプロイを実行した。
+
+実行:
+
+- `npx vercel --prod --yes`
+
+結果:
+
+- Vercel deployment id: `dpl_HcTtJBbANAWGmqQhfavLCvJjYd9m`
+- Production URL: `https://oyano-moshimo-navi-e07ibqsfa-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+- Build: 成功
+- `/home` の新chunk: `/_next/static/chunks/app/home/page-416a3398cf7009e5.js`
+
+公開確認:
+
+- `https://oyano-moshimo-navi.vercel.app/home?reset=1` がHTTP 200。
+- HTML内で `.nav-crisis{background:transparent...}` を確認し、「急なとき」メニューが通常時に強調されない版になっている。
+- HTML内でトップナビが「手帳 / 読む / 急なとき」になっている。
+- 初回レビューURLは `https://oyano-moshimo-navi.vercel.app/home?reset=1`。
+
+注意:
+
+- `/home?reset=1` はローカルの手帳データを消して初回見え方に戻すレビュー用URL。自分の保存データを残したい端末では通常の `https://oyano-moshimo-navi.vercel.app/home` を使う。
