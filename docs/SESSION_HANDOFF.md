@@ -7463,3 +7463,26 @@ Claude再検収で「スナップショットの意味論を1行文書化」「c
 - Vercel本番反映後、未ログインのiPhone/Androidで `/consult` を開き、「先にクラウド控えを作る」が表示されず、相談ボタンが有効になること。
 - 記録保存直後に「この記録でAI相談する」を押し、入力内容が相談欄へ入り、回答後に回答欄まで自動で移動すること。
 - 同じ未ログイン端末では、相談成功後に初回無料が再度使えないこと。別端末やcookie削除による再利用は、既存レート制限で費用上限を守り、正式有料テスト前に追加の不正対策を検討する。
+
+## 2026-08-23 追記 206 — GitHub反映完了、本番デプロイはVercel認証待ち
+
+追記205のAI相談直通化・文字拡大はcommit `9823a80` としてGitHubの `main` へpush済み。
+
+確認結果:
+
+- GitHub Actionsの `web-and-mobile` と `check` は成功。
+- GitHub Actionsの `deploy` は、リポジトリに `VERCEL_TOKEN` / `VERCEL_ORG_ID` / `VERCEL_PROJECT_ID` が設定されていないためskip。
+- ローカルからの `npx vercel --prod --yes` は `Not authorized` で停止。Vercel CLIの再認証が必要。
+- そのため、現時点の本番 `https://oyano-moshimo-navi.vercel.app/api/consult` は旧実装の `login_required` を返す。コード修正はGitHubにあるが、本番画面にはまだ反映されていない。
+
+次の外部作業:
+
+1. ターミナルで `npx vercel login` を実行し、Vercelへ再ログインする。
+2. `apps/web` で `npx vercel --prod --yes` を実行する。
+3. 本番 `/api/consult` を未ログインで開き、HTTP 200かつ `signedIn: false` / `trialAvailable: true` が返ることを確認する。
+4. iPhone/Androidで記録保存からAI相談へ直行できることを確認する。
+
+注意:
+
+- VercelのtokenやSupabaseのsecretを台帳・Git・チャットへ記録しない。
+- `review_exports/` はレビュー用の未追跡成果物であり、今回のcommitには含めない。
