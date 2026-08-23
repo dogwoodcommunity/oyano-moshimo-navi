@@ -6788,3 +6788,36 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - `corepack pnpm --dir apps/web build` で Next.js のビルドは成功。Supabase JS から Node.js 20以下非推奨警告が出るが、今回の修正起因ではない。
 - まだ本番デプロイ前。次は commit → push → Vercel prod deploy → `/home` の確認URLを案内する。
+
+## 2026-08-23 追記 187 — 記録カレンダー・AI相談導線を本番反映
+
+追記186の修正をGitHubとVercel本番へ反映した。ユーザーの最新指摘は「記録しても日付が見えない」「過去記録をカレンダーで見たい」「相談メモが何のためか分からない」「AIが寄り添う導線を明確にしたい」。これに対して、手帳の中心を `日付つき記録` → `カレンダーで見返す` → `ナビからの寄り添い` → `AI相談チャット` に整理した。
+
+実行:
+
+- `git commit -m "Clarify diary history and AI consultation"`
+- commit: `004aafb`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+結果:
+
+- Vercel deployment id: `dpl_7MiEGuXFmYw1cugY7ftjs5gHfoC5`
+- Production URL: `https://oyano-moshimo-navi-pjul0vaka-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+- `/home` の新chunk: `/_next/static/chunks/app/home/page-b085a307c3ca07bb.js`
+
+確認:
+
+- `corepack pnpm --dir apps/web exec tsc --noEmit`
+- `git diff --check`
+- `corepack pnpm --dir apps/web build`
+- `https://oyano-moshimo-navi.vercel.app/home?v=diary-calendar-186` がHTTP 200。
+- 本番chunk内に `記録する日付` / `過去の日も選べます` / `ナビからの寄り添い` / `AI相談チャット` が存在。
+- 本番chunk内に旧文言 `相談メモ` / `気づきメモ` は見つからない。
+
+ユーザーへの案内:
+
+- 確認URLは `https://oyano-moshimo-navi.vercel.app/home?v=diary-calendar-186`。
+- 端末に古い表示が残る場合は、上記の `?v=diary-calendar-186` 付きURLで開き直す。保存済み手帳を消したくない場合は `?reset=1` は付けない。
+- 今回は「相談メモ」を機能名として残さず、短い自動コメントを `ナビからの寄り添い`、深い相談入口を `AI相談チャット` に統一した。
