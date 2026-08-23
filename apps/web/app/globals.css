@@ -1526,6 +1526,27 @@
   font-weight: 900;
 }
 
+.entry-advice > p {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.entry-advice > em {
+  background: #fffdf6;
+  border: 1px solid #eadfc9;
+  border-radius: 14px;
+  color: var(--ink);
+  display: block;
+  font-size: 13.5px;
+  font-style: normal;
+  font-weight: 850;
+  line-height: 1.75;
+  padding: 11px 12px;
+}
+
 .entry-attachments {
   display: flex;
   flex-wrap: wrap;
@@ -8733,6 +8754,52 @@ textarea {
   letter-spacing: 0;
 }
 
+.record-date-row {
+  align-items: end;
+  background: #fffdf6;
+  border: 1px solid #e5ddcd;
+  border-radius: 15px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+  padding: 11px 12px;
+}
+
+.record-date-row label {
+  color: var(--ink);
+  display: grid;
+  font-size: 12.5px;
+  font-weight: 900;
+  gap: 6px;
+}
+
+.record-date-row input {
+  appearance: none;
+  background: #fff;
+  border: 1.5px solid rgba(47, 110, 130, 0.24);
+  border-radius: 12px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 850;
+  min-height: 44px;
+  padding: 9px 11px;
+  width: 100%;
+}
+
+.record-date-row input:focus {
+  border-color: #2f6e82;
+  box-shadow: 0 0 0 4px rgba(47, 110, 130, 0.12);
+  outline: none;
+}
+
+.record-date-row span {
+  color: var(--ink-faint);
+  font-size: 12.5px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .today-record-card .diary-label {
   color: var(--ink);
   font-size: 13px;
@@ -9037,8 +9104,246 @@ textarea {
   line-height: 1.6;
 }
 
+.record-ai-card {
+  background:
+    linear-gradient(135deg, rgba(238, 247, 245, 0.98), rgba(255, 253, 246, 0.98)),
+    radial-gradient(circle at 12% 0%, rgba(47, 110, 130, 0.14), transparent 36%);
+  border-color: #d5e5e1;
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+}
+
+.record-ai-head {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+
+.record-ai-head img {
+  background: #fffdf6;
+  border: 1px solid #d6e8e4;
+  border-radius: 16px;
+  height: 48px;
+  object-fit: contain;
+  padding: 3px;
+  width: 48px;
+}
+
+.record-ai-head span {
+  color: #2f6e82;
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  margin-bottom: 4px;
+}
+
+.record-ai-head strong {
+  color: var(--ink);
+  display: block;
+  font-size: 16.5px;
+  font-weight: 950;
+  line-height: 1.55;
+}
+
+.record-ai-head p {
+  color: var(--ink-sub);
+  font-size: 13.5px;
+  font-weight: 800;
+  line-height: 1.75;
+  margin: 7px 0 0;
+}
+
+.record-ai-actions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.record-ai-actions a {
+  align-items: center;
+  border-radius: 999px;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 950;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+  text-decoration: none;
+}
+
+.record-ai-actions a:first-child {
+  background: #0f6f49;
+  color: #fffdf6;
+}
+
+.record-ai-actions a:last-child {
+  background: #fff;
+  border: 1.5px solid rgba(47, 110, 130, 0.22);
+  color: #2f6e82;
+}
+
+.record-ai-card > small {
+  color: var(--ink-faint);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
 .history-card {
   display: grid;
+}
+
+.record-calendar-card {
+  background:
+    linear-gradient(135deg, rgba(255, 253, 246, 0.98), rgba(248, 251, 245, 0.98)),
+    radial-gradient(circle at 92% 0%, rgba(47, 110, 130, 0.1), transparent 36%);
+  border-bottom: 1px solid var(--hairline);
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.record-calendar-head {
+  align-items: center;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+}
+
+.record-calendar-head strong {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.record-calendar-head button {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #dce8dd;
+  border-radius: 999px;
+  color: #2f6e82;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-size: 23px;
+  font-weight: 900;
+  height: 42px;
+  justify-content: center;
+  padding: 0;
+  touch-action: manipulation;
+  width: 42px;
+}
+
+.record-calendar-weekdays,
+.record-calendar-grid {
+  display: grid;
+  gap: 5px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.record-calendar-weekdays span {
+  color: var(--ink-faint);
+  font-size: 11px;
+  font-weight: 900;
+  text-align: center;
+}
+
+.record-calendar-day,
+.record-calendar-blank {
+  min-height: 42px;
+}
+
+.record-calendar-day {
+  align-items: center;
+  background: #fff;
+  border: 1px solid #e1e9de;
+  border-radius: 13px;
+  color: var(--ink-sub);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 900;
+  gap: 1px;
+  justify-items: center;
+  padding: 5px 2px;
+  position: relative;
+  touch-action: manipulation;
+}
+
+.record-calendar-day.has-entry {
+  border-color: rgba(47, 110, 130, 0.35);
+  color: var(--ink);
+}
+
+.record-calendar-day.is-changed {
+  background: #fff8ec;
+  border-color: rgba(184, 137, 67, 0.36);
+}
+
+.record-calendar-day.is-urgent {
+  background: #fff0ee;
+  border-color: rgba(179, 91, 117, 0.42);
+}
+
+.record-calendar-day.is-selected {
+  background: #0f6f49;
+  border-color: #0f6f49;
+  box-shadow: 0 8px 18px rgba(15, 95, 65, 0.18);
+  color: #fffdf6;
+}
+
+.record-calendar-day small {
+  align-items: center;
+  background: #eef7f5;
+  border-radius: 999px;
+  color: #2f6e82;
+  display: inline-flex;
+  font-size: 10.5px;
+  height: 17px;
+  justify-content: center;
+  min-width: 17px;
+  padding: 0 4px;
+}
+
+.record-calendar-day.is-selected small {
+  background: rgba(255, 255, 255, 0.2);
+  color: #fffdf6;
+}
+
+.record-calendar-footer {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.record-calendar-footer p {
+  color: var(--ink-sub);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.record-calendar-footer button,
+.selected-date-notice button {
+  background: #fff;
+  border: 1.5px solid rgba(47, 110, 130, 0.22);
+  border-radius: 999px;
+  color: #2f6e82;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 900;
+  min-height: 36px;
+  padding: 8px 12px;
+  touch-action: manipulation;
 }
 
 .history-row {
@@ -9080,6 +9385,24 @@ textarea {
 .history-drawer[open] summary,
 .profile-edit-drawer[open] summary {
   border-bottom: 1px solid var(--hairline);
+}
+
+.selected-date-notice {
+  align-items: center;
+  background: #eef7f5;
+  border: 1px solid #d6e8e4;
+  border-radius: 15px;
+  display: grid;
+  gap: 8px;
+  margin: 14px 16px 0;
+  padding: 11px 12px;
+}
+
+.selected-date-notice strong {
+  color: var(--ink);
+  font-size: 13.5px;
+  font-weight: 900;
+  line-height: 1.55;
 }
 
 .history-drawer .record-filter-tabs,

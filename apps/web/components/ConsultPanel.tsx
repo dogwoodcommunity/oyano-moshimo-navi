@@ -353,9 +353,9 @@ export function ConsultPanel() {
       <section className="consult-plus-gate" aria-label="長期相談の利用条件">
         <div>
           <p className="consult-gate-kicker">使う前に</p>
-          <h2>相談は「手帳を読む」機能です。</h2>
+          <h2>AI相談チャットは「手帳を読んで答える」機能です。</h2>
           <p>
-            プロフィールと最近の記録を前提に、次に確認することを整理します。
+            プロフィールと最近の記録を前提に、次に確認すること、窓口で聞くこと、家族へ共有することを整理します。
             {signedInEmail ? ` 現在は ${signedInEmail} で確認済みです。` : " 先に家族ボードでメール確認をしてください。"}
           </p>
           {consultAccess ? <ConsultAccessNote access={consultAccess} /> : null}
@@ -390,7 +390,7 @@ export function ConsultPanel() {
       </section>
 
       <section className="consult-form" aria-label="相談する">
-        <h2>いま困っていることを書いてください</h2>
+        <h2>この人のことで、AIに聞きたいことを書いてください</h2>
         <div className="consult-suggestions">
           {suggestedQuestions.map((item) => (
             <button key={item} onClick={() => setQuestion(item)} type="button">{item}</button>
@@ -410,11 +410,11 @@ export function ConsultPanel() {
           onClick={submit}
           type="button"
         >
-          {phase === "loading" ? "整理しています…" : "相談メモを作る"}
+          {phase === "loading" ? "整理しています…" : "AI相談をはじめる"}
         </button>
         {authChecked && !signedInEmail ? (
           <p className="consult-hint">
-            長期相談は保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
+            AI相談チャットは保存済みの手帳を前提に使います。先に <Link href="/home?cloud=1">家族ボードでクラウド控え</Link> を作ってください。
           </p>
         ) : null}
         {!hasSubstance ? (
@@ -429,7 +429,7 @@ export function ConsultPanel() {
       </section>
 
       {answer ? (
-        <section className="consult-answer" aria-label="相談メモ">
+        <section className="consult-answer" aria-label="AI相談の回答">
           <div className="consult-answer-block">
             <h2>いまの状況</h2>
             <p>{answer.situation}</p>
@@ -485,7 +485,7 @@ export function ConsultPanel() {
 
           <div className="consult-save">
             <button disabled={saved || saveSyncPhase === "saving"} onClick={saveToNotebook} type="button">
-              {saveSyncPhase === "saving" ? "手帳に残しています…" : "この相談メモを手帳に残す"}
+              {saveSyncPhase === "saving" ? "手帳に残しています…" : "このAI相談を手帳に残す"}
             </button>
             {saved ? (
               <p role="status">

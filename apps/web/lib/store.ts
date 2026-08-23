@@ -469,6 +469,31 @@ export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] 
   return Array.from(advice).slice(0, 4);
 }
 
+export function diaryCompanionComment(entry: Pick<DiaryEntry, "body" | "mood">): string {
+  const text = entry.body;
+
+  if (entry.mood === "urgent") {
+    return "急なことが起きた日は、全部を整理しきれなくても大丈夫です。まずは連絡した相手、言われた言葉、次に行く場所だけ残しておくと、あとで家族が同じ状況を見返せます。";
+  }
+  if (/入院|病院|退院|医師|看護|薬|服薬/.test(text)) {
+    return "病院や薬の話は、あとから思い出すのが一番大変です。今日聞いた言葉をそのまま残せているだけで、次の相談の助けになります。";
+  }
+  if (/認知|忘れ|徘徊|怒|混乱|判断|発言/.test(text)) {
+    return "様子や発言の変化は、家族だけで抱えると不安が大きくなります。決めつけず、今日見た事実として残せているのが大事です。";
+  }
+  if (/介護|ケアマネ|要介護|認定|施設|特養|訪問/.test(text)) {
+    return "介護の手続きは言葉が多くて迷いやすいです。今日出てきた制度名や相談先を残しておくと、次に誰へ聞くかを一緒に整理できます。";
+  }
+  if (/家|実家|片付|鍵|写真|荷物|書類/.test(text)) {
+    return "実家や書類のことは、写真と短いメモがあとで効きます。場所が分かる形で残しておくと、家族が同じ前提で動きやすくなります。";
+  }
+  if (entry.mood === "changed") {
+    return "小さな変化でも、日付つきで残しておくと流れが見えます。次に同じことが起きた時、前回どうだったかを家族で確認できます。";
+  }
+
+  return "今日の記録を残せています。大きな変化がない日も、あとから見ると大切な流れになります。無理に詳しく書かなくても、一言ずつで十分です。";
+}
+
 async function postJson<T>(path: string, body: unknown): Promise<T | null> {
   try {
     const response = await fetch(path, {
