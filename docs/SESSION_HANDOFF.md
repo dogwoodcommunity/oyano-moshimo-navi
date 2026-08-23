@@ -6723,3 +6723,35 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - ローカルNext devを `127.0.0.1:3006` で試したが、環境側で `EMFILE: too many open files, watch` が出て `/home` が404になったため、ローカルdev画面ではなくVercel本番デプロイ後の実機確認を正とする。
 - 次の確認URLはデプロイ後に `https://oyano-moshimo-navi.vercel.app/home?reset=1&v=first-run-184` を使う。
+
+## 2026-08-23 追記 185 — 初回ゼロ登録画面を本番デプロイ
+
+追記184の初回画面修正をGitHubとVercel本番へ反映した。
+
+実行:
+
+- `git commit -m "Clarify first notebook entry screen"`
+- commit: `d4e56cd`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+結果:
+
+- Vercel deployment id: `dpl_B5PQK6VGVbybhTiJPCEaKwXNQ6wA`
+- Production URL: `https://oyano-moshimo-navi-ewv5pm6zk-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+- `/home` の新chunk: `/_next/static/chunks/app/home/page-862025de83b95712.js`
+
+確認:
+
+- `corepack pnpm --dir apps/web exec tsc --noEmit`
+- `git diff --check`
+- `corepack pnpm --dir apps/web build`
+- `https://oyano-moshimo-navi.vercel.app/home?reset=1&v=first-run-184` がHTTP 200。
+- 新chunk内に `まず、1人分だけ手帳を作ります` が存在。
+- 新chunk内に旧文言 `最初の手帳を作る` が存在しない。
+
+ユーザーへの案内:
+
+- 初回レビューは `https://oyano-moshimo-navi.vercel.app/home?reset=1&v=first-run-184`。
+- 端末側で古い表示が残る場合は、PWA/ブラウザのキャッシュか既存localStorageの可能性が高い。レビュー用URLの `reset=1` は端末内の手帳データを初期化するので、自分の保存データを残したい端末では使わない。
