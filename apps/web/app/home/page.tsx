@@ -58,6 +58,12 @@ type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synce
 type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
 type NotebookTab = "overview" | "record" | "profile" | "tasks" | "media";
 type HandbookStepState = "done" | "now" | "next";
+type ConsultDraft = {
+  caseId: string;
+  entryId?: string;
+  sourceLabel: string;
+  question: string;
+};
 type NotebookSyncPayload = {
   cases: CaseRecord[];
   diaryEntries: DiaryEntry[];
@@ -606,8 +612,17 @@ function buildMonthReview(entries: DiaryEntry[], profile: PersonProfile | undefi
   };
 }
 
-function MonthReview({ entries, profile }: { entries: DiaryEntry[]; profile: PersonProfile | undefined }) {
+function MonthReview({
+  entries,
+  profile,
+  onConsult
+}: {
+  entries: DiaryEntry[];
+  profile: PersonProfile | undefined;
+  onConsult?: (question: string) => void;
+}) {
   const review = buildMonthReview(entries, profile);
+  const consultQuestion = buildDigestConsultQuestion(entries, profile, review.body);
 
   return (
     <div className={`month-review is-${review.tone}`}>
@@ -629,7 +644,13 @@ function MonthReview({ entries, profile }: { entries: DiaryEntry[]; profile: Per
         <span>家族に共有する一文</span>
         <p>{review.familyLine}</p>
       </div>
-      <Link className="month-review-consult" href="/consult">この月をAI相談チャットに持っていく</Link>
+      {onConsult ? (
+        <button className="month-review-consult" type="button" onClick={() => onConsult(consultQuestion)}>
+          この月をAI相談チャットに持っていく
+        </button>
+      ) : (
+        <Link className="month-review-consult" href={consultHref("", consultQuestion)}>この月をAI相談チャットに持っていく</Link>
+      )}
     </div>
   );
 }
@@ -903,6 +924,25 @@ function buildRecordDigest(entries: DiaryEntry[], profile: PersonProfile | undef
   };
 }
 
+function buildEntryConsultQuestion(entry: DiaryEntry, profile: PersonProfile | undefined) {
+  const person = profile?.displayName?.trim() || profile?.fullName?.trim() || profile?.relationship?.trim() || "この人";
+  return `${formatLongDate(entry.date)}の記録「${clipText(entry.body, 96)}」をもとに、${person}について次に確認すること、家族に共有する一文、相談先で聞くことを整理してください。`;
+}
+
+function buildDigestConsultQuestion(entries: DiaryEntry[], profile: PersonProfile | undefined, summary?: string) {
+  const person = profile?.displayName?.trim() || profile?.fullName?.trim() || profile?.relationship?.trim() || "この人";
+  const latest = entries[0];
+  if (!latest) {
+    return `${person}の手帳をこれから育てます。最初にどんな記録を書けば、あとで家族や支援者に説明しやすくなりますか。`;
+  }
+
+  return `${person}の最近の記録のまとめ「${summary ?? clipText(latest.body, 90)}」をもとに、今週確認すること、家族に頼むこと、次に残す記録を整理してください。`;
+}
+
+function consultHref(caseId: string, question: string) {
+  return `/consult?caseId=${encodeURIComponent(caseId)}&q=${encodeURIComponent(question)}`;
+}
+
 function buildNotebookInsight(
   caseId: string,
   entries: DiaryEntry[],
@@ -1133,6 +1173,7 @@ export default function FamilyBoardPage() {
   const [selectedDiaryDate, setSelectedDiaryDate] = useState<string | null>(null);
   const [diaryCalendarMonth, setDiaryCalendarMonth] = useState(() => monthInputValue());
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("record");
+  const [consultDraft, setConsultDraft] = useState<ConsultDraft | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
@@ -1234,6 +1275,7 @@ export default function FamilyBoardPage() {
     setSelectedDiaryDate(null);
     setDiaryCalendarMonth(monthInputValue());
     setActiveNotebookTab("record");
+    setConsultDraft(null);
   }, [activeCase?.id]);
 
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
@@ -1271,6 +1313,9 @@ export default function FamilyBoardPage() {
   const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
   const unassignedTaskCount = openTasks.filter((task) => !task.assignee?.trim()).length;
   const latestEntry = activeEntries[0];
+  const consultDraftEntry = consultDraft?.entryId
+    ? activeEntries.find((entry) => entry.id === consultDraft.entryId)
+    : latestEntry;
   const daysFromLatestEntry = daysSince(latestEntry?.date);
   const latestEntrySummary = latestEntry
     ? latestEntry.body.length > 92
@@ -1367,6 +1412,34 @@ export default function FamilyBoardPage() {
     window.setTimeout(() => {
       document.querySelector(hash)?.scrollIntoView({ block: "start", behavior: "smooth" });
     }, 0);
+  }
+
+  function openConsultDraft(draft: ConsultDraft) {
+    setActiveNotebookTab("record");
+    setConsultDraft(draft);
+    window.setTimeout(() => {
+      document.querySelector("#inline-ai-consult")?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 0);
+  }
+
+  function openConsultFromEntry(entry: DiaryEntry) {
+    if (!activeCase) return;
+    openConsultDraft({
+      caseId: activeCase.id,
+      entryId: entry.id,
+      sourceLabel: `${formatLongDate(entry.date)}の記録から`,
+      question: buildEntryConsultQuestion(entry, activeProfile)
+    });
+  }
+
+  function openConsultFromDigest() {
+    if (!activeCase) return;
+    openConsultDraft({
+      caseId: activeCase.id,
+      entryId: latestEntry?.id,
+      sourceLabel: latestEntry ? "最近の記録から" : "手帳のはじめ方から",
+      question: buildDigestConsultQuestion(activeEntries, activeProfile, recordDigest?.summary)
+    });
   }
 
   function notebookTabNote(tab: NotebookTab) {
@@ -2671,7 +2744,7 @@ export default function FamilyBoardPage() {
                 </div>
               </div>
               <div className="record-ai-actions">
-                <Link href="/consult">AI相談チャットを開く</Link>
+                <button type="button" onClick={openConsultFromDigest}>AI相談チャットを開く</button>
                 <a
                   href="#diary-history"
                   onClick={(event) => {
@@ -2685,6 +2758,45 @@ export default function FamilyBoardPage() {
               <small>相談内容は医療・法律・税務の判断ではありません。必要な判断は主治医や専門家に確認してください。</small>
             </article>
           </section>
+
+          {consultDraft ? (
+            <section
+              className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`}
+              id="inline-ai-consult"
+              aria-label="記録からAI相談する"
+            >
+              <article className="nb-card inline-ai-consult-card">
+                <div className="inline-ai-consult-head">
+                  <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                  <div>
+                    <span>{consultDraft.sourceLabel}</span>
+                    <strong>この内容でAI相談チャットに進めます。</strong>
+                    <p>
+                      まず下の質問文を作りました。さらに詳しく聞く時は、本格AI相談チャットを開いてください。
+                    </p>
+                  </div>
+                </div>
+                <div className="inline-ai-question">
+                  <span>AIに聞く内容</span>
+                  <p>{consultDraft.question}</p>
+                </div>
+                {consultDraftEntry ? (
+                  <div className="inline-ai-preview">
+                    <strong>ナビからの寄り添い</strong>
+                    <p>{diaryCompanionComment(consultDraftEntry)}</p>
+                    <ul>
+                      {diaryAdvice(consultDraftEntry).slice(0, 3).map((item) => <li key={item}>{item}</li>)}
+                    </ul>
+                  </div>
+                ) : null}
+                <div className="inline-ai-actions">
+                  <Link href={consultHref(consultDraft.caseId, consultDraft.question)}>本格AI相談チャットへ進む</Link>
+                  <button type="button" onClick={() => setConsultDraft(null)}>閉じる</button>
+                </div>
+                <small>プロフィールと最近の記録を前提に相談するには、クラウド控えと同意が必要です。</small>
+              </article>
+            </section>
+          ) : null}
 
           {journeyCards.length > 0 ? (
             <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="これからの道すじ">
@@ -2763,7 +2875,9 @@ export default function FamilyBoardPage() {
                     {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
                   </div>
                   <p className="history-card-note">カレンダーの日付を押すと、その日の記録だけを見返せます。記録ごとに編集、確認リスト追加、AI相談ができます。</p>
-                  <Link className="record-digest-consult" href="/consult">記録をもとにAI相談する</Link>
+                  <button className="record-digest-consult" type="button" onClick={openConsultFromDigest}>
+                    記録をもとにAI相談する
+                  </button>
                 </div>
               ) : null}
               {visibleRecentEntries.length > 0 ? (
@@ -2810,7 +2924,19 @@ export default function FamilyBoardPage() {
                             <h3>{monthLabel(group.month)}</h3>
                             <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真 {group.attachmentCount}件</p>
                           </div>
-                          <MonthReview entries={group.items} profile={activeProfile} />
+                          <MonthReview
+                            entries={group.items}
+                            profile={activeProfile}
+                            onConsult={(question) => {
+                              if (!activeCase) return;
+                              openConsultDraft({
+                                caseId: activeCase.id,
+                                entryId: group.items[0]?.id,
+                                sourceLabel: `${monthLabel(group.month)}から`,
+                                question
+                              });
+                            }}
+                          />
                           {group.items.map((entry) => {
                             const editForm = diaryEditForms[entry.id] ?? diaryEditSeed(entry);
                             const isEditing = editingDiaryId === entry.id;
@@ -2875,7 +3001,7 @@ export default function FamilyBoardPage() {
                                 <div className="diary-entry-actions">
                                   <button type="button" onClick={() => openDiaryEditor(entry)}>この記録を編集</button>
                                   <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>確認リストに追加</button>
-                                  <Link href="/consult">AI相談する</Link>
+                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>AI相談する</button>
                                 </div>
                                 {diarySavedId === entry.id ? <small className="entry-feedback">記録を更新しました。</small> : null}
                                 {taskAddedEntryId === entry.id ? <small className="entry-feedback">確認リストに追加しました。</small> : null}

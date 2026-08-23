@@ -118,8 +118,18 @@ export function ConsultPanel() {
   useEffect(() => {
     let cancelled = false;
     const localCases = listLocalCases();
+    const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const requestedCaseId = params?.get("caseId") ?? undefined;
+    const requestedQuestion = params?.get("q")?.trim() ?? "";
+    const initialCase = requestedCaseId && localCases.some((item) => item.id === requestedCaseId)
+      ? requestedCaseId
+      : localCases[0]?.id;
+
     setCases(localCases);
-    setActiveCaseId(localCases[0]?.id);
+    setActiveCaseId(initialCase);
+    if (requestedQuestion) {
+      setQuestion(requestedQuestion.slice(0, CONSULT_MAX_QUESTION_LENGTH));
+    }
     setConsent(readConsent());
     setLoaded(true);
 

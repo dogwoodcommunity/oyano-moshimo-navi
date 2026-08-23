@@ -6821,3 +6821,30 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 - 確認URLは `https://oyano-moshimo-navi.vercel.app/home?v=diary-calendar-186`。
 - 端末に古い表示が残る場合は、上記の `?v=diary-calendar-186` 付きURLで開き直す。保存済み手帳を消したくない場合は `?reset=1` は付けない。
 - 今回は「相談メモ」を機能名として残さず、短い自動コメントを `ナビからの寄り添い`、深い相談入口を `AI相談チャット` に統一した。
+
+## 2026-08-23 追記 188 — 記録からAI相談ボタンの反応を明確化
+
+ユーザーが実機で「記録をもとにAIに相談するボタンを押してもAIの画面が出ない」と指摘。原因は、家族ボード上のAI相談導線が `/consult` へ単純遷移するだけで、どの記録をもとに相談するのかが画面上で見えず、相談画面側にも質問文や対象手帳が渡っていなかったこと。
+
+対応:
+
+- `apps/web/app/home/page.tsx`
+  - `ConsultDraft` を追加し、記録タブ内でAI相談の下書きを状態管理するようにした。
+  - `buildEntryConsultQuestion()` / `buildDigestConsultQuestion()` / `consultHref()` を追加。
+  - `AI相談チャットを開く`、`記録をもとにAI相談する`、各記録の `AI相談する`、月まとめの `この月をAI相談チャットに持っていく` を、まず家族ボード内の `inline-ai-consult` へ展開する導線に変更。
+  - 展開カードには「AIに聞く内容」「ナビからの寄り添い」「次に確認すること」を表示し、そこから `本格AI相談チャットへ進む` で `/consult?caseId=...&q=...` へ進む形にした。
+- `apps/web/components/ConsultPanel.tsx`
+  - `/consult` が `caseId` と `q` のURLパラメータを読み、対象手帳を選択済み・質問文を入力済みで開くようにした。
+- `apps/web/app/globals.css`
+  - インラインAI相談カードと、button化したAI相談導線のスタイルを追加。リンクとボタンの見た目が崩れないように調整。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+
+注意:
+
+- `corepack pnpm --filter web run build` は成功。Supabase JS 由来の Node.js 20以下非推奨警告が出るが、今回の修正起因ではない。
+- まだ本番デプロイ前。次は commit → push → Vercel prod deploy → `/home` の確認URLを案内する。
