@@ -72,7 +72,7 @@
 .notebook-identity-card span,
 .notebook-identity-card p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.02em;
   margin: 0;
@@ -126,7 +126,7 @@
 .preview-person-card small,
 .preview-note-row span {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -139,7 +139,7 @@
 
 .preview-note-row strong {
   color: var(--primary-deep);
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
@@ -168,7 +168,7 @@
 
 .notebook-promise-grid p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -196,7 +196,7 @@
   border-radius: 16px;
   color: var(--ink);
   display: flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 52px;
   padding: 12px 14px;
@@ -244,7 +244,7 @@
 
 .health-chip-grid button small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -254,7 +254,7 @@
   background: #f0f5ef;
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 900;
   justify-self: start;
@@ -461,7 +461,7 @@
 .person-switcher span,
 .person-switcher small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -502,7 +502,7 @@
 
 .notebook-stats small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -562,7 +562,7 @@
   border-radius: 999px;
   color: var(--primary-deep);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: start;
   min-height: 30px;
@@ -583,7 +583,7 @@
 
 .today-overview-card p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -633,7 +633,7 @@
   border-radius: 999px;
   color: var(--primary-deep);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: start;
   min-height: 30px;
@@ -657,7 +657,7 @@
 
 .control-map-grid p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.65;
   margin: 0;
@@ -763,7 +763,7 @@
 .profile-completion span,
 .profile-completion small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -809,7 +809,7 @@
 
 .profile-edit-guide p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 6px 0 0;
@@ -823,7 +823,7 @@
   color: #fff;
   cursor: pointer;
   font: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 52px;
   padding: 12px 16px;
@@ -847,7 +847,7 @@
 
 .profile-missing-box > span {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -861,7 +861,7 @@
   background: #eef7f5;
   border-radius: 999px;
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.25;
   padding: 7px 10px;
@@ -873,7 +873,7 @@
 
 .profile-missing-box.is-complete strong {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
@@ -891,13 +891,13 @@
 .profile-edit-callout strong {
   color: var(--ink);
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.35;
 }
 
 .profile-edit-callout p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 4px 0 0;
@@ -907,7 +907,7 @@
   background: var(--primary-deep);
   border-radius: 999px;
   color: #fff;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 40px;
   padding: 10px 14px;
@@ -926,7 +926,7 @@
   background: #e8f2ec;
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   padding: 6px 10px;
 }
@@ -951,19 +951,19 @@
 .profile-row-grid span,
 .profile-note span {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
 .profile-row-grid strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
 .profile-note p {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.7;
 }
 
@@ -984,7 +984,7 @@
 
 .profile-form-grid label > span {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -996,7 +996,7 @@
   border-radius: 14px;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   min-height: 48px;
   padding: 12px;
@@ -1055,7 +1055,7 @@
 .profile-save-row span,
 .profile-save-row small {
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -1078,7 +1078,7 @@
   cursor: pointer;
   display: flex;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   gap: 9px;
   line-height: 1.45;
@@ -1143,7 +1143,7 @@
 
 .insight-metrics span {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -1160,7 +1160,7 @@
   background: rgba(255, 255, 255, 0.12);
   border-radius: 999px;
   color: #dff0e8;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: start;
   padding: 6px 10px;
@@ -1179,7 +1179,7 @@
 
 .insight-summary small {
   color: rgba(255, 255, 255, 0.68);
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
 }
@@ -1197,7 +1197,7 @@
   background: #f0e6d2;
   border-radius: 999px;
   color: #7a5520;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: start;
   padding: 6px 10px;
@@ -1212,7 +1212,7 @@
 
 .forecast-card p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -1245,19 +1245,19 @@
 
 .alert-card span {
   color: var(--ink-sub);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .alert-card strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.35;
 }
 
 .alert-card p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   line-height: 1.6;
 }
 
@@ -1287,7 +1287,7 @@
 .question-list li,
 .entry-advice li {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
 }
@@ -1305,7 +1305,7 @@
   color: var(--primary-deep);
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 40px;
   padding: 9px 13px;
@@ -1341,7 +1341,7 @@
 
 .diary-month-head p {
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.55;
   margin: 0;
@@ -1370,7 +1370,7 @@
 
 .diary-entry-card time {
   color: var(--tab-sand-ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -1378,7 +1378,7 @@
   background: #e9f2ed;
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   padding: 5px 8px;
 }
@@ -1395,7 +1395,7 @@
 
 .diary-entry-card p {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -1418,7 +1418,7 @@
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   line-height: 1.25;
@@ -1455,7 +1455,7 @@
 .diary-edit-panel label {
   color: var(--ink);
   display: grid;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   gap: 7px;
 }
@@ -1467,7 +1467,7 @@
   border-radius: 12px;
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.6;
   padding: 11px 12px;
@@ -1496,7 +1496,7 @@
   border-radius: 999px;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 42px;
   padding: 9px 12px;
@@ -1520,7 +1520,7 @@
   border-radius: 999px;
   color: #0f6a45;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 28px;
@@ -1537,13 +1537,13 @@
 
 .entry-advice > strong {
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .entry-advice > p {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 850;
   line-height: 1.6;
   margin: 0;
@@ -1555,7 +1555,7 @@
   border-radius: 14px;
   color: var(--ink);
   display: block;
-  font-size: 13.5px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 850;
   line-height: 1.75;
@@ -1575,7 +1575,7 @@
   border-radius: 12px;
   color: var(--ink-sub);
   display: inline-flex;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   gap: 6px;
   padding: 6px 8px;
@@ -1632,7 +1632,7 @@
 
 .mini-calendar span {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -1663,13 +1663,13 @@
 .task-stack span,
 .task-stack small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .task-stack strong {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
@@ -1698,7 +1698,7 @@
 
 .media-tile > span {
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -1707,7 +1707,7 @@
   border-radius: 999px;
   bottom: 6px;
   color: var(--ink);
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 800;
   left: 6px;
   padding: 3px 6px;
@@ -1739,7 +1739,7 @@
 
 .family-share-card p:not(.pill) {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
   margin: 6px 0 0;
@@ -1756,7 +1756,7 @@
   border: 1px solid rgba(174, 135, 72, 0.24);
   border-radius: 999px;
   color: var(--tab-sand-ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 34px;
   padding: 8px 9px;
@@ -1921,7 +1921,7 @@ textarea {
   color: var(--muted);
   display: flex;
   flex-wrap: wrap;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   gap: 10px;
 }
@@ -1965,7 +1965,7 @@ textarea {
   background: rgba(255, 253, 246, 0.92);
   border-radius: 999px;
   color: #0d4f34;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   padding: 4px 7px;
@@ -2113,7 +2113,7 @@ textarea {
 
 .app-gateway::before {
   content: "アプリ";
-  font-size: 13px;
+  font-size: 16px;
   height: 52px;
   top: -28px;
   width: 52px;
@@ -2121,7 +2121,7 @@ textarea {
 
 .gateway-label {
   color: var(--green);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   margin: 0;
 }
@@ -2140,13 +2140,13 @@ textarea {
 
 .gateway-button span {
   color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
 .gateway-note {
   color: var(--muted);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.55;
   margin: 0;
@@ -2165,7 +2165,7 @@ textarea {
   border-radius: 999px;
   color: var(--green-dark);
   display: inline-flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   padding: 8px 11px;
 }
@@ -2203,7 +2203,7 @@ textarea {
 
 .paper-head span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -2248,7 +2248,7 @@ textarea {
 
 .paper-footer p {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
@@ -2319,7 +2319,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 8px;
   color: var(--green-dark);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 52px;
   padding: 10px;
@@ -2328,7 +2328,7 @@ textarea {
 
 .simple-copy {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.75;
   margin: 0;
 }
@@ -2365,7 +2365,7 @@ textarea {
 .proof-label {
   color: var(--muted);
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.45;
   margin-top: 3px;
@@ -2380,7 +2380,7 @@ textarea {
 
 .eyebrow {
   color: var(--green);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0 0 10px;
 }
@@ -2508,7 +2508,7 @@ textarea {
 
 .status-button span {
   color: var(--muted);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.45;
 }
@@ -2558,7 +2558,7 @@ textarea {
 
 .quick-status-button span {
   color: rgba(255, 255, 255, 0.76);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.5;
 }
@@ -2649,7 +2649,7 @@ textarea {
   border-radius: 8px;
   color: var(--muted);
   display: flex;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 38px;
   padding: 8px 10px;
@@ -2710,7 +2710,7 @@ textarea {
   color: var(--green-dark);
   display: inline-flex;
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   height: 36px;
   justify-content: center;
@@ -2733,7 +2733,7 @@ textarea {
 
 .hint {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.5;
 }
 
@@ -2896,7 +2896,7 @@ textarea {
 
 .target-choice-card small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.35;
 }
@@ -2936,7 +2936,7 @@ textarea {
 
 .diagnosis-status-card small {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -2966,7 +2966,7 @@ textarea {
 .additional-targets strong {
   color: var(--green-dark);
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
@@ -3079,7 +3079,7 @@ textarea {
   border: 1px solid rgba(255, 255, 255, 0.24);
   border-radius: 12px;
   color: #fff;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
   margin: 10px 0 0;
@@ -3105,7 +3105,7 @@ textarea {
   border-radius: 999px;
   color: var(--green);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   padding: 6px 10px;
 }
@@ -3164,7 +3164,7 @@ textarea {
   background: #eef5f0;
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: start;
   padding: 6px 10px;
@@ -3178,7 +3178,7 @@ textarea {
 }
 
 .result-save-panel p {
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.65;
 }
 
@@ -3216,7 +3216,7 @@ textarea {
 }
 
 .result-value-grid p {
-  font-size: 13.5px;
+  font-size: 16px;
   line-height: 1.65;
 }
 
@@ -3286,7 +3286,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   padding: 5px 9px;
 }
@@ -3432,7 +3432,7 @@ textarea {
 
 .entry-card p {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.7;
   margin: 0;
 }
@@ -3488,7 +3488,7 @@ textarea {
 
 .portal-topic p {
   color: var(--muted);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.65;
   margin: 0;
 }
@@ -3597,7 +3597,7 @@ textarea {
 
 .guide-search-field span {
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -3637,7 +3637,7 @@ textarea {
   color: var(--ink);
   cursor: pointer;
   flex: 0 0 auto;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 44px;
   padding: 10px 15px;
@@ -3663,7 +3663,7 @@ textarea {
 
 .guide-result-head span {
   color: var(--muted);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -3683,7 +3683,7 @@ textarea {
 
 .guide-card-head > span:last-child {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -3723,7 +3723,7 @@ textarea {
   border: 1px solid rgba(196, 211, 202, 0.84);
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   padding: 6px 9px;
 }
@@ -3971,7 +3971,7 @@ textarea {
   border: 1px solid var(--line);
   border-radius: 999px;
   color: var(--green-dark);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   padding: 8px 11px;
 }
@@ -4231,7 +4231,7 @@ textarea {
   background: #173f2e;
   border-radius: 999px;
   color: white !important;
-  font-size: 12px !important;
+  font-size: 16px !important;
   font-weight: 900 !important;
   line-height: 1;
   padding: 8px 10px;
@@ -4297,7 +4297,7 @@ textarea {
   border-radius: 999px;
   color: var(--green);
   display: inline-flex;
-  font-size: 13px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 900;
   gap: 6px;
@@ -4313,7 +4313,7 @@ textarea {
 
 .quick-status-button em b,
 .status-button em b {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1;
 }
 
@@ -4512,7 +4512,7 @@ textarea {
   border-radius: 999px;
   color: var(--primary-deep);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   height: 30px;
   justify-content: center;
@@ -4530,7 +4530,7 @@ textarea {
 .sponsor-principles p,
 .sponsor-field-grid p {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -4555,7 +4555,7 @@ textarea {
 }
 
 .sponsor-form label span {
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .sponsor-form input,
@@ -4669,7 +4669,7 @@ textarea {
 
 .admin-table th {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -4722,7 +4722,7 @@ textarea {
   border-radius: 999px;
   color: white;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   height: 30px;
   justify-content: center;
@@ -4745,7 +4745,7 @@ textarea {
   border-radius: 999px;
   color: var(--muted);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
   padding: 6px 9px;
@@ -4782,7 +4782,7 @@ textarea {
 
 .admin-metrics-summary span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -4811,7 +4811,7 @@ textarea {
 .admin-public-hidden {
   border-radius: 999px;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   padding: 6px 9px;
 }
@@ -4858,7 +4858,7 @@ textarea {
 
 .admin-detail-grid span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -4870,7 +4870,7 @@ textarea {
   background: #17231d;
   border-radius: 8px;
   color: #eff8ef;
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.55;
   margin: 0;
   overflow-x: auto;
@@ -4981,7 +4981,7 @@ textarea {
 
 .mascot-card small {
   color: #825f1d;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -5032,7 +5032,7 @@ textarea {
 .welcome-note span {
   color: var(--green);
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -5056,7 +5056,7 @@ textarea {
   border: 1px solid rgba(39, 100, 71, 0.18);
   border-radius: 999px;
   color: var(--green-dark);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   padding: 9px 12px;
 }
@@ -5087,7 +5087,7 @@ textarea {
 
 .pwa-primary span {
   color: rgba(255, 255, 255, 0.84);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -5127,7 +5127,7 @@ textarea {
   border-radius: 18px 18px 8px 8px;
   color: #fff;
   content: "今日";
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   padding: 7px 12px;
   position: absolute;
@@ -5142,7 +5142,7 @@ textarea {
 .preview-topline span {
   color: var(--green);
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -5219,7 +5219,7 @@ textarea {
 .preview-task span {
   color: var(--green);
   display: block;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin-bottom: 6px;
 }
@@ -5255,7 +5255,7 @@ textarea {
   background: #edf4ed;
   border-radius: 999px;
   color: var(--green-dark);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   padding: 8px 10px;
 }
@@ -5275,7 +5275,7 @@ textarea {
   border-radius: 999px;
   color: #fff;
   display: inline-flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   height: 34px;
   justify-content: center;
@@ -5375,7 +5375,7 @@ textarea {
 
 .title-lockup small {
   color: var(--ink-sub);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.22em;
 }
@@ -5412,7 +5412,7 @@ textarea {
 
 .title-card span:last-child {
   color: var(--tab-sand-ink);
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 700;
   letter-spacing: 0.18em;
 }
@@ -5449,7 +5449,7 @@ textarea {
 .entry-date {
   color: var(--primary-deep);
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   margin: 0;
 }
@@ -5493,7 +5493,7 @@ textarea {
 
 .entry-main-button span {
   color: rgba(255, 255, 255, 0.86);
-  font-size: 13px;
+  font-size: 16px;
 }
 
 .entry-how-card {
@@ -5536,7 +5536,7 @@ textarea {
   content: counter(entry-step);
   display: inline-flex;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   height: 30px;
   justify-content: center;
@@ -5545,12 +5545,12 @@ textarea {
 
 .entry-how-card strong {
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .entry-how-card span {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   grid-column: 2;
   line-height: 1.55;
@@ -5559,7 +5559,7 @@ textarea {
 .chip {
   border-radius: 999px;
   display: inline-flex;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   min-height: 28px;
   padding: 5px 9px;
@@ -5582,7 +5582,7 @@ textarea {
   border-radius: 14px;
   color: var(--primary-deep);
   display: inline-flex;
-  font-size: 16px;
+  font-size: 18px;
   justify-content: center;
   min-height: 58px;
   padding: 13px 16px;
@@ -5612,7 +5612,7 @@ textarea {
 .entry-plus-card p:not(.pill),
 .board-plus p:not(.pill) {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -5689,7 +5689,7 @@ textarea {
 
 .board-stats span {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -5741,7 +5741,7 @@ textarea {
   border-radius: 999px;
   color: var(--primary-deep);
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   padding: 6px 10px;
 }
@@ -5756,7 +5756,7 @@ textarea {
 
 .person-board-card p {
   color: var(--ink-sub);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   margin: 0;
 }
@@ -5772,7 +5772,7 @@ textarea {
   border: 1px solid rgba(154, 174, 159, 0.5);
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   padding: 7px 10px;
 }
@@ -5793,12 +5793,12 @@ textarea {
 
 .next-task strong {
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .next-task span {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -5831,14 +5831,14 @@ textarea {
   background: #f4efe4;
   border-radius: 999px;
   color: var(--tab-sand-ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   padding: 6px 9px;
 }
 
 .diary-label {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.55;
 }
@@ -5849,7 +5849,7 @@ textarea {
   border-radius: 14px;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.65;
   min-height: 132px;
   padding: 14px;
@@ -5876,7 +5876,7 @@ textarea {
   border-radius: 999px;
   color: var(--primary-deep);
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   min-height: 46px;
   padding: 10px 14px;
@@ -5910,7 +5910,7 @@ textarea {
   border-radius: 12px;
   color: var(--ink-sub);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 700;
   gap: 7px;
   max-width: 100%;
@@ -5987,7 +5987,7 @@ textarea {
 
 .latest-diary p {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -6002,7 +6002,7 @@ textarea {
 
 .latest-diary li {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.55;
 }
@@ -6011,7 +6011,7 @@ textarea {
   background: #f8f6ef;
   border-radius: 14px;
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.6;
   margin: 0;
@@ -6031,7 +6031,7 @@ textarea {
 
 .ai-consult-card p:not(.pill) {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.65;
   margin: 6px 0 0;
@@ -6076,7 +6076,7 @@ textarea {
   border: 1.5px solid var(--secondary-border);
   box-shadow: 0 4px 0 var(--secondary-shadow);
   color: var(--primary-deep);
-  font-size: 16px;
+  font-size: 18px;
 }
 
 .stamp-primary:active,
@@ -6092,7 +6092,7 @@ textarea {
 .pwa-note {
   color: var(--ink-sub);
   display: grid;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   gap: 8px;
   line-height: 1.6;
@@ -6167,14 +6167,14 @@ textarea {
 
 .toc-start-brand small {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   margin-top: 3px;
 }
 
 .toc-kicker {
   color: var(--primary-deep);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   margin: 0;
 }
@@ -6206,7 +6206,7 @@ textarea {
 }
 
 .toc-first-step span {
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -6230,7 +6230,7 @@ textarea {
 
 .start-section-heading span {
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -6272,7 +6272,7 @@ textarea {
 
 .start-profile-grid span {
   color: var(--muted);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -6300,7 +6300,7 @@ textarea {
   border: 1px solid rgba(39, 100, 71, 0.14);
   border-radius: 14px;
   color: var(--primary-deep);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.65;
   margin: 0;
@@ -6323,7 +6323,7 @@ textarea {
   align-items: center;
   border-radius: 999px;
   display: inline-flex;
-  font-size: 14px;
+  font-size: 17px;
   justify-self: start;
   line-height: 1.25;
   margin: 8px 0 0;
@@ -6415,7 +6415,7 @@ textarea {
   color: var(--primary-deep);
   display: inline-flex;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   height: 68px;
   justify-content: center;
@@ -6686,7 +6686,7 @@ textarea {
 
 .toc-helper {
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -6702,7 +6702,7 @@ textarea {
 
 .toc-hint {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.45;
 }
@@ -6714,7 +6714,7 @@ textarea {
   color: var(--primary-deep);
   display: inline-flex;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   justify-self: start;
   margin-top: 5px;
@@ -6726,7 +6726,7 @@ textarea {
   background: var(--primary);
   border-radius: 999px;
   color: #fff;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-self: end;
   min-height: 34px;
@@ -6885,7 +6885,7 @@ textarea {
   }
 
   .start-select-guide p:last-child {
-    font-size: 14px;
+    font-size: 17px;
   }
 
   .select-guide-icon {
@@ -6910,7 +6910,7 @@ textarea {
   }
 
   .start-guide-card p:last-child {
-    font-size: 13px;
+    font-size: 16px;
     line-height: 1.55;
   }
 
@@ -7107,11 +7107,11 @@ textarea {
   }
 
   .toc-hint {
-    font-size: 12.5px;
+    font-size: 16px;
   }
 
   .toc-helper {
-    font-size: 11.5px;
+    font-size: 16px;
   }
 }
 
@@ -7148,7 +7148,7 @@ textarea {
 .family-notebook-page .notebook-identity-card span,
 .family-notebook-page .notebook-identity-card p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.02em;
   margin: 0;
@@ -7202,7 +7202,7 @@ textarea {
 .family-notebook-page .preview-person-card small,
 .family-notebook-page .preview-note-row span {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -7215,7 +7215,7 @@ textarea {
 
 .family-notebook-page .preview-note-row strong {
   color: var(--primary-deep);
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.45;
 }
 
@@ -7244,7 +7244,7 @@ textarea {
 
 .family-notebook-page .notebook-promise-grid p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
   margin: 0;
@@ -7281,7 +7281,7 @@ textarea {
   border-radius: 16px;
   color: var(--ink);
   display: flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 52px;
   padding: 12px 14px;
@@ -7371,7 +7371,7 @@ textarea {
 
 .family-notebook-page .health-chip-grid button small {
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -7381,7 +7381,7 @@ textarea {
   background: #f0f5ef;
   border-radius: 999px;
   color: var(--primary-deep);
-  font-size: 12px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 900;
   justify-self: start;
@@ -7510,7 +7510,7 @@ textarea {
   align-items: center;
   color: rgba(255, 255, 255, 0.66);
   display: flex;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 800;
   gap: 8px;
   letter-spacing: 0.24em;
@@ -7560,7 +7560,7 @@ textarea {
 
 .cover-person-meta span {
   color: var(--cover-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -7581,7 +7581,7 @@ textarea {
   border-radius: 999px;
   color: #fff;
   display: inline-flex;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   justify-content: center;
   min-height: 44px;
@@ -7610,7 +7610,7 @@ textarea {
   cursor: pointer;
   flex: 0 0 auto;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   letter-spacing: 0;
   min-height: 44px;
@@ -7621,7 +7621,7 @@ textarea {
   border-bottom: 3px solid var(--gold);
   color: #fff;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 14.5px;
+  font-size: 17px;
 }
 
 .notebook-workspace,
@@ -7682,7 +7682,7 @@ textarea {
 
 .first-run-hero .nb-eyebrow {
   color: #0d6f4b;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
@@ -7699,7 +7699,7 @@ textarea {
 
 .first-run-hero p {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.85;
   margin: 0;
@@ -7730,7 +7730,7 @@ textarea {
 
 .first-run-primary span {
   color: rgba(255, 255, 255, 0.78);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -7778,7 +7778,7 @@ textarea {
   border-radius: 999px;
   color: #0d6f4b;
   display: flex;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   height: 38px;
   justify-content: center;
@@ -7788,7 +7788,7 @@ textarea {
 .first-run-steps strong {
   color: var(--ink);
   display: block;
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
@@ -7796,7 +7796,7 @@ textarea {
 .first-run-steps small {
   color: var(--ink-sub);
   display: block;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
   margin-top: 3px;
@@ -7817,7 +7817,7 @@ textarea {
 
 .first-run-crisis span {
   color: #9b4d2b;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 1 / 2;
   line-height: 1.55;
@@ -7825,7 +7825,7 @@ textarea {
 
 .first-run-crisis strong {
   color: #71351e;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   grid-column: 1 / 2;
   line-height: 1.35;
@@ -7849,7 +7849,7 @@ textarea {
 
 .first-run-note {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.7;
   padding: 0 4px;
@@ -7858,7 +7858,7 @@ textarea {
 .first-run-note strong {
   color: var(--ink);
   display: block;
-  font-size: 14px;
+  font-size: 17px;
   margin-bottom: 2px;
 }
 
@@ -7892,7 +7892,7 @@ textarea {
   color: var(--ink);
   flex: 0 0 auto;
   font-family: var(--font-serif), serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.35;
 }
@@ -7908,7 +7908,7 @@ textarea {
 .nb-section-head .aside-link {
   color: var(--ink-faint);
   flex: 0 0 auto;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -7983,13 +7983,13 @@ textarea {
 
 .notebook-tab-bar strong {
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
 
 .notebook-tab-bar small {
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.25;
 }
@@ -8030,7 +8030,7 @@ textarea {
 
 .record-first-head .nb-eyebrow {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0 0 5px;
 }
@@ -8045,7 +8045,7 @@ textarea {
 
 .record-first-head p:not(.nb-eyebrow) {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.8;
   margin: 9px 0 0;
@@ -8075,7 +8075,7 @@ textarea {
 
 .record-first-primary span {
   color: rgba(255, 253, 246, 0.78);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -8088,7 +8088,7 @@ textarea {
 
 .record-first-primary small {
   color: rgba(255, 253, 246, 0.86);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.5;
 }
@@ -8106,7 +8106,7 @@ textarea {
 .record-first-latest span,
 .record-first-next span {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.35;
 }
@@ -8114,7 +8114,7 @@ textarea {
 .record-first-latest strong,
 .record-first-next strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.65;
 }
@@ -8134,7 +8134,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   justify-self: start;
@@ -8152,7 +8152,7 @@ textarea {
 
 .record-first-next p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -8169,7 +8169,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   display: flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   justify-content: space-between;
   line-height: 1.55;
@@ -8189,7 +8189,7 @@ textarea {
   color: #0f5f41;
   content: "開く";
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin-left: 12px;
   padding: 6px 10px;
@@ -8224,14 +8224,14 @@ textarea {
 }
 
 .record-first-menu strong {
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .record-first-menu small {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
 }
@@ -8255,7 +8255,7 @@ textarea {
 
 .person-command-head .nb-eyebrow {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0 0 5px;
 }
@@ -8270,7 +8270,7 @@ textarea {
 
 .person-command-head p:not(.nb-eyebrow) {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.8;
   margin: 9px 0 0;
@@ -8301,7 +8301,7 @@ textarea {
 
 .person-command-stats span {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.35;
 }
@@ -8326,7 +8326,7 @@ textarea {
 .person-daily-main span,
 .person-next-panel span {
   color: rgba(255, 253, 246, 0.78);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -8341,7 +8341,7 @@ textarea {
 
 .person-daily-main p {
   color: rgba(255, 253, 246, 0.88);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -8360,7 +8360,7 @@ textarea {
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.10);
   color: #174f39;
   display: inline-flex;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 44px;
@@ -8400,7 +8400,7 @@ textarea {
 .person-next-panel strong {
   color: var(--ink);
   display: block;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 1;
   line-height: 1.55;
@@ -8417,7 +8417,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 2;
   grid-row: 1 / span 2;
@@ -8466,14 +8466,14 @@ textarea {
 
 .person-command-grid strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.4;
 }
 
 .person-command-grid small {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.5;
 }
@@ -8492,7 +8492,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   display: flex;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: space-between;
   line-height: 1.55;
@@ -8513,7 +8513,7 @@ textarea {
   color: #174f39;
   content: "開く";
   flex: 0 0 auto;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   margin-left: 12px;
   padding: 5px 9px;
@@ -8562,7 +8562,7 @@ textarea {
 .handbook-readiness-score span {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.25;
 }
@@ -8580,7 +8580,7 @@ textarea {
 .handbook-readiness-head p,
 .handbook-readiness-note {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 8px 0 0;
@@ -8607,7 +8607,7 @@ textarea {
 
 .parent-prefecture-prompt p {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 8px 0 0;
@@ -8626,7 +8626,7 @@ textarea {
 
 .parent-prefecture-form label span {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -8638,7 +8638,7 @@ textarea {
   border-radius: 15px;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   min-height: 50px;
   padding: 12px 14px;
@@ -8678,7 +8678,7 @@ textarea {
   color: var(--primary-dark);
   cursor: pointer;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 44px;
   padding: 10px 16px;
@@ -8723,7 +8723,7 @@ textarea {
 
 .handbook-readiness-score small {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -8844,21 +8844,21 @@ textarea {
 
 .handbook-step small {
   color: #2f6e82;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.25;
 }
 
 .handbook-step strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.35;
 }
 
 .handbook-step p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
   margin: 0;
@@ -8870,7 +8870,7 @@ textarea {
   border-radius: 999px;
   color: #2f6e82;
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 900;
   justify-content: center;
@@ -9049,7 +9049,7 @@ textarea {
 .nb-row .lead {
   border-radius: 999px;
   color: var(--tab-sand-ink);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-width: 40px;
 }
@@ -9068,7 +9068,7 @@ textarea {
 
 .nb-row strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
   min-width: 0;
@@ -9077,7 +9077,7 @@ textarea {
 .nb-row small {
   color: var(--ink-sub);
   display: block;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.45;
   max-width: 220px;
@@ -9116,7 +9116,7 @@ textarea {
 
 .record-help {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -9169,7 +9169,7 @@ textarea {
 }
 
 .record-chip strong {
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
 }
@@ -9188,7 +9188,7 @@ textarea {
 .record-date-row label {
   color: var(--ink);
   display: grid;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   gap: 6px;
 }
@@ -9200,7 +9200,7 @@ textarea {
   border-radius: 12px;
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 850;
   min-height: 44px;
   padding: 9px 11px;
@@ -9215,14 +9215,14 @@ textarea {
 
 .record-date-row span {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
 }
 
 .today-record-card .diary-label {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin-top: 2px;
 }
@@ -9233,7 +9233,7 @@ textarea {
   border-radius: 14px;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.7;
   min-height: 132px;
@@ -9271,7 +9271,7 @@ textarea {
   color: var(--ink-sub);
   cursor: pointer;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 34px;
   padding: 7px 10px;
@@ -9291,7 +9291,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   display: inline-flex;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 42px;
@@ -9314,7 +9314,7 @@ textarea {
   border-radius: 999px;
   color: var(--ink);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 800;
   gap: 6px;
   max-width: 100%;
@@ -9360,7 +9360,7 @@ textarea {
   border: 1px solid rgba(15, 95, 65, 0.18);
   border-radius: 14px;
   color: #0d5c3e;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.7;
   margin: 0;
@@ -9383,7 +9383,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 16.5px;
+  font-size: 18px;
   font-weight: 700;
   justify-content: center;
   letter-spacing: 0;
@@ -9427,7 +9427,7 @@ textarea {
   border-radius: 999px;
   color: #fff;
   font-family: var(--font-serif), serif;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 700;
   left: 16px;
   letter-spacing: 0.08em;
@@ -9439,14 +9439,14 @@ textarea {
 .kizuki-card strong {
   color: var(--ink);
   font-family: var(--font-serif), serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.75;
 }
 
 .kizuki-card p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -9462,13 +9462,13 @@ textarea {
 
 .kizuki-question span {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .kizuki-question b {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   line-height: 1.55;
 }
 
@@ -9483,26 +9483,26 @@ textarea {
 
 .kizuki-forecast span {
   color: #2f6e82;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .kizuki-forecast b {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   line-height: 1.5;
 }
 
 .kizuki-forecast p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   line-height: 1.65;
 }
 
 .kizuki-question-list {
   color: var(--ink-sub);
   display: grid;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   gap: 3px;
   line-height: 1.55;
@@ -9519,7 +9519,7 @@ textarea {
 
 .kizuki-card small {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -9553,7 +9553,7 @@ textarea {
 .record-ai-head span {
   color: #2f6e82;
   display: inline-block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 950;
   letter-spacing: 0.08em;
   margin-bottom: 4px;
@@ -9569,7 +9569,7 @@ textarea {
 
 .record-ai-head p {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.75;
   margin: 7px 0 0;
@@ -9612,7 +9612,7 @@ textarea {
 
 .record-ai-card > small {
   color: var(--ink-faint);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -9649,7 +9649,7 @@ textarea {
 .diary-save-complete-head span {
   color: #0f6f49;
   display: inline-block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 950;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -9665,7 +9665,7 @@ textarea {
 
 .diary-save-complete-head p {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.75;
   margin: 6px 0 0;
@@ -9721,7 +9721,7 @@ textarea {
 
 .diary-save-complete-card > small {
   color: var(--ink-faint);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.65;
 }
@@ -9783,7 +9783,7 @@ textarea {
 
 .record-calendar-weekdays span {
   color: var(--ink-faint);
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   text-align: center;
 }
@@ -9802,7 +9802,7 @@ textarea {
   cursor: pointer;
   display: grid;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   gap: 1px;
   justify-items: center;
@@ -9839,7 +9839,7 @@ textarea {
   border-radius: 999px;
   color: #2f6e82;
   display: inline-flex;
-  font-size: 10.5px;
+  font-size: 16px;
   height: 17px;
   justify-content: center;
   min-width: 17px;
@@ -9860,7 +9860,7 @@ textarea {
 
 .record-calendar-footer p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 850;
   line-height: 1.65;
   margin: 0;
@@ -9874,7 +9874,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 36px;
   padding: 8px 12px;
@@ -9887,7 +9887,7 @@ textarea {
 
 .history-row time {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -9905,7 +9905,7 @@ textarea {
 .profile-edit-drawer summary {
   color: #2f6e82;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   list-style: none;
   min-height: 52px;
@@ -9935,7 +9935,7 @@ textarea {
 
 .selected-date-notice strong {
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.55;
 }
@@ -9973,7 +9973,7 @@ textarea {
 
 .profile-summary-head p {
   color: #2f6e82;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0 0 2px;
 }
@@ -9989,7 +9989,7 @@ textarea {
 .profile-summary-head span {
   color: var(--ink-sub);
   display: block;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   margin-top: 4px;
 }
@@ -10020,13 +10020,13 @@ textarea {
 .compact-profile-rows span {
   color: var(--ink-faint);
   flex: 0 0 auto;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .compact-profile-rows strong {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   line-height: 1.45;
   text-align: right;
 }
@@ -10049,7 +10049,7 @@ textarea {
 
 .profile-safe-note {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -10067,7 +10067,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   font: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 52px;
   padding: 12px 16px;
@@ -10084,7 +10084,7 @@ textarea {
   border: 1px solid rgba(209, 224, 205, 0.95);
   border-radius: 14px;
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.7;
   margin: 0;
@@ -10121,7 +10121,7 @@ textarea {
 
 .task-add-head span {
   color: #0f6a45;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -10136,7 +10136,7 @@ textarea {
 
 .task-add-head p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -10150,7 +10150,7 @@ textarea {
   color: #fff;
   cursor: pointer;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 42px;
   padding: 10px 15px;
@@ -10170,7 +10170,7 @@ textarea {
 
 .task-add-feedback {
   color: #4f7b43;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   padding: 0 2px;
 }
@@ -10198,7 +10198,7 @@ textarea {
 
 .task-date small {
   color: currentColor;
-  font-size: 10px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1;
 }
@@ -10272,7 +10272,7 @@ textarea {
 
 .task-tap-hint {
   color: #0f6a45;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0;
   line-height: 1.2;
@@ -10281,7 +10281,7 @@ textarea {
 .task-copy strong {
   color: var(--ink);
   font-family: var(--font-serif), serif;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.45;
 }
@@ -10289,7 +10289,7 @@ textarea {
 .task-copy small {
   color: var(--ink-sub);
   display: -webkit-box;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
   overflow: hidden;
@@ -10301,7 +10301,7 @@ textarea {
   background: #f6f2e8;
   border-radius: 999px;
   color: var(--tab-sand-ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 2;
   padding: 7px 10px;
@@ -10330,7 +10330,7 @@ textarea {
   background: #f6f2e8;
   border-radius: 999px;
   color: var(--ink-sub);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
   padding: 6px 9px;
@@ -10364,7 +10364,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   justify-self: end;
@@ -10387,7 +10387,7 @@ textarea {
   color: #2f6e82;
   cursor: pointer;
   font: inherit;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 38px;
   padding: 8px 13px;
@@ -10403,7 +10403,7 @@ textarea {
 
 .task-quick-actions span {
   color: #4f7b43;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -10430,7 +10430,7 @@ textarea {
 
 .task-edit-panel-head span {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -10454,7 +10454,7 @@ textarea {
 
 .task-edit-field span {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -10466,7 +10466,7 @@ textarea {
   border-radius: 12px;
   color: var(--ink);
   font: inherit;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   min-height: 48px;
   padding: 11px 12px;
@@ -10500,7 +10500,7 @@ textarea {
   border-radius: 999px;
   color: var(--tab-sand-ink);
   flex: 0 0 auto;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   padding: 6px 9px;
   white-space: nowrap;
@@ -10534,7 +10534,7 @@ textarea {
 
 .nb-plus-note {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
   margin: 24px 0 0;
@@ -10554,7 +10554,7 @@ textarea {
 
 .empty-notebook-card .nb-eyebrow {
   color: #2f6e82;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0 0 8px;
 }
@@ -10569,7 +10569,7 @@ textarea {
 
 .empty-notebook-card p:not(.nb-eyebrow) {
   color: var(--ink-sub);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.85;
   margin: 14px 0 0;
@@ -10588,7 +10588,7 @@ textarea {
   border-radius: 999px;
   color: var(--ink);
   display: flex;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 40px;
   padding: 9px 12px;
@@ -10601,7 +10601,7 @@ textarea {
   border-radius: 16px;
   color: rgba(255, 255, 255, 0.9);
   display: grid;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   gap: 9px;
   grid-template-columns: auto minmax(0, 1fr);
@@ -10655,7 +10655,7 @@ textarea {
 
 .mascot-note-body span {
   color: #2f6e82;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -10663,14 +10663,14 @@ textarea {
 .mascot-note-body strong {
   color: var(--ink);
   font-family: var(--font-rounded), var(--font-body), system-ui, sans-serif;
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.5;
 }
 
 .mascot-note-body p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -10715,7 +10715,7 @@ textarea {
   border-radius: 999px;
   color: #fff;
   display: inline-flex;
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 30px;
@@ -10732,14 +10732,14 @@ textarea {
 
 .support-action-card strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .support-action-card p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
   margin: 0;
@@ -10776,7 +10776,7 @@ textarea {
   color: #2f6e82;
   content: "開く";
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 2;
   grid-row: 1 / span 3;
@@ -10792,7 +10792,7 @@ textarea {
 
 .optional-tools-card summary span {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
@@ -10807,7 +10807,7 @@ textarea {
 
 .optional-tools-card summary small {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.55;
 }
@@ -10838,21 +10838,21 @@ textarea {
 
 .optional-tool span {
   color: #2f6e82;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
 }
 
 .optional-tool strong {
   color: var(--ink);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .optional-tool small {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -10905,7 +10905,7 @@ textarea {
   border-radius: 999px;
   color: var(--ink);
   display: inline-flex;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   height: 34px;
   justify-content: center;
@@ -10958,7 +10958,7 @@ textarea {
 .journey-list small {
   color: #2f6e82;
   display: block;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.2;
   margin-bottom: 3px;
@@ -10967,14 +10967,14 @@ textarea {
 .journey-list strong {
   color: var(--ink);
   display: block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .journey-list p {
   color: var(--ink-sub);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
   margin: 4px 0 0;
@@ -11006,14 +11006,14 @@ textarea {
 .record-digest-head span {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .record-digest-head strong {
   color: var(--ink);
   display: block;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.35;
   margin-top: 2px;
@@ -11021,7 +11021,7 @@ textarea {
 
 .record-digest-card p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -11032,7 +11032,7 @@ textarea {
   border: 1px solid #e3eadf;
   border-radius: 13px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   line-height: 1.65;
   padding: 10px 12px;
 }
@@ -11061,7 +11061,7 @@ textarea {
 
 .record-digest-stats span {
   color: var(--ink-faint);
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -11076,7 +11076,7 @@ textarea {
   border: 1px solid #e5ddcd;
   border-radius: 999px;
   color: var(--ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 30px;
   padding: 6px 10px;
@@ -11091,7 +11091,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 42px;
@@ -11132,7 +11132,7 @@ textarea {
 .inline-ai-preview strong {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 950;
   margin-bottom: 4px;
 }
@@ -11149,7 +11149,7 @@ textarea {
 .inline-ai-consult-head p,
 .inline-ai-consult-card > small {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 6px 0 0;
@@ -11168,7 +11168,7 @@ textarea {
 .inline-ai-question p,
 .inline-ai-preview p {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 850;
   line-height: 1.75;
   margin: 0;
@@ -11184,7 +11184,7 @@ textarea {
 
 .inline-ai-preview li {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
 }
@@ -11202,7 +11202,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 950;
   justify-content: center;
   min-height: 46px;
@@ -11243,20 +11243,20 @@ textarea {
 
 .overview-memory-next span {
   color: #2f6e82;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .overview-memory-next strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .overview-memory-next p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   margin: 0;
@@ -11274,7 +11274,7 @@ textarea {
   border-radius: 999px;
   color: #fffdf6;
   display: inline-flex;
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 44px;
@@ -11305,7 +11305,7 @@ textarea {
 .overview-empty-memory-card span {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin-bottom: 6px;
 }
@@ -11320,7 +11320,7 @@ textarea {
 
 .overview-empty-memory-card p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 8px 0 0;
@@ -11332,7 +11332,7 @@ textarea {
   border-radius: 999px;
   color: #fffdf6;
   display: inline-flex;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   grid-column: 1 / -1;
   justify-content: center;
@@ -11372,7 +11372,7 @@ textarea {
 .family-share-note span {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   line-height: 1.25;
   margin-bottom: 4px;
@@ -11389,7 +11389,7 @@ textarea {
 
 .next-action-head p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 8px 0 0;
@@ -11402,7 +11402,7 @@ textarea {
   box-shadow: 0 12px 22px rgba(15, 95, 65, 0.16);
   color: #fffdf6;
   display: inline-flex;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   justify-content: center;
   min-height: 50px;
@@ -11429,7 +11429,7 @@ textarea {
 
 .family-share-note p {
   color: var(--ink);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 850;
   line-height: 1.7;
   margin: 0;
@@ -11440,7 +11440,7 @@ textarea {
   border: 1px solid rgba(47, 110, 130, 0.2);
   border-radius: 999px;
   color: #2f6e82;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 38px;
   padding: 8px 12px;
@@ -11457,7 +11457,7 @@ textarea {
   border: 1px solid #e5ddcd;
   border-radius: 999px;
   color: var(--ink);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   min-height: 30px;
   padding: 6px 10px;
@@ -11486,7 +11486,7 @@ textarea {
 .month-review span {
   color: #2f6e82;
   display: block;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
   margin-bottom: 4px;
 }
@@ -11494,14 +11494,14 @@ textarea {
 .month-review strong {
   color: var(--ink);
   display: block;
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.5;
 }
 
 .month-review p {
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.7;
   margin: 6px 0 0;
@@ -11518,7 +11518,7 @@ textarea {
   border: 1px solid #e1e9de;
   border-radius: 999px;
   color: var(--ink);
-  font-size: 11.5px;
+  font-size: 16px;
   font-style: normal;
   font-weight: 900;
   min-height: 28px;
@@ -11541,7 +11541,7 @@ textarea {
 
 .month-review-family-line p {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 850;
   line-height: 1.7;
   margin: 0;
@@ -11557,7 +11557,7 @@ textarea {
 
 .month-review-questions li {
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.65;
   padding-left: 16px;
@@ -11584,7 +11584,7 @@ textarea {
   cursor: pointer;
   display: inline-flex;
   font: inherit;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   justify-content: center;
   min-height: 40px;
@@ -11641,13 +11641,13 @@ textarea {
 
 .cloud-backup-disclosure summary span {
   color: var(--ink-faint);
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .cloud-backup-disclosure summary strong {
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 950;
   line-height: 1.4;
 }
@@ -11657,7 +11657,7 @@ textarea {
   border-radius: 50%;
   color: #176345;
   content: "開";
-  font-size: 11px;
+  font-size: 16px;
   font-weight: 950;
   grid-column: 3;
   justify-self: end;
@@ -11682,7 +11682,7 @@ textarea {
 }
 
 .cloud-guard-card .cloud-message {
-  font-size: 0.86rem;
+  font-size: 1rem;
 }
 
 .cloud-backup-head {
@@ -11720,7 +11720,7 @@ textarea {
 
 .cloud-backup-card p {
   color: rgba(35, 53, 61, 0.72);
-  font-size: 0.92rem;
+  font-size: 1.0625rem;
   font-weight: 750;
   line-height: 1.75;
   margin: 0;
@@ -11742,7 +11742,7 @@ textarea {
   color: #174535;
   display: flex;
   gap: 9px;
-  font-size: 0.84rem;
+  font-size: 1rem;
   font-weight: 900;
   line-height: 1.55;
   min-height: 42px;
@@ -11773,7 +11773,7 @@ textarea {
 .cloud-linked-box span,
 .cloud-form span {
   color: var(--ink-faint);
-  font-size: 0.75rem;
+  font-size: 1rem;
   font-weight: 900;
 }
 
@@ -11807,7 +11807,7 @@ textarea {
 
 .cloud-auto-line em {
   color: #174535;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-style: normal;
   font-weight: 900;
   line-height: 1.4;
@@ -11861,7 +11861,7 @@ textarea {
   border-radius: 14px;
   color: var(--ink);
   font: inherit;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   min-height: 48px;
   padding: 0 0.95rem;
@@ -11873,7 +11873,7 @@ textarea {
   border-radius: 14px;
   cursor: pointer;
   font: inherit;
-  font-size: 0.92rem;
+  font-size: 1.0625rem;
   font-weight: 900;
   min-height: 48px;
   padding: 0 1rem;
@@ -11929,7 +11929,7 @@ textarea {
 .cloud-backup-card small {
   color: rgba(35, 53, 61, 0.58);
   display: block;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 800;
   line-height: 1.6;
   margin-top: 0.8rem;
@@ -11966,7 +11966,7 @@ textarea {
   border-radius: 999px;
   color: #0c6b47;
   display: inline-flex;
-  font-size: 0.78rem;
+  font-size: 1rem;
   font-weight: 900;
   line-height: 1;
   margin-bottom: 0.68rem;
@@ -11984,7 +11984,7 @@ textarea {
 
 .companion-feature p {
   color: rgba(35, 53, 61, 0.72);
-  font-size: 0.9rem;
+  font-size: 1.0625rem;
   font-weight: 700;
   line-height: 1.76;
   margin: 0;
@@ -12240,7 +12240,7 @@ textarea {
 
 .crisis-eyebrow {
   color: var(--urgent);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
@@ -12255,7 +12255,7 @@ textarea {
 
 .crisis-lead {
   color: var(--ink-sub);
-  font-size: 15.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -12265,7 +12265,7 @@ textarea {
   background: var(--urgent-bg);
   border-radius: 14px;
   color: #8d3f1e;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.8;
   margin: 0;
@@ -12290,7 +12290,7 @@ textarea {
 
 .crisis-reassurance p {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -12332,7 +12332,7 @@ textarea {
 
 .crisis-choice small {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
 }
@@ -12364,14 +12364,14 @@ textarea {
 
 .crisis-note-card strong {
   display: block;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   margin-bottom: 6px;
 }
 
 .crisis-note-card p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0 0 12px;
@@ -12385,7 +12385,7 @@ textarea {
 
 .crisis-safety {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -12393,7 +12393,7 @@ textarea {
 
 .crisis-back {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 900;
   justify-self: start;
   min-height: 44px;
@@ -12409,7 +12409,7 @@ textarea {
   background: #f5f8f3;
   border-radius: 12px;
   color: var(--tab-teal-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   margin: 0;
   padding: 12px 16px;
@@ -12436,7 +12436,7 @@ textarea {
 
 .crisis-timing {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -12455,7 +12455,7 @@ textarea {
 
 .crisis-group-head p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.75;
   margin: 0;
@@ -12492,7 +12492,7 @@ textarea {
   background: #f1ebdc;
   border-radius: 999px;
   color: var(--ink-sub);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   height: 26px;
   line-height: 26px;
@@ -12513,14 +12513,14 @@ textarea {
 
 .crisis-step-body strong {
   color: var(--ink);
-  font-size: 16.5px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.5;
 }
 
 .crisis-step-body small {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
 }
@@ -12540,14 +12540,14 @@ textarea {
 
 .crisis-save strong {
   display: block;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   margin-bottom: 6px;
 }
 
 .crisis-save p {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0;
@@ -12561,7 +12561,7 @@ textarea {
   color: #fff;
   cursor: pointer;
   display: inline-flex;
-  font-size: 16.5px;
+  font-size: 18px;
   font-weight: 900;
   justify-content: center;
   min-height: 56px;
@@ -12571,7 +12571,7 @@ textarea {
 
 .crisis-save-note {
   color: var(--tab-teal-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
 }
@@ -12601,7 +12601,7 @@ textarea {
 
 .crisis-panel > p {
   color: var(--ink-sub);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0;
@@ -12617,7 +12617,7 @@ textarea {
 
 .crisis-panel li {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   padding-left: 20px;
@@ -12652,7 +12652,7 @@ textarea {
   border-radius: 14px;
   color: var(--ink);
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.9;
   margin: 0 0 12px;
@@ -12667,7 +12667,7 @@ textarea {
   border-radius: 999px;
   color: #0f6b45;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 48px;
   padding: 12px 18px;
@@ -12696,13 +12696,13 @@ textarea {
 
 .crisis-guide-links span {
   color: var(--ink-faint);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .crisis-guide-links strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.6;
 }
@@ -12729,7 +12729,7 @@ textarea {
   background: var(--urgent);
   border-radius: 999px;
   color: #fff;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 1;
   padding: 6px 12px;
@@ -12743,14 +12743,14 @@ textarea {
 }
 
 .crisis-banner-body strong {
-  font-size: 16.5px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.45;
 }
 
 .crisis-banner-body small {
   color: #8d6a58;
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.7;
 }
@@ -12786,7 +12786,7 @@ textarea {
 
 .crisis-template-note {
   color: var(--urgent);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.75;
   margin: 10px 0 0;
@@ -12813,7 +12813,7 @@ textarea {
 
 .consult-eyebrow {
   color: var(--tab-teal-ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   margin: 0;
 }
@@ -12903,7 +12903,7 @@ textarea {
   border-radius: 999px;
   color: #fffdf6;
   display: inline-flex;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   height: 34px;
   justify-content: center;
@@ -12924,7 +12924,7 @@ textarea {
 
 .consult-step-head small {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   margin-top: 2px;
 }
@@ -12961,7 +12961,7 @@ textarea {
 
 .consult-case-tabs button small {
   color: var(--ink-faint);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.45;
 }
@@ -12992,7 +12992,7 @@ textarea {
 .consult-ready-card span {
   color: #2f6e82;
   display: inline-block;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 950;
   letter-spacing: 0.04em;
   margin-bottom: 4px;
@@ -13008,7 +13008,7 @@ textarea {
 
 .consult-ready-card p {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   line-height: 1.75;
   margin: 6px 0 0;
@@ -13058,7 +13058,7 @@ textarea {
 
 .consult-gate-kicker {
   color: var(--tab-teal-ink) !important;
-  font-size: 15px !important;
+  font-size: 17px !important;
   font-weight: 900 !important;
   letter-spacing: 0 !important;
   margin: 0 0 8px !important;
@@ -13123,7 +13123,7 @@ textarea {
 
 .consult-disclosure-grid li {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.7;
   padding-left: 14px;
@@ -13173,7 +13173,7 @@ textarea {
   border-radius: 999px;
   color: var(--tab-teal-ink);
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   min-height: 50px;
   padding: 12px 16px;
@@ -13200,7 +13200,7 @@ textarea {
 
 .consult-count {
   color: var(--ink-faint);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
   text-align: right;
@@ -13211,7 +13211,7 @@ textarea {
   border: 1px solid #e5ddcd;
   border-radius: 13px;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 850;
   line-height: 1.65;
   margin: 0;
@@ -13247,7 +13247,7 @@ textarea {
 
 .consult-hint {
   color: var(--ink-faint);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.75;
   font-weight: 800;
   margin: 0;
@@ -13312,7 +13312,7 @@ textarea {
 
 .consult-checks small {
   color: var(--ink-sub);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.8;
 }
@@ -13355,7 +13355,7 @@ textarea {
   background: var(--primary-tint);
   border-radius: 999px;
   color: var(--tab-teal-ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 800;
   padding: 8px 14px;
 }
@@ -13407,7 +13407,7 @@ textarea {
 
 .consult-disclaimer {
   color: var(--ink-faint);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13418,7 +13418,7 @@ textarea {
   border: 1px solid rgba(203, 221, 227, 0.9);
   border-radius: 12px;
   color: var(--tab-teal-ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   line-height: 1.65;
   margin: 10px 0 0;
@@ -13442,7 +13442,7 @@ textarea {
 
 .consult-entry-card p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13481,7 +13481,7 @@ textarea {
 
 .family-eyebrow {
   color: var(--tab-teal-ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   margin: 0;
 }
@@ -13496,7 +13496,7 @@ textarea {
 
 .family-lead {
   color: var(--ink-sub);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13546,7 +13546,7 @@ textarea {
 .family-card > p,
 .invite-card > p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13556,7 +13556,7 @@ textarea {
   background: var(--primary-tint);
   border-radius: 12px;
   color: var(--tab-teal-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   margin: 0;
   padding: 12px 14px;
@@ -13586,14 +13586,14 @@ textarea {
 
 .family-members strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
 }
 
 .family-members small {
   color: var(--ink-sub);
   flex: 0 0 auto;
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -13607,7 +13607,7 @@ textarea {
 
 .family-list li {
   color: var(--ink);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.8;
   padding-left: 18px;
@@ -13632,7 +13632,7 @@ textarea {
 
 .family-field label {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
 }
 
@@ -13641,7 +13641,7 @@ textarea {
   border: 1.5px solid rgba(203, 221, 227, 0.9);
   border-radius: 12px;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   min-height: 50px;
   padding: 12px 14px;
@@ -13661,7 +13661,7 @@ textarea {
   color: #fff;
   cursor: pointer;
   display: inline-flex;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   justify-content: center;
   min-height: 54px;
@@ -13677,7 +13677,7 @@ textarea {
 
 .family-note {
   color: var(--ink-faint);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.8;
   margin: 0;
@@ -13692,7 +13692,7 @@ textarea {
   background: var(--urgent-bg);
   border-radius: 12px;
   color: #8d3f1e;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
@@ -13709,14 +13709,14 @@ textarea {
 
 .family-invite-result strong {
   color: var(--ink);
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   line-height: 1.6;
 }
 
 .family-invite-result p {
   color: var(--ink-sub);
-  font-size: 13.5px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.8;
   margin: 0;
@@ -13727,7 +13727,7 @@ textarea {
   border: 1px solid rgba(203, 221, 227, 0.9);
   border-radius: 10px;
   color: var(--ink);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   padding: 12px;
   word-break: break-all;
@@ -13739,7 +13739,7 @@ textarea {
   border-radius: 999px;
   color: #0f6b45;
   cursor: pointer;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   min-height: 48px;
   padding: 12px 18px;
@@ -13747,7 +13747,7 @@ textarea {
 
 .family-safety {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13770,7 +13770,7 @@ textarea {
 
 .family-entry-card p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -13808,7 +13808,7 @@ textarea {
 
 .start-urgent-lead {
   color: var(--urgent);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 900;
   margin: 0;
 }
@@ -13832,7 +13832,7 @@ textarea {
   background: var(--urgent);
   border-radius: 999px;
   color: #fff;
-  font-size: 11.5px;
+  font-size: 16px;
   font-weight: 900;
   grid-column: 1;
   padding: 5px 11px;
@@ -13845,8 +13845,8 @@ textarea {
   min-width: 0;
 }
 
-.start-urgent-body strong { font-size: 15.5px; font-weight: 900; line-height: 1.45; }
-.start-urgent-body small { color: #8d6a58; font-size: 12.5px; line-height: 1.7; }
+.start-urgent-body strong { font-size: 17px; font-weight: 900; line-height: 1.45; }
+.start-urgent-body small { color: #8d6a58; font-size: 16px; line-height: 1.7; }
 .start-urgent-row > span:last-child { color: var(--urgent); font-size: 22px; font-weight: 900; grid-column: 3; }
 
 .toc-more {
@@ -13858,7 +13858,7 @@ textarea {
 .toc-more summary {
   color: var(--tab-teal-ink);
   cursor: pointer;
-  font-size: 15px;
+  font-size: 17px;
   font-weight: 900;
   list-style: none;
   min-height: 44px;
@@ -13873,7 +13873,7 @@ textarea {
   background: var(--urgent-bg);
   border-radius: 12px;
   color: #8d3f1e;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   margin: 12px 0 0;
   padding: 12px 14px;
@@ -13893,7 +13893,7 @@ textarea {
   background: #276447;
   border-radius: 999px;
   color: #ffffff;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   padding: 10px 16px;
   text-decoration: none;
@@ -13918,7 +13918,7 @@ textarea {
 
 .app-band-mark img { display: block; height: 48px; width: 48px; }
 .app-band-body { display: grid; gap: 8px; min-width: 0; }
-.app-band-kicker { color: var(--tab-teal-ink); font-size: 12.5px; font-weight: 900; margin: 0; }
+.app-band-kicker { color: var(--tab-teal-ink); font-size: 16px; font-weight: 900; margin: 0; }
 
 .app-band-body h2 {
   color: var(--ink);
@@ -13929,9 +13929,9 @@ textarea {
   margin: 0;
 }
 
-.app-band-body p { color: var(--ink-sub); font-size: 14px; font-weight: 700; line-height: 1.85; margin: 0; }
+.app-band-body p { color: var(--ink-sub); font-size: 17px; font-weight: 700; line-height: 1.85; margin: 0; }
 .app-band-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
-.app-band-note { color: var(--ink-faint); font-size: 13.5px; font-weight: 800; }
+.app-band-note { color: var(--ink-faint); font-size: 16px; font-weight: 800; }
 .app-band-note a { color: var(--tab-teal-ink); text-decoration: underline; }
 
 @media (max-width: 640px) {
@@ -13962,21 +13962,21 @@ textarea {
 
 .plus-upgrade > p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
 }
 
 .plus-field { display: grid; gap: 6px; }
-.plus-field label { color: var(--ink-sub); font-size: 13.5px; font-weight: 800; }
+.plus-field label { color: var(--ink-sub); font-size: 16px; font-weight: 800; }
 
 .plus-field input {
   background: #fff;
   border: 1.5px solid rgba(203, 221, 227, 0.9);
   border-radius: 12px;
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 700;
   min-height: 50px;
   padding: 12px 14px;
@@ -13991,7 +13991,7 @@ textarea {
   border-radius: 14px;
   color: #fff;
   cursor: pointer;
-  font-size: 16px;
+  font-size: 18px;
   font-weight: 900;
   min-height: 54px;
   padding: 14px 18px;
@@ -13999,13 +13999,13 @@ textarea {
 }
 
 .plus-button:disabled { background: #d9e2dc; color: #8b968f; cursor: not-allowed; }
-.plus-note { color: var(--ink-faint); font-size: 13.5px; font-weight: 800; line-height: 1.8; margin: 0; }
+.plus-note { color: var(--ink-faint); font-size: 16px; font-weight: 800; line-height: 1.8; margin: 0; }
 
 .plus-outcome {
   background: var(--primary-tint);
   border-radius: 12px;
   color: var(--tab-teal-ink);
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
   padding: 12px 14px;
@@ -14015,7 +14015,7 @@ textarea {
   background: var(--urgent-bg);
   border-radius: 12px;
   color: #8d3f1e;
-  font-size: 14px;
+  font-size: 17px;
   font-weight: 800;
   margin: 0;
   padding: 12px 14px;
@@ -14063,7 +14063,7 @@ textarea {
 
 .plan-compare-row span {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
 }
 
@@ -14072,7 +14072,7 @@ textarea {
   border: 1px solid rgba(224, 215, 196, 0.72);
   border-radius: 12px;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 17px;
   line-height: 1.5;
   padding: 10px 12px;
 }
@@ -14093,7 +14093,7 @@ textarea {
 
 .emergency-card-entry p {
   color: var(--ink-sub);
-  font-size: 14.5px;
+  font-size: 17px;
   font-weight: 700;
   line-height: 1.85;
   margin: 0;
@@ -14147,7 +14147,7 @@ textarea {
 
 .emergency-print-head p {
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 900;
   letter-spacing: 0.04em;
   margin: 0 0 4px;
@@ -14176,13 +14176,13 @@ textarea {
 
 .emergency-print-row span {
   color: var(--green);
-  font-size: 12.5px;
+  font-size: 16px;
   font-weight: 900;
 }
 
 .emergency-print-row strong {
   color: var(--ink);
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.6;
 }
 
@@ -14190,7 +14190,7 @@ textarea {
   background: var(--surface-soft);
   border-radius: 12px;
   color: var(--ink-faint);
-  font-size: 13px;
+  font-size: 16px;
   font-weight: 800;
   line-height: 1.8;
   margin: 0;

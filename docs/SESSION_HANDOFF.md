@@ -7509,3 +7509,40 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 
 - `apps/web` ディレクトリには別Vercel project `web` への古いlinkがあり、そこからdeployするとworkspace依存をnpmで解決できず失敗する。今後の本番deployは必ず**リポジトリルート**から `npx vercel --prod --yes` を実行する。
 - 次の確認は、実利用データが入っているiPhoneで「記録を保存 → この記録でAI相談する → 質問送信 → 回答まで自動スクロール」を1回通すこと。
+
+## 2026-08-23 追記 208 — PWA全画面の文字サイズを中高年向けに統一
+
+利用者実機で「文字がまだ小さい」と再指摘されたため、AI相談周辺だけでなくPWA全画面の文字指定を再監査した。`body` の文字サイズを大きくしても、各部品に残っていた10〜16pxの明示指定429件と、1rem未満の指定が上書きしていたことが原因だった。
+
+変更:
+
+- `apps/web/app/globals.css`
+  - 画面内テキストの最小値を16px / 1remへ統一。
+  - 10〜13px指定は16px、14〜15px指定は17px、16px指定は主要本文相当の18pxへ引き上げた。
+  - クラウド控え、記録、プロフィール、確認リスト、写真、家族共有、AI相談、急なとき、記事、管理画面を含む全スタイルを対象にした。
+  - スマホ幅の `text-size-adjust: 112%` は維持し、iPhone上では補足も十分な実寸になるようにした。
+- `apps/web/app/layout.tsx`
+  - 初期表示用のインラインCSSに残っていた「表示中」13pxとフッター15pxを16pxへ修正。
+  - 読み込み直後と通常表示で文字サイズが変わらないように統一。
+
+確認:
+
+- `apps/web`: `corepack pnpm exec tsc --noEmit` 成功。
+- `apps/mobile`: `corepack pnpm exec tsc --noEmit` 成功。
+- `apps/web`: `corepack pnpm build` 成功。156ページを生成。
+- `git diff --check` 成功。
+- Vercel本番をiPhone相当の390×844pxで確認。
+  - 表示中要素のcomputed font-sizeが16px未満: 0件。
+  - ページ全体の横はみ出し: 0件。
+  - ホームとAI相談画面で、本文、ナビ、ボタンの折返し・重なりがないことを目視確認。
+
+本番反映:
+
+- deployment ID: `dpl_AzniyNRrWGSwg9f3GDGGVjdiDFUB`
+- production alias: `https://oyano-moshimo-navi.vercel.app`
+- 本番 `/home` はHTTP 200を確認。
+
+注意:
+
+- PWAまたはSafari内ブラウザに旧CSSが残る場合は、タブを閉じて本番URLを開き直す。表示確認時は古いキャッシュと混同しないこと。
+- `review_exports/` は今回も未追跡のレビュー成果物としてcommit対象外。

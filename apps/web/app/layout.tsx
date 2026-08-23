@@ -20,7 +20,7 @@ const criticalCss = `
   .nav-link{align-items:center;border:1px solid transparent;border-radius:999px;color:#68736d;display:inline-flex;gap:7px;min-height:34px;padding:6px 11px;position:relative}
   .nav-link.is-active{background:#0d4f34;border-color:#0d4f34;box-shadow:0 8px 20px rgba(13,79,52,.22);color:#fffdf6}
   .nav-link.is-active::after{background:#0d4f34;border-radius:999px;bottom:-9px;content:"";height:4px;left:18px;position:absolute;right:18px}
-  .nav-current-label{background:rgba(255,253,246,.92);border-radius:999px;color:#0d4f34;font-size:13px;font-weight:900;line-height:1;padding:5px 8px}
+  .nav-current-label{background:rgba(255,253,246,.92);border-radius:999px;color:#0d4f34;font-size:16px;font-weight:900;line-height:1;padding:6px 9px}
   .nav-crisis{background:transparent;border-color:transparent;color:#68736d;padding-inline:13px}
   .nav-crisis.is-active{background:#b4562e;border-color:#b4562e;color:#fffdf6}
   .nav-crisis.is-active::after{background:#b4562e}
@@ -45,7 +45,7 @@ const criticalCss = `
   .entry-how-card li{background:#f5f8f3;border-radius:14px;display:grid;gap:4px;padding:14px}
   .entry-how-card strong{font-size:17px}
   .entry-board-link,.secondary{align-items:center;background:#fff;border:1.5px solid rgba(39,100,71,.32);border-radius:999px;color:#0f6b45;display:inline-flex;font-weight:900;justify-content:center;min-height:48px;padding:12px 18px}
-  .footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:28px 24px;color:#6f7974;font-size:15px;font-weight:800}
+  .footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:28px 24px;color:#6f7974;font-size:16px;font-weight:800}
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
 `;
 
