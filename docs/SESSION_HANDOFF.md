@@ -7123,3 +7123,35 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 次:
 
 - 本番へpush/deployして、実機で「AI相談 → 先にクラウド控えを作る → 保存状態が開く」ことを確認する。
+
+## 2026-08-23 追記 197 — AI相談CTA修正を本番反映
+
+追記196のAI相談CTA修正をGitHubとVercel本番へ反映した。
+
+実行:
+
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+- `git commit -m "Fix consult cloud backup CTA"`
+- commit: `d7b1b41`
+- `git push origin main`
+- 初回に `apps/web` 直下から `npx vercel --prod --yes` を実行したところ、Vercel側が `npm install` で `workspace:*` を解決できず失敗。これはコード不具合ではなくデプロイ実行ディレクトリの問題。
+- repoルートから `npx vercel --prod --yes` を再実行して成功。
+
+デプロイ:
+
+- Vercel deployment id: `dpl_5jvV4K9jkTRh8yfKoSfYifC5vb6a`
+- Production URL: `https://oyano-moshimo-navi-9smfyunux-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+
+確認:
+
+- `https://oyano-moshimo-navi.vercel.app/consult?v=consult-cta-196` がHTTP 200。
+- `https://oyano-moshimo-navi.vercel.app/home?cloud=1` がHTTP 200。
+
+実機確認ポイント:
+
+- `/consult` で未ログインなら、灰色の「AI相談をはじめる」ではなく「先にクラウド控えを作る」が押せること。
+- 押すと `/home?cloud=1#cloud-backup` に移動し、保存状態パネルが開いて見えること。
+- メール確認後はAI相談の通常ボタンが表示されること。
