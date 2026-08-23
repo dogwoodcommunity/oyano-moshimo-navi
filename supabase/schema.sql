@@ -375,7 +375,20 @@ create table if not exists partners (
   unique(prefecture, category)
 );
 
-create or replace view prefecture_active_family_counts as
+create table if not exists prefecture_usage_snapshots (
+  id uuid primary key default uuid_generate_v4(),
+  snapshot_month date not null,
+  prefecture text not null,
+  active_users integer not null default 0,
+  active_families integer not null default 0,
+  created_at timestamptz default now(),
+  unique(snapshot_month, prefecture)
+);
+
+create index if not exists idx_prefecture_usage_snapshots_month
+on prefecture_usage_snapshots(snapshot_month);
+
+create or replace view prefecture_active_family_current_counts as
 with prefectures(prefecture) as (
   values
     ('北海道'), ('青森県'), ('岩手県'), ('宮城県'), ('秋田県'), ('山形県'), ('福島県'),
@@ -414,32 +427,73 @@ current_counts as (
   from eligible_families ef
   left join family_members fm on fm.family_id = ef.family_id
   group by ef.prefecture
-),
-previous_counts as (
-  select
-    ef.prefecture,
-    count(distinct ef.family_id)::integer as previous_month_families,
-    count(distinct fm.user_id) filter (
-      where fm.created_at < date_trunc('month', now())
-    )::integer as previous_month_users
-  from eligible_families ef
-  left join family_members fm on fm.family_id = ef.family_id
-  where ef.created_at < date_trunc('month', now())
-  group by ef.prefecture
 )
 select
   prefectures.prefecture,
   coalesce(current_counts.active_users, 0) as active_users,
-  coalesce(current_counts.active_families, 0) as active_families,
+  coalesce(current_counts.active_families, 0) as active_families
+from prefectures
+left join current_counts on current_counts.prefecture = prefectures.prefecture;
+
+create or replace function capture_prefecture_usage_snapshot(
+  p_snapshot_month date default date_trunc('month', now())::date
+)
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_count integer := 0;
+begin
+  insert into prefecture_usage_snapshots (
+    snapshot_month,
+    prefecture,
+    active_users,
+    active_families
+  )
+  select
+    date_trunc('month', p_snapshot_month)::date,
+    prefecture,
+    active_users,
+    active_families
+  from prefecture_active_family_current_counts
+  on conflict (snapshot_month, prefecture) do update
+  set
+    active_users = excluded.active_users,
+    active_families = excluded.active_families,
+    created_at = now();
+
+  get diagnostics v_count = row_count;
+  return v_count;
+end;
+$$;
+
+create or replace view prefecture_active_family_counts as
+with current_counts as (
+  select *
+  from prefecture_active_family_current_counts
+),
+previous_counts as (
+  select
+    prefecture,
+    active_users as previous_month_users,
+    active_families as previous_month_families
+  from prefecture_usage_snapshots
+  where snapshot_month = (date_trunc('month', now()) - interval '1 month')::date
+)
+select
+  current_counts.prefecture,
+  current_counts.active_users,
+  current_counts.active_families,
   coalesce(previous_counts.previous_month_users, 0) as previous_month_users,
   coalesce(previous_counts.previous_month_families, 0) as previous_month_families,
-  coalesce(current_counts.active_users, 0) - coalesce(previous_counts.previous_month_users, 0)
+  current_counts.active_users - coalesce(previous_counts.previous_month_users, 0)
     as month_over_month_users,
-  coalesce(current_counts.active_families, 0) - coalesce(previous_counts.previous_month_families, 0)
+  current_counts.active_families - coalesce(previous_counts.previous_month_families, 0)
     as month_over_month_families
-from prefectures
-left join current_counts on current_counts.prefecture = prefectures.prefecture
-left join previous_counts on previous_counts.prefecture = prefectures.prefecture;
+from current_counts
+left join previous_counts on previous_counts.prefecture = current_counts.prefecture;
 
 create table if not exists consent_logs (
   id uuid primary key default uuid_generate_v4(),

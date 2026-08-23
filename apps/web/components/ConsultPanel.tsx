@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
+  CONSULT_MAX_ENTRIES,
   CONSULT_MAX_QUESTION_LENGTH,
   CONSULT_SENT_FIELDS,
   CONSULT_WITHHELD_FIELDS,
@@ -64,6 +65,15 @@ function writeConsent(value: boolean) {
 
 function todayInputValue() {
   return new Date().toISOString().slice(0, 10);
+}
+
+function birthDateToAgeBand(birthDate?: string) {
+  if (!birthDate) return undefined;
+  const year = Number(birthDate.slice(0, 4));
+  if (!Number.isFinite(year) || year < 1900) return undefined;
+  const age = new Date().getFullYear() - year;
+  if (age < 0 || age > 130) return undefined;
+  return `${Math.floor(age / 10) * 10}代`;
 }
 
 function allDiaryEntriesForSync(cases: CaseRecord[]) {
@@ -199,7 +209,7 @@ export function ConsultPanel() {
     setSaveSyncPhase("idle");
     setSaveSyncMessage("");
 
-    const entries = listDiaryEntries(activeCase.id).slice(0, 20).map((entry) => ({
+    const entries = listDiaryEntries(activeCase.id).slice(0, CONSULT_MAX_ENTRIES).map((entry) => ({
       date: entry.date,
       mood: entry.mood,
       body: entry.body
@@ -238,7 +248,7 @@ export function ConsultPanel() {
           person: {
             relationship: activeCase.personProfile?.relationship,
             careStatus: activeCase.personProfile?.careStatus,
-            birthDate: activeCase.personProfile?.birthDate,
+            birthDate: birthDateToAgeBand(activeCase.personProfile?.birthDate),
             hospitalOrFacility: activeCase.personProfile?.hospitalOrFacility,
             medicationNote: activeCase.personProfile?.medicationNote,
             familyStructureNote: activeCase.personProfile?.familyStructureNote,

@@ -45,7 +45,10 @@ with checks as (
   union all select 'index_exists', 'idx_people_profile_updated_at', to_regclass('public.idx_people_profile_updated_at') is not null
   union all select 'index_exists', 'idx_people_prefecture', to_regclass('public.idx_people_prefecture') is not null
   union all select 'index_exists', 'idx_partners_region_category_status', to_regclass('public.idx_partners_region_category_status') is not null
+  union all select 'index_exists', 'idx_prefecture_usage_snapshots_month', to_regclass('public.idx_prefecture_usage_snapshots_month') is not null
   union all select 'index_exists', 'idx_timeline_events_person_date', to_regclass('public.idx_timeline_events_person_date') is not null
+  union all select 'table_exists', 'prefecture_usage_snapshots', to_regclass('public.prefecture_usage_snapshots') is not null
+  union all select 'view_exists', 'prefecture_active_family_current_counts', to_regclass('public.prefecture_active_family_current_counts') is not null
   union all select 'view_exists', 'prefecture_active_family_counts', to_regclass('public.prefecture_active_family_counts') is not null
   union all select 'view_column_exists', 'prefecture_active_family_counts.active_users', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'prefecture_active_family_counts' and column_name = 'active_users')
   union all select 'view_column_exists', 'prefecture_active_family_counts.previous_month_users', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'prefecture_active_family_counts' and column_name = 'previous_month_users')
@@ -62,6 +65,7 @@ with checks as (
   union all select 'function_exists', 'check_public_api_rate_limit', to_regproc('public.check_public_api_rate_limit') is not null
   union all select 'function_exists', 'purge_stale_anonymous_cases', to_regproc('public.purge_stale_anonymous_cases') is not null
   union all select 'function_exists', 'promote_family_member_to_owner', to_regproc('public.promote_family_member_to_owner') is not null
+  union all select 'function_exists', 'capture_prefecture_usage_snapshot', to_regprocedure('public.capture_prefecture_usage_snapshot(date)') is not null
   union all select 'security_check', 'legacy_family_app_admin_absent', not exists(select 1 from public.family_members where role = 'admin' and relationship = 'app_admin')
   union all select 'seed_count', 'task_templates', (select count(*) > 0 from public.task_templates)
   union all select 'seed_count', 'products', (select count(*) > 0 from public.products)

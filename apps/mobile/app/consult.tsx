@@ -6,6 +6,7 @@ import {
   consultAnswerToDiaryBody,
   consultAnswerToHistoryTurn,
   hasNotebookSubstance,
+  CONSULT_MAX_ENTRIES,
   CONSULT_MAX_HISTORY,
   CONSULT_MAX_QUESTION_LENGTH,
   CONSULT_SENT_FIELDS,
@@ -41,6 +42,15 @@ type Phase = "loading" | "ready" | "asking" | "done" | "error";
 
 /** 画面に積み上がる、1回ぶんの相談と回答。前回までを踏まえてAIが続けて答える。 */
 type ConsultTurn = { id: string; question: string; answer: ConsultAnswer; saved: boolean };
+
+function birthDateToAgeBand(birthDate?: string) {
+  if (!birthDate) return undefined;
+  const year = Number(birthDate.slice(0, 4));
+  if (!Number.isFinite(year) || year < 1900) return undefined;
+  const age = new Date().getFullYear() - year;
+  if (age < 0 || age > 130) return undefined;
+  return `${Math.floor(age / 10) * 10}代`;
+}
 
 export default function ConsultScreen() {
   const [phase, setPhase] = useState<Phase>("loading");
@@ -89,14 +99,14 @@ export default function ConsultScreen() {
   const payloadPerson = {
     relationship: profile?.relationship ?? person?.relationship,
     careStatus: profile?.careStatus,
-    birthDate: profile?.birthDate,
+    birthDate: birthDateToAgeBand(profile?.birthDate),
     hospitalOrFacility: profile?.hospitalOrFacility,
     medicationNote: profile?.medicationNote,
     familyStructureNote: profile?.familyStructure
   };
   const diaryEntries = entries
     .filter((entry) => entry.eventType === "diary")
-    .slice(0, 20)
+    .slice(0, CONSULT_MAX_ENTRIES)
     .map((entry) => ({ date: entry.date, mood: entry.mood, body: entry.body }));
   const hasSubstance = hasNotebookSubstance({ question: "", person: payloadPerson, entries: diaryEntries });
   const canAsk = consent && hasSubstance && question.trim().length >= 4 && phase !== "asking";

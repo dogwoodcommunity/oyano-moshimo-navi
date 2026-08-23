@@ -30,6 +30,7 @@ function clean(value: string | undefined, maxLength: number): string | undefined
 
 function ageBand(birthDate?: string): string | undefined {
   if (!birthDate) return undefined;
+  if (/^\d{2,3}代$/.test(birthDate.trim())) return birthDate.trim();
   const year = Number(birthDate.slice(0, 4));
   if (!Number.isFinite(year) || year < 1900) return undefined;
   const age = new Date().getFullYear() - year;

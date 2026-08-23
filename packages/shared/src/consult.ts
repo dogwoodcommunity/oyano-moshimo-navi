@@ -1,6 +1,7 @@
 export type ConsultPerson = {
   relationship?: string;
   careStatus?: string;
+  /** クライアントから外部AIへ渡す前に「70代」などへ丸める。サーバー側も生年月日は年代化して扱う。 */
   birthDate?: string;
   hospitalOrFacility?: string;
   medicationNote?: string;

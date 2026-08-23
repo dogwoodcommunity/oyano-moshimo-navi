@@ -33,6 +33,7 @@ create index if not exists idx_purchases_provider_checkout_id on purchases(provi
 create index if not exists idx_sponsor_applications_region_category on sponsor_applications(prefecture, category, status);
 create index if not exists idx_sponsor_applications_created_at on sponsor_applications(created_at desc);
 create index if not exists idx_partners_region_category_status on partners(prefecture, category, status);
+create index if not exists idx_prefecture_usage_snapshots_month on prefecture_usage_snapshots(snapshot_month);
 create index if not exists idx_account_delete_requests_status_due on account_delete_requests(status, due_at);
 create index if not exists idx_account_delete_requests_user_status on account_delete_requests(user_id, status);
 create unique index if not exists idx_account_delete_requests_one_open

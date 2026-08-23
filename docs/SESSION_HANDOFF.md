@@ -7260,3 +7260,63 @@ Claudeへの渡し方:
 
 - `review_exports/` は未追跡のローカル出力フォルダ。GitHubへはまだ入れていない。
 - 本番DBには引き続き `supabase/regional_sponsor_data.sql` の再適用が必要。
+
+## 2026-08-23 追記 201 — Claudeレビュー指摘への追加対応（スポンサー数字/AI最小化/PR防火壁）
+
+Claudeレビューで指摘された「スポンサー営業に使う数字の固定化」「協賛/PR表記の整理」「AI相談へ送る生年月日の最小化」「都道府県入力の初回強制を避ける」を実装した。
+
+実装:
+
+- `apps/web/components/ConsultPanel.tsx`
+  - AI相談へ送る `birthDate` を、生年月日そのものではなく `70代` などの年代へ変換。
+  - Web側も最近の記録を `CONSULT_MAX_ENTRIES`（12件）に統一。
+- `apps/mobile/app/consult.tsx`
+  - モバイル側のAI相談 payload も、生年月日を年代へ丸める。
+  - 最近の記録数を `CONSULT_MAX_ENTRIES` に統一。
+- `apps/web/lib/consult.ts`
+  - サーバ側も `70代` などの年代文字列をそのまま受けられるようにし、二重に最小化。
+- `packages/shared/src/consult.ts`
+  - `ConsultPerson.birthDate` は外部AI送信前に年代化する前提をコメントで明記。
+- `apps/web/app/home/page.tsx`
+  - 親御さんの都道府県入力モーダルは、記録が2件以上たまってから出す。
+  - 初回手帳作成時に地域を聞いて警戒される流れを避ける。
+- `supabase/schema.sql` / `supabase/regional_sponsor_data.sql`
+  - `prefecture_usage_snapshots` を追加。
+  - 月初に `capture_prefecture_usage_snapshot()` で現在値を固定保存する方式へ変更。
+  - `prefecture_active_family_current_counts` は現在値専用、`prefecture_active_family_counts` は現在値 + 前月スナップショット差分を返す。
+  - スポンサー営業に使う前月比が、あとから変わる可変ビューにならないようにした。
+- `supabase/production_rls.sql` / `supabase/indexes.sql` / `supabase/verify_setup.sql` / `supabase/verify_compact.sql`
+  - snapshotテーブル、index、function、RLS、検証項目を追加。
+- `docs/MONETIZATION.md`
+  - 有効世帯の定義を明記。
+    - 親情報1件 + 親の都道府県 + オーナー以外の家族メンバー1人以上、または7日以内のpending招待1件以上。
+    - ソロ利用者はスポンサー営業用の有効世帯数には含めない。
+    - 県違いの対象者がいる家族は県ごとに1世帯、同県内複数対象者は1世帯。
+  - 利用者に見える掲載はすべて協賛/PR表記必須に変更。
+  - 記録画面・危機モード・AI相談にはスポンサー名を混ぜない方針を明記。
+- `apps/web/app/sponsors/page.tsx`
+  - スポンサーLPに、協賛/PR表記、手帳内広告を出さないこと、AI相談へスポンサー名を混ぜないことを追記。
+  - 前月比は月次スナップショットの確定値だけを使うと明記。
+- `docs/PRIVACY_AND_REVIEW_GUARDRAILS.md`
+  - スポンサー/協賛掲載の防火壁を恒久レビュー項目として追加。
+  - AI相談に送る情報の最小化（年代化、氏名/連絡先/写真/PDF/保管場所/広告情報を送らない）を明記。
+- `apps/web/app/legal/privacy/page.tsx`
+  - スポンサー/協賛掲載の扱いと、広告主へ個人データを提供しないことを追記。
+  - AI送信対象の最近の記録数を最大12件へ修正。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter mobile run typecheck` 成功。
+- `git diff --check` 成功。
+- `corepack pnpm --filter web run build` 成功。
+  - Supabase JS由来の Node.js 20以下非推奨警告は出るが、ビルド自体は成功。
+- AI相談コードに `partners` / `sponsor_applications` / `sponsor` 参照がないことを `rg` で確認。
+
+次に必要:
+
+- 本番Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を再適用する。
+  - これをしないと `prefecture_usage_snapshots` と `capture_prefecture_usage_snapshot()` は本番DBにまだ無い。
+- SQL適用後、`supabase/verify_setup.sql` または `supabase/verify_compact.sql` で該当チェックがtrueになることを確認。
+- 月初に `select capture_prefecture_usage_snapshot();` を実行するcron/運用を作る。
+- Claudeレビューへ渡す新しい資料とZIPを、この追記後のcommitから作り直す。

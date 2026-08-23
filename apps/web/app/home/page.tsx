@@ -82,6 +82,8 @@ type DiaryCalendarCell = {
   tone: "none" | "stable" | "changed" | "urgent";
 };
 
+const PREFECTURE_PROMPT_MIN_DIARY_ENTRIES = 2;
+
 const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
   { id: "overview", label: "今日", note: "まず見る" },
   { id: "record", label: "記録", note: "書く・見返す" },
@@ -1345,6 +1347,7 @@ export default function FamilyBoardPage() {
   const shouldPromptParentPrefecture = Boolean(
     activeCase &&
     activeProfile &&
+    activeEntries.length >= PREFECTURE_PROMPT_MIN_DIARY_ENTRIES &&
     !activeProfile.parentPrefecture?.trim() &&
     !prefecturePromptSkipped[activeCase.id]
   );
@@ -2410,10 +2413,10 @@ export default function FamilyBoardPage() {
               <article className="nb-card parent-prefecture-prompt" aria-label="親御さんの都道府県入力">
                 <div>
                   <p className="nb-eyebrow">地域設定</p>
-                  <h2>親御さんの都道府県を入れてください。</h2>
+                  <h2>記録が増えてきたので、親御さんの地域を入れてください。</h2>
                   <p>
-                    葬儀・施設・相続などの案内は、利用者ではなく親御さんの居住地を基準に整理します。
-                    市区町村は任意です。
+                    地域の相談先や手続きの案内は、利用者ではなく親御さんの居住地を基準に近づけます。
+                    市区町村は任意で、あとから変更できます。
                   </p>
                 </div>
                 <div className="parent-prefecture-form">

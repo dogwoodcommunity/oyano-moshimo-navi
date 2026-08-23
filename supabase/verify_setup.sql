@@ -224,8 +224,28 @@ from public.products;
 
 select
   'view_exists' as check_type,
+  'prefecture_active_family_current_counts' as target,
+  (to_regclass('public.prefecture_active_family_current_counts') is not null) as ok
+union all
+select
+  'view_exists' as check_type,
   'prefecture_active_family_counts' as target,
   (to_regclass('public.prefecture_active_family_counts') is not null) as ok;
+
+select
+  'table_exists' as check_type,
+  'prefecture_usage_snapshots' as target,
+  (to_regclass('public.prefecture_usage_snapshots') is not null) as ok
+union all
+select
+  'index_exists' as check_type,
+  'idx_prefecture_usage_snapshots_month' as target,
+  (to_regclass('public.idx_prefecture_usage_snapshots_month') is not null) as ok
+union all
+select
+  'function_exists' as check_type,
+  'capture_prefecture_usage_snapshot' as target,
+  (to_regprocedure('public.capture_prefecture_usage_snapshot(date)') is not null) as ok;
 
 select
   'view_column_exists' as check_type,
