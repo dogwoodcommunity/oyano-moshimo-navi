@@ -446,6 +446,9 @@ as $$
 declare
   v_count integer := 0;
 begin
+  -- This is a monthly accounting snapshot for sponsor sales metrics.
+  -- Run once on the first day of each month. Re-running mid-month rewrites
+  -- that month's fixed value and should only happen for an explicit correction.
   insert into prefecture_usage_snapshots (
     snapshot_month,
     prefecture,

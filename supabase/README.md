@@ -25,17 +25,23 @@ SQL Editorで以下の順に実行する。
 19. `public_api_rate_limits.sql`
 20. `anonymous_case_retention.sql`
 21. `storage_setup.sql`
+22. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
 - `home_photo_security_hardening.sql`
 - `post_discharge_home_task_seed.sql`
   退院後・在宅療養ステータスを後から追加する場合に実行する。新規DBでは `task_template_seed.sql` に含まれる。
+- `prefecture_usage_snapshot_cron.sql`
+  地域スポンサー基盤を寝かせていても、都道府県別の月次確定値を貯めるために実行する。
+  `regional_sponsor_data.sql` の後に1回だけ実行する。
+  毎月1日 00:10 UTC（日本時間09:10）に `capture_prefecture_usage_snapshot()` を実行する。
+  月途中の手動再実行は禁止。訂正時のみ理由を残して再実行する。
 
 任意確認:
 
-22. `verify_setup.sql`
-23. `verify_compact.sql`
+23. `verify_setup.sql`
+24. `verify_compact.sql`
 
 ## 重要
 
@@ -45,6 +51,8 @@ SQL Editorで以下の順に実行する。
 - Expoアプリは `EXPO_PUBLIC_SUPABASE_URL` と `EXPO_PUBLIC_SUPABASE_ANON_KEY` のみを使う。
 - 公開APIの連打対策は `public_api_rate_limits.sql` のRPCで制御する。SQL未投入時はWebサーバー内の簡易制限に落ちるが、本番では必ずSQLを投入する。
 - 放置された匿名診断ケースは `anonymous_case_retention.sql` と Vercel Cron `/api/cron/purge-anonymous-cases` で削除する。
+- 地域スポンサーの前月比は `prefecture_usage_snapshots` の月次確定値から出す。
+  現在値から過去を再計算しない。月次確定値は `prefecture_usage_snapshot_cron.sql` で貯める。
 
 ## SQL実行後に取得する値
 

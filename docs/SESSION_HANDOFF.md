@@ -7389,3 +7389,33 @@ Vercel:
 - 本番Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を再適用。
 - 適用後に `supabase/verify_setup.sql` または `supabase/verify_compact.sql` を実行。
 - 月次スナップショット運用として `select capture_prefecture_usage_snapshot();` をcron化、または月初手動実行。
+
+## 2026-08-23 追記 204 — スポンサー月次スナップショット運用を明文化
+
+Claude再検収で「スナップショットの意味論を1行文書化」「cronだけは今設定できるように」と指摘されたため、文書とSQLを追加した。
+
+実装:
+
+- `docs/MONETIZATION.md`
+  - `prefecture_usage_snapshots` は「毎月1日時点の確定値」として扱う、と明記。
+  - 前月比は「前月1日時点の確定値」と「現在値」の差分で見る、と明記。
+  - 月途中の手動再実行は禁止。訂正が必要な時だけ、管理者が理由を残して再実行する、と明記。
+- `supabase/prefecture_usage_snapshot_cron.sql`
+  - `pg_cron` を使い、毎月1日 00:10 UTC（日本時間09:10）に `capture_prefecture_usage_snapshot()` を実行するSQLを追加。
+  - 同名ジョブがある場合は一度unscheduleしてから再登録する。
+- `supabase/README.md`
+  - 本番SQL実行順に `regional_sponsor_data.sql` を追加。
+  - 既存DB向け個別SQLとして `prefecture_usage_snapshot_cron.sql` を追加。
+- `supabase/regional_sponsor_data.sql` / `supabase/schema.sql`
+  - `capture_prefecture_usage_snapshot()` の運用コメントを追加。
+
+本番Supabaseで必要な実行順:
+
+1. `supabase/regional_sponsor_data.sql`
+2. `supabase/verify_setup.sql` または `supabase/verify_compact.sql`
+3. `supabase/prefecture_usage_snapshot_cron.sql`
+
+注意:
+
+- `prefecture_usage_snapshot_cron.sql` は `pg_cron` を使う。Supabase側で拡張が有効化できない場合は、Edge Function定期実行または月初手動実行に切り替える。
+- 月途中に `capture_prefecture_usage_snapshot()` を再実行すると、その月の確定値が上書きされるため、通常運用では実行しない。
