@@ -29,6 +29,7 @@ alter table provider_categories enable row level security;
 alter table providers enable row level security;
 alter table provider_recommendations enable row level security;
 alter table referrals enable row level security;
+alter table sponsor_applications enable row level security;
 alter table consent_logs enable row level security;
 alter table products enable row level security;
 alter table purchases enable row level security;
@@ -341,6 +342,10 @@ using (true);
 create policy "providers active public read"
 on providers for select
 using (status = 'active');
+
+create policy "admin read sponsor_applications"
+on sponsor_applications for select
+using (is_app_admin());
 
 create policy "products active public read"
 on products for select

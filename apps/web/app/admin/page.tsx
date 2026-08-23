@@ -14,6 +14,7 @@ export default function AdminPage() {
           <Link className="secondary" href="/admin/funnel">funnel</Link>
           <Link className="secondary" href="/admin/cases">cases</Link>
           <Link className="secondary" href="/admin/support-packs">support packs</Link>
+          <Link className="secondary" href="/admin/sponsor-applications">sponsor slots</Link>
           <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
           <Link className="secondary" href="/admin/providers">providers</Link>
           <Link className="secondary" href="/admin/env">env</Link>
@@ -39,6 +40,11 @@ export default function AdminPage() {
           <span>04</span>
           <strong>削除依頼</strong>
           <p>アプリ内から届いたアカウント削除依頼を確認します。</p>
+        </article>
+        <article className="admin-stat">
+          <span>05</span>
+          <strong>Sponsor slots</strong>
+          <p>都道府県×分野で届いたスポンサー枠の申請を確認します。</p>
         </article>
       </section>
       <AdminTokenControl />

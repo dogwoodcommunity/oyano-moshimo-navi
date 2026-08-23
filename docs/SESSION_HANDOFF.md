@@ -6911,3 +6911,64 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - `corepack pnpm --filter web run build` は成功。Supabase JS 由来の Node.js 20以下非推奨警告が出るが、今回の修正起因ではない。
 - まだ commit / push / Vercel本番反映前。次は commit → push → Vercel prod deploy → `/home` と `/consult` の確認URLを案内する。
+
+## 2026-08-23 追記 191 — 地域スポンサー/掲載枠の収益仮説を将来枠として整理
+
+ユーザーから、地域×分野（葬儀・相続士業・家族信託・ホーム紹介・保険・遺品整理）で掲載枠を切るローカル媒体モデルの共有があった。机上では `47都道府県 × 6分野 × 月3万円 = 年約1億円` の器になるが、枠は作れば売れるものではなく、地域の会員密度と問い合わせ実績が先に必要という整理。
+
+判断:
+
+- 「手帳、記録、危機モード、AI相談の途中に広告を出す」は引き続きやらない。`docs/MONETIZATION.md` の「広告はやらない」という信頼方針は維持する。
+- 一方で、将来のB2B収益としての「地域スポンサー/掲載枠」は検討余地あり。これは画面内広告ではなく、ユーザーが明示的に開く地域ガイド、相談先一覧、印刷物の協賛枠などに限定する。
+- 全国枠を先に作るのは反対。最初は兵庫または神戸市に一点集中し、会員1,000〜3,000家族規模と「1枠あたり月何件問い合わせが来たか」の実績を作ってから、大阪/京都などへ1県ずつ複製する。
+- 広告主が月3万円を払い続ける条件は、2〜3か月に1件以上の問い合わせが来ること。葬儀や士業など粗利の大きい分野なら1件で元が取れるが、半年ゼロなら更新されない。
+- 20県を超えるまでは直販または限定的な紹介で検証し、広域展開時に地元広告代理店や商工会系への代理店卸を検討する。
+
+対応:
+
+- `docs/MONETIZATION.md` の最終更新日を `2026-08-23` に更新。
+- `docs/MONETIZATION.md` の「将来の柱」に `地域スポンサー/掲載枠` を追記。
+- ただし、これは3組テスト、有料テスト、Plusの価値検証より前に着手しない将来仮説として扱う。
+
+## 2026-08-23 追記 192 — スポンサー枠の申請受付を初期導線として実装
+
+ユーザーから、地域スポンサー枠は「後で考える」ではなく、会員数を増やす初期段階から事業者が申請できる枠組みをアプリ内に持っておきたい、という訂正があった。判断を更新し、手帳内広告は禁止のまま、B2Bスポンサー枠の申請受付だけを初期実装として追加した。
+
+実装:
+
+- `apps/web/app/sponsors/page.tsx`
+  - 公開ページ `/sponsors` を追加。都道府県×分野のスポンサー枠を申請できるページ。
+  - 手帳・記録・危機モード・AI相談の途中には広告を出さないことを明記。
+  - 申請分野は葬儀、相続士業、家族信託、ホーム紹介、保険、遺品整理、その他。
+- `apps/web/components/SponsorApplicationForm.tsx`
+  - 47都道府県、分野、希望枠、会社情報、連絡先、メッセージ、同意チェックを持つ申請フォームを追加。
+  - `POST /api/sponsors/apply` へ送信。DB未準備時は `sponsor_applications_not_ready` として案内を返す。
+- `apps/web/app/api/sponsors/apply/route.ts`
+  - 公開申請APIを追加。IPレート制限、必須項目検証、同意確認、メール形式検証を行う。
+  - Supabase service role で `sponsor_applications` に保存する。
+- `apps/web/app/admin/sponsor-applications/page.tsx`
+  - 管理画面 `/admin/sponsor-applications` を追加。
+  - `ADMIN_ACCESS_TOKEN` 付きの管理者だけが申請一覧を確認できる。
+- `apps/web/app/api/admin/sponsor-applications/route.ts`
+  - 管理者用一覧APIを追加。
+- `apps/web/components/AdminSponsorApplications.tsx`
+  - 申請日時、都道府県、分野、会社名、担当者、連絡先、希望枠、メッセージを一覧表示。
+- `apps/web/app/layout.tsx`
+  - フッターに `スポンサー枠` へのリンクを追加。
+- `apps/web/app/admin/page.tsx`
+  - 管理トップから `sponsor slots` 管理へ入れる導線を追加。
+- `apps/web/app/globals.css`
+  - スポンサー申請ページと申請フォームの見た目を追加。
+- `supabase/sponsor_applications.sql`
+  - 既存DB向けの追加SQLを新規作成。
+- `supabase/schema.sql` / `supabase/production_rls.sql` / `supabase/indexes.sql`
+  - `sponsor_applications` テーブル、RLS、管理者read policy、検索用indexを本体SQLにも反映。
+- `docs/MONETIZATION.md`
+  - 「広告は永久にやらない」を「手帳内広告は永久にやらない」に修正。
+  - スポンサー枠は初期から申請受付だけ持つが、実際の掲載・販売・送客は審査基準と地域実績ができてから、と整理。
+
+重要な設計境界:
+
+- ユーザーの手帳、日記、写真、危機モード、AI相談途中にはスポンサー広告を出さない。
+- 初期の `/sponsors` は営業リストと枠需要の先行把握であり、利用者への事業者紹介や成約課金ではない。
+- 本番で申請を保存するには、Supabaseに `supabase/sponsor_applications.sql` を適用する必要がある。未適用の場合、公開フォームは `sponsor_applications_not_ready` を返す。

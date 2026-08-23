@@ -331,6 +331,28 @@ create table if not exists referrals (
   updated_at timestamptz default now()
 );
 
+create table if not exists sponsor_applications (
+  id uuid primary key default uuid_generate_v4(),
+  company_name text not null,
+  contact_name text not null,
+  contact_email text not null,
+  contact_phone text,
+  prefecture text not null,
+  city text,
+  category text not null,
+  slot_type text not null,
+  website text,
+  budget_note text,
+  message text,
+  consent_to_contact boolean not null default false,
+  status text not null default 'new',
+  admin_note text,
+  ip_address text,
+  user_agent text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 create table if not exists consent_logs (
   id uuid primary key default uuid_generate_v4(),
   user_id uuid references profiles(id) on delete set null,

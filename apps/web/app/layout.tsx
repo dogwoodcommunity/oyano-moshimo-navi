@@ -122,6 +122,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
+            <Link href="/sponsors">スポンサー枠</Link>
             <Link href="/home">手帳</Link>
           </footer>
         </div>
