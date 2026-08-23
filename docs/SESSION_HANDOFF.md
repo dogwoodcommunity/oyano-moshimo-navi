@@ -7067,3 +7067,34 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 - commit / push / Vercel本番反映。
 - 本番Supabaseへ `supabase/regional_sponsor_data.sql` を適用。
 - 適用後に `supabase/verify_compact.sql` または `supabase/verify_setup.sql` で `partners`、`people.prefecture/city`、`prefecture_active_family_counts` が true になることを確認。
+
+## 2026-08-23 追記 195 — 地域スポンサー指標をGitHubとVercel本番へ反映
+
+追記194の地域スポンサー枠配線をGitHubとVercel本番へ反映した。
+
+実行:
+
+- `corepack pnpm --filter mobile run typecheck`
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+- `git commit -m "Add regional sponsor metrics"`
+- commit: `7e3b526`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+デプロイ:
+
+- Vercel deployment id: `dpl_46MntFkoePweEZ4i3qcsc4Uy8zy4`
+- Production URL: `https://oyano-moshimo-navi-6jfb4subu-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+
+確認:
+
+- `https://oyano-moshimo-navi.vercel.app/sponsors?v=regional-sponsors-194` がHTTP 200。
+- `https://oyano-moshimo-navi.vercel.app/admin/regional-sponsors?v=regional-sponsors-194` がHTTP 200。
+
+注意:
+
+- ワークツリーには未追跡の `review_exports/` が残っている。今回の実装とは別出力と判断して触っていない。
+- 本番DBへ保存・集計を有効化するには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を適用する必要がある。
