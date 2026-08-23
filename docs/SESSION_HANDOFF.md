@@ -7222,3 +7222,41 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - ワークツリーには未追跡の `review_exports/` が残っている。今回の実装とは別出力と判断して触っていない。
 - 本番DBの `prefecture_active_family_counts` view に `active_users` 等を実際に追加するには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` の再適用が必要。コード側はSQL未適用でも落ちないようにフォールバック済み。
+
+## 2026-08-23 追記 200 — Claudeレビュー用資料とソースZIPを作成
+
+ユーザーから「claudeにレビューもらうから資料つくって」と依頼があり、Claudeへ渡すレビュー資料一式を `review_exports/claude_review_2026-08-23-regional-usage/` に作成した。
+
+作成物:
+
+- `review_exports/claude_review_2026-08-23-regional-usage/CLAUDE_REVIEW_PROMPT_2026-08-23_REGIONAL_USAGE.md`
+  - Claudeへ最初に貼るレビュー依頼文。
+  - 家族3組テスト可否、有料テスト可否、UX、AI相談、地域スポンサー、DB/security、やらないこと、実装順をレビューするよう指定。
+- `review_exports/claude_review_2026-08-23-regional-usage/IMPLEMENTATION_BRIEF_2026-08-23_REGIONAL_USAGE.md`
+  - 現在の実装状態、重要URL、主要ファイル、直近の仕様変更、既知の未完了事項を整理。
+- `review_exports/claude_review_2026-08-23-regional-usage/README_CLAUDE_REVIEW_2026-08-23_REGIONAL_USAGE.md`
+  - Claudeへ渡す順番とレビュー観点の簡易案内。
+- `review_exports/claude_review_2026-08-23-regional-usage/oyano-moshimo-navi-source-2026-08-23-regional-usage-ff08f63.zip`
+  - `git archive` で commit `ff08f63` から作成したソースZIP。
+  - tracked files のみで作成しており、未追跡ファイルやローカル出力は含めていない。
+- `review_exports/claude_review_2026-08-23-regional-usage.zip`
+  - 上記フォルダ一式をまとめた提出用ZIP。
+
+Claudeへの渡し方:
+
+1. `CLAUDE_REVIEW_PROMPT_2026-08-23_REGIONAL_USAGE.md` の中身を貼る。
+2. `oyano-moshimo-navi-source-2026-08-23-regional-usage-ff08f63.zip` を添付する。
+3. 必要なら `IMPLEMENTATION_BRIEF_2026-08-23_REGIONAL_USAGE.md` も添付する。
+
+レビューで特に見てほしい論点:
+
+- PWAを「記録ファースト + AI伴走 + 家族手帳」として再設計した方向性が正しいか。
+- 初回登録、日記保存、AI相談、過去記録確認の導線が50〜70代でも迷わないか。
+- AI相談がPlusの課金理由になっているか。
+- 地域スポンサー枠（市区町村×分野、利用者/世帯併記、世帯数基準課金）の仕様に穴がないか。
+- Storage、同期、consult、地域スポンサー集計、RLS/APIまわりにテスト前ブロッカーが残っていないか。
+
+注意:
+
+- `review_exports/` は未追跡のローカル出力フォルダ。GitHubへはまだ入れていない。
+- 本番DBには引き続き `supabase/regional_sponsor_data.sql` の再適用が必要。
