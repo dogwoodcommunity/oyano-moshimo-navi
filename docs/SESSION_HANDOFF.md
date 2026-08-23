@@ -7320,3 +7320,40 @@ Claudeレビューで指摘された「スポンサー営業に使う数字の�
 - SQL適用後、`supabase/verify_setup.sql` または `supabase/verify_compact.sql` で該当チェックがtrueになることを確認。
 - 月初に `select capture_prefecture_usage_snapshot();` を実行するcron/運用を作る。
 - Claudeレビューへ渡す新しい資料とZIPを、この追記後のcommitから作り直す。
+
+## 2026-08-23 追記 202 — Claude再レビュー資料を作成
+
+追記201の修正（スポンサー数字の月次スナップショット化、協賛/PR防火壁、AI相談の生年月日最小化、都道府県入力の後ろ倒し）をコミットし、そのコミットを基準にClaudeレビュー用資料を作成した。
+
+コミット:
+
+- `92ba97e` Harden sponsor metrics and consult privacy
+
+作成したレビュー資料:
+
+- `review_exports/claude_review_2026-08-23-sponsor-privacy-hardening/CLAUDE_REVIEW_PROMPT_2026-08-23_SPONSOR_PRIVACY_HARDENING.md`
+- `review_exports/claude_review_2026-08-23-sponsor-privacy-hardening/IMPLEMENTATION_BRIEF_2026-08-23_SPONSOR_PRIVACY_HARDENING.md`
+- `review_exports/claude_review_2026-08-23-sponsor-privacy-hardening/README_CLAUDE_REVIEW_2026-08-23_SPONSOR_PRIVACY_HARDENING.md`
+- `review_exports/claude_review_2026-08-23-sponsor-privacy-hardening/oyano-moshimo-navi-source-2026-08-23-sponsor-privacy-hardening-92ba97e.zip`
+- `review_exports/claude_review_2026-08-23-sponsor-privacy-hardening.zip`
+
+Claudeへ渡す時:
+
+1. `CLAUDE_REVIEW_PROMPT_2026-08-23_SPONSOR_PRIVACY_HARDENING.md` の内容を貼る。
+2. `oyano-moshimo-navi-source-2026-08-23-sponsor-privacy-hardening-92ba97e.zip` を添付する。
+3. 必要なら `IMPLEMENTATION_BRIEF_2026-08-23_SPONSOR_PRIVACY_HARDENING.md` も添付する。
+
+レビューで見てほしい主な論点:
+
+- 家族3組テストを開始してよいか。
+- 有料テストはまだ止めるべきか。
+- スポンサー営業を開始してよいか、まだ寝かせるべきか。
+- `prefecture_usage_snapshots` と `capture_prefecture_usage_snapshot()` で前月比が固定値になったか。
+- 有効世帯数の定義が営業資料として説明可能か。
+- 記録画面/急なとき/AI相談にスポンサーを混ぜない防火壁が保たれているか。
+- AI相談へ送る生年月日が年代化され、送信情報が最小化されているか。
+
+注意:
+
+- `review_exports/` はローカル提出物フォルダで、GitHubには基本入れない。
+- 本番DBにはまだ `supabase/regional_sponsor_data.sql` の再適用が必要。
