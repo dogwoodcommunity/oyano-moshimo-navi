@@ -10,11 +10,26 @@ type NavItem = {
   match: (pathname: string) => boolean;
 };
 
+const boardPaths = [
+  "/home",
+  "/consult",
+  "/family",
+  "/plans",
+  "/emergency-card",
+  "/checklists",
+  "/install",
+  "/support-pack"
+];
+
+function matchesAny(pathname: string, paths: string[]) {
+  return paths.some((path) => pathname === path || pathname.startsWith(`${path}/`));
+}
+
 const navItems: NavItem[] = [
   {
     href: "/home",
     label: "家族ボード",
-    match: (pathname) => pathname === "/home"
+    match: (pathname) => matchesAny(pathname, boardPaths)
   },
   {
     href: "/guides",
@@ -51,7 +66,8 @@ export function MainNav() {
             href={item.href}
             key={item.href}
           >
-            {item.label}
+            <span>{item.label}</span>
+            {isActive ? <span className="nav-current-label">表示中</span> : null}
           </Link>
         );
       })}

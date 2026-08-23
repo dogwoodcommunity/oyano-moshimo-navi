@@ -17,10 +17,14 @@ const criticalCss = `
   .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
   .app-brand-logo{display:block;height:44px;width:44px}
   .navlinks{align-items:center;color:#6f7974;display:flex;flex-wrap:wrap;font-size:15px;font-weight:800;gap:10px}
-  .nav-link{align-items:center;border:1px solid transparent;border-radius:999px;color:#68736d;display:inline-flex;min-height:34px;padding:6px 11px}
-  .nav-link.is-active{background:#174f39;border-color:#174f39;box-shadow:0 7px 18px rgba(23,79,57,.18);color:#fffdf6}
-  .nav-crisis{background:#fff8f1;border-color:rgba(180,86,46,.2);color:#a55b33;padding-inline:13px}
+  .nav-link{align-items:center;border:1px solid transparent;border-radius:999px;color:#68736d;display:inline-flex;gap:7px;min-height:34px;padding:6px 11px;position:relative}
+  .nav-link.is-active{background:#0d4f34;border-color:#0d4f34;box-shadow:0 8px 20px rgba(13,79,52,.22);color:#fffdf6}
+  .nav-link.is-active::after{background:#0d4f34;border-radius:999px;bottom:-9px;content:"";height:4px;left:18px;position:absolute;right:18px}
+  .nav-current-label{background:rgba(255,253,246,.92);border-radius:999px;color:#0d4f34;font-size:11px;font-weight:900;line-height:1;padding:4px 7px}
+  .nav-crisis{background:#fffdf8;border-color:rgba(180,86,46,.28);color:#934f2f;padding-inline:13px}
   .nav-crisis.is-active{background:#b4562e;border-color:#b4562e;color:#fffdf6}
+  .nav-crisis.is-active::after{background:#b4562e}
+  .nav-crisis.is-active .nav-current-label{color:#934f2f}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}
   .shell:has(.entry-screen) .navlinks{display:none}
