@@ -7486,3 +7486,26 @@ Claude再検収で「スナップショットの意味論を1行文書化」「c
 
 - VercelのtokenやSupabaseのsecretを台帳・Git・チャットへ記録しない。
 - `review_exports/` はレビュー用の未追跡成果物であり、今回のcommitには含めない。
+
+## 2026-08-23 追記 207 — AI相談直通版をVercel本番へ反映
+
+Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジトリルートから本番デプロイを実行した。
+
+デプロイ結果:
+
+- 対象Vercel project: `oyano-moshimo-navi`
+- deployment ID: `dpl_GD1Ch1dDobk8qKPqSDRELfuALk5X`
+- production alias: `https://oyano-moshimo-navi.vercel.app`
+- Vercel上のmonorepo install、Next.js build、156ページの静的生成、serverless function生成がすべて成功。
+- `https://oyano-moshimo-navi.vercel.app/api/consult` を未ログインで確認し、次の本番応答を確認した。
+  - `signedIn: false`
+  - `plan: free`
+  - `trialAvailable: true`
+  - `canConsult: true`
+- 本番 `/consult` で、旧「先にクラウド控えを作る」「メール確認が必要」の強制導線が表示されないことを確認した。
+- 手帳が1件もない新規端末では、相談の前提となる対象者を作るため「先に1人分の手帳を作ってください」と案内する。手帳がある端末では、記録からAI相談へ直接進む。
+
+注意:
+
+- `apps/web` ディレクトリには別Vercel project `web` への古いlinkがあり、そこからdeployするとworkspace依存をnpmで解決できず失敗する。今後の本番deployは必ず**リポジトリルート**から `npx vercel --prod --yes` を実行する。
+- 次の確認は、実利用データが入っているiPhoneで「記録を保存 → この記録でAI相談する → 質問送信 → 回答まで自動スクロール」を1回通すこと。
