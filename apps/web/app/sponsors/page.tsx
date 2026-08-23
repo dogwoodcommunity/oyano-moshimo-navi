@@ -61,12 +61,13 @@ export default function SponsorsPage() {
             <p className="eyebrow">Regional data</p>
             <h2>会員数は、親御さんの居住地で集計します</h2>
           </div>
-          <span className="hint">公開は{threshold}家族以上</span>
+          <span className="hint">公開は{threshold}世帯以上</span>
         </div>
         <p>
           管理画面では全都道府県の生数字と前月比を確認します。公開側では、
-          有効会員{threshold}家族以上の県だけ「◯◯県:△△家族が利用中」と表示し、
+          有効世帯{threshold}世帯以上の県だけ「◯◯県:利用者△△人（□□世帯）が利用中」と表示し、
           閾値未満の県は「募集中」として扱います。
+          掲載料の段階判定は、表示人数ではなく世帯数を基準にします。
         </p>
       </section>
 

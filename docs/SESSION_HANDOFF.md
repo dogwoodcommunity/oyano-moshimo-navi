@@ -7155,3 +7155,40 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 - `/consult` で未ログインなら、灰色の「AI相談をはじめる」ではなく「先にクラウド控えを作る」が押せること。
 - 押すと `/home?cloud=1#cloud-backup` に移動し、保存状態パネルが開いて見えること。
 - メール確認後はAI相談の通常ボタンが表示されること。
+
+## 2026-08-23 追記 198 — 地域スポンサーの会員数表記を「利用者/世帯」併記へ統一
+
+ユーザーから、会員数の表示は全箇所で「利用者◯人（◯世帯）」に統一し、掲載料の段階判定は世帯数（有効会員=家族）基準のまま固定する方針が追加された。これを、admin / 営業CSV / 公開LP / docs / Supabase view へ反映した。
+
+修正:
+
+- `supabase/schema.sql` / `supabase/regional_sponsor_data.sql`
+  - `prefecture_active_family_counts` view に `active_users`、`previous_month_users`、`month_over_month_users` を追加。
+  - `active_families` は従来どおり世帯数として残し、公開閾値・掲載料判定の基準に使う。
+- `apps/web/app/api/admin/regional-sponsor-metrics/route.ts`
+  - APIレスポンスに利用者数と世帯数を両方返すようにした。
+  - 本番DBへSQL未適用の間も落ちないよう、view取得は `select("*")` にし、利用者数カラムが無い場合は世帯数へフォールバックする。
+- `apps/web/components/AdminRegionalSponsorMetrics.tsx`
+  - 管理画面のサマリ、一覧、CSVを `利用者X人（Y世帯）` 表記へ統一。
+  - CSVは利用者数・世帯数（料金判定基準）を別カラムでも出す。
+- `apps/web/app/sponsors/page.tsx`
+  - 公開LPの説明を `利用者△△人（□□世帯）` 表記へ変更。
+  - 「掲載料の段階判定は世帯数基準、人数は表示専用」と明記。
+- `apps/web/app/admin/page.tsx` / `apps/web/app/admin/regional-sponsors/page.tsx`
+  - 管理導線の説明を利用者数・世帯数の両方に合わせた。
+- `supabase/verify_setup.sql` / `supabase/verify_compact.sql`
+  - view の利用者数カラム検証を追加。
+- `docs/MONETIZATION.md`
+  - 会員数表記ルールと料金判定基準を正式仕様として追記。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `git diff --check` 成功。
+- `corepack pnpm --filter web run build` 成功。
+  - Supabase JS由来の Node.js 20以下非推奨警告は出るが、今回の修正起因ではない。
+
+次に必要:
+
+- commit / push / Vercel本番反映。
+- 本番DBで実際の利用者数カラムを返すには、Supabase SQL Editorで `supabase/regional_sponsor_data.sql` を再適用する必要がある。未適用中はAPI側フォールバックで利用者数=世帯数として表示される。

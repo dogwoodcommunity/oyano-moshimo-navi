@@ -50,7 +50,7 @@ export default function AdminPage() {
         <article className="admin-stat">
           <span>06</span>
           <strong>Regional metrics</strong>
-          <p>親の居住地ベースで、県×分野の会員数と営業用CSVを確認します。</p>
+          <p>親の居住地ベースで、県×分野の利用者数・世帯数と営業用CSVを確認します。</p>
         </article>
       </section>
       <AdminTokenControl />

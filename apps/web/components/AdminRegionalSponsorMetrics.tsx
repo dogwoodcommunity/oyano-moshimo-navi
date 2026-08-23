@@ -6,8 +6,11 @@ import { adminHeaders } from "@/lib/adminClientAuth";
 type MetricRow = {
   prefecture: string;
   category: string;
+  activeUsers: number;
   activeFamilies: number;
+  previousMonthUsers: number;
   previousMonthFamilies: number;
+  monthOverMonthUsers: number;
   monthOverMonthFamilies: number;
   publicStatus: "visible" | "hidden";
   partnerCompany?: string;
@@ -35,6 +38,14 @@ function publicStatusLabel(value: MetricRow["publicStatus"]) {
   return value === "visible" ? "公開可" : "非公開";
 }
 
+function signed(value: number) {
+  return `${value >= 0 ? "+" : ""}${value.toLocaleString("ja-JP")}`;
+}
+
+function usageLabel(users: number, families: number) {
+  return `利用者${users.toLocaleString("ja-JP")}人（${families.toLocaleString("ja-JP")}世帯）`;
+}
+
 export function AdminRegionalSponsorMetrics() {
   const [rows, setRows] = useState<MetricRow[] | null>(null);
   const [threshold, setThreshold] = useState(100);
@@ -58,20 +69,23 @@ export function AdminRegionalSponsorMetrics() {
   }, []);
 
   const summary = useMemo(() => {
-    const prefectures = new Map<string, number>();
+    const familyCounts = new Map<string, number>();
+    const userCounts = new Map<string, number>();
     let visiblePrefectures = 0;
     let activeSlots = 0;
 
     (rows ?? []).forEach((row) => {
-      prefectures.set(row.prefecture, Math.max(prefectures.get(row.prefecture) ?? 0, row.activeFamilies));
+      familyCounts.set(row.prefecture, Math.max(familyCounts.get(row.prefecture) ?? 0, row.activeFamilies));
+      userCounts.set(row.prefecture, Math.max(userCounts.get(row.prefecture) ?? 0, row.activeUsers));
       if (row.partnerStatus && row.partnerStatus !== "open") activeSlots += 1;
     });
-    prefectures.forEach((count) => {
+    familyCounts.forEach((count) => {
       if (count >= threshold) visiblePrefectures += 1;
     });
 
     return {
-      activeFamilies: Array.from(prefectures.values()).reduce((sum, count) => sum + count, 0),
+      activeUsers: Array.from(userCounts.values()).reduce((sum, count) => sum + count, 0),
+      activeFamilies: Array.from(familyCounts.values()).reduce((sum, count) => sum + count, 0),
       visiblePrefectures,
       activeSlots
     };
@@ -81,8 +95,10 @@ export function AdminRegionalSponsorMetrics() {
     const header = [
       "都道府県",
       "分野",
-      "有効会員数",
-      "前月比",
+      "会員数（利用者/世帯）",
+      "利用者数",
+      "世帯数（料金判定基準）",
+      "前月比（利用者/世帯）",
       "公開表示",
       "スポンサー",
       "ステータス",
@@ -95,8 +111,10 @@ export function AdminRegionalSponsorMetrics() {
       ...(rows ?? []).map((row) => [
         row.prefecture,
         row.category,
+        usageLabel(row.activeUsers, row.activeFamilies),
+        row.activeUsers,
         row.activeFamilies,
-        row.monthOverMonthFamilies,
+        `利用者${signed(row.monthOverMonthUsers)}人（世帯${signed(row.monthOverMonthFamilies)}）`,
         publicStatusLabel(row.publicStatus),
         row.partnerCompany ?? "",
         row.partnerStatus ?? "",
@@ -128,13 +146,13 @@ export function AdminRegionalSponsorMetrics() {
       <div className="admin-metrics-summary">
         <article>
           <span>有効会員</span>
-          <strong>{summary.activeFamilies.toLocaleString("ja-JP")}</strong>
-          <p>親の居住都道府県で集計</p>
+          <strong>{usageLabel(summary.activeUsers, summary.activeFamilies)}</strong>
+          <p>親の居住都道府県で集計。料金判定は世帯数基準</p>
         </article>
         <article>
           <span>公開対象県</span>
           <strong>{summary.visiblePrefectures}</strong>
-          <p>{threshold}家族以上だけ公開表示</p>
+          <p>{threshold}世帯以上だけ公開表示</p>
         </article>
         <article>
           <span>掲載中枠</span>
@@ -161,7 +179,7 @@ export function AdminRegionalSponsorMetrics() {
             <tr>
               <th>prefecture</th>
               <th>category</th>
-              <th>families</th>
+              <th>users / households</th>
               <th>public</th>
               <th>sponsor</th>
               <th>views</th>
@@ -175,9 +193,11 @@ export function AdminRegionalSponsorMetrics() {
                 <td>{row.prefecture}</td>
                 <td><span className="admin-chip success">{row.category}</span></td>
                 <td className="numeric">
-                  {row.activeFamilies.toLocaleString("ja-JP")}
+                  {usageLabel(row.activeUsers, row.activeFamilies)}
                   <br />
-                  <small>前月比 {row.monthOverMonthFamilies >= 0 ? "+" : ""}{row.monthOverMonthFamilies}</small>
+                  <small>
+                    前月比 利用者{signed(row.monthOverMonthUsers)}人（世帯{signed(row.monthOverMonthFamilies)}）
+                  </small>
                 </td>
                 <td>
                   <span className={row.publicStatus === "visible" ? "admin-public-visible" : "admin-public-hidden"}>

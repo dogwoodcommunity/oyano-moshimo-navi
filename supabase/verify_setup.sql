@@ -228,6 +228,39 @@ select
   (to_regclass('public.prefecture_active_family_counts') is not null) as ok;
 
 select
+  'view_column_exists' as check_type,
+  'prefecture_active_family_counts.active_users' as target,
+  exists(
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'prefecture_active_family_counts'
+      and column_name = 'active_users'
+  ) as ok
+union all
+select
+  'view_column_exists' as check_type,
+  'prefecture_active_family_counts.previous_month_users' as target,
+  exists(
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'prefecture_active_family_counts'
+      and column_name = 'previous_month_users'
+  ) as ok
+union all
+select
+  'view_column_exists' as check_type,
+  'prefecture_active_family_counts.month_over_month_users' as target,
+  exists(
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'prefecture_active_family_counts'
+      and column_name = 'month_over_month_users'
+  ) as ok;
+
+select
   'security_check' as check_type,
   'legacy_family_app_admin_absent' as target,
   not exists(

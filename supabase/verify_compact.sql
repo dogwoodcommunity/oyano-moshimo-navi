@@ -47,6 +47,9 @@ with checks as (
   union all select 'index_exists', 'idx_partners_region_category_status', to_regclass('public.idx_partners_region_category_status') is not null
   union all select 'index_exists', 'idx_timeline_events_person_date', to_regclass('public.idx_timeline_events_person_date') is not null
   union all select 'view_exists', 'prefecture_active_family_counts', to_regclass('public.prefecture_active_family_counts') is not null
+  union all select 'view_column_exists', 'prefecture_active_family_counts.active_users', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'prefecture_active_family_counts' and column_name = 'active_users')
+  union all select 'view_column_exists', 'prefecture_active_family_counts.previous_month_users', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'prefecture_active_family_counts' and column_name = 'previous_month_users')
+  union all select 'view_column_exists', 'prefecture_active_family_counts.month_over_month_users', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'prefecture_active_family_counts' and column_name = 'month_over_month_users')
   union all select 'function_exists', 'generate_tasks_for_status_event', to_regproc('public.generate_tasks_for_status_event') is not null
   union all select 'function_exists', 'schedule_notifications_for_task', to_regproc('public.schedule_notifications_for_task') is not null
   union all select 'function_exists', 'claim_due_scheduled_notifications', to_regproc('public.claim_due_scheduled_notifications') is not null

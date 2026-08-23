@@ -8,8 +8,11 @@ export const dynamic = "force-dynamic";
 export type AdminRegionalSponsorMetricRow = {
   prefecture: string;
   category: string;
+  activeUsers: number;
   activeFamilies: number;
+  previousMonthUsers: number;
   previousMonthFamilies: number;
+  monthOverMonthUsers: number;
   monthOverMonthFamilies: number;
   publicStatus: "visible" | "hidden";
   partnerCompany?: string;
@@ -21,8 +24,11 @@ export type AdminRegionalSponsorMetricRow = {
 
 type CountRow = {
   prefecture: string | null;
+  active_users?: number | null;
   active_families: number | null;
+  previous_month_users?: number | null;
   previous_month_families: number | null;
+  month_over_month_users?: number | null;
   month_over_month_families: number | null;
 };
 
@@ -62,12 +68,18 @@ function buildRows(
       const count = counts.get(prefecture);
       const partner = partners.get(`${prefecture}::${category}`);
       const activeFamilies = numeric(count?.active_families);
+      const previousMonthFamilies = numeric(count?.previous_month_families);
+      const activeUsers = numeric(count?.active_users ?? activeFamilies);
+      const previousMonthUsers = numeric(count?.previous_month_users ?? previousMonthFamilies);
 
       return {
         prefecture,
         category,
+        activeUsers,
         activeFamilies,
-        previousMonthFamilies: numeric(count?.previous_month_families),
+        previousMonthUsers,
+        previousMonthFamilies,
+        monthOverMonthUsers: numeric(count?.month_over_month_users ?? activeUsers - previousMonthUsers),
         monthOverMonthFamilies: numeric(count?.month_over_month_families),
         publicStatus: activeFamilies >= threshold ? "visible" : "hidden",
         partnerCompany: partner?.company_name ?? undefined,
@@ -96,7 +108,7 @@ export async function GET(request: Request) {
 
   const { data: countData, error: countError } = await supabase
     .from("prefecture_active_family_counts")
-    .select("prefecture, active_families, previous_month_families, month_over_month_families");
+    .select("*");
 
   if (countError) {
     return NextResponse.json({

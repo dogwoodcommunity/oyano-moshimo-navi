@@ -8,7 +8,7 @@ export default function AdminRegionalSponsorsPage() {
         <p className="pill">Regional sponsor metrics</p>
         <h1 className="page-title">県×分野のスポンサー営業データ</h1>
         <p className="lead">
-          親御さんの居住都道府県を基準に、有効会員数、公開可否、掲載枠の反応を確認します。
+          親御さんの居住都道府県を基準に、利用者数・世帯数、公開可否、掲載枠の反応を確認します。
           CSVで出力して営業資料に使えます。
         </p>
         <div className="actions">

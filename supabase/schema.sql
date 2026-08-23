@@ -407,20 +407,34 @@ eligible_families as (
     )
 ),
 current_counts as (
-  select prefecture, count(distinct family_id)::integer as active_families
-  from eligible_families
-  group by prefecture
+  select
+    ef.prefecture,
+    count(distinct ef.family_id)::integer as active_families,
+    count(distinct fm.user_id)::integer as active_users
+  from eligible_families ef
+  left join family_members fm on fm.family_id = ef.family_id
+  group by ef.prefecture
 ),
 previous_counts as (
-  select prefecture, count(distinct family_id)::integer as previous_month_families
-  from eligible_families
-  where created_at < date_trunc('month', now())
-  group by prefecture
+  select
+    ef.prefecture,
+    count(distinct ef.family_id)::integer as previous_month_families,
+    count(distinct fm.user_id) filter (
+      where fm.created_at < date_trunc('month', now())
+    )::integer as previous_month_users
+  from eligible_families ef
+  left join family_members fm on fm.family_id = ef.family_id
+  where ef.created_at < date_trunc('month', now())
+  group by ef.prefecture
 )
 select
   prefectures.prefecture,
+  coalesce(current_counts.active_users, 0) as active_users,
   coalesce(current_counts.active_families, 0) as active_families,
+  coalesce(previous_counts.previous_month_users, 0) as previous_month_users,
   coalesce(previous_counts.previous_month_families, 0) as previous_month_families,
+  coalesce(current_counts.active_users, 0) - coalesce(previous_counts.previous_month_users, 0)
+    as month_over_month_users,
   coalesce(current_counts.active_families, 0) - coalesce(previous_counts.previous_month_families, 0)
     as month_over_month_families
 from prefectures
