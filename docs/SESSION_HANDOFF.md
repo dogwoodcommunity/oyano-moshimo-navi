@@ -6848,3 +6848,35 @@ Claudeレビューでは「テスト前の大改修には反対」という意�
 
 - `corepack pnpm --filter web run build` は成功。Supabase JS 由来の Node.js 20以下非推奨警告が出るが、今回の修正起因ではない。
 - まだ本番デプロイ前。次は commit → push → Vercel prod deploy → `/home` の確認URLを案内する。
+
+## 2026-08-23 追記 189 — 記録からAI相談導線を本番反映
+
+追記188の修正をGitHubとVercel本番へ反映した。実機で「記録をもとにAIに相談する」系のボタンを押したとき、いきなり別画面へ飛ばすのではなく、家族ボード内に `AIに聞く内容` の確認カードを出すようにした。ユーザーには、このカードが出れば反応している状態で、そこから `本格AI相談チャットへ進む` を押すと `/consult` が対象手帳・質問文入りで開く、と案内する。
+
+実行:
+
+- `git commit -m "Clarify record to AI consultation flow"`
+- commit: `f0bcb87`
+- `git push origin main`
+- `npx vercel --prod --yes`
+
+結果:
+
+- Vercel deployment id: `dpl_6f1iomN2ZPLnC15b8wPWFWhpuTTR`
+- Production URL: `https://oyano-moshimo-navi-2i86ge03w-dogwoodcommunity1.vercel.app`
+- Alias: `https://oyano-moshimo-navi.vercel.app`
+- `/home` の新chunk: `/_next/static/chunks/app/home/page-75ca203ae00d244f.js`
+
+確認:
+
+- `corepack pnpm --filter web run typecheck`
+- `git diff --check`
+- `corepack pnpm --filter web run build`
+- `https://oyano-moshimo-navi.vercel.app/home?v=consult-inline-188` がHTTP 200。
+- 本番chunk内に `この内容でAI相談チャットに進めます` / `本格AI相談チャットへ進む` / `AIに聞く内容` が存在。
+
+ユーザーへの案内:
+
+- 確認URLは `https://oyano-moshimo-navi.vercel.app/home?v=consult-inline-188`。
+- 古い表示が残る場合は、上記の `?v=consult-inline-188` 付きURLで開き直す。
+- 期待挙動は、記録欄の `記録をもとにAI相談する` または各記録の `AI相談する` を押す → 画面内に相談カードが開く → `本格AI相談チャットへ進む` で相談画面が質問入りで開く、の順。
