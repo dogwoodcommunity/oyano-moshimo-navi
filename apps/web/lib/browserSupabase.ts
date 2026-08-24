@@ -68,6 +68,24 @@ export async function sendNotebookMagicLink(email: string): Promise<{ ok: boolea
   return sendMagicLink(email, "/home?cloud=1");
 }
 
+export async function sendAdminMagicLink(email: string): Promise<{ ok: boolean; error?: string }> {
+  const client = getBrowserSupabase();
+  if (!client || typeof window === "undefined") {
+    return { ok: false, error: "管理者認証の設定がまだありません。" };
+  }
+
+  const redirectTo = `${window.location.origin}/admin/monitor-feedback`;
+  const { error } = await client.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: redirectTo,
+      shouldCreateUser: false
+    }
+  });
+
+  return error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
+}
+
 /**
  * 確認メールから戻る先を指定できる版。招待の受け取りでは招待ページへ戻す必要がある。
  */
