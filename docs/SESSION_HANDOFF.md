@@ -8003,3 +8003,18 @@ AI相談チャットで質問例を押すと、日記から用意された相談
 - この実行環境ではlocalhostのlistenが `EPERM` で制限されるため、最終のPC・スマホ表示確認は
   Vercel本番反映後に実施する。
 - 未追跡の `review_exports/` はcommit対象外。
+
+本番反映・最終確認:
+
+- 実装commit: `4f3975f Redesign admin operations dashboard`。`origin/main` へpush済み。
+- Vercel本番deployment: `41AiASJ1S4yVxuSQYv72NWXagybv`。
+- deployment URL: `https://oyano-moshimo-navi-k1mrzd2a1-dogwoodcommunity1.vercel.app`。
+- `https://oyano-moshimo-navi.vercel.app` へalias済み。
+- 本番 `/admin` を1440x900で確認。通常サイトのヘッダー・フッターは表示されず、
+  管理専用ナビ、管理者メール認証、4分類の業務カードが正しい順序で表示された。
+- 本番 `/admin` を390x844で確認。document幅390px、横はみ出しなし。
+  ナビは横スクロール、カードと認証フォームは1列表示になった。
+- 本番 `/admin/monitor-feedback` を390x844で確認。横はみ出しなし。
+  未認証時は管理者メール確認が先に表示され、回答が見えない理由と次の操作が分かる。
+- 管理画面の入口: `https://oyano-moshimo-navi.vercel.app/admin`。
+- モニター回答: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`。
