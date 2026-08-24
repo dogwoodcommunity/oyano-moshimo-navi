@@ -176,13 +176,9 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .eq("user_id", user.id);
 
   if (membershipError) {
-    return {
-      response: jsonError(
-        "consult_unavailable",
-        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
-        503
-      )
-    };
+    // 家族プランの確認障害で、端末に残っている初回無料相談まで止めない。
+    console.error("[consult] failed to read family memberships", membershipError);
+    return readDeviceTrialAccess(request, user.id);
   }
 
   const familyIds = (memberships ?? [])
@@ -195,38 +191,58 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
 
   const { data: families, error: familyError } = await supabase
     .from("families")
-    .select("id, plan, consult_trial_used_at")
+    .select("id, plan")
     .in("id", familyIds);
 
   if (familyError) {
-    return {
-      response: jsonError(
-        "consult_unavailable",
-        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
-        503
-      )
-    };
+    console.error("[consult] failed to read family plans", familyError);
+    return readDeviceTrialAccess(request, user.id);
   }
 
-  const familyRows = (families ?? [])
+  const baseFamilyRows = (families ?? [])
     .map((family) => ({
       id: typeof family.id === "string" ? family.id : "",
-      plan: family.plan === "plus" ? "plus" as const : "free" as const,
-      trialUsedAt: typeof family.consult_trial_used_at === "string" ? family.consult_trial_used_at : null
+      plan: family.plan === "plus" ? "plus" as const : "free" as const
     }))
     .filter((family) => family.id);
+  const plusFamilyWithoutTrial = baseFamilyRows.find((family) => family.plan === "plus");
+
+  const { data: trialRows, error: trialError } = await supabase
+    .from("families")
+    .select("id, consult_trial_used_at")
+    .in("id", familyIds);
+
+  if (trialError) {
+    // 古いDBでおためし管理列が未適用でも、Plus判定と端末の初回無料相談は使える。
+    console.error("[consult] failed to read family trial status", trialError);
+    if (plusFamilyWithoutTrial) {
+      return {
+        userId: user.id,
+        familyId: plusFamilyWithoutTrial.id,
+        plan: "plus",
+        trialUsedAt: null,
+        trialAvailable: false,
+        canConsult: true,
+        mode: "plus"
+      };
+    }
+    return readDeviceTrialAccess(request, user.id);
+  }
+
+  const trialUsedAtByFamily = new Map((trialRows ?? []).map((family) => [
+    typeof family.id === "string" ? family.id : "",
+    typeof family.consult_trial_used_at === "string" ? family.consult_trial_used_at : null
+  ]));
+  const familyRows = baseFamilyRows.map((family) => ({
+    ...family,
+    trialUsedAt: trialUsedAtByFamily.get(family.id) ?? null
+  }));
   const plusFamily = familyRows.find((family) => family.plan === "plus");
   const trialFamily = familyRows.find((family) => !family.trialUsedAt);
   const primaryFamily = plusFamily ?? trialFamily ?? familyRows[0];
 
   if (!primaryFamily) {
-    return {
-      response: jsonError(
-        "consult_unavailable",
-        "長期相談の利用状況を確認できませんでした。時間をおいてお試しください。",
-        503
-      )
-    };
+    return readDeviceTrialAccess(request, user.id);
   }
 
   if (plusFamily) {

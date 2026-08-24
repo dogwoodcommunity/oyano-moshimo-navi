@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   CONSULT_MAX_ENTRIES,
@@ -130,6 +130,7 @@ export function ConsultPanel() {
   const [authChecked, setAuthChecked] = useState(false);
   const [consultAccess, setConsultAccess] = useState<ConsultAccess | null>(null);
   const [openedFromRecord, setOpenedFromRecord] = useState(false);
+  const questionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -218,6 +219,19 @@ export function ConsultPanel() {
     setErrorMessage("");
     setOpenedFromRecord(false);
     setPhase("idle");
+  }
+
+  function addSuggestedQuestion(item: string) {
+    setQuestion((current) => {
+      const existing = current.trim();
+      if (!existing) return item;
+      if (existing.includes(item)) return current;
+      return `${existing}\n\n${item}`.slice(0, CONSULT_MAX_QUESTION_LENGTH);
+    });
+    window.setTimeout(() => {
+      questionRef.current?.focus();
+      questionRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 40);
   }
 
   async function submit() {
@@ -462,9 +476,17 @@ export function ConsultPanel() {
                 ? "一度答えた後も、この画面で会話の続きを聞けます。"
                 : "最初の1回答は無料です。2回答目からFamily Plusで会話を続けられます。"}
             </p>
+            <p className="consult-suggestion-guide">下の質問例を押すと、入力欄の末尾に追加されます。いま入っている文章は消えません。</p>
             <div className="consult-suggestions">
               {suggestedQuestions.map((item) => (
-                <button key={item} onClick={() => setQuestion(item)} type="button">{item}</button>
+                <button
+                  aria-label={`${item}を相談内容に追加`}
+                  key={item}
+                  onClick={() => addSuggestedQuestion(item)}
+                  type="button"
+                >
+                  <span aria-hidden="true">＋</span>{item}
+                </button>
               ))}
             </div>
           </div>
@@ -581,13 +603,20 @@ export function ConsultPanel() {
             </div>
           ) : (
             <>
+              <p className="consult-edit-note" id="consult-edit-note">
+                {openedFromRecord
+                  ? "記録から相談文を用意しました。内容は自由に修正・削除して構いません。"
+                  : "文章は自由に修正できます。短い言葉でも大丈夫です。"}
+              </p>
               <textarea
+                aria-describedby="consult-edit-note"
                 maxLength={CONSULT_MAX_QUESTION_LENGTH}
                 onChange={(event) => setQuestion(event.target.value)}
                 placeholder={turns.length > 0
                   ? "例: さっき教えてもらった中で、まず病院には何と聞けばいいですか。"
                   : "例: 退院の話が出ています。何から確認すればいいですか。"}
                 rows={4}
+                ref={questionRef}
                 value={question}
               />
               <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>

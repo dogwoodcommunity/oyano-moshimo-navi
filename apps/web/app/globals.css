@@ -13051,6 +13051,16 @@ textarea {
   margin: 0;
 }
 
+.consult-chat-intro > .consult-suggestion-guide {
+  background: #f6f7f1;
+  border-left: 4px solid #2f6e82;
+  border-radius: 4px 12px 12px 4px;
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.7;
+  padding: 10px 12px;
+}
+
 .consult-thread,
 .consult-turn,
 .consult-message {
@@ -13156,6 +13166,17 @@ textarea {
   font-weight: 950;
   line-height: 1.5;
   margin: 0;
+}
+
+.consult-edit-note {
+  background: #edf5f1;
+  border-radius: 12px;
+  color: #185b42;
+  font-size: 17px;
+  font-weight: 850;
+  line-height: 1.7;
+  margin: 0;
+  padding: 10px 12px;
 }
 
 .consult-composer textarea {
@@ -13427,16 +13448,33 @@ textarea {
 }
 
 .consult-suggestions button {
+  align-items: center;
   background: #f5f8f3;
-  border: 0;
-  border-radius: 999px;
+  border: 1px solid rgba(47, 110, 130, 0.22);
+  border-radius: 14px;
   color: var(--tab-teal-ink);
   cursor: pointer;
+  display: flex;
   font-size: 18px;
   font-weight: 800;
+  gap: 8px;
   min-height: 50px;
   padding: 12px 16px;
   text-align: left;
+}
+
+.consult-suggestions button span {
+  align-items: center;
+  background: #2f6e82;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 20px;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  width: 28px;
 }
 
 .consult-form textarea {
