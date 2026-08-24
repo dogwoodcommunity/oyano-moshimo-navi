@@ -7809,3 +7809,35 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
   入れるならサーバーから状態を取る配線が要る。現在の主導線がWebなので後回しにした。
 - 本番反映は未実施。この作業環境からは `vercel.com` がネットワークポリシーで
   遮断されている（403）ため、利用者のパソコンから `npx vercel --prod` を実行する。
+## 2026-08-24 追記 214 — モニター専用入口・回答フォーム・回答管理を実装
+
+モニターへ通常のアプリURLを直接送り、古い手帳や複数の導線を見せて混乱させないよう、
+モニターテスト専用の入口と回答導線を新設した。
+
+公開導線:
+
+- モニター入口: `https://oyano-moshimo-navi.vercel.app/monitor`
+- 回答フォーム: `https://oyano-moshimo-navi.vercel.app/monitor/report`
+- 回答管理: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`
+
+実装内容:
+
+- `/monitor` に10〜15分のテスト手順、個人情報を入力しない注意、テスト開始、結果報告を集約。
+- 通常の「テストを始める」は既存のローカル手帳を消さず `/start?monitor=1` へ進む。
+- データを消して最初から試す操作は、確認ダイアログ付きの別ボタンに分離。
+- `/monitor/report` にGoogleフォーム相当の専用回答フォームを実装。年齢層、端末、完走状況、
+  迷った場所、記録の再発見、AI相談、7日後の利用意向、共有意向、980円/9,800円の支払意向、
+  自由記述を収集する。
+- 公開API `/api/monitor-feedback` はIP単位で1時間5回に制限し、入力を整形・長さ制限して
+  `audit_logs.action = monitor_feedback_submitted` へ保存する。
+- 管理API `/api/admin/monitor-feedback` と管理画面 `/admin/monitor-feedback` は既存の管理者認証を必須にした。
+- 管理画面では回答数、自力完走、7日後の利用意向、支払意向の集計と回答詳細を確認できる。
+- `/admin` にモニター回答管理への入口を追加。
+- `docs/FAMILY_TEST_PROTOCOL.md` と `docs/TEST_COOPERATION_REQUEST.md` を現行の記録ファースト導線へ更新。
+
+確認:
+
+- `apps/web`: `corepack pnpm --filter web exec tsc --noEmit` 成功。
+- `apps/web`: `corepack pnpm --filter web build` 成功。161ページを生成し、モニター・回答・管理の各ページ/APIを確認。
+- ローカルの `next start` は実行環境のポートbindがEPERMとなったため未実施。本番反映後に公開URLで確認する。
+- 未追跡の `review_exports/` は今回もcommit対象外。

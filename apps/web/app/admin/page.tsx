@@ -17,6 +17,7 @@ export default function AdminPage() {
           <Link className="secondary" href="/admin/sponsor-applications">sponsor slots</Link>
           <Link className="secondary" href="/admin/regional-sponsors">regional metrics</Link>
           <Link className="secondary" href="/admin/ai-usage">AI usage</Link>
+          <Link className="secondary" href="/admin/monitor-feedback">monitor feedback</Link>
           <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
           <Link className="secondary" href="/admin/providers">providers</Link>
           <Link className="secondary" href="/admin/env">env</Link>
@@ -57,6 +58,11 @@ export default function AdminPage() {
           <span>07</span>
           <strong>AI usage</strong>
           <p>相談の回答回数、Family Plusの上限到達、AI APIの概算原価を確認します。</p>
+        </article>
+        <article className="admin-stat">
+          <span>08</span>
+          <strong>Monitor feedback</strong>
+          <p>モニターの自力完走、迷った場所、7日後の利用意向、支払意向を確認します。</p>
         </article>
       </section>
       <AdminTokenControl />
