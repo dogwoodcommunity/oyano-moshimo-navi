@@ -7963,3 +7963,13 @@ AI相談チャットで質問例を押すと、日記から用意された相談
 - `apps/web`: `corepack pnpm --filter web build` 成功。162ページを生成。
 - `git diff --check` 成功。
 - 未追跡の `review_exports/` はcommit対象外。
+
+本番反映・最終確認:
+
+- 実装commit: `6fc4665 Fix consultation input and access fallback`。`origin/main` へpush済み。
+- Vercel本番deployment: `dpl_Gu6g7A6NQYxfHfPRHuGQVAk6BDMs`。
+- deployment URL: `https://oyano-moshimo-navi-ephyepfi2-dogwoodcommunity1.vercel.app`。
+- `https://oyano-moshimo-navi.vercel.app` へalias済み。
+- 本番の `GET /api/consult` はHTTP 200。
+  未ログイン状態で `trialAvailable: true`、`canConsult: true` を返し、旧503エラーが出ないことを確認。
+- 本番 `/consult` は表示でき、手帳未登録の新規端末では手帳作成案内へ安全に分岐することを確認。
