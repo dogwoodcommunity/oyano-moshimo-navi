@@ -20,18 +20,54 @@ export function MonitorStart() {
           <p className={styles.lead}>
             うまく使えたところだけでなく、迷った画面や「もう使わない」と感じた理由も大切な検証結果です。ダミーの内容で、率直に試してください。
           </p>
-          <span className={styles.time}>利用期間 7日間</span>
-          <span className={styles.time}>最終回答 約15分</span>
-          <span className={styles.time}>報酬 2,000円（検収後）</span>
+          <div className={styles.summary} aria-label="モニターテストの概要">
+            <div>
+              <span>利用期間</span>
+              <strong>7日間</strong>
+            </div>
+            <div>
+              <span>最終回答</span>
+              <strong>約15分</strong>
+            </div>
+            <div>
+              <span>報酬</span>
+              <strong>2,000円</strong>
+              <small>検収後にお支払い</small>
+            </div>
+          </div>
         </section>
 
         <section className={styles.card}>
           <h2>お願いすること</h2>
           <ol className={styles.steps}>
-            <li><span>1</span><strong>初日</strong> 親御さんの呼び名と関係だけを入れて、手帳を1冊作る</li>
-            <li><span>2</span><strong>7日間</strong> 「今日の記録」を合計3回以上書く</li>
-            <li><span>3</span><strong>期間中</strong> 確認リスト・書類の所在メモ・家族招待を各1回試す</li>
-            <li><span>4</span><strong>最終日</strong> 約15問へ回答し、気になった画面のスクショを3枚添付する</li>
+            <li>
+              <span>1</span>
+              <div className={styles.stepBody}>
+                <strong>初日</strong>
+                <p>親御さんの呼び名と関係だけを入れて、手帳を1冊作る</p>
+              </div>
+            </li>
+            <li>
+              <span>2</span>
+              <div className={styles.stepBody}>
+                <strong>7日間</strong>
+                <p>「今日の記録」を合計3回以上書く</p>
+              </div>
+            </li>
+            <li>
+              <span>3</span>
+              <div className={styles.stepBody}>
+                <strong>期間中</strong>
+                <p>確認リスト・書類の所在メモ・家族招待を各1回試す</p>
+              </div>
+            </li>
+            <li>
+              <span>4</span>
+              <div className={styles.stepBody}>
+                <strong>最終日</strong>
+                <p>約15問へ回答し、気になった画面のスクショを3枚添付する</p>
+              </div>
+            </li>
           </ol>
         </section>
 

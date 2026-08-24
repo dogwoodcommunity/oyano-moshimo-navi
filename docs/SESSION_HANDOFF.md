@@ -7901,3 +7901,30 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
 - 本番HTMLに「7日間」「検証結果」を確認。
 - 本番の未認証 `/api/admin/monitor-feedback` は401。
 - 本番のファイルなし `/api/monitor-feedback/screenshot` は400。
+
+## 2026-08-24 追記 216 — モニター入口のスマホ文字崩れを修正
+
+本番の `/monitor` をiPhone相当の390×844で再確認したところ、
+「お願いすること」の説明文が番号用の狭い列へ入り、1文字ずつ縦に並ぶ不具合を再現した。
+
+原因:
+
+- 1つの `li` 内に番号、見出し、説明テキストを直置きしていた。
+- CSS Gridでは番号と見出しの後にある匿名テキストも別のgrid itemとして扱われ、
+  折り返し後の説明が42pxの番号列へ配置されていた。
+
+修正:
+
+- 各手順を「番号」と `stepBody` の2列へ整理し、見出しと説明を同じ本文領域にまとめた。
+- 本文列へ `minmax(0, 1fr)` と `min-width: 0` を指定し、スマホ幅でも自然に折り返すようにした。
+- 「利用期間・最終回答・報酬」は横並びの短いラベルから概要グリッドへ変更。
+  390px以下では1項目ずつ縦に並べ、金額と支払条件を読み分けやすくした。
+
+確認:
+
+- `apps/web`: `corepack pnpm --filter web exec tsc --noEmit` 成功。
+- `apps/web`: `corepack pnpm --filter web build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- この実行環境ではlocalhostのlistenが `EPERM` で制限されるため、最終のスマホ表示確認は
+  Vercel本番反映後に390×844で実施する。
+- 未追跡の `review_exports/` はcommit対象外。
