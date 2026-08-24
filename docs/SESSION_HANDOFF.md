@@ -7838,6 +7838,13 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
 確認:
 
 - `apps/web`: `corepack pnpm --filter web exec tsc --noEmit` 成功。
+- `apps/mobile`: `corepack pnpm --filter mobile exec tsc --noEmit` 成功。
 - `apps/web`: `corepack pnpm --filter web build` 成功。161ページを生成し、モニター・回答・管理の各ページ/APIを確認。
-- ローカルの `next start` は実行環境のポートbindがEPERMとなったため未実施。本番反映後に公開URLで確認する。
+- 実装commit: `491151e Add monitor testing and feedback flow`。`origin/main` へpush済み。
+- Vercel本番deploy: `HNx1xtcUyUdgw4LZPcNjsP52zjhd`。
+  `https://oyano-moshimo-navi.vercel.app` へalias済み。
+- 本番疎通: `/monitor` は200、`/monitor/report` は200。
+  未認証の `/api/admin/monitor-feedback` は401となり、管理者保護を確認。
+- iPhone相当の390×844表示で `/monitor` と `/monitor/report` を目視確認。
+  文字、必須項目、ボタンに重なり・横はみ出しなし。
 - 未追跡の `review_exports/` は今回もcommit対象外。
