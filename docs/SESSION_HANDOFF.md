@@ -8058,5 +8058,15 @@ AI相談チャットで質問例を押すと、日記から用意された相談
 - `apps/mobile`: `corepack pnpm --filter mobile run typecheck` 成功。
 - `git diff --check` 成功。
 - この実行環境ではlocalhostのlistenが `EPERM` で制限されるため、最終の画面確認は
-  GitHub push後にVercel本番URLで行う。
+  Vercel本番URLで実施した。
 - 未追跡の `review_exports/` はcommit対象外。
+
+本番反映・最終確認:
+
+- 実装commit `84a0c6c` (`Add daily seven-day monitor reminders`) を `origin/main` へpush済み。
+- Vercel本番deployment: `dpl_5qBaEnmaDHq83gUKjAR7SrhqWS7a`。
+- deployment URL: `https://oyano-moshimo-navi-ipn0i9w8q-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- Vercel本番build成功。163ページを生成。
+- 本番 `/monitor` のHTMLで「1日1回」「合計7回」「7日間の終了後」
+  「手帳の先頭に出る案内」を確認し、新しいモニター条件が反映済み。
