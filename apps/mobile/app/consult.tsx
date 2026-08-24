@@ -314,7 +314,7 @@ function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
     return (
       <View style={styles.accessNotice}>
         <Text style={styles.accessTitle}>Family Plusで利用中</Text>
-        <Text style={styles.accessText}>1日5回まで、この人の記録をもとに相談できます。</Text>
+        <Text style={styles.accessText}>1日5回・月30回まで、この人の記録をもとに相談できます。</Text>
       </View>
     );
   }

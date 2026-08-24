@@ -35,7 +35,7 @@ export default function PlanTab() {
         <Feature text="2人目以降を管理する" />
         <Feature text="家族招待を増やす" />
         <Feature text="写真容量と履歴を増やす" />
-        <Feature text="AI相談を1日5回まで使う" />
+        <Feature text="AI相談を1日5回・月30回まで使う" />
         <Feature text="家族会議用PDFを出す" />
       </View>
 

@@ -34,7 +34,7 @@ const plans = [
       "2人目以降の対象者管理",
       "家族招待を増やす（手帳を作った人が管理）",
       "写真・PDF容量の拡張",
-      "長期相談を1日5回まで",
+      "長期相談を1日5回・月30回まで",
       "家族会議用PDFと月次まとめ"
     ],
     cta: "Plusの手続きへ",
@@ -102,7 +102,7 @@ export default function PlansPage() {
         <div className="plan-compare-row">
           <span>相談</span>
           <strong>無料: 初回1回</strong>
-          <strong>Plus: 1日5回</strong>
+          <strong>Plus: 1日5回・月30回</strong>
         </div>
         <div className="plan-compare-row">
           <span>出力</span>

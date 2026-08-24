@@ -9,13 +9,14 @@ export default function AdminPage() {
       <section className="admin-hero">
         <p className="pill">Operations</p>
         <h1 className="page-title">Admin overview</h1>
-        <p className="lead">Web診断case、発動サポートパック、環境設定を本番前に確認する管理入口です。</p>
+        <p className="lead">利用状況、AI原価、スポンサー枠、発動サポートパック、環境設定を確認する運営専用の管理入口です。</p>
         <div className="actions">
           <Link className="secondary" href="/admin/funnel">funnel</Link>
           <Link className="secondary" href="/admin/cases">cases</Link>
           <Link className="secondary" href="/admin/support-packs">support packs</Link>
           <Link className="secondary" href="/admin/sponsor-applications">sponsor slots</Link>
           <Link className="secondary" href="/admin/regional-sponsors">regional metrics</Link>
+          <Link className="secondary" href="/admin/ai-usage">AI usage</Link>
           <Link className="secondary" href="/admin/delete-requests">delete requests</Link>
           <Link className="secondary" href="/admin/providers">providers</Link>
           <Link className="secondary" href="/admin/env">env</Link>
@@ -51,6 +52,11 @@ export default function AdminPage() {
           <span>06</span>
           <strong>Regional metrics</strong>
           <p>親の居住地ベースで、県×分野の利用者数・世帯数と営業用CSVを確認します。</p>
+        </article>
+        <article className="admin-stat">
+          <span>07</span>
+          <strong>AI usage</strong>
+          <p>相談の回答回数、Family Plusの上限到達、AI APIの概算原価を確認します。</p>
         </article>
       </section>
       <AdminTokenControl />

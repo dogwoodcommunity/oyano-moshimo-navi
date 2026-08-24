@@ -7496,6 +7496,7 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 - 対象Vercel project: `oyano-moshimo-navi`
 - deployment ID: `dpl_GD1Ch1dDobk8qKPqSDRELfuALk5X`
 - production alias: `https://oyano-moshimo-navi.vercel.app`
+
 - Vercel上のmonorepo install、Next.js build、156ページの静的生成、serverless function生成がすべて成功。
 - `https://oyano-moshimo-navi.vercel.app/api/consult` を未ログインで確認し、次の本番応答を確認した。
   - `signedIn: false`
@@ -7647,3 +7648,49 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 
 - deployment ID: `dpl_2WBKFLooytnappBT7ymphqVybbfw`
 - production alias: `https://oyano-moshimo-navi.vercel.app`
+
+## 2026-08-24 追記 211 — AI相談の課金境界と運営用管理画面を確定
+
+利用者との協議で、無料相談を長く開放して原価を膨らませるのではなく、最初の価値体験だけ無料にし、会話の継続をFamily Plusの価値にする方針を確定した。
+
+料金境界:
+
+- 無料家族・未ログイン端末は、最初のAI回答1回だけ無料。
+- 2回答目からFamily Plusが必要。失敗・拒否・無効な回答では無料権を消費しない。
+- Family Plusは同じ会話を続けられるが、家族単位で1日5回・月30回まで。
+- 月間上限はサーバー側で `audit_logs.action = ai_consult_usage` の成功回答を数えて強制する。
+- 過去ログに `outcome` がない場合は成功として数え、仕様変更で回数が不意にリセットされないようにした。
+
+実装:
+
+- `apps/web/lib/consultLimits.ts`
+  - 日5回、月30回、サービス全体50回/日、最大1,600token、原価単価を一元管理。
+  - 日本時間の当日・当月開始時刻を算出する。
+- `apps/web/app/api/consult/route.ts`
+  - Plus家族の月30回上限を回答生成前に確認。
+  - AI APIを呼んだ結果を `success` / `refusal` / `invalid_response` で原価ログへ記録。
+  - 月上限到達時も手帳と記録は使えることを日本語で案内。
+- `apps/web/app/admin/ai-usage/page.tsx`
+  - 利用者画面と分離した運営専用ページを新設。
+  - 今月の成功回答数、今日のAPI呼び出し数、入出力token、概算USD/円原価、家族ごとの上限到達状況を表示。
+  - 相談本文は管理画面へ表示しない。
+- `apps/web/app/api/admin/ai-usage/route.ts`
+  - 既存のadmin認証を必須にし、当月の `ai_consult_usage` だけを集計。
+  - 家族IDは画面上で先頭8文字だけ表示。
+- 管理トークンの保存・削除時に `admin-auth-changed` を発火し、同じ画面の利用指標を自動で再取得する。
+- `/admin` にAI usageの入口を追加。スポンサー管理・地域指標も従来どおり同じ運営入口から確認できる。
+- Web/PWA・Expoの料金表示を「1日5回・月30回まで」に統一。
+- `CONSULT_FAMILY_MONTHLY_LIMIT` を環境変数資料へ追加。未設定時は30。
+
+確認:
+
+- `apps/web`: `corepack pnpm --filter web exec tsc --noEmit` 成功。
+- `apps/mobile`: `corepack pnpm --filter mobile exec tsc --noEmit` 成功。
+- `apps/web`: `corepack pnpm --filter web build` 成功。157ページを生成し、`/admin/ai-usage` と `/api/admin/ai-usage` を確認。
+- `git diff --check` 成功。
+
+注意:
+
+- 管理画面の円換算は運営判断用の概算として `$1 = ¥150` を使用する。実請求との照合はAnthropic側の請求明細で行う。
+- 原価ログ保存に失敗した場合も利用者への回答は止めない既存方針を維持している。管理画面でログ欠損が疑われる場合はサーバーログと請求明細を照合する。
+- 未追跡の `review_exports/` はレビュー成果物であり、今回もcommit対象外。

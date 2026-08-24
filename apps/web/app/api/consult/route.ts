@@ -9,6 +9,15 @@ import {
   type ConsultRequest
 } from "@oyano/shared";
 import { buildConsultPrompt, CONSULT_SYSTEM_PROMPT, CONSULT_TOOL } from "@/lib/consult";
+import {
+  CONSULT_INPUT_USD_PER_MILLION_TOKENS,
+  CONSULT_MAX_OUTPUT_TOKENS,
+  CONSULT_OUTPUT_USD_PER_MILLION_TOKENS,
+  CONSULT_PER_CLIENT_DAILY_LIMIT,
+  CONSULT_PER_FAMILY_MONTHLY_LIMIT,
+  CONSULT_SERVICE_DAILY_LIMIT,
+  currentJstMonthStart
+} from "@/lib/consultLimits";
 import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
@@ -16,25 +25,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
-
-function readBoundedNumber(value: string | undefined, fallback: number, min: number, max: number): number {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return fallback;
-  return Math.min(max, Math.max(min, Math.floor(parsed)));
-}
-
-/** 1回ごとに外部APIの費用が出るため、利用者ごとと、サービス全体の両方に1日の上限を置く。 */
-const PER_CLIENT_DAILY_LIMIT = readBoundedNumber(process.env.CONSULT_CLIENT_DAILY_LIMIT, 5, 1, 10);
-// 初期運用では想定外の請求を防ぐため全体50回/日。利用実績を見て環境変数から引き上げる。
-const SERVICE_DAILY_LIMIT = readBoundedNumber(process.env.CONSULT_DAILY_LIMIT, 50, 1, 5_000);
-/**
- * 構造化された日本語回答には5,000 tokenは過剰だった。
- * 品質を維持できる1,600を既定とし、環境変数でも2,000を超えないようにする。
- */
-const MAX_OUTPUT_TOKENS = readBoundedNumber(process.env.CONSULT_MAX_OUTPUT_TOKENS, 1_600, 800, 2_000);
-// Claude Sonnet 4.6 standard pricing as of 2026-08-23. MODELを変える時は同時に更新する。
-const INPUT_USD_PER_MILLION_TOKENS = 3;
-const OUTPUT_USD_PER_MILLION_TOKENS = 15;
 const ONE_DAY_SECONDS = 86_400;
 const DEVICE_TRIAL_COOKIE = "oyano_consult_trial_used_v01";
 
@@ -57,22 +47,24 @@ async function recordConsultUsage(params: {
   outputTokens: number;
   fastMode: boolean;
   historyTurns: number;
+  outcome: "success" | "refusal" | "invalid_response";
 }) {
   const speedMultiplier = params.fastMode ? 2 : 1;
   const estimatedCostUsd = speedMultiplier * (
-    params.inputTokens * INPUT_USD_PER_MILLION_TOKENS
-    + params.outputTokens * OUTPUT_USD_PER_MILLION_TOKENS
+    params.inputTokens * CONSULT_INPUT_USD_PER_MILLION_TOKENS
+    + params.outputTokens * CONSULT_OUTPUT_USD_PER_MILLION_TOKENS
   ) / 1_000_000;
   const metadata = {
     model: MODEL,
     input_tokens: params.inputTokens,
     output_tokens: params.outputTokens,
-    max_output_tokens: MAX_OUTPUT_TOKENS,
+    max_output_tokens: CONSULT_MAX_OUTPUT_TOKENS,
     history_turns: params.historyTurns,
     fast_mode: params.fastMode,
     estimated_cost_usd: Number(estimatedCostUsd.toFixed(6)),
     plan: params.access.plan,
-    mode: params.access.mode
+    mode: params.access.mode,
+    outcome: params.outcome
   };
 
   console.info("[consult] usage", metadata);
@@ -90,6 +82,35 @@ async function recordConsultUsage(params: {
     // 原価ログの失敗で、利用者への回答まで失敗させない。
     console.error("[consult] failed to record usage", error);
   }
+}
+
+async function readMonthlySuccessfulConsultCount(access: ConsultAccessState) {
+  if (access.plan !== "plus" || !access.familyId) return { count: 0 };
+
+  const supabase = getServerSupabase();
+  if (!supabase) return { error: "not_configured" as const };
+
+  const { data, error } = await supabase
+    .from("audit_logs")
+    .select("metadata")
+    .eq("action", "ai_consult_usage")
+    .eq("target_type", "family")
+    .eq("target_id", access.familyId)
+    .gte("created_at", currentJstMonthStart());
+
+  if (error) {
+    console.error("[consult] failed to read monthly usage", error);
+    return { error: "query_failed" as const };
+  }
+
+  const count = (data ?? []).filter((row) => {
+    const metadata = row.metadata && typeof row.metadata === "object"
+      ? row.metadata as Record<string, unknown>
+      : {};
+    return metadata.outcome === undefined || metadata.outcome === "success";
+  }).length;
+
+  return { count };
 }
 
 /**
@@ -311,18 +332,34 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const monthlyUsage = await readMonthlySuccessfulConsultCount(authorized);
+  if ("error" in monthlyUsage) {
+    return jsonError(
+      "consult_unavailable",
+      "今月の相談回数を確認できませんでした。時間をおいてお試しください。",
+      503
+    );
+  }
+  if (monthlyUsage.count >= CONSULT_PER_FAMILY_MONTHLY_LIMIT) {
+    return jsonError(
+      "consult_monthly_limit",
+      `今月のAI相談は${CONSULT_PER_FAMILY_MONTHLY_LIMIT}回まで使いました。来月1日に再開します。手帳と記録はそのまま使えます。`,
+      429
+    );
+  }
+
   // ここまでの検証を通ったものだけが枠を消費する。
   // 入力の不備で弾かれたリクエストで1日の枠を使い切ると、一度も相談できないまま終わる。
   const limited = await checkPublicRateLimit(request, {
     keyPrefix: "consult",
-    limit: PER_CLIENT_DAILY_LIMIT,
+    limit: CONSULT_PER_CLIENT_DAILY_LIMIT,
     windowSeconds: ONE_DAY_SECONDS
   });
   if (limited) return limited;
 
   const service = await checkServiceRateLimit({
     keyPrefix: "consult",
-    limit: SERVICE_DAILY_LIMIT,
+    limit: CONSULT_SERVICE_DAILY_LIMIT,
     windowSeconds: ONE_DAY_SECONDS
   });
   if (!service.allowed) {
@@ -340,7 +377,7 @@ export async function POST(request: NextRequest) {
   try {
     const params = {
       model: MODEL,
-      max_tokens: MAX_OUTPUT_TOKENS,
+      max_tokens: CONSULT_MAX_OUTPUT_TOKENS,
       // 本番で29〜49秒かかり、48秒台では空で返った。60秒の実行上限に近すぎる。
       // 出力の形はシステムプロンプトとstrict schemaで固定してあるので、
       // 推論の深さを下げても崩れにくいと判断してlowにする。
@@ -372,15 +409,15 @@ export async function POST(request: NextRequest) {
         })
       : await client.messages.create(params);
 
-    await recordConsultUsage({
-      access: authorized,
-      inputTokens: response.usage.input_tokens,
-      outputTokens: response.usage.output_tokens,
-      fastMode: usedFastMode,
-      historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0
-    });
-
     if (response.stop_reason === "refusal") {
+      await recordConsultUsage({
+        access: authorized,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        fastMode: usedFastMode,
+        historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+        outcome: "refusal"
+      });
       return NextResponse.json(
         {
           error: "consult_declined",
@@ -397,6 +434,14 @@ export async function POST(request: NextRequest) {
     const answer = normalizeConsultAnswer(toolUse?.input);
 
     if (!answer) {
+      await recordConsultUsage({
+        access: authorized,
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+        fastMode: usedFastMode,
+        historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+        outcome: "invalid_response"
+      });
       return NextResponse.json(
         {
           error: "consult_failed",
@@ -405,6 +450,15 @@ export async function POST(request: NextRequest) {
         { status: 502 }
       );
     }
+
+    await recordConsultUsage({
+      access: authorized,
+      inputTokens: response.usage.input_tokens,
+      outputTokens: response.usage.output_tokens,
+      fastMode: usedFastMode,
+      historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+      outcome: "success"
+    });
 
     if (authorized.trialFamilyId) {
       const supabase = getServerSupabase();

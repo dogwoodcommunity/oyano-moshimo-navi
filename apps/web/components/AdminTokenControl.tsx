@@ -33,6 +33,7 @@ export function AdminTokenControl() {
     }
 
     setSaved(true);
+    window.dispatchEvent(new Event("admin-auth-changed"));
     window.setTimeout(() => setSaved(false), 1800);
   }
 
@@ -80,6 +81,7 @@ export function AdminTokenControl() {
             window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
             window.localStorage.removeItem(ADMIN_STATIC_TOKEN_STORAGE_KEY);
             setSaved(true);
+            window.dispatchEvent(new Event("admin-auth-changed"));
             window.setTimeout(() => setSaved(false), 1800);
           }}
         >
@@ -88,7 +90,7 @@ export function AdminTokenControl() {
       </div>
       <p className="hint">
         Bearer tokenが保存されている場合はBearer認証を使い、未設定の場合だけ暫定fallbackを使います。
-        保存後にAdmin一覧やenv確認を再読み込みすると、Supabase本番データを確認できます。
+        保存すると、このページの管理指標を自動で読み直します。
         {saved ? " 保存しました。" : ""}
       </p>
     </section>

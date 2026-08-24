@@ -436,7 +436,7 @@ export function ConsultPanel() {
             {!authChecked
               ? "利用条件を確認中"
               : consultAccess?.plan === "plus"
-                ? "Family Plus・同じ会話を続けられます"
+                ? "Family Plus・1日5回／月30回まで"
                 : consultAccess?.trialAvailable
                   ? "最初の1回答は無料です"
                   : "無料回答は利用済みです"}
@@ -457,7 +457,11 @@ export function ConsultPanel() {
         {turns.length === 0 ? (
           <div className="consult-chat-intro">
             <h2>聞きたいことを1つ書いてください</h2>
-            <p>一度答えた後も、この画面で会話の続きを聞けます。</p>
+            <p>
+              {consultAccess?.plan === "plus"
+                ? "一度答えた後も、この画面で会話の続きを聞けます。"
+                : "最初の1回答は無料です。2回答目からFamily Plusで会話を続けられます。"}
+            </p>
             <div className="consult-suggestions">
               {suggestedQuestions.map((item) => (
                 <button key={item} onClick={() => setQuestion(item)} type="button">{item}</button>
