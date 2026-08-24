@@ -62,6 +62,10 @@
   padding: 10px 14px;
 }
 
+.time + .time {
+  margin-left: 8px;
+}
+
 .card h2,
 .formCard h2 {
   color: #17322a;
@@ -89,6 +93,10 @@
   grid-template-columns: 38px 1fr;
   line-height: 1.65;
   padding: 14px;
+}
+
+.steps li strong {
+  color: #176344;
 }
 
 .steps span {
@@ -181,7 +189,8 @@
 }
 
 .input,
-.textarea {
+.textarea,
+.fileInput {
   background: white;
   border: 2px solid #c6d3cc;
   border-radius: 12px;
@@ -194,6 +203,45 @@
 .textarea {
   min-height: 130px;
   resize: vertical;
+}
+
+.help {
+  color: #58665f;
+  font-size: 16px;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.fileInput {
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.fileInput::file-selector-button {
+  background: #eaf3ed;
+  border: 1px solid #8fb3a1;
+  border-radius: 9px;
+  color: #174f39;
+  cursor: pointer;
+  font-weight: 900;
+  margin-right: 12px;
+  padding: 10px 12px;
+}
+
+.fileStatus {
+  color: #176344;
+  font-size: 17px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.fileList {
+  color: #46564f;
+  font-size: 15px;
+  line-height: 1.6;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding-left: 22px;
 }
 
 .options {
@@ -264,5 +312,9 @@
   .primary,
   .secondary {
     font-size: 19px;
+  }
+
+  .time + .time {
+    margin-left: 0;
   }
 }

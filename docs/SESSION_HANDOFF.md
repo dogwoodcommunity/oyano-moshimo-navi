@@ -7848,3 +7848,45 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
 - iPhone相当の390×844表示で `/monitor` と `/monitor/report` を目視確認。
   文字、必須項目、ボタンに重なり・横はみ出しなし。
 - 未追跡の `review_exports/` は今回もcommit対象外。
+
+## 2026-08-24 追記 215 — 7日間の有償モニターテストへ更新
+
+短時間の操作確認だったモニター導線を、募集要項どおりの7日間テストへ更新した。
+モニターは個人情報を使わず、日常的に戻れるか、主要機能を自力で見つけられるか、
+有料価値を感じるかまで一連で回答できる。
+
+公開導線:
+
+- モニター入口: `https://oyano-moshimo-navi.vercel.app/monitor`
+- 最終報告フォーム: `https://oyano-moshimo-navi.vercel.app/monitor/report`
+- 回答管理: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`
+
+実装内容:
+
+- `/monitor` に「7日間」「最終回答約15分」「報酬2,000円（検収後）」を明示。
+- 初日に呼び名と関係だけで手帳を1冊作り、7日間で「今日の記録」を3回以上書く手順に変更。
+- 確認リスト、書類の所在メモ、家族招待を各1回試し、最終日に約15問とスクリーンショット3枚を提出する。
+- 実名、住所、病名、電話番号、暗証番号、マイナンバー等を入力・撮影しない注意を入口と回答画面の両方に表示。
+- `/monitor/report` は年代、介護対象との関係、現在の状況、端末、利用日数、記録回数、
+  主要3機能の実施状況、保存した記録の再発見、AI相談、迷った場所、継続・共有・支払意向、
+  自由記述を収集する7日間用フォームへ更新。
+- スクリーンショットはJPEG/PNG/WebPを3枚必須、1枚4MB以下に制限。
+- 公開API `/api/monitor-feedback/screenshot` を新設し、IP+User-Agentで1時間12回に制限。
+  画像はprivateの`home-photos`バケット内`monitor-feedback/YYYY-MM/`へ保存し、公開URLは持たない。
+- 回答本体にはStorage pathだけを保存し、管理APIが管理者認証後に1時間の署名URLを発行する。
+- 管理画面は総回答数、7日利用、記録3回以上、支払意向を集計し、各回答のスクリーンショット3枚も確認できる。
+- `docs/TEST_COOPERATION_REQUEST.md` に募集掲載文、採用後の送信文、短いLINE文を整備。
+- `docs/FAMILY_TEST_PROTOCOL.md` を7日間の検収条件と観察項目へ更新。
+
+確認:
+
+- `apps/web`: `corepack pnpm --filter web build` 成功。162ページを生成。
+- `apps/web`: `corepack pnpm --filter web exec tsc --noEmit` 成功。
+- `git diff --check` 成功。
+- ローカルの本番ビルドで `/monitor` と `/monitor/report` は200。
+- 未認証の `/api/admin/monitor-feedback` は401。
+- ファイルなしの `/api/monitor-feedback/screenshot` は400。
+- iPhone相当の390×844表示で入口と最終報告フォームを目視確認。
+  報酬・手順・必須項目・画像添付に重なりや横はみ出しなし。
+- 既存のprivate `home-photos` バケットを利用するため、今回の追加DB migrationは不要。
+- 未追跡の `review_exports/` はcommit対象外。

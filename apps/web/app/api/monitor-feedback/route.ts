@@ -5,8 +5,14 @@ import { getServerSupabase } from "@/lib/serverSupabase";
 const REQUIRED_TEXT_FIELDS = [
   "monitorCode",
   "ageGroup",
+  "careRelation",
+  "careSituation",
   "device",
-  "completion",
+  "usagePeriod",
+  "recordCount",
+  "checklistTried",
+  "documentMemoTried",
+  "familyInviteTried",
   "savedRecord",
   "aiConsult",
   "returnIntent",
@@ -32,8 +38,14 @@ export async function POST(request: Request) {
   const metadata: Record<string, unknown> = {
     monitorCode: safeText(body.monitorCode, 40),
     ageGroup: safeText(body.ageGroup, 20),
+    careRelation: safeText(body.careRelation, 40),
+    careSituation: safeText(body.careSituation, 80),
     device: safeText(body.device, 30),
-    completion: safeText(body.completion, 80),
+    usagePeriod: safeText(body.usagePeriod, 30),
+    recordCount: safeText(body.recordCount, 30),
+    checklistTried: safeText(body.checklistTried, 80),
+    documentMemoTried: safeText(body.documentMemoTried, 80),
+    familyInviteTried: safeText(body.familyInviteTried, 80),
     stoppedAt: Array.isArray(body.stoppedAt)
       ? body.stoppedAt.filter((value): value is string => typeof value === "string").slice(0, 12).map((value) => value.slice(0, 80))
       : [],
@@ -44,11 +56,21 @@ export async function POST(request: Request) {
     paymentIntent: safeText(body.paymentIntent, 80),
     confusingPoint: safeText(body.confusingPoint, 1000),
     usefulPoint: safeText(body.usefulPoint, 1000),
-    formVersion: "2026-08-24"
+    missingPoint: safeText(body.missingPoint, 1000),
+    screenshotPaths: Array.isArray(body.screenshotPaths)
+      ? body.screenshotPaths
+          .filter((value): value is string => typeof value === "string" && value.startsWith("monitor-feedback/"))
+          .slice(0, 3)
+          .map((value) => value.slice(0, 300))
+      : [],
+    formVersion: "2026-08-24-7day"
   };
 
   if (REQUIRED_TEXT_FIELDS.some((field) => !metadata[field])) {
     return NextResponse.json({ message: "必須項目を確認してください。" }, { status: 400 });
+  }
+  if (!Array.isArray(metadata.screenshotPaths) || metadata.screenshotPaths.length !== 3) {
+    return NextResponse.json({ message: "スクリーンショットを3枚添付してください。" }, { status: 400 });
   }
 
   const supabase = getServerSupabase();

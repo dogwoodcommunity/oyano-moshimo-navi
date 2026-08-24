@@ -19,5 +19,18 @@ export async function GET(request: Request) {
     .limit(500);
 
   if (error) return NextResponse.json({ message: error.message }, { status: 503 });
-  return NextResponse.json({ responses: data ?? [] });
+
+  const responses = await Promise.all((data ?? []).map(async (row) => {
+    const metadata = (row.metadata ?? {}) as Record<string, unknown>;
+    const paths = Array.isArray(metadata.screenshotPaths)
+      ? metadata.screenshotPaths.filter((value): value is string => typeof value === "string" && value.startsWith("monitor-feedback/"))
+      : [];
+    const screenshotUrls = (await Promise.all(paths.map(async (path) => {
+      const { data: signed } = await supabase.storage.from("home-photos").createSignedUrl(path, 60 * 60);
+      return signed?.signedUrl ?? null;
+    }))).filter((value): value is string => Boolean(value));
+    return { ...row, screenshotUrls };
+  }));
+
+  return NextResponse.json({ responses });
 }
