@@ -7890,3 +7890,14 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
   報酬・手順・必須項目・画像添付に重なりや横はみ出しなし。
 - 既存のprivate `home-photos` バケットを利用するため、今回の追加DB migrationは不要。
 - 未追跡の `review_exports/` はcommit対象外。
+
+本番反映:
+
+- 実装commit: `ad99932 Add seven-day monitor testing flow`。`origin/main` へpush済み。
+- Vercel本番deployment: `dpl_A2puxaA4MYwN2vNpYoKKj1hrkjkt`。
+- deployment URL: `https://oyano-moshimo-navi-akvg86ks7-dogwoodcommunity1.vercel.app`。
+- `https://oyano-moshimo-navi.vercel.app` へalias済み。
+- 本番の `/monitor` と `/monitor/report` は200。
+- 本番HTMLに「7日間」「検証結果」を確認。
+- 本番の未認証 `/api/admin/monitor-feedback` は401。
+- 本番のファイルなし `/api/monitor-feedback/screenshot` は400。
