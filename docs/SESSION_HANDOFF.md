@@ -8018,3 +8018,16 @@ AI相談チャットで質問例を押すと、日記から用意された相談
   未認証時は管理者メール確認が先に表示され、回答が見えない理由と次の操作が分かる。
 - 管理画面の入口: `https://oyano-moshimo-navi.vercel.app/admin`。
 - モニター回答: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`。
+
+## 2026-08-25 追記 219 — 本番の運営管理者メールを登録
+
+本番Supabaseで、通常運用に使う運営管理者メールを作成し、管理者台帳へ登録した。
+
+- Supabase Authenticationから `info@bee-ch.co.jp` へ招待メールを送信済み。
+- Auth user ID: `a5599e10-2124-4ebf-9037-e2fc7f87863e`。
+- `profiles` 行を冪等に作成・更新した上で、`app_admins` に `運営管理者` として登録。
+- 確認SQLで `info@bee-ch.co.jp`、上記user ID、`運営管理者` の1行が返ることを確認。
+- 管理者本人は最初にSupabaseの招待メールを1回開いて本人確認を完了する。
+- 以後は `https://oyano-moshimo-navi.vercel.app/admin` で同じメールアドレスを入力し、
+  届いた管理者ログインリンクから入る。`ADMIN_ACCESS_TOKEN` は緊急時のfallbackのみ。
+- パスワードやSMTP/APIキーなどの秘密情報は台帳へ記録していない。
