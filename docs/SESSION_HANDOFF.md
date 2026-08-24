@@ -7694,3 +7694,11 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 - 管理画面の円換算は運営判断用の概算として `$1 = ¥150` を使用する。実請求との照合はAnthropic側の請求明細で行う。
 - 原価ログ保存に失敗した場合も利用者への回答は止めない既存方針を維持している。管理画面でログ欠損が疑われる場合はサーバーログと請求明細を照合する。
 - 未追跡の `review_exports/` はレビュー成果物であり、今回もcommit対象外。
+
+本番反映:
+
+- Vercel CLIを `dogwoodcommunity` で再認証し、リポジトリルートから本番deployを実行。
+- deployment ID: `dpl_AhLFVoVMEayM3CCrnu4JbwELvHc3`
+- production alias: `https://oyano-moshimo-navi.vercel.app`
+- 本番 `/admin/ai-usage` はHTTP 200、見出し「AI相談の利用回数と原価」の反映を確認。
+- 本番 `/api/admin/ai-usage` は管理認証なしでHTTP 401を確認。運営データは未認証では取得できない。
