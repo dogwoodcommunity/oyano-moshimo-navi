@@ -5,6 +5,7 @@ import Link from "next/link";
 import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
 import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
+import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { PREFECTURES } from "@/lib/prefectures";
 import {
   addCaseTask,
@@ -197,13 +198,11 @@ function progressLabel(caseRecord: CaseRecord) {
 }
 
 function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return japanDateInputValue();
 }
 
 function dateInputAfterDays(days: number) {
-  const date = new Date(`${todayInputValue()}T00:00:00`);
-  date.setDate(date.getDate() + days);
-  return date.toISOString().slice(0, 10);
+  return japanDateInputAfterDays(days);
 }
 
 function formatDate(dateString?: string) {

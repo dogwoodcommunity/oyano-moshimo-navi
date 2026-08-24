@@ -1,6 +1,7 @@
 "use client";
 
 import { trackFunnel } from "@/lib/funnel";
+import { japanDateInputValue } from "@/lib/date";
 import {
   buildDiagnosisResult,
   canCreateNotebook,
@@ -440,7 +441,7 @@ export function addCaseTask(caseId: string, task: Partial<EditableTask> & Pick<E
 }
 
 function todayDate() {
-  return new Date().toISOString().slice(0, 10);
+  return japanDateInputValue();
 }
 
 export function diaryAdvice(entry: Pick<DiaryEntry, "body" | "mood">): string[] {

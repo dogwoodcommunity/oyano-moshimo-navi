@@ -7,6 +7,7 @@ import {
   type ParentStatus
 } from "@oyano/shared";
 import { getServerSupabase } from "@/lib/serverSupabase";
+import { japanDateInputValue } from "@/lib/date";
 
 type AnyRecord = Record<string, any>;
 type ServerSupabase = NonNullable<ReturnType<typeof getServerSupabase>>;
@@ -99,7 +100,7 @@ function normalizeStatus(value: unknown): ParentStatus {
   return typeof value === "string" && parentStatuses.has(value as ParentStatus) ? value as ParentStatus : "preparing";
 }
 
-function safeDate(value: unknown, fallback = new Date().toISOString().slice(0, 10)) {
+function safeDate(value: unknown, fallback = japanDateInputValue()) {
   return typeof value === "string" && value.length >= 8 ? value.slice(0, 10) : fallback;
 }
 

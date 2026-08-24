@@ -14,6 +14,7 @@ import {
   type ConsultAnswer
 } from "@oyano/shared";
 import { getBrowserSupabase } from "@/lib/browserSupabase";
+import { japanDateInputValue } from "@/lib/date";
 import { trackFunnel } from "@/lib/funnel";
 import {
   addDiaryEntry,
@@ -74,7 +75,7 @@ function writeConsent(value: boolean) {
 }
 
 function todayInputValue() {
-  return new Date().toISOString().slice(0, 10);
+  return japanDateInputValue();
 }
 
 function birthDateToAgeBand(birthDate?: string) {
