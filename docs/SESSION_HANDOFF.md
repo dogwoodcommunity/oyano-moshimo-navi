@@ -7928,3 +7928,13 @@ localStorage を読むため、判定はマウント後に行う（サーバー�
 - この実行環境ではlocalhostのlistenが `EPERM` で制限されるため、最終のスマホ表示確認は
   Vercel本番反映後に390×844で実施する。
 - 未追跡の `review_exports/` はcommit対象外。
+
+本番反映・最終確認:
+
+- 実装commit: `98b0753 Fix monitor mobile text layout`。`origin/main` へpush済み。
+- Vercel本番deployment: `FVGkwTfB35dBZFJwvqXMnSXHXQFo`。
+- deployment URL: `https://oyano-moshimo-navi-i8mzsmjne-dogwoodcommunity1.vercel.app`。
+- `https://oyano-moshimo-navi.vercel.app` へalias済み。
+- 本番 `/monitor` を390×844で再確認。document幅390px、横はみ出しなし。
+- 4件の手順本文幅はいずれも232pxで、1文字ずつ縦に並ぶ不具合が解消した。
+- 手順カードの高さは120〜151pxに収まり、見出し・説明・番号が読みやすい順序で表示された。
