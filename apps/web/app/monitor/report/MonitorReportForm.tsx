@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { ChangeEvent, FormEvent, useState } from "react";
-import { markMonitorReportSubmitted } from "@/lib/monitorSession";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import {
+  markMonitorReportSubmitted,
+  monitorProgress,
+  readMonitorSession
+} from "@/lib/monitorSession";
 import styles from "../monitor.module.css";
 
 const STOP_OPTIONS = [
@@ -20,12 +24,40 @@ const STOP_OPTIONS = [
 
 const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
 
+type ReportGate =
+  | { status: "checking" }
+  | { status: "not-started" }
+  | { status: "active"; dayNumber: number; daysRemaining: number }
+  | { status: "due" }
+  | { status: "submitted" };
+
 export function MonitorReportForm() {
+  const [gate, setGate] = useState<ReportGate>({ status: "checking" });
   const [stops, setStops] = useState<string[]>([]);
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [completed, setCompleted] = useState(false);
+
+  useEffect(() => {
+    const session = readMonitorSession();
+    if (!session) {
+      setGate({ status: "not-started" });
+      return;
+    }
+    if (session.reportSubmittedAt) {
+      setGate({ status: "submitted" });
+      return;
+    }
+    const progress = monitorProgress(session);
+    setGate(progress.isReportDue
+      ? { status: "due" }
+      : {
+          status: "active",
+          dayNumber: progress.dayNumber,
+          daysRemaining: progress.daysRemaining
+        });
+  }, []);
 
   function toggleStop(value: string) {
     setStops((current) => {
@@ -118,7 +150,7 @@ export function MonitorReportForm() {
     }
   }
 
-  if (completed) {
+  if (completed || gate.status === "submitted") {
     return (
       <main className={styles.page}>
         <div className={styles.wrap}>
@@ -128,6 +160,54 @@ export function MonitorReportForm() {
             <p>いただいた回答とスクリーンショットは、迷わず使える家族の手帳へ改善するためにだけ利用します。</p>
             <div className={styles.actions} style={{ marginTop: 24 }}>
               <Link className={styles.secondary} href="/home">家族の手帳へ戻る</Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (gate.status === "checking") {
+    return (
+      <main className={styles.page}>
+        <div className={styles.wrap}>
+          <section className={styles.completeCard}>
+            <p className={styles.eyebrow}>確認中</p>
+            <h1>7日間の進み具合を確認しています。</h1>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (gate.status === "not-started") {
+    return (
+      <main className={styles.page}>
+        <div className={styles.wrap}>
+          <section className={styles.completeCard}>
+            <p className={styles.eyebrow}>モニターテスト</p>
+            <h1>この端末では、テスト開始を確認できませんでした。</h1>
+            <p>最終報告は、同じスマホで7日間のテストを始めた方だけ回答できます。</p>
+            <div className={styles.actions} style={{ marginTop: 24 }}>
+              <Link className={styles.primary} href="/monitor">テストの説明を見る</Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (gate.status === "active") {
+    return (
+      <main className={styles.page}>
+        <div className={styles.wrap}>
+          <section className={styles.completeCard}>
+            <p className={styles.eyebrow}>7日間モニター {gate.dayNumber}日目</p>
+            <h1>最終報告は、7日間が終わると表示されます。</h1>
+            <p>あと{gate.daysRemaining}日です。今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
+            <div className={styles.actions} style={{ marginTop: 24 }}>
+              <Link className={styles.primary} href="/home#today-diary">今日の記録を書く</Link>
+              <Link className={styles.secondary} href="/home">手帳へ戻る</Link>
             </div>
           </section>
         </div>

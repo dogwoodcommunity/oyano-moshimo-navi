@@ -44,7 +44,7 @@ export function MonitorStart() {
               <span>1</span>
               <div className={styles.stepBody}>
                 <strong>初日</strong>
-                <p>親御さんの呼び名と関係だけを入れて、手帳を1冊作る</p>
+                <p>親御さんの呼び名・関係・都道府県を入れて、手帳を1冊作る</p>
               </div>
             </li>
             <li>
@@ -58,7 +58,7 @@ export function MonitorStart() {
               <span>3</span>
               <div className={styles.stepBody}>
                 <strong>期間中</strong>
-                <p>確認リスト・書類の所在メモ・家族招待を各1回試す</p>
+                <p>確認リスト・書類の所在メモ・家族招待・AI相談を各1回試す</p>
               </div>
             </li>
             <li>
@@ -78,9 +78,6 @@ export function MonitorStart() {
         <div className={styles.actions}>
           <Link className={styles.primary} href="/start?monitor=1">
             7日間のテストを始める
-          </Link>
-          <Link className={styles.secondary} href="/monitor/report">
-            最終日の結果を報告する
           </Link>
           <button className={styles.dangerLink} type="button" onClick={restart}>
             以前のテストデータを消して最初からやり直す
