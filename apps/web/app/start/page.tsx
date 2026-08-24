@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
 import { PREFECTURES } from "@/lib/prefectures";
+import { startMonitorSession } from "@/lib/monitorSession";
 import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData, type PersonProfile } from "@/lib/store";
 
 type TocItem = {
@@ -84,13 +85,19 @@ export default function StartPage() {
   // 11個の選択肢を読んで押してから断られるのは、いちばん徒労になる。
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("fresh") === "1" || params.get("reset") === "1") {
+    const isReset = params.get("reset") === "1";
+    const isMonitor = params.get("monitor") === "1";
+    if (params.get("fresh") === "1" || isReset) {
       resetLocalNotebookData();
       params.delete("fresh");
       params.delete("reset");
-      const nextQuery = params.toString();
-      window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
     }
+    if (isMonitor) {
+      startMonitorSession({ restart: isReset });
+      params.delete("monitor");
+    }
+    const nextQuery = params.toString();
+    window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
 
     const quota = notebookQuota();
     if (!quota.canCreate) {

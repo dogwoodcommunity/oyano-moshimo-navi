@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useState } from "react";
+import { markMonitorReportSubmitted } from "@/lib/monitorSession";
 import styles from "../monitor.module.css";
 
 const STOP_OPTIONS = [
@@ -107,6 +108,7 @@ export function MonitorReportForm() {
       });
       const body = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(body.message ?? "回答を送信できませんでした。");
+      markMonitorReportSubmitted();
       setCompleted(true);
       window.scrollTo({ top: 0, behavior: "smooth" });
     } catch (submitError) {
@@ -125,7 +127,7 @@ export function MonitorReportForm() {
             <h1>7日間のご協力、ありがとうございました。</h1>
             <p>いただいた回答とスクリーンショットは、迷わず使える家族の手帳へ改善するためにだけ利用します。</p>
             <div className={styles.actions} style={{ marginTop: 24 }}>
-              <Link className={styles.secondary} href="/monitor">モニター案内へ戻る</Link>
+              <Link className={styles.secondary} href="/home">家族の手帳へ戻る</Link>
             </div>
           </section>
         </div>
@@ -153,7 +155,7 @@ export function MonitorReportForm() {
           <RadioField name="careSituation" title="現在の状況に近いもの" options={["要介護・要支援の家族がいる", "介護が始まりそう・備えている", "過去に介護を経験した", "回答しない"]} />
           <RadioField name="device" title="主に使った端末" options={["iPhone", "Android", "パソコン", "その他"]} />
           <RadioField name="usagePeriod" title="何日間、画面を開きましたか？" options={["7日間", "4〜6日", "2〜3日", "初日だけ"]} />
-          <RadioField name="recordCount" title="「今日の記録」を何回保存しましたか？" options={["3回以上", "2回", "1回", "保存できなかった"]} />
+          <RadioField name="recordCount" title="7日間で「今日の記録」を何日保存しましたか？" options={["7日すべて", "5〜6日", "2〜4日", "1日", "保存できなかった"]} />
           <RadioField name="checklistTried" title="確認リストを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった"]} />
           <RadioField name="documentMemoTried" title="書類の所在メモを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった"]} />
           <RadioField name="familyInviteTried" title="家族招待を試しましたか？" options={["試して使えた", "試したが完了できなかった", "見つけられなかった"]} />

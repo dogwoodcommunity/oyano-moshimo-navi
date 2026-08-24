@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
+import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { PREFECTURES } from "@/lib/prefectures";
 import {
@@ -2203,6 +2204,11 @@ export default function FamilyBoardPage() {
           </nav>
         </section>
       ) : null}
+
+      <MonitorTestReminder
+        hasNotebook={Boolean(activeCase)}
+        hasRecordToday={activeEntries.some((entry) => entry.date === todayInputValue())}
+      />
 
       {!loaded ? (
         <section className="nb-card board-empty">

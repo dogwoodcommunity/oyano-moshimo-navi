@@ -51,7 +51,7 @@ export function MonitorStart() {
               <span>2</span>
               <div className={styles.stepBody}>
                 <strong>7日間</strong>
-                <p>「今日の記録」を合計3回以上書く</p>
+                <p>1日1回、「今日の記録」を毎日書く（合計7回）</p>
               </div>
             </li>
             <li>
@@ -64,8 +64,8 @@ export function MonitorStart() {
             <li>
               <span>4</span>
               <div className={styles.stepBody}>
-                <strong>最終日</strong>
-                <p>約15問へ回答し、気になった画面のスクショを3枚添付する</p>
+                <strong>7日間の終了後</strong>
+                <p>手帳の先頭に出る案内から約15問へ回答し、気になった画面のスクショを3枚添付する</p>
               </div>
             </li>
           </ol>

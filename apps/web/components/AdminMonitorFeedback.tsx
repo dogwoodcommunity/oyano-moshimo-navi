@@ -53,7 +53,7 @@ export function AdminMonitorFeedback() {
   const summary = useMemo(() => ({
     total: rows.length,
     sevenDays: rows.filter((row) => value(row.metadata ?? {}, "usagePeriod") === "7日間").length,
-    threeRecords: rows.filter((row) => value(row.metadata ?? {}, "recordCount") === "3回以上").length,
+    dailyRecords: rows.filter((row) => value(row.metadata ?? {}, "recordCount") === "7日すべて").length,
     pays: rows.filter((row) => ["月980円なら利用したい", "年9,800円なら利用したい"]
       .includes(value(row.metadata ?? {}, "paymentIntent"))).length
   }), [rows]);
@@ -66,7 +66,7 @@ export function AdminMonitorFeedback() {
       <div className="admin-metrics-summary">
         <article><span>届いた回答</span><strong>{summary.total}<small>件</small></strong><p>送信済みの回答数</p></article>
         <article><span>7日間利用</span><strong>{summary.sevenDays}<small>人</small></strong><p>7日間アプリを開いた</p></article>
-        <article><span>記録3回以上</span><strong>{summary.threeRecords}<small>人</small></strong><p>記録を3回以上試した</p></article>
+        <article><span>毎日記録</span><strong>{summary.dailyRecords}<small>人</small></strong><p>7日すべて記録した</p></article>
         <article><span>支払意向あり</span><strong>{summary.pays}<small>人</small></strong><p>月額か年額を選んだ</p></article>
       </div>
 
