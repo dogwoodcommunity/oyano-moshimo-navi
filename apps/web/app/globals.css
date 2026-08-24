@@ -14306,6 +14306,24 @@ textarea {
   margin-top: 18px;
 }
 
+/* 「勝手に解約しない」の一文。約束なので、本文と同じ大きさで読ませる。 */
+.plan-complete-note {
+  color: var(--ink-faint);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.7;
+  margin: 0;
+}
+
+/* 記録欄の下の補足。中高年向けに本文と同じ16pxを守る。 */
+.diary-voice-hint {
+  color: var(--ink-faint);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.6;
+  margin: 6px 0 0;
+}
+
 .plan-trust-panel h2,
 .plan-compare h2,
 .plan-complete-notice h2 {

@@ -2818,6 +2818,9 @@ export default function FamilyBoardPage() {
                 value={activeForm.body}
                 onChange={(event) => updateForm(activeCase.id, { body: event.target.value })}
               />
+              {/* 入力の壁はタップより先に「打つこと」にある。OSの音声入力で足りるので、
+                  専用の録音機能を作る前に、使える手段があることだけ伝えておく。 */}
+              <p className="diary-voice-hint">キーボードのマイクボタンで、話すだけでも書けます。</p>
               <div className="record-tool-row">
                 <div className="mood-segment" aria-label="今日の変化">
                   {([
