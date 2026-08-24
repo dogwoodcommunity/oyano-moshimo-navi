@@ -7702,3 +7702,23 @@ Vercel CLIへ `dogwoodcommunity` として再認証できたため、リポジ�
 - production alias: `https://oyano-moshimo-navi.vercel.app`
 - 本番 `/admin/ai-usage` はHTTP 200、見出し「AI相談の利用回数と原価」の反映を確認。
 - 本番 `/api/admin/ai-usage` は管理認証なしでHTTP 401を確認。運営データは未認証では取得できない。
+
+## 2026-08-24 追記 212 — Claude向けの専用引き継ぎ文書を作成
+
+別セッションのClaudeで安全に開発を継続できるよう、現在のコード・商品判断・料金境界・安全境界・
+管理画面・残課題を1本に整理した `docs/CLAUDE_HANDOFF_2026-08-24.md` を新設した。
+
+引き継ぎ文書に固定した主な内容:
+
+- Web/PWAが現在の主導線で、Expoは将来利用に備えて削除せず保管する。
+- 記録→保存確認→AI相談→相談回答を手帳へ保存、を中心導線にする。
+- 無料はAI成功回答1回、2回答目からFamily Plus。Plusは家族単位で1日5回・月30回。
+- Family Plusは月980円・年9,800円、手帳2人目と追加家族招待を主な課金境界にする。
+- 利用者用PWAと運営管理画面を分離し、AI原価管理は `/admin/ai-usage` で行う。
+- 記録・急なとき・AI回答にスポンサーを混ぜず、AIコードからpartner/sponsorを参照しない。
+- `review_exports/` は未追跡のレビュー成果物なので、今後もcommitしない。
+- 本番Supabase SQL/cron、consult実弾、Stripe E2E、メール通知は外部確認・残作業として明示した。
+- 作業完了時はWeb/Mobileのtypecheck、Web build、`git diff --check`、台帳追記、mainへのpushを必須とした。
+
+Claudeで作業を始める際は、古いレビュー資料より本書、現行コード、追記211以降、
+`docs/MONETIZATION.md` の現行ルールを優先する。
