@@ -9072,3 +9072,34 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-qzbn5uuka-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-compact-diary-actions` へ退避した。今回は `.env.local` は生成されなかった。
+
+## 2026-08-25 追記 245 — ナビの確認ポイントを濃い文字へ変更
+
+ユーザーから、「変化があった日は、いつから・誰が見たか・次に誰へ伝えるか」「家族に送る時は『今日あったこと』『次に確認したいこと』を分ける」といったナビの箇条書きが薄くて読みにくいと指摘された。
+
+変更:
+
+- 「ナビからの寄り添い」内の確認ポイントを、薄い補足色から濃い紺灰色 `#263b43` へ変更した。
+- 文字サイズを16pxから17pxへ上げ、太さを強めた。
+- 箇条書きの点を青緑 `#2f6e82` へ変更し、各項目の開始位置を見つけやすくした。
+- PWA更新用にservice worker cacheを `v43` へ上げた。
+
+確認:
+
+- `git diff --check` 成功。
+- `CI=true pnpm --filter web run typecheck` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- ローカルの過去記録で、淡い緑のナビ欄に対して箇条書き本文と点が濃く表示されることを実ブラウザで確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番の既存記録で同じ箇条書きを表示し、濃い文字と青緑の点が反映されることを実ブラウザで確認した。本番データの追加・編集は行っていない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v43` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_DxJTnzNK8WjBtfSwkx44DcVu2pnv` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-h5x2fjek4-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-dark-advice-text` へ退避した。今回は `.env.local` は生成されなかった。

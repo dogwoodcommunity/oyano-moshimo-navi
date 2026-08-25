@@ -1297,6 +1297,16 @@
   line-height: 1.55;
 }
 
+.entry-advice li {
+  color: #263b43;
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.entry-advice li::marker {
+  color: #2f6e82;
+}
+
 .record-filter-tabs {
   display: flex;
   flex-wrap: wrap;
