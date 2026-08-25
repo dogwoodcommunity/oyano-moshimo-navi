@@ -9405,6 +9405,23 @@ textarea {
   outline: none;
 }
 
+.diary-input-error {
+  background: #fff3ef;
+  border: 1px solid rgba(159, 57, 31, 0.34);
+  border-radius: 12px;
+  color: #8a2f1f;
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.6;
+  margin: -2px 0 0;
+  padding: 9px 11px;
+}
+
+.today-record-card textarea[aria-invalid="true"] {
+  border-color: #9f391f;
+  box-shadow: 0 0 0 4px rgba(159, 57, 31, 0.1);
+}
+
 .record-tool-row {
   align-items: center;
   display: flex;

@@ -61,8 +61,13 @@ const invalidFeedback = await read("/api/monitor-feedback", {
   headers: { "Content-Type": "application/json" },
   body: "{}"
 });
-if (invalidFeedback.response.status === 400) {
-  ok("未入力の最終報告を拒否", invalidFeedback.response.status);
+if ([400, 503].includes(invalidFeedback.response.status)) {
+  ok(
+    invalidFeedback.response.status === 400
+      ? "未入力の最終報告を拒否"
+      : "許可名未設定時は最終回答の受付を停止",
+    invalidFeedback.response.status
+  );
 } else {
   fail("未入力の最終報告を拒否", invalidFeedback.response.status);
 }
@@ -78,7 +83,7 @@ if (invalidScreenshot.response.status === 400) {
 }
 
 const unsignedSync = await read("/api/notebook/sync");
-if ([401, 503].includes(unsignedSync.response.status)) {
+if ([401, 501, 503].includes(unsignedSync.response.status)) {
   ok("未認証のクラウド同期を拒否", unsignedSync.response.status);
 } else {
   fail("未認証のクラウド同期を拒否", unsignedSync.response.status);

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
   markMonitorReportSubmitted,
+  monitorPeriodStatus,
   monitorProgress,
   readMonitorSession
 } from "@/lib/monitorSession";
@@ -28,7 +29,7 @@ const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
 type ReportGate =
   | { status: "checking" }
   | { status: "not-started" }
-  | { status: "active"; dayNumber: number; daysRemaining: number; reportDueAt: Date }
+  | { status: "active"; dayNumber: number; daysRemaining: number; reportDueAt: Date; periodStatus: string }
   | { status: "due" }
   | { status: "submitted" };
 
@@ -65,7 +66,8 @@ export function MonitorReportForm() {
           status: "active",
           dayNumber: progress.dayNumber,
           daysRemaining: progress.daysRemaining,
-          reportDueAt: progress.reportDueAt
+          reportDueAt: progress.reportDueAt,
+          periodStatus: monitorPeriodStatus(progress)
         });
   }, []);
 
@@ -239,7 +241,7 @@ export function MonitorReportForm() {
           <section className={styles.completeCard}>
             <p className={styles.eyebrow}>7日間モニター {gate.dayNumber}日目</p>
             <h1>最終報告は、7日間を終えた翌日に表示されます。</h1>
-            <p>回答開始は{dueLabel} 0:00です。あと{gate.daysRemaining}日です。今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
+            <p>回答開始は{dueLabel} 0:00です。{gate.periodStatus}今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
             <div className={styles.actions} style={{ marginTop: 24 }}>
               <Link className={styles.primary} href="/home#today-diary">今日の記録を書く</Link>
               <Link className={styles.secondary} href="/home">手帳へ戻る</Link>

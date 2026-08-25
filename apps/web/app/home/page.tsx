@@ -1179,6 +1179,7 @@ export default function FamilyBoardPage() {
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
   const [diarySavedId, setDiarySavedId] = useState<string | null>(null);
   const [diaryUpdatedId, setDiaryUpdatedId] = useState<string | null>(null);
+  const [diaryValidationCaseId, setDiaryValidationCaseId] = useState<string | null>(null);
   const [taskAddedEntryId, setTaskAddedEntryId] = useState<string | null>(null);
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
@@ -1504,6 +1505,7 @@ export default function FamilyBoardPage() {
   }
 
   function updateForm(caseId: string, patch: Partial<DiaryFormState>) {
+    if (typeof patch.body === "string" && patch.body.trim()) setDiaryValidationCaseId(null);
     setForms((current) => ({
       ...current,
       [caseId]: {
@@ -1774,7 +1776,16 @@ export default function FamilyBoardPage() {
 
   function saveDiary(caseId: string) {
     const form = forms[caseId] ?? emptyDiaryForm;
-    if (!form.body.trim() && form.files.length === 0) return;
+    if (!form.body.trim() && form.files.length === 0) {
+      setDiaryValidationCaseId(caseId);
+      window.requestAnimationFrame(() => {
+        const input = document.getElementById(`diary-${caseId}`);
+        input?.scrollIntoView({ block: "center", behavior: "smooth" });
+        input?.focus({ preventScroll: true });
+      });
+      return;
+    }
+    setDiaryValidationCaseId(null);
     const entryDate = form.date || todayInputValue();
     const entry = addDiaryEntry({
       caseId,
@@ -2832,11 +2843,18 @@ export default function FamilyBoardPage() {
                 この日に残すこと
               </label>
               <textarea
+                aria-describedby={diaryValidationCaseId === activeCase.id ? `diary-error-${activeCase.id}` : undefined}
+                aria-invalid={diaryValidationCaseId === activeCase.id}
                 id={`diary-${activeCase.id}`}
                 placeholder="例: 今日は退院後はじめて訪問看護の日。薬の飲み忘れが少しあった。次回通院は長女に相談する。"
                 value={activeForm.body}
                 onChange={(event) => updateForm(activeCase.id, { body: event.target.value })}
               />
+              {diaryValidationCaseId === activeCase.id ? (
+                <p className="diary-input-error" id={`diary-error-${activeCase.id}`} role="alert">
+                  記録内容を1行入力するか、写真を1枚追加してください。
+                </p>
+              ) : null}
               <details className="diary-voice-help">
                 <summary>声で入力する方法を見る（使わなくても大丈夫）</summary>
                 <ol>

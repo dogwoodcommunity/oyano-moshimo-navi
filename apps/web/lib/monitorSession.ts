@@ -35,6 +35,14 @@ export type MonitorProgress = {
   isReportDue: boolean;
 };
 
+export function monitorPeriodStatus(
+  progress: Pick<MonitorProgress, "dayNumber" | "daysRemaining" | "isReportDue">
+) {
+  if (progress.isReportDue) return "7日間の記録期間は終了しました。";
+  if (progress.dayNumber === MONITOR_TEST_CALENDAR_DAYS) return "今日が7日目（最終日）です。";
+  return `今日を含めてあと${progress.daysRemaining}日です。`;
+}
+
 function getStorage() {
   if (typeof window === "undefined") return null;
   try {

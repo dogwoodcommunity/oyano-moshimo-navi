@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { type MouseEvent, useEffect, useMemo, useState } from "react";
-import { markMonitorActivity, monitorProgress, readMonitorActivity, readMonitorSession, type MonitorSession } from "@/lib/monitorSession";
+import { markMonitorActivity, monitorPeriodStatus, monitorProgress, readMonitorActivity, readMonitorSession, type MonitorSession } from "@/lib/monitorSession";
 import styles from "./MonitorTestReminder.module.css";
 
 export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebook: boolean; hasRecordToday: boolean }) {
@@ -56,7 +56,7 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
         <span className={styles.label}>7日間モニター {progress.dayNumber}日目</span>
         <h2>{hasRecordToday ? "今日の記録は完了です。" : "今日の記録を1回保存してください。"}</h2>
         <p>
-          7日間、毎日1回ずつ記録します。あと{progress.daysRemaining}日です。最終アンケートは{dueLabel}以降、ここに大きく表示します。
+          7日間、毎日1回ずつ記録します。{monitorPeriodStatus(progress)}最終アンケートは{dueLabel} 0:00以降、ここに大きく表示します。
         </p>
         {!cloudBackupConfirmed && hasNotebook ? (
           <p className={styles.optionalNote}>

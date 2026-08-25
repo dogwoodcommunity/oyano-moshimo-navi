@@ -30,6 +30,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "画像はJPEG・PNG・WebP、1枚4MB以下にしてください。" }, { status: 400 });
   }
 
+  if (process.env.NODE_ENV === "development" && process.env.MONITOR_E2E_MODE === "1") {
+    return NextResponse.json({ storagePath: `monitor-feedback/e2e/${randomUUID()}.${extension}`, simulated: true });
+  }
+
   const supabase = getServerSupabase();
   if (!supabase) {
     return NextResponse.json({ message: "現在、画像を保存できません。時間をおいて再度お試しください。" }, { status: 503 });

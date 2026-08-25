@@ -148,6 +148,10 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "スクリーンショットを1〜3枚添付してください。" }, { status: 400 });
   }
 
+  if (process.env.NODE_ENV === "development" && process.env.MONITOR_E2E_MODE === "1") {
+    return NextResponse.json({ ok: true, replacedPreviousResponse: false, simulated: true });
+  }
+
   const supabase = getServerSupabase();
   if (!supabase) return NextResponse.json({ message: "現在、回答を保存できません。時間をおいて再度お試しください。" }, { status: 503 });
 

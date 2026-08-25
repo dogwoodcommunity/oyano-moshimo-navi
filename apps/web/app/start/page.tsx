@@ -107,6 +107,12 @@ export default function StartPage() {
     const params = new URLSearchParams(window.location.search);
     const isReset = params.get("reset") === "1";
     const isMonitor = params.get("monitor") === "1";
+    const monitorStartedAtForLocalTest = process.env.NODE_ENV === "development"
+      ? params.get("monitorStartedAt")
+      : null;
+    const localTestNow = monitorStartedAtForLocalTest && Number.isFinite(Date.parse(monitorStartedAtForLocalTest))
+      ? new Date(monitorStartedAtForLocalTest)
+      : undefined;
     const existingMonitorSession = readMonitorSession();
     if (params.get("fresh") === "1" || isReset) {
       resetLocalNotebookData();
@@ -114,9 +120,10 @@ export default function StartPage() {
       params.delete("reset");
     }
     if (isMonitor) {
-      startMonitorSession({ restart: isReset });
+      startMonitorSession({ restart: isReset || Boolean(localTestNow), now: localTestNow });
       params.delete("monitor");
     }
+    params.delete("monitorStartedAt");
     const nextQuery = params.toString();
     window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
 
