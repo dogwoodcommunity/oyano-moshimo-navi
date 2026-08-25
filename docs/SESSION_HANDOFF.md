@@ -8460,3 +8460,39 @@ GitHub・本番:
 - deployment URL: `https://oyano-moshimo-navi-cqhjp2md5-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 230 — モニター最終アンケートの確認用プレビューを追加
+
+ユーザーからアンケート回答フォームを今すぐ見たいとの要望があった。通常の `/monitor/report` は同じ端末でモニター開始から7日経過するまでフォームを表示しないため、日付制限を変えずに回答項目だけ確認できるプレビューURLを追加した。
+
+変更:
+
+- `/monitor/report?preview=1` で、モニターセッションや経過日数に関係なく最終アンケートの全項目を表示する。
+- プレビュー冒頭に「確認用」「入力内容と画像は送信できない」「実際の回答は7日後」と明記した。
+- プレビューの送信ボタンはdisabledにし、「プレビューでは送信できません」と表示する。
+- UI上のdisabledだけに頼らず、submit処理側でもpreviewなら送信を止める。
+- 通常の `/monitor/report` の開始端末判定、7日間の経過判定、送信済み判定は変更していない。
+- PWA更新用にservice worker cacheを `v30` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカル本番ビルドを3100番で起動し、390×844pxでプレビューの注意書き、全回答項目、disabledの送信ボタンを確認。
+- 同じoriginでqueryなしの `/monitor/report` を開き、従来どおり開始端末または7日経過のgateが表示され、プレビュー項目が出ないことを確認。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番 `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1` で注意書き、年代などの質問、送信不可ボタンを実操作確認。
+- 本番のqueryなし `/monitor/report` では従来の7日後gateが維持されることを確認。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v30` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `18c7a6a` (`Add monitor survey preview`)。
+- Vercel production deployment: `dpl_HqaM5oL9voRmdTtatf2kns7ddfKV` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-i9i5wwd1k-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
