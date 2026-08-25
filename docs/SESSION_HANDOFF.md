@@ -8123,3 +8123,61 @@ AI相談チャットで質問例を押すと、日記から用意された相談
 - 日付修正commit: `7ea50a0` (`Use Japan dates for daily monitor records`)。
 - 最終報告ゲートcommit: `c133e3a` (`Gate monitor report until day seven`)。
 - production deployment: `dpl_9YvoxuJ8TPR6tZxVwGRRN37s1nUd`。
+
+## 2026-08-25 追記 222 — 期限・月1確認を登録メールでも受け取れる土台を実装
+
+`a2d9e57` から作業を再開し、有料テスト前の未完了項目だった「期限通知と月1確認のメール通知」を実装した。
+既存のExpo Pushは残し、登録メールにも同日の通知を1通へまとめて送る。外部メールサービスはResendのHTTP APIを使用し、SDK依存は追加していない。
+
+実装:
+
+- `/api/cron/send-due-notifications` で、期限タスクと月1確認を利用者・日本日付単位のダイジェストにまとめ、
+  Expo Pushと登録メールへ配信するようにした。
+- メールはResendのbatch APIで最大100通を1回に送り、通知ID集合から作るIdempotency-Keyを付けた。
+- `scheduled_notifications.push_sent_at` / `email_sent_at` を追加し、片方だけ成功した場合は成功チャネルを再送せず、失敗チャネルだけ次回Cronで再試行する。
+- `supabase/notification_email_delivery.sql` を新設。既存本番DBへ安全に後追いできる加算migrationとした。
+- WebがSQLより先にdeployされても、追加列がない間はメールだけを停止して従来のPush配送を継続する互換分岐を入れた。
+- 配送直前に通知設定を再取得するようにした。期限通知OFFは期限タスクへ、月1確認OFFは月1確認へ正しく反映する。
+- 月1確認の作成対象を「active Push tokenがある人だけ」から「登録メールまたはactive Push tokenがある人」へ拡張した。
+- モバイル通知設定の説明を、端末通知と登録メールに共通の設定であることが分かる文言へ変更した。
+- `RESEND_API_KEY` / `NOTIFICATION_EMAIL_FROM` / 任意の `NOTIFICATION_EMAIL_REPLY_TO` を環境変数資料へ追加し、管理画面のenv確認にも必須2項目を追加した。
+- Cron Routeを `force-dynamic` に固定し、ビルド時の静的応答化を防いだ。
+- Vercel CronはUTC固定のため、従来の `0 9 * * *`（日本時間18:00）を `0 0 * * *`（日本時間09:00）へ修正した。
+- 手動Cron確認手順は、秘密値をURLへ載せるquery方式から `Authorization: Bearer` header方式へ修正した。
+- Supabase実行順、setup verification、local doctor、本番チェックリスト、専用引き継ぎ文書を現行仕様へ更新した。
+
+安全上の判断:
+
+- `RESEND_API_KEY` または送信元が未設定ならメールだけを停止し、Pushを止めない。
+- `notification_email_delivery.sql` 未適用時も、二重送信防止列がないためメールだけを停止する。
+- 通知設定をOFFにした後にすでに作成済みの通知が残っていても、配送時判定で送らない。
+- メール件名には親の氏名やタスク名を入れず、本文も従来Pushと同じ確認項目だけに限定した。
+- 未追跡の `review_exports/` は変更・追加・commitしていない。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter mobile run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。Cron RouteがDynamic (`ƒ`) になり、162ページを生成。
+- `corepack pnpm run doctor:local` 成功。
+- `git diff --check` 成功。
+- ローカル本番ビルドを3100番で起動し、環境変数なしのCron APIがHTTP 200と
+  `{ sent: 0, skipped: true, reason: "Supabase is not configured" }` を返すことを確認。
+- `node scripts/smoke-web.mjs http://localhost:3100` 成功。主要ページ/APIはすべて期待ステータス。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+
+GitHub:
+
+- 実装commit: `4e2a396` (`Add email reminder delivery`)。
+- 本追記commitと合わせて `origin/main` へpushする。
+
+本番でメールを有効にするために残る作業:
+
+1. Supabase SQL Editorで `supabase/notification_email_delivery.sql` を実行し、`verify_compact.sql` の
+   `scheduled_notifications.push_sent_at` / `email_sent_at` がtrueになることを確認する。
+2. Resendで送信ドメインを認証し、Vercelへ `RESEND_API_KEY` と `NOTIFICATION_EMAIL_FROM` を設定する。
+3. ダミーの期限通知と月1確認を各1件だけ作り、メール実受信、Pushとの同日集約、通知OFF後の非送信、
+   `push_sent_at` / `email_sent_at` の記録を確認する。
+
+今回は本番SupabaseへのSQL適用、Resendのアカウント/ドメイン設定、実メール送信は行っていない。
+資格情報がない状態で推測値を入れず、コードはメールOFFの安全な状態でdeployできるようにしている。
