@@ -3027,7 +3027,7 @@ export default function FamilyBoardPage() {
                         <time>{formatLongDate(entry.date)}</time>
                         <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
                       </div>
-                      <p>{entry.body}</p>
+                      <p>{clipText(entry.body, 96)}</p>
                       <a className="history-preview-action" href={`#diary-entry-${entry.id}`}>
                         この記録を見返す・編集する <span aria-hidden="true">›</span>
                       </a>
