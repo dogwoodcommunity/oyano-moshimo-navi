@@ -8374,3 +8374,40 @@ GitHub・本番:
 - deployment URL: `https://oyano-moshimo-navi-d3tpn0jfr-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 228 — 日記の振り返りをスマホ向けカード表示に改善
+
+ユーザーから、iPhoneの手帳にある「最近の記録」が見にくいとの指摘があった。従来は日付・本文・状態を1行の表形式へ押し込み、スマホでは本文が短く切れる一方で状態だけが次の行へ離れていたため、1件の日記としてまとまりを追いにくかった。
+
+変更:
+
+- 「最近の記録」を表形式から、記録ごとの独立したカードへ変更した。
+- カード上段に日付と状態、中央に本文プレビュー、下段に「この記録を見返す・編集する」を配置し、読む順序を揃えた。
+- 日付で絞り込んだ場合は見出しを「8月25日の記録」のように切り替え、表示件数も同じ行に出す。
+- 短い記録は本文を全文表示する。非常に長い記録は空白と改行を整えた96文字のプレビューにし、一覧が縦に伸びすぎないようにした。全文はカード下の導線から該当する詳細・編集欄で確認できる。
+- 長文表示には5行相当の高さ制限も入れ、端末ごとの折り返し差に対する安全策とした。
+- 旧 `.history-row` のモバイル専用grid指定を削除した。
+- PWA更新用にservice worker cacheを `v28` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカル本番ビルドを3100番で起動し、`node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- アプリ内ブラウザの390×844pxで、長めのダミー日記が日付・状態・本文・編集導線の順に1枚のカードとして表示されることを目視確認。
+- カードの「この記録を見返す・編集する」を押すと、同じ記録の `#diary-entry-...` へ移動することを確認。
+- 本番production aliasの既存モニターデータ3件で、短文は全文、長文は末尾 `…` のプレビューになり、次のカードと操作導線が画面内で見分けられることを390×844pxで実操作確認。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v28` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `1958878` (`Improve diary history readability`)。
+- 長文プレビュー調整commit: `ead92a5` (`Clamp long diary previews`)、`0f617e0` (`Bound diary preview height`)、`b0ef2f1` (`Shorten long diary card previews`)。
+- 最終Vercel production deployment: `dpl_H9e2u76R5RGeeBh2zzZKRie1JFuy` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-cnc7a1k0g-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
