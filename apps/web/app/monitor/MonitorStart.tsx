@@ -18,7 +18,7 @@ export function MonitorStart() {
           <p className={styles.eyebrow}>7日間モニターテストのお願い</p>
           <h1>暮らしの中で7日間、家族の手帳を試してください。</h1>
           <p className={styles.lead}>
-            うまく使えたところだけでなく、迷った画面や「もう使わない」と感じた理由も大切な検証結果です。ダミーの内容で、率直に試してください。
+            うまく使えたところだけでなく、迷った画面や「もう使わない」と感じた理由も大切な検証結果です。使えなかった報告でも報酬は同じです。ダミーの内容で、率直に試してください。
           </p>
           <div className={styles.summary} aria-label="モニターテストの概要">
             <div>
@@ -27,12 +27,12 @@ export function MonitorStart() {
             </div>
             <div>
               <span>最終回答</span>
-              <strong>約15分</strong>
+              <strong>15〜20分</strong>
             </div>
             <div>
               <span>報酬</span>
               <strong>2,000円</strong>
-              <small>検収後にお支払い</small>
+              <small>最終回答の提出でお支払い</small>
             </div>
           </div>
         </section>
@@ -44,7 +44,7 @@ export function MonitorStart() {
               <span>1</span>
               <div className={styles.stepBody}>
                 <strong>初日</strong>
-                <p>親御さんの呼び名・関係・都道府県・市区町村を入れて、手帳を1冊作る</p>
+                <p>手帳を1冊作り、メール確認まで進んでクラウドの控えを作る</p>
               </div>
             </li>
             <li>
@@ -58,21 +58,21 @@ export function MonitorStart() {
               <span>3</span>
               <div className={styles.stepBody}>
                 <strong>期間中</strong>
-                <p>確認リスト・書類の所在メモ・家族招待・AI相談を各1回試す</p>
+                <p>確認リスト・書類の所在メモ・AI相談を各1回試す。家族招待は画面を開いて手順を確認する（送信は任意）</p>
               </div>
             </li>
             <li>
               <span>4</span>
               <div className={styles.stepBody}>
                 <strong>7日間の終了後</strong>
-                <p>手帳の先頭に出る案内から約15問へ回答し、気になった画面のスクショを3枚添付する</p>
+                <p>手帳の先頭に出る案内から回答し、気になった画面のスクショを1〜3枚添付する</p>
               </div>
             </li>
           </ol>
         </section>
 
         <p className={styles.notice}>
-          市区町村はテスト用の架空の内容で構いません。実名、病名、番地以下の詳細住所、電話番号、暗証番号、マイナンバーなどの個人情報は入力しないでください。呼び名は「お母さん」「テスト母」、記録は架空の内容で大丈夫です。添付するスクショにも個人情報を写さないでください。
+          7日間は開始時と同じスマホ・同じブラウザを使い、プライベートブラウズを使ったり履歴やサイトデータを削除したりしないでください。市区町村はテスト用の架空の内容で構いません。実名、病名、番地以下の詳細住所、電話番号、暗証番号、マイナンバーなどの個人情報は入力しないでください。呼び名は「お母さん」「テスト母」、記録は架空の内容で大丈夫です。添付するスクショにも個人情報を写さないでください。
         </p>
 
         <div className={styles.actions}>

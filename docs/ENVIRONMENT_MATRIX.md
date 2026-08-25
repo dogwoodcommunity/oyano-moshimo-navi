@@ -8,6 +8,7 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | yes | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | no | Next.js APIからDB/Storageへ安全に書き込む |
 | `ADMIN_ACCESS_TOKEN` | yes | no | Admin API簡易保護 |
+| `MONITOR_ALLOWED_CROWDWORKS_NAMES` | モニター募集時 | no | 採用したクラウドワークス表示名をカンマ区切りで指定。未設定時は最終回答を停止 |
 | `STRIPE_SECRET_KEY` | support pack時 | no | Stripe Checkout作成 |
 | `STRIPE_SUPPORT_PACK_PRICE_ID` | support pack時 | no | 発動サポートパックPrice |
 | `STRIPE_WEBHOOK_SECRET` | support pack時 | no | Stripe Webhook署名検証 |

@@ -16,6 +16,7 @@ import {
 import { getBrowserSupabase } from "@/lib/browserSupabase";
 import { japanDateInputValue } from "@/lib/date";
 import { trackFunnel } from "@/lib/funnel";
+import { markMonitorActivity } from "@/lib/monitorSession";
 import {
   addDiaryEntry,
   listDiaryEntries,
@@ -317,6 +318,7 @@ export function ConsultPanel() {
       const access = await accessResponse.json().catch(() => null) as ConsultAccess | null;
       if (accessResponse.ok && access) setConsultAccess(access);
       trackFunnel("consult_asked");
+      markMonitorActivity("aiConsultCompleted");
       setPhase("done");
       window.setTimeout(() => {
         document.getElementById(`consult-turn-${turnId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });

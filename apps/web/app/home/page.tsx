@@ -7,6 +7,7 @@ import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { PREFECTURES } from "@/lib/prefectures";
+import { markMonitorActivity } from "@/lib/monitorSession";
 import {
   addCaseTask,
   addDiaryEntry,
@@ -1448,6 +1449,8 @@ export default function FamilyBoardPage() {
   function openNotebookSection(hash: string) {
     const tab = tabForHash(hash);
     if (tab) setActiveNotebookTab(tab);
+    if (hash === "#diary-history") markMonitorActivity("diaryHistoryOpened");
+    if (tab === "tasks") markMonitorActivity("checklistOpened");
     if (hash === "#person-profile" || hash === "#profile-edit-fields") setProfileEditorOpen(true);
 
     window.setTimeout(() => {
@@ -1575,6 +1578,7 @@ export default function FamilyBoardPage() {
     }));
     setProfileSavedCaseId(caseId);
     setProfileLocationErrorCaseId(null);
+    if (profile.documentLocationNote?.trim()) markMonitorActivity("documentMemoSaved");
   }
 
   function openTaskEditor(caseId: string, taskIndex: number, task: TaskWithDue) {
@@ -1776,6 +1780,7 @@ export default function FamilyBoardPage() {
       body: form.body.trim() || "写真を追加しました。",
       attachments: form.files
     });
+    markMonitorActivity("dailyRecordSaved");
     const storageWarning = consumeNotebookStorageWarning();
     setDiaryEntries((current) => ({
       ...current,
@@ -2008,6 +2013,7 @@ export default function FamilyBoardPage() {
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");
+      markMonitorActivity("cloudBackupConfirmed");
       // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
       const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
       if (!options.silent || notice) {
@@ -2529,6 +2535,7 @@ export default function FamilyBoardPage() {
                   onClick={() => {
                     setActiveNotebookTab(tab.id);
                     if (tab.id === "profile") setProfileEditorOpen(true);
+                    if (tab.id === "tasks") markMonitorActivity("checklistOpened");
                   }}
                 >
                   <strong>{tab.label}</strong>

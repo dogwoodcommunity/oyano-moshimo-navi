@@ -24,6 +24,21 @@ function answer(text: string) {
   return text || "回答なし";
 }
 
+function usageMetrics(metadata: Record<string, unknown>) {
+  return metadata.usageMetrics && typeof metadata.usageMetrics === "object"
+    ? metadata.usageMetrics as Record<string, unknown>
+    : {};
+}
+
+function metricNumber(metadata: Record<string, unknown>, key: string) {
+  const metric = usageMetrics(metadata)[key];
+  return typeof metric === "number" && Number.isFinite(metric) ? metric : null;
+}
+
+function metricDone(metadata: Record<string, unknown>, key: string) {
+  return usageMetrics(metadata)[key] === true ? "確認あり" : "確認なし";
+}
+
 export function AdminMonitorFeedback() {
   const [rows, setRows] = useState<ResponseRow[]>([]);
   const [error, setError] = useState("");
@@ -53,9 +68,9 @@ export function AdminMonitorFeedback() {
   const summary = useMemo(() => ({
     total: rows.length,
     sevenDays: rows.filter((row) => value(row.metadata ?? {}, "usagePeriod") === "7日間").length,
-    dailyRecords: rows.filter((row) => value(row.metadata ?? {}, "recordCount") === "7日すべて").length,
-    pays: rows.filter((row) => ["月980円なら利用したい", "年9,800円なら利用したい"]
-      .includes(value(row.metadata ?? {}, "paymentIntent"))).length
+    dailyRecords: rows.filter((row) => (metricNumber(row.metadata ?? {}, "manualRecordDistinctDayCount") ?? 0) >= 5).length,
+    pays: rows.filter((row) => ["月980円を払って使う", "年払いなら検討する"]
+      .includes(value(row.metadata ?? {}, "priceReaction"))).length
   }), [rows]);
 
   if (loading) return <p className="admin-empty-state">回答を読み込んでいます。</p>;
@@ -66,7 +81,7 @@ export function AdminMonitorFeedback() {
       <div className="admin-metrics-summary">
         <article><span>届いた回答</span><strong>{summary.total}<small>件</small></strong><p>送信済みの回答数</p></article>
         <article><span>7日間利用</span><strong>{summary.sevenDays}<small>人</small></strong><p>7日間アプリを開いた</p></article>
-        <article><span>毎日記録</span><strong>{summary.dailyRecords}<small>人</small></strong><p>7日すべて記録した</p></article>
+        <article><span>5日以上記録</span><strong>{summary.dailyRecords}<small>人</small></strong><p>端末の自動カウント</p></article>
         <article><span>支払意向あり</span><strong>{summary.pays}<small>人</small></strong><p>月額か年額を選んだ</p></article>
       </div>
 
@@ -79,17 +94,18 @@ export function AdminMonitorFeedback() {
             const crowdworksName = value(metadata, "crowdworksName")
               || value(metadata, "monitorCode")
               || `回答 ${rows.length - index}`;
+            const submittedAt = value(metadata, "submittedAt") || row.created_at;
             const screenshots = row.screenshotUrls ?? [];
             return (
               <details className="admin-feedback-card" key={row.id} open={index === 0}>
                 <summary>
                   <div>
                     <strong>{crowdworksName}</strong>
-                    <span>{new Date(row.created_at).toLocaleString("ja-JP")}</span>
+                    <span>{new Date(submittedAt).toLocaleString("ja-JP")}</span>
                   </div>
                   <div className="admin-feedback-tags">
                     <span>{answer(value(metadata, "usagePeriod"))}</span>
-                    <span>{answer(value(metadata, "paymentIntent"))}</span>
+                    <span>{answer(value(metadata, "priceReaction") || value(metadata, "paymentIntent"))}</span>
                   </div>
                 </summary>
                 <div className="admin-feedback-body">
@@ -107,7 +123,10 @@ export function AdminMonitorFeedback() {
                     <h3>7日間で試したこと</h3>
                     <dl>
                       <div><dt>利用期間</dt><dd>{answer(value(metadata, "usagePeriod"))}</dd></div>
-                      <div><dt>記録回数</dt><dd>{answer(value(metadata, "recordCount"))}</dd></div>
+                      <div><dt>記録回数（自己申告）</dt><dd>{answer(value(metadata, "recordCount"))}</dd></div>
+                      <div><dt>記録した日数（自動）</dt><dd>{metricNumber(metadata, "manualRecordDistinctDayCount") ?? "取得なし"}</dd></div>
+                      <div><dt>記録保存回数（自動）</dt><dd>{metricNumber(metadata, "manualRecordSaveCount") ?? "取得なし"}</dd></div>
+                      <div><dt>最終記録日（自動）</dt><dd>{metricNumber(metadata, "lastManualRecordDayNumber") ? `${metricNumber(metadata, "lastManualRecordDayNumber")}日目` : "取得なし"}</dd></div>
                       <div><dt>保存した記録の再確認</dt><dd>{answer(value(metadata, "savedRecord"))}</dd></div>
                       <div><dt>確認リスト</dt><dd>{answer(value(metadata, "checklistTried"))}</dd></div>
                       <div><dt>書類の所在メモ</dt><dd>{answer(value(metadata, "documentMemoTried"))}</dd></div>
@@ -115,16 +134,31 @@ export function AdminMonitorFeedback() {
                       <div><dt>AI相談</dt><dd>{answer(value(metadata, "aiConsult"))}</dd></div>
                     </dl>
                   </section>
+                  <section>
+                    <h3>端末の自動計測</h3>
+                    <dl>
+                      <div><dt>初回登録時間</dt><dd>{metricNumber(metadata, "registrationDurationSeconds") !== null ? `${metricNumber(metadata, "registrationDurationSeconds")}秒` : "取得なし"}</dd></div>
+                      <div><dt>手帳を開いた日数</dt><dd>{metricNumber(metadata, "appOpenDistinctDayCount") ?? "取得なし"}</dd></div>
+                      <div><dt>過去記録を開いた</dt><dd>{metricDone(metadata, "diaryHistoryOpened")}</dd></div>
+                      <div><dt>確認リストを開いた</dt><dd>{metricDone(metadata, "checklistOpened")}</dd></div>
+                      <div><dt>書類メモを保存</dt><dd>{metricDone(metadata, "documentMemoSaved")}</dd></div>
+                      <div><dt>家族招待画面を開いた</dt><dd>{metricDone(metadata, "familyInviteOpened")}</dd></div>
+                      <div><dt>AI相談が成功</dt><dd>{metricDone(metadata, "aiConsultCompleted")}</dd></div>
+                      <div><dt>クラウド控え</dt><dd>{metricDone(metadata, "cloudBackupConfirmed")}</dd></div>
+                    </dl>
+                  </section>
                   <section className="is-wide">
                     <h3>率直な感想</h3>
                     <dl>
-                      <div><dt>指が止まった場所</dt><dd>{list(metadata, "stoppedAt").join("、") || "回答なし"}</dd></div>
+                      <div><dt>最初に迷った場所</dt><dd>{answer(value(metadata, "firstStoppedAt"))}</dd></div>
+                      <div><dt>ほかに迷った場所</dt><dd>{list(metadata, "stoppedAt").join("、") || "回答なし"}</dd></div>
                       <div><dt>分かりにくかったこと</dt><dd>{answer(value(metadata, "confusingPoint"))}</dd></div>
                       <div><dt>役に立ったこと</dt><dd>{answer(value(metadata, "usefulPoint"))}</dd></div>
                       <div><dt>足りないこと</dt><dd>{answer(value(metadata, "missingPoint"))}</dd></div>
                       <div><dt>7日後も使いたいか</dt><dd>{answer(value(metadata, "returnIntent"))}</dd></div>
                       <div><dt>家族と共有したいか</dt><dd>{answer(value(metadata, "familyShare"))}</dd></div>
-                      <div><dt>支払意向</dt><dd>{answer(value(metadata, "paymentIntent"))}</dd></div>
+                      <div><dt>アンカー前の支払上限</dt><dd>{answer(value(metadata, "willingnessToPay"))}</dd></div>
+                      <div><dt>実価格への反応</dt><dd>{answer(value(metadata, "priceReaction") || value(metadata, "paymentIntent"))}</dd></div>
                     </dl>
                   </section>
                   {screenshots.length > 0 && (

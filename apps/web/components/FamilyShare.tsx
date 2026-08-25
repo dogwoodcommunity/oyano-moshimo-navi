@@ -7,6 +7,7 @@ import {
   getBrowserSupabase,
   sendMagicLink
 } from "@/lib/browserSupabase";
+import { markMonitorActivity } from "@/lib/monitorSession";
 
 type FamilySummary = {
   plan: "free" | "plus";
@@ -61,6 +62,7 @@ export function FamilyShare() {
 
   useEffect(() => {
     let cancelled = false;
+    markMonitorActivity("familyInviteOpened");
 
     async function boot() {
       const client = getBrowserSupabase();

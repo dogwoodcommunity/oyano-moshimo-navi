@@ -7,6 +7,7 @@ import {
   monitorProgress,
   readMonitorSession
 } from "@/lib/monitorSession";
+import { collectMonitorUsageMetrics } from "@/lib/monitorMetrics";
 import styles from "../monitor.module.css";
 
 const STOP_OPTIONS = [
@@ -27,7 +28,7 @@ const MAX_SCREENSHOT_BYTES = 4 * 1024 * 1024;
 type ReportGate =
   | { status: "checking" }
   | { status: "not-started" }
-  | { status: "active"; dayNumber: number; daysRemaining: number }
+  | { status: "active"; dayNumber: number; daysRemaining: number; reportDueAt: Date }
   | { status: "due" }
   | { status: "submitted" };
 
@@ -63,7 +64,8 @@ export function MonitorReportForm() {
       : {
           status: "active",
           dayNumber: progress.dayNumber,
-          daysRemaining: progress.daysRemaining
+          daysRemaining: progress.daysRemaining,
+          reportDueAt: progress.reportDueAt
         });
   }, []);
 
@@ -79,7 +81,7 @@ export function MonitorReportForm() {
     setError("");
     const files = Array.from(event.target.files ?? []);
     if (files.length > 3) {
-      setError("スクリーンショットは3枚だけ選んでください。");
+      setError("スクリーンショットは最大3枚まで選べます。");
       event.target.value = "";
       setScreenshots([]);
       return;
@@ -112,8 +114,8 @@ export function MonitorReportForm() {
       setError("これは確認用画面です。実際の回答は7日間のモニター終了後に送信できます。");
       return;
     }
-    if (screenshots.length !== 3) {
-      setError("気になった画面のスクリーンショットを3枚添付してください。");
+    if (screenshots.length < 1 || screenshots.length > 3) {
+      setError("気になった画面のスクリーンショットを1〜3枚添付してください。");
       return;
     }
 
@@ -121,9 +123,21 @@ export function MonitorReportForm() {
     const form = new FormData(event.currentTarget);
 
     try {
+      const crowdworksName = String(form.get("crowdworksName") ?? "").trim();
+      const participantResponse = await fetch("/api/monitor-feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ validateOnly: true, crowdworksName })
+      });
+      const participantBody = await participantResponse.json().catch(() => ({}));
+      if (!participantResponse.ok) {
+        throw new Error(participantBody.message ?? "クラウドワークスで使っている名前を確認できませんでした。");
+      }
+
       const screenshotPaths = await Promise.all(screenshots.map(uploadScreenshot));
+      const session = readMonitorSession();
       const payload = {
-        crowdworksName: String(form.get("crowdworksName") ?? "").trim(),
+        crowdworksName,
         ageGroup: String(form.get("ageGroup") ?? ""),
         careRelation: String(form.get("careRelation") ?? ""),
         careSituation: String(form.get("careSituation") ?? ""),
@@ -135,14 +149,17 @@ export function MonitorReportForm() {
         familyInviteTried: String(form.get("familyInviteTried") ?? ""),
         savedRecord: String(form.get("savedRecord") ?? ""),
         aiConsult: String(form.get("aiConsult") ?? ""),
+        firstStoppedAt: String(form.get("firstStoppedAt") ?? ""),
         stoppedAt: stops,
         returnIntent: String(form.get("returnIntent") ?? ""),
         familyShare: String(form.get("familyShare") ?? ""),
-        paymentIntent: String(form.get("paymentIntent") ?? ""),
+        willingnessToPay: String(form.get("willingnessToPay") ?? ""),
+        priceReaction: String(form.get("priceReaction") ?? ""),
         confusingPoint: String(form.get("confusingPoint") ?? "").trim(),
         usefulPoint: String(form.get("usefulPoint") ?? "").trim(),
         missingPoint: String(form.get("missingPoint") ?? "").trim(),
-        screenshotPaths
+        screenshotPaths,
+        usageMetrics: session ? collectMonitorUsageMetrics(session) : null
       };
 
       const response = await fetch("/api/monitor-feedback", {
@@ -210,13 +227,19 @@ export function MonitorReportForm() {
   }
 
   if (gate.status === "active") {
+    const dueLabel = new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      weekday: "short"
+    }).format(gate.reportDueAt);
     return (
       <main className={styles.page}>
         <div className={styles.wrap}>
           <section className={styles.completeCard}>
             <p className={styles.eyebrow}>7日間モニター {gate.dayNumber}日目</p>
-            <h1>最終報告は、7日間が終わると表示されます。</h1>
-            <p>あと{gate.daysRemaining}日です。今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
+            <h1>最終報告は、7日間を終えた翌日に表示されます。</h1>
+            <p>回答開始は{dueLabel} 0:00です。あと{gate.daysRemaining}日です。今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
             <div className={styles.actions} style={{ marginTop: 24 }}>
               <Link className={styles.primary} href="/home#today-diary">今日の記録を書く</Link>
               <Link className={styles.secondary} href="/home">手帳へ戻る</Link>
@@ -233,8 +256,12 @@ export function MonitorReportForm() {
         <section className={styles.hero}>
           <p className={styles.eyebrow}>7日間モニター 最終報告</p>
           <h1>使い続けて分かったことを教えてください。</h1>
-          <p className={styles.lead}>約15問、15分ほどです。実名やご家族の病気・住所は書かず、スクショにも個人情報を写さないでください。</p>
+          <p className={styles.lead}>15〜20分ほどです。使えなかった報告も同じ価値があり、最終回答の提出で報酬をお支払いします。</p>
         </section>
+
+        <p className={styles.notice} role="note">
+          回答・スクリーンショットは本サービスの改善目的のみに使用し、6か月後に削除します。希望があればクラウドワークスのメッセージからいつでも削除を依頼できます。回答に実名・住所・病名は書かず、スクリーンショットにも個人情報を写さないでください。
+        </p>
 
         {preview ? (
           <p className={styles.notice} role="note">
@@ -255,14 +282,16 @@ export function MonitorReportForm() {
           <RadioField name="device" title="主に使った端末" options={["iPhone", "Android", "パソコン", "その他"]} />
           <RadioField name="usagePeriod" title="何日間、画面を開きましたか？" options={["7日間", "4〜6日", "2〜3日", "初日だけ"]} />
           <RadioField name="recordCount" title="7日間で「今日の記録」を何日保存しましたか？" options={["7日すべて", "5〜6日", "2〜4日", "1日", "保存できなかった"]} />
-          <RadioField name="checklistTried" title="確認リストを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった"]} />
-          <RadioField name="documentMemoTried" title="書類の所在メモを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった"]} />
-          <RadioField name="familyInviteTried" title="家族招待を試しましたか？" options={["試して使えた", "試したが完了できなかった", "見つけられなかった"]} />
+          <RadioField name="checklistTried" title="確認リストを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった", "使う必要がなかった"]} />
+          <RadioField name="documentMemoTried" title="書類の所在メモを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった", "使う必要がなかった"]} />
+          <RadioField name="familyInviteTried" title="家族招待の画面を開いて、手順を確認できましたか？" options={["手順を確認できた", "開いたが手順が分からなかった", "見つけられなかった", "使う必要がなかった"]} />
           <RadioField name="savedRecord" title="過去に保存した記録を、あとから見つけられましたか？" options={["すぐ見つけられた", "少し迷った", "見つけられなかった", "記録を保存できなかった"]} />
-          <RadioField name="aiConsult" title="AI相談を見つけて使えましたか？" options={["すぐ使えた", "少し迷ったが使えた", "見つけたが使えなかった", "見つけられなかった"]} />
+          <RadioField name="aiConsult" title="AI相談を見つけて使えましたか？" options={["すぐ使えた", "少し迷ったが使えた", "見つけたが使えなかった", "見つけられなかった", "使う必要がなかった"]} />
+
+          <RadioField name="firstStoppedAt" title="一番最初に迷った場所はどこですか？" options={STOP_OPTIONS} />
 
           <fieldset className={styles.field}>
-            <legend>どこで止まった、または迷いましたか？<span className={styles.required}>複数選択可</span></legend>
+            <legend>ほかにも止まった、または迷った場所はありますか？<span className={styles.required}>複数選択可</span></legend>
             <div className={styles.options}>
               {STOP_OPTIONS.map((option) => (
                 <label className={styles.option} key={option}>
@@ -275,17 +304,18 @@ export function MonitorReportForm() {
 
           <RadioField name="returnIntent" title="今後も変化を記録するために使いたいですか？" options={["ぜひ使いたい", "たぶん使う", "分からない", "使わないと思う"]} />
           <RadioField name="familyShare" title="この手帳を家族とも共有したいですか？" options={["共有したい", "場合によっては共有したい", "共有しなくてよい"]} />
-          <RadioField name="paymentIntent" title="2人目の手帳・無制限共有・継続AI相談が使える場合、近いものを選んでください。" options={["月980円なら利用したい", "年9,800円なら利用したい", "家族と相談して決めたい", "有料では利用しない"]} />
+          <RadioField name="willingnessToPay" title="この7日間の体験に、あなたなら月いくらまで払えますか？" options={["0円（無料なら使う）", "300円まで", "500円まで", "980円まで", "980円以上"]} />
+          <RadioField name="priceReaction" title="実際の価格は月980円（年9,800円）です。どうしますか？" options={["月980円を払って使う", "年払いなら検討する", "家族と相談する", "無料の範囲だけ使う", "使わない"]} />
 
           <TextArea name="confusingPoint" title="一番分かりにくかったところ" placeholder="押すボタンが分からなかった、保存できたか不安だった、など" />
           <TextArea name="usefulPoint" title="一番役に立ちそうだと感じたところ" />
           <TextArea name="missingPoint" title="足りない機能、または使わないと思った理由" />
 
           <div className={styles.field}>
-            <label htmlFor="screenshots">気になった画面のスクリーンショット3枚<span className={styles.required}>必須</span></label>
+            <label htmlFor="screenshots">気になった画面のスクリーンショット<span className={styles.required}>1枚必須・最大3枚</span></label>
             <p className={styles.help}>実名・住所・病名・メールアドレスなどが写っていないことを確認してください。JPEG・PNG・WebP、1枚4MB以下です。</p>
             <input className={styles.fileInput} id="screenshots" type="file" accept="image/jpeg,image/png,image/webp" multiple required onChange={selectScreenshots} />
-            <p className={styles.fileStatus}>{screenshots.length === 3 ? "3枚選択できました" : `${screenshots.length}/3枚 選択中`}</p>
+            <p className={styles.fileStatus}>{screenshots.length >= 1 ? `${screenshots.length}枚選択できました（最大3枚）` : "0枚 選択中"}</p>
             {screenshots.length > 0 && <ul className={styles.fileList}>{screenshots.map((file) => <li key={`${file.name}-${file.size}`}>{file.name}</li>)}</ul>}
           </div>
 
