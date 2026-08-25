@@ -645,9 +645,10 @@ function MonthReview({
   return (
     <div className={`month-review is-${review.tone}`}>
       <div>
-        <span>この月の見返し</span>
+        <span>この月の記録から自動で作ったまとめ</span>
         <strong>{review.title}</strong>
         <p>{review.body}</p>
+        <small className="month-review-update-note">記録を追加・編集すると、この内容も自動で変わります。</small>
       </div>
       <div className="month-review-facts" aria-label="この月の集計">
         {review.facts.map((fact) => <em key={fact}>{fact}</em>)}
@@ -664,10 +665,10 @@ function MonthReview({
       </div>
       {onConsult ? (
         <button className="month-review-consult" type="button" onClick={() => onConsult(consultQuestion)}>
-          この月をAI相談チャットに持っていく
+          この月の記録まとめでAIに相談する
         </button>
       ) : (
-        <Link className="month-review-consult" href={consultHref("", consultQuestion)}>この月をAI相談チャットに持っていく</Link>
+        <Link className="month-review-consult" href={consultHref("", consultQuestion)}>この月の記録まとめでAIに相談する</Link>
       )}
     </div>
   );
@@ -705,6 +706,7 @@ function DiaryCalendar({
         {cells.map((cell) => (
           cell.day ? (
             <button
+              aria-label={`${Number(month.slice(5, 7))}月${cell.day}日、${cell.count > 0 ? `記録${cell.count}件` : "記録なし"}`}
               className={[
                 "record-calendar-day",
                 cell.count > 0 ? "has-entry" : "",
@@ -726,10 +728,12 @@ function DiaryCalendar({
       <div className="record-calendar-footer">
         <p>
           {selectedDate
-            ? `${formatLongDate(selectedDate)}の記録を表示中: ${selectedEntries.length}件`
+            ? selectedEntries.length > 0
+              ? `${formatLongDate(selectedDate)}の記録を表示しています（${selectedEntries.length}件）`
+              : `${formatLongDate(selectedDate)}には記録がありません。件数が付いた日を選ぶと記録が表示されます。`
             : "日付を押すと、その日の記録だけを見返せます。"}
         </p>
-        {selectedDate ? <button type="button" onClick={onClearDate}>日付選択を解除</button> : null}
+        {selectedDate ? <button type="button" onClick={onClearDate}>全日付の記録を表示</button> : null}
       </div>
     </div>
   );
@@ -1346,9 +1350,6 @@ export default function FamilyBoardPage() {
   const activeRelationship = activeCase ? activeProfile?.relationship || relationshipName(activeCase) : "";
   const activeCareStatus = activeCase ? activeProfile?.careStatus || statusLabel(activeCase.selectedStatus) : "";
   const todayRows = notebookInsight?.alerts.slice(0, 2) ?? [];
-  const visibleRecentEntries = selectedDiaryDate
-    ? activeEntries.filter((entry) => entry.date === selectedDiaryDate).slice(0, 3)
-    : activeEntries.slice(0, 3);
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
@@ -1823,8 +1824,6 @@ export default function FamilyBoardPage() {
 
   function scrollToDiaryEntry(entryId: string) {
     window.setTimeout(() => {
-      const drawer = document.querySelector<HTMLDetailsElement>("#diary-history-drawer");
-      if (drawer) drawer.open = true;
       window.requestAnimationFrame(() => {
         document.getElementById(`diary-entry-${entryId}`)?.scrollIntoView({
           block: "start",
@@ -3038,66 +3037,15 @@ export default function FamilyBoardPage() {
                   onClearDate={() => setSelectedDiaryDate(null)}
                 />
               ) : null}
-              {recordDigest ? (
-                <div className="record-digest-card">
-                  <div className="record-digest-head">
-                    <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                    <div>
-                      <span>最近のまとめ</span>
-                      <strong>{recordDigest.latestLabel}</strong>
-                    </div>
-                  </div>
-                  <p>{recordDigest.summary}</p>
-                  <div className="record-digest-stats" aria-label="記録の集計">
-                    {recordDigest.stats.map((item) => (
-                      <div key={item.label}>
-                        <strong>{item.value}</strong>
-                        <span>{item.label}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="record-tags" aria-label="記録から見えるテーマ">
-                    {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
-                  </div>
-                  <p className="history-card-note">カレンダーの日付を押すと、その日の記録だけを見返せます。記録ごとに編集、あとで確認することの作成、AI相談ができます。</p>
-                  <button className="record-digest-consult" type="button" onClick={openConsultFromDigest}>
-                    記録をもとにAI相談する
-                  </button>
-                </div>
-              ) : null}
-              {visibleRecentEntries.length > 0 ? (
-                <div className="recent-entry-list" aria-label="最近の記録">
-                  <div className="recent-entry-list-head">
-                    <strong>{selectedDiaryDate ? `${formatLongDate(selectedDiaryDate)}の記録` : "最近の記録"}</strong>
-                    <span>{visibleRecentEntries.length}件</span>
-                  </div>
-                  {visibleRecentEntries.map((entry) => (
-                    <article className="history-preview-card" key={entry.id}>
-                      <div className="history-preview-meta">
-                        <time>{formatLongDate(entry.date)}</time>
-                        <span className={`mood-badge ${entry.body.trimStart().startsWith("相談メモ:") ? "is-consult" : `is-${entry.mood}`}`}>
-                          {entry.body.trimStart().startsWith("相談メモ:") ? "AI相談メモ" : moodLabel(entry.mood)}
-                        </span>
-                      </div>
-                      <p>{clipText(entry.body, 96)}</p>
-                      <button className="history-preview-action" type="button" onClick={() => openDiaryEditorAndScroll(entry)}>
-                        内容を確認・編集する <span aria-hidden="true">›</span>
-                      </button>
-                    </article>
-                  ))}
-                </div>
-              ) : (
-                <p className="diary-empty">まだ記録はありません。今日の一言から手帳が育ちます。</p>
-              )}
               {activeEntries.length > 0 ? (
-                <details className="history-drawer" id="diary-history-drawer" open>
-                  <summary>すべての記録を見返す・編集する ›</summary>
-                  {selectedDiaryDate ? (
-                    <div className="selected-date-notice">
-                      <strong>{formatLongDate(selectedDiaryDate)}の記録だけ表示中</strong>
-                      <button type="button" onClick={() => setSelectedDiaryDate(null)}>すべての日付に戻す</button>
+                <div className="history-record-list" id="diary-history-records">
+                  <div className="history-record-list-head">
+                    <div>
+                      <span>{selectedDiaryDate ? "選んだ日の記録" : "保存した記録"}</span>
+                      <strong>{selectedDiaryDate ? formatLongDate(selectedDiaryDate) : "すべての記録"}</strong>
                     </div>
-                  ) : null}
+                    <em>{filteredEntries.length}件</em>
+                  </div>
                   <div className="record-filter-tabs" aria-label="記録の絞り込み">
                     {([
                       ["all", "すべて"],
@@ -3116,25 +3064,15 @@ export default function FamilyBoardPage() {
                   </div>
                   {diaryGroups.length > 0 ? (
                     <div className="diary-timeline">
-                      {diaryGroups.map((group) => (
-                        <section className="diary-month-group" key={group.month}>
+                      {diaryGroups.map((group) => {
+                        const monthEntries = activeEntries.filter((entry) => entry.date.startsWith(group.month));
+
+                        return (
+                          <section className="diary-month-group" key={group.month}>
                           <div className="diary-month-head">
                             <h3>{monthLabel(group.month)}</h3>
                             <p>{group.items.length}件 / 変化 {group.changedCount}件 / 写真 {group.attachmentCount}件</p>
                           </div>
-                          <MonthReview
-                            entries={group.items}
-                            profile={activeProfile}
-                            onConsult={(question) => {
-                              if (!activeCase) return;
-                              openConsultDraft({
-                                caseId: activeCase.id,
-                                entryId: group.items[0]?.id,
-                                sourceLabel: `${monthLabel(group.month)}から`,
-                                question
-                              });
-                            }}
-                          />
                           {group.items.map((entry) => {
                             const editForm = diaryEditForms[entry.id] ?? diaryEditSeed(entry);
                             const isEditing = editingDiaryId === entry.id;
@@ -3237,13 +3175,40 @@ export default function FamilyBoardPage() {
                               </article>
                             );
                           })}
-                        </section>
-                      ))}
+                          <details className="month-review-disclosure">
+                            <summary>
+                              <strong>{formatMonthTitle(group.month)}のまとめを見る</strong>
+                              <span>この月の記録から自動作成・自動更新</span>
+                            </summary>
+                            <MonthReview
+                              entries={monthEntries}
+                              profile={activeProfile}
+                              onConsult={(question) => {
+                                if (!activeCase) return;
+                                openConsultDraft({
+                                  caseId: activeCase.id,
+                                  entryId: monthEntries[0]?.id,
+                                  sourceLabel: `${monthLabel(group.month)}から`,
+                                  question
+                                });
+                              }}
+                            />
+                          </details>
+                          </section>
+                        );
+                      })}
                     </div>
                   ) : (
-                    <p className="diary-empty">この絞り込みに合う記録はありません。</p>
+                    <p className="diary-empty">
+                      {selectedDiaryDate
+                        ? `${formatLongDate(selectedDiaryDate)}には表示できる記録がありません。別の日を選ぶか、「全日付の記録を表示」を押してください。`
+                        : "この絞り込みに合う記録はありません。"}
+                    </p>
                   )}
-                </details>
+                </div>
+              ) : null}
+              {activeEntries.length === 0 ? (
+                <p className="diary-empty">まだ記録はありません。「今日の記録を書く」から、まず1行残してください。</p>
               ) : null}
             </article>
           </section>

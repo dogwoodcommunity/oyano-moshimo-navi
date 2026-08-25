@@ -1,5 +1,9 @@
 :root {
   color-scheme: light;
+  --font-ui: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
+  --font-body: var(--font-ui);
+  --font-rounded: var(--font-ui);
+  --font-serif: var(--font-ui);
   --bg-paper: #faf7ee;
   --rule: rgba(74, 143, 166, 0.08);
   --ink: #33424a;
@@ -1904,7 +1908,7 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-size: 18px;
-  font-family: var(--font-body), system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: var(--font-ui);
   letter-spacing: 0;
 }
 
@@ -10132,6 +10136,59 @@ textarea {
   margin: 14px 16px;
 }
 
+.history-record-list {
+  background: #f7f3e9;
+  border-top: 1px solid var(--hairline);
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.history-record-list-head {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.history-record-list-head div {
+  display: grid;
+  gap: 3px;
+}
+
+.history-record-list-head span {
+  color: var(--ink-faint);
+  font-size: 16px;
+  font-weight: 850;
+}
+
+.history-record-list-head strong {
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.history-record-list-head em {
+  background: #fff;
+  border: 1px solid #dce8dd;
+  border-radius: 999px;
+  color: var(--primary-deep);
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-style: normal;
+  font-weight: 900;
+  padding: 7px 11px;
+}
+
+.history-record-list .diary-timeline {
+  gap: 18px;
+}
+
+.history-record-list > .diary-empty {
+  margin: 0;
+}
+
 .profile-summary-card {
   display: grid;
   gap: 14px;
@@ -11662,6 +11719,75 @@ textarea {
   padding: 14px;
 }
 
+.month-review-disclosure {
+  background: #eef5f0;
+  border: 1px solid rgba(154, 174, 159, 0.48);
+  border-radius: 16px;
+  margin-top: 4px;
+  overflow: hidden;
+}
+
+.month-review-disclosure summary {
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  list-style: none;
+  min-height: 56px;
+  padding: 13px 44px 13px 14px;
+  position: relative;
+}
+
+.month-review-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.month-review-disclosure summary::after {
+  color: var(--primary-deep);
+  content: "＋";
+  font-size: 23px;
+  font-weight: 900;
+  line-height: 1;
+  position: absolute;
+  right: 15px;
+  top: 18px;
+}
+
+.month-review-disclosure[open] summary::after {
+  content: "−";
+}
+
+.month-review-disclosure[open] summary {
+  border-bottom: 1px solid rgba(154, 174, 159, 0.38);
+}
+
+.month-review-disclosure summary strong {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 900;
+  line-height: 1.4;
+}
+
+.month-review-disclosure summary span {
+  color: var(--ink-sub);
+  font-size: 16px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.month-review-disclosure .month-review {
+  border: 0;
+  border-left: 6px solid #8aa897;
+  border-radius: 0;
+}
+
+.month-review-disclosure .month-review.is-urgent {
+  border-left-color: #b35b75;
+}
+
+.month-review-disclosure .month-review.is-changed {
+  border-left-color: #b88943;
+}
+
 .month-review.is-urgent {
   border-left-color: #b35b75;
 }
@@ -11692,6 +11818,15 @@ textarea {
   font-weight: 800;
   line-height: 1.7;
   margin: 6px 0 0;
+}
+
+.month-review .month-review-update-note {
+  color: var(--ink-sub);
+  display: block;
+  font-size: 16px;
+  font-weight: 850;
+  line-height: 1.55;
+  margin-top: 8px;
 }
 
 .month-review-facts {
