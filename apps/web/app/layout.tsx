@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
+import { BIZ_UDPMincho } from "next/font/google";
 import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
@@ -7,12 +8,12 @@ import "./globals.css";
 const criticalCss = `
   *,*::before,*::after{box-sizing:border-box}
   html{background:#faf7ee;color:#33424a}
-  body{margin:0;background:#faf7ee;color:#33424a;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;font-size:18px;letter-spacing:0}
+  body{margin:0;background:#faf7ee;color:#33424a;font-family:var(--font-readable-mincho),"BIZ UDPMincho","Yu Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro",serif;font-size:18px;letter-spacing:0}
   a{color:inherit;text-decoration:none}
   button,input,select,textarea{font:inherit}
   .shell{min-height:100vh}
   .nav{align-items:center;background:rgba(246,247,241,.96);border-bottom:1px solid rgba(217,226,220,.82);display:flex;gap:16px;justify-content:space-between;min-height:66px;padding:14px 24px;position:sticky;top:0;z-index:20}
-  .app-brand{align-items:center;display:inline-flex;font-weight:900;gap:10px}
+  .app-brand{align-items:center;display:inline-flex;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;font-weight:900;gap:10px}
   .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
   .app-brand-logo{display:block;height:44px;width:44px}
   .navlinks{align-items:center;color:#6f7974;display:flex;flex-wrap:wrap;font-size:17px;font-weight:800;gap:10px}
@@ -31,7 +32,7 @@ const criticalCss = `
   .title-card .card{align-items:center;background:#fff;border:1px solid rgba(217,226,220,.9);border-radius:22px;box-shadow:0 18px 48px rgba(28,48,39,.1);display:flex;gap:14px;padding:16px 18px}
   .title-lockup{align-items:center;display:flex;gap:12px}
   .watch-bird-mark{display:block;height:64px;max-width:64px;width:64px}
-  .title-card strong{display:block;font-size:20px;font-weight:900;line-height:1.3}
+  .title-card strong{display:block;font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic UI","Yu Gothic",Meiryo,sans-serif;font-size:20px;font-weight:900;line-height:1.3}
   .title-card small,.title-card span:last-child{color:#6f7974;font-size:12px;font-weight:800}
   .entry-intro-card,.entry-how-card,.entry-plus-card{background:rgba(255,255,255,.94);border:1px solid rgba(217,226,220,.95);border-radius:22px;box-shadow:0 18px 48px rgba(28,48,39,.1);padding:24px}
   .entry-date,.pill{color:#0f6b45;font-size:13px;font-weight:900;margin:0 0 10px}
@@ -47,6 +48,13 @@ const criticalCss = `
   .footer{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;padding:28px 24px;color:#6f7974;font-size:16px;font-weight:800}
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
 `;
+
+const readableMincho = BIZ_UDPMincho({
+  display: "swap",
+  subsets: ["latin"],
+  variable: "--font-readable-mincho",
+  weight: ["400", "700"]
+});
 
 export const metadata: Metadata = {
   title: {
@@ -81,7 +89,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja">
+    <html className={readableMincho.variable} lang="ja">
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
       </head>

@@ -8875,3 +8875,49 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-hfhmnr1se-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` と `.env.local` は、それぞれworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-font-history` と `/private/tmp/oyano-moshimo-navi-env-local-20260825-font-history` へ退避した。
+
+## 2026-08-25 追記 240 — ロゴ以外を読みやすいBIZ UDP明朝へ変更
+
+ユーザーから、追記239で統一したゴシック体をやめ、ロゴの「親のもしもナビ」だけはゴシック体のまま、本文や見出しを明朝体に近い読みやすい字体へ変更するよう要望があった。モニター用の募集・登録・最終アンケートも同じ字体で確認できることを求められた。
+
+判断:
+
+- 本文用には `BIZ UDPMincho` を採用した。明朝系の雰囲気を保ちながら、文字の形や濁点を判別しやすく設計されたユニバーサルデザイン書体で、中高年を含む利用者の読みやすさを優先できる。
+- ロゴはサービス識別のため、従来の太い日本語システムゴシック体を維持した。
+- 通常版とモニター版を別CSSにはせず、共通layoutで字体を適用し、画面間の不一致を防いだ。
+
+変更:
+
+- `next/font/google` の `BIZ_UDPMincho` 400・700を読み込み、全画面の `--font-ui`、`--font-body`、`--font-rounded`、`--font-serif` から参照するようにした。
+- フォント読込前も明朝系で表示されるよう、`Yu Mincho`、`Hiragino Mincho ProN` などをfallbackへ設定した。
+- 上部固定ヘッダー、初回画面のロックアップ、手帳表紙、初回登録のブランド表示、管理画面ブランドの「親のもしもナビ」は `--font-brand` のゴシック体へ固定した。
+- 本文、見出し、ボタン、入力欄、手帳、モニター募集、モニター新規登録、7日間案内、最終アンケートはBIZ UDP明朝へ統一した。
+- PWA更新用にservice worker cacheを `v38` へ上げた。
+
+確認:
+
+- `CI=true pnpm --filter web run typecheck` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカルの通常手帳で、ヘッダーと手帳表紙の「親のもしもナビ」はゴシック体のまま、手帳名、説明、日記、ボタンがBIZ UDP明朝になることを目視確認した。
+- ローカル `/monitor` で、募集見出し、説明、報酬・期間、お願い事項がBIZ UDP明朝になり、文字切れがないことを確認した。
+- ローカル `/start?reset=1&monitor=1` でモニター用の新規登録画面を表示し、ロゴだけゴシック、登録見出し・説明・必須項目がBIZ UDP明朝になることを確認した。
+- ローカル `/monitor/report?preview=1` で、最終報告見出し、説明、同意文、回答項目がBIZ UDP明朝になることを確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番 `/monitor` と `/monitor/report?preview=1` を実ブラウザで開き、新字体と文字切れがないことを確認した。
+- 本番 `/start?monitor=1` のHTMLに「はじめての手帳登録」「市区町村（必須・番地不要）」が含まれることを確認した。既存手帳があるブラウザでは手帳へ戻る仕様のため、本番データをリセットする確認は行っていない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v38` を確認。
+- `smoke-monitor-journey` の既知のHTTP 503は、許可名設定まで最終回答受付を停止しているためで、今回の字体変更による回帰ではない。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deploymentはREADY。
+- deployment URL: `https://oyano-moshimo-navi-dtadyfame-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- モニター募集: `https://oyano-moshimo-navi.vercel.app/monitor`。
+- モニター新規登録: `https://oyano-moshimo-navi.vercel.app/start?monitor=1`。
+- 最終アンケート項目プレビュー: `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1`。
+- deploy時に一時生成された `.vercel/` と `.env.local` は、それぞれworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-biz-mincho` と `/private/tmp/oyano-moshimo-navi-env-local-20260825-biz-mincho` へ退避した。
