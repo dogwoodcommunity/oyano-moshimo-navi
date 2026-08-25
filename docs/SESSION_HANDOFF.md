@@ -9228,3 +9228,58 @@ commit・GitHub:
 - 実装・資料commit: `7a6955c` (`Allow self-identified monitor participants`)。`origin/main` へpush済み。
 - GitHub Actions CI `32815752642` はweb/mobile typecheck、web build、smokeを含めすべて成功。
 - GitHub ActionsのVercel workflow `32815752364` はcheck成功、Vercel secrets未設定のためdeploy jobを設計どおりスキップした。productionは上記のVercel CLI deploymentで反映済み。
+
+## 2026-08-25 追記 248 — 募集条件を「7日間で3回以上」に統一し、配布セットを再作成
+
+ユーザーから、クラウドワークスへ掲載するモニター募集文として、7日間で「今日の記録」を3回以上書く条件、応募条件、報酬・期間、機密保持、応募時の質問を追加・修正したいとの依頼があった。提示文には旧仕様の「初期設定は呼び名と関係のみ」「最終日にGoogleフォーム」「スクリーンショット3枚必須」「検収後に支払い」も含まれていたため、現在の本番仕様と報酬方針へ合わせて整理した。
+
+募集条件と参加者向け表現:
+
+- 記録課題を「1日1回を目安に、7日間で3回以上」へ変更した。毎日書けない日があっても参加を継続でき、1日目の記録も3回に含める。
+- 初期設定は本番で必須の呼び名、関係、都道府県、市区町村の4項目とした。呼び名と地域は仮名・架空でよく、クラウド保存は任意。
+- 期間中の課題へ、保存した過去の記録を見返す操作を明記した。確認リスト、書類の所在メモ、AI相談は各1回、家族招待は画面を開いて手順確認までで、実送信は任意。
+- 最終回答はGoogleフォームではなく、開始日を1日目とした8日目0:00以降にアプリ内へ表示する専用フォームと明記した。回答時間は15〜20分。
+- スクリーンショットは1枚必須・最大3枚。3枚必須には戻していない。
+- 報酬は検収後ではなく、最終回答の提出で2,000円を支払う。記録未達、機能を使えなかった回答、否定回答でも報酬は変えない。
+- 同じスマートフォン・同じブラウザ、プライベートブラウズ不使用、履歴・サイトデータ削除禁止、個人情報を入力・撮影しないこと、回答と画像を6か月後に削除することを募集文へ追加した。
+- `docs/MONITOR_RECRUITMENT_POST.txt` を新規作成し、クラウドワークスへそのまま貼れる平文の募集文を保存した。
+- `docs/TEST_COOPERATION_REQUEST.md`、`docs/MONITOR_PARTICIPANT_GUIDE.md`、`docs/MONITOR_SEND_MESSAGE.txt`、`docs/FAMILY_TEST_PROTOCOL.md`、`docs/CLAUDE_MONITOR_REVIEW_PACKET.md` を同じ条件へ更新した。
+
+画面と集計:
+
+- `/monitor` の課題を「1日1回を目安に、7日間で3回以上」へ変更し、過去の記録を見返す課題も表示した。
+- 手帳上部のモニター案内は、端末内の保存イベントを暦日ごとに数え、3日に届くまでは「あとN日分」、3日以上なら「3回以上の記録ができています」と表示する。毎日必須とは表示しない。
+- 期間中に最終回答URLを直接開いた場合の説明も3回以上へ変更した。
+- 最終アンケートの自己申告選択肢を「7日すべて / 5〜6日 / 3〜4日 / 2日 / 1日 / 保存できなかった」へ変更した。
+- 運営管理画面の集計を「5日以上記録」から「3日以上記録」へ変更した。
+- 参加人数5人以上の場合の暫定判定も、3日以上記録した人70%以上を前進・再設計の基準、2日以下の人70%以上を立ち止まりの基準へ変更した。
+- PWA更新用にservice worker cacheを `v45` へ上げた。
+
+配布成果物:
+
+- リポジトリ外の `outputs/親のもしもナビ_モニター募集文.txt` を新規作成した。
+- `outputs/親のもしもナビ_7日間モニター参加ガイド.docx` とPDFを新条件で再生成した。
+- 配布ZIP `outputs/親のもしもナビ_7日間モニター参加セット.zip` を再作成し、`monitor_guide.docx`、`monitor_guide.pdf`、`send_message.txt` の3ファイルだけを収録した。
+- 日本語フォントを埋め込んだPDFは4ページ、US Letter、リンク付き。全4ページを100%表示で目視し、文字欠け、重なり、途中切れ、不要な空白ページがないことを確認した。
+- DOCXは4セクション、全8表が `tblW=9360`、`tblInd=120`。ZIPとDOCXの圧縮データ検査も成功した。
+
+実装確認:
+
+- Web TypeScript `tsc --noEmit` 成功。
+- `scripts/test-monitor-timeline.mjs` 成功。朝開始、23:59開始、月またぎ、年またぎ、7日目終了から8日目0:00の境界を再確認した。
+- Next.js production build成功。162ページを生成した。
+- ローカルproduction buildで通常smokeとモニターsmokeが成功した。未入力回答400、画像なし400、未認証クラウド同期501を確認した。
+- ローカル `/monitor` のHTMLで「7日間で3回以上」、旧文言「合計7回」が無いこと、`/sw.js` が `v45` であることを確認した。
+- 本番の通常smokeとモニターsmokeも成功した。本番は未入力回答400、画像なし400、未認証クラウド同期401。
+- 本番 `/monitor` で「7日間で3回以上」「スクショを1〜3枚」「最終回答の提出でお支払い」を確認し、`/sw.js` で `v45` を確認した。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+commit・GitHub・本番:
+
+- 実装・資料commit: `f657496` (`Align monitor tasks to three records`)。`origin/main` へpush済み。
+- GitHub Actions CI `32826309666` は成功。
+- GitHub Actions Vercel workflow `32826309692` は成功。
+- Vercel production deployment `dpl_13UbNg6Q5gjLqbomEDgBcTs6tsSW` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-d9m9chdly-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-monitor-three-records` へ退避した。`.env.local` は生成していない。
