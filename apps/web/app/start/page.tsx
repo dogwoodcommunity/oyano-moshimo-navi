@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
 import { PREFECTURES } from "@/lib/prefectures";
-import { startMonitorSession } from "@/lib/monitorSession";
+import { readMonitorSession, startMonitorSession } from "@/lib/monitorSession";
 import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData, type PersonProfile } from "@/lib/store";
 
 type TocItem = {
@@ -107,6 +107,7 @@ export default function StartPage() {
     const params = new URLSearchParams(window.location.search);
     const isReset = params.get("reset") === "1";
     const isMonitor = params.get("monitor") === "1";
+    const existingMonitorSession = readMonitorSession();
     if (params.get("fresh") === "1" || isReset) {
       resetLocalNotebookData();
       params.delete("fresh");
@@ -120,6 +121,10 @@ export default function StartPage() {
     window.history.replaceState(null, "", `${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
 
     const quota = notebookQuota();
+    if (!isReset && existingMonitorSession && quota.count > 0) {
+      router.replace("/home");
+      return;
+    }
     if (!quota.canCreate) {
       setChooseError(quota.message);
       setLimitReached(true);
@@ -127,7 +132,7 @@ export default function StartPage() {
       setChooseError(null);
       setLimitReached(false);
     }
-  }, []);
+  }, [router]);
 
   useEffect(() => {
     router.prefetch("/home");
@@ -159,6 +164,11 @@ export default function StartPage() {
 
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
+    if (readMonitorSession() && notebookQuota().count > 0) {
+      router.push("/home");
+      return;
+    }
+
     const missingFields = missingRequiredProfileFields(profileDraft);
     if (missingFields.length > 0) {
       setChooseError(null);
