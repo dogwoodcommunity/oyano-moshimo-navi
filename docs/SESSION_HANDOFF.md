@@ -8747,3 +8747,37 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-414om829k-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-1241` へ退避した。
+
+## 2026-08-25 追記 237 — クラウド保存の利点を画面内で具体化
+
+ユーザーから、任意にしたクラウド保存について「保存すると何がよいか」を画面へ書くよう要望があった。
+
+変更:
+
+- 7日間モニターの日次案内へ、「機種変更・端末故障・履歴削除のあとも、メール確認で手帳を戻せる」と具体的な利点を追記した。任意であることと、使わない場合は同じブラウザを使い履歴を削除しない注意も維持した。
+- 補助リンク名を「クラウド保存を見る（任意）」から「クラウド保存の説明を見る（任意）」へ変更し、押すと何が表示されるか明確にした。
+- `/monitor` の初日説明にも、クラウド保存を使うと機種変更・故障・履歴削除後に手帳を戻せることを追記した。
+- クラウド保存欄の冒頭で、「手帳の控えをインターネット上にも残す機能」と平易に説明した。
+- 未設定時の利点を、①日記・プロフィール・確認リストの変更を自動で控える、②履歴削除・機種変更・端末故障後もメール確認で戻せる、③家族と同じ手帳を共有する時の保存先になる、の3点へ整理した。
+- PWA更新用にservice worker cacheを `v35` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカルのfresh monitorで、日記が主課題のまま、復元の利点と「クラウド保存の説明を見る（任意）」が表示されることを実操作確認した。
+- ローカルで説明リンクを押し、クラウド欄がopenになり、機能説明、自動の控え、復元、家族共有の3利点がすべて表示されることを確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番 `/home` でも復元の利点と新しいリンク名を確認し、リンク先に機能説明と3利点が表示されることを実操作確認した。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v35` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment: `dpl_An4TtRMBsJ3xJA5yqmAhd1PtCgjJ` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-3hi80e9o1-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-1300` へ退避した。

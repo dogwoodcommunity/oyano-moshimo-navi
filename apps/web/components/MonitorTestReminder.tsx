@@ -60,7 +60,7 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
         </p>
         {!cloudBackupConfirmed && hasNotebook ? (
           <p className={styles.optionalNote}>
-            クラウド保存は任意です。使わない場合は、同じブラウザを使い、履歴を削除しないでください。
+            クラウド保存を使うと、機種変更・端末故障・履歴削除のあとも、メール確認で手帳を戻せます。設定は任意です。使わない場合は、同じブラウザを使い、履歴を削除しないでください。
           </p>
         ) : null}
       </div>
@@ -73,7 +73,7 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
         </Link>
         {!cloudBackupConfirmed && hasNotebook ? (
           <a className={styles.optionalLink} href="#cloud-backup" onClick={openCloudBackup}>
-            クラウド保存を見る（任意）
+            クラウド保存の説明を見る（任意）
           </a>
         ) : null}
       </div>

@@ -44,7 +44,7 @@ export function MonitorStart() {
               <span>1</span>
               <div className={styles.stepBody}>
                 <strong>初日</strong>
-                <p>手帳を1冊作る。クラウド保存は使いたい人だけで構いません</p>
+                <p>手帳を1冊作る。クラウド保存は任意です。使うと、機種変更・端末故障・履歴削除のあとも手帳を戻せます</p>
               </div>
             </li>
             <li>

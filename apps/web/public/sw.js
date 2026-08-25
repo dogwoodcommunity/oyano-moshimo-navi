@@ -1,4 +1,4 @@
-const CACHE_VERSION = "oyano-moshimo-navi-v34";
+const CACHE_VERSION = "oyano-moshimo-navi-v35";
 const STATIC_CACHE_URLS = [
   "/offline",
   "/brand/watch-bird-mark.svg",
