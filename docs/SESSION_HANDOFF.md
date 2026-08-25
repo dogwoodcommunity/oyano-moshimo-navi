@@ -9222,3 +9222,9 @@ commit・本番:
 - 参加人数は固定しない。参加者を選んだら、配布セットの `send_message.txt` と `monitor_guide.pdf` を渡す。
 - 最終回答では、参加者本人がクラウドワークスのプロフィール表示名を入力する。事前名簿登録とモニター番号発行は不要。
 - 支払管理表には、本人が入力した表示名、提出日時、支払状態、削除予定日、削除依頼を記録する。
+
+commit・GitHub:
+
+- 実装・資料commit: `7a6955c` (`Allow self-identified monitor participants`)。`origin/main` へpush済み。
+- GitHub Actions CI `32815752642` はweb/mobile typecheck、web build、smokeを含めすべて成功。
+- GitHub ActionsのVercel workflow `32815752364` はcheck成功、Vercel secrets未設定のためdeploy jobを設計どおりスキップした。productionは上記のVercel CLI deploymentで反映済み。
