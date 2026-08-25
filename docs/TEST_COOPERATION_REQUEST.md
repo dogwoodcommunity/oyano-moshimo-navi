@@ -71,7 +71,7 @@ https://oyano-moshimo-navi.vercel.app/monitor
 - 最終報告: `https://oyano-moshimo-navi.vercel.app/monitor/report`
 - 回答管理: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`
 - 回答と画像は管理者認証なしでは閲覧できない。
-- 採用した3人のクラウドワークス表示名を、Vercelの `MONITOR_ALLOWED_CROWDWORKS_NAMES` へカンマ区切りで設定してから開始URLを送る。
+- 採用した10人のクラウドワークス表示名を、Vercelの `MONITOR_ALLOWED_CROWDWORKS_NAMES` へカンマ区切りで設定してから開始URLを送る。
 - 最終回答の提出で報酬を支払う。機能未達や記録中断を減額・不払いの理由にしない。
 - 管理画面で自己申告と端末の自動カウントを並べ、差も調査結果として記録する。
 - 別の支払管理表へ、表示名、提出日時、支払状態、削除予定日、削除依頼の有無を残す。

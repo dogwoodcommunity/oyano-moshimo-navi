@@ -8623,3 +8623,30 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-kd03na445-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 234 — モニター人数を実際の10人へ訂正
+
+ユーザーから、モニターは3人ではなく、すでに10人集めているとの訂正があった。Claudeの初回レビューが3人前提だったため、その人数を実運用人数と誤認して資料へ反映していた。実際の対象人数は10人であり、「クラウドワークス表示名」は採用した10人それぞれのプロフィールに表示される名前を指す。
+
+変更:
+
+- `docs/FAMILY_TEST_PROTOCOL.md`、`docs/TEST_COOPERATION_REQUEST.md`、`docs/CLAUDE_MONITOR_REVIEW_PACKET.md` の参加人数、許可名設定、運営対象を3人から10人へ訂正した。
+- 10人を大規模な統計調査ではなく探索的モニターとして扱う方針は維持した。
+- 3段階判定を10人用の暫定基準へ変更した。「前進」は実価格へ前向きな反応が3人以上かつ5日以上の記録が7人以上、「再設計」は5日以上の記録が7人以上だが前向きな支払反応が2人以下、「立ち止まり」は7人以上が3日以内に記録を停止とした。
+- どの暫定基準にも明確に当てはまらない場合は無理に合否を作らず、10人分の最初の迷い、停止日、自己申告との差、価格反応、スクリーンショットを並べて再設計箇所を決めると明記した。
+- リポジトリ外の `outputs/CLAUDE_MONITOR_REVIEW_PACKET.md` も更新後のリポジトリ資料と同一内容にした。
+- 回答APIの `MONITOR_ALLOWED_CROWDWORKS_NAMES` はもともと固定人数ではなくカンマ区切りの任意件数に対応しているため、アプリコードの人数上限変更は不要。10人の正確な表示名を環境変数へ登録すれば全員を照合できる。
+
+開始前に残る作業:
+
+- 採用した10人のクラウドワークスプロフィール表示名を、そのまま10件受け取る。
+- 10件をVercel Productionの `MONITOR_ALLOWED_CROWDWORKS_NAMES` へ設定し、再deploy後に全10名の事前照合を確認する。
+- 設定完了までは、productionの最終回答APIをHTTP 503「受付準備中」で停止したままにする。
+
+確認:
+
+- 対象3文書に残る「3人」「3名」を確認し、10人の判定条件で意図的に使う「3人以上」以外の旧人数表現がないことを確認した。
+- `docs/CLAUDE_MONITOR_REVIEW_PACKET.md` とリポジトリ外の `outputs/CLAUDE_MONITOR_REVIEW_PACKET.md` が同一であることを `cmp` で確認した。
+- `git diff --check` 成功。
+- アプリコードと本番の挙動変更はないため、Vercel再deployは行っていない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
