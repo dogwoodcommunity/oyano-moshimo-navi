@@ -8271,3 +8271,33 @@ GitHub・本番:
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。本番 `/sw.js` がcache `v21`、`/start` で市区町村必須表示と状況カードを確認。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 225 — 手帳がある端末でも必須未入力エラーを優先
+
+追記224の本番確認後、ユーザーの端末で必須項目を未入力にしてもエラーが出ないとの再指摘があった。この端末はすでに無料枠の手帳1冊を持っており、必須入力より先に手帳上限を判定していたことが原因。
+
+変更:
+
+- `/start` の状況カード押下時の判定順を「必須入力4項目 → 手帳上限 → 手帳作成」に変更。
+- すでに手帳がある端末でも、呼び名・関係・都道府県・市区町村が未入力なら4項目のエラーを先に表示する。
+- 4項目を入力した後に同じカードを押した場合だけ、無料枠の手帳1冊上限を案内する。
+- PWA更新用にservice worker cacheを `v22` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- 手帳1冊があるローカルブラウザの390×844pxで、未入力押下時に上限案内が消え、4項目のエラー、`aria-invalid=true` 4件、呼び名欄へのfocusを確認。
+- 同じ画面で4項目を入力後に押すと、必須エラーが消えて手帳上限案内へfocusすることを確認。
+- 本番production aliasをservice worker更新後に再読み込みし、手帳1冊がある本番originでも、未入力押下後に4エラーと呼び名focusが出ることを実操作確認。
+- ローカルと本番の `scripts/smoke-web.mjs` 成功。`git diff --check` 成功。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `6dc7a12` (`Validate required registration fields first`)。
+- Vercel production deployment: `dpl_7VVunKoEibkeqBorYQNWV4gwJWhv` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-3kxru7y4c-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `/sw.js` でcache `v22` を確認。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
