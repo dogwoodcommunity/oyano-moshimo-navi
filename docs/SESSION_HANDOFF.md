@@ -8169,7 +8169,11 @@ AI相談チャットで質問例を押すと、日記から用意された相談
 GitHub:
 
 - 実装commit: `4e2a396` (`Add email reminder delivery`)。
-- 本追記commitと合わせて `origin/main` へpushする。
+- 引き継ぎcommit: `f452038` (`Record email reminder handoff`)。
+- `a2d9e57..f452038` を `origin/main` へpush済み。
+- GitHub Actions CI run `32795058497` は成功。Web/Mobile typecheck、Web build、smokeがすべて成功。
+- Vercel deploy workflow run `32795058494` はcheck成功、deploy jobはVercel secrets未設定のためskip。
+  今回の本番deployment IDはなく、本番反映確認も行っていない。
 
 本番でメールを有効にするために残る作業:
 
