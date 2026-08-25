@@ -33,6 +33,8 @@ with checks as (
   union all select 'column_exists', 'people.prefecture', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'people' and column_name = 'prefecture')
   union all select 'column_exists', 'people.city', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'people' and column_name = 'city')
   union all select 'column_exists', 'families.consult_trial_used_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'families' and column_name = 'consult_trial_used_at')
+  union all select 'column_exists', 'scheduled_notifications.push_sent_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'scheduled_notifications' and column_name = 'push_sent_at')
+  union all select 'column_exists', 'scheduled_notifications.email_sent_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'scheduled_notifications' and column_name = 'email_sent_at')
   union all select 'column_exists', 'people.profile_updated_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'people' and column_name = 'profile_updated_at')
   union all select 'column_exists', 'timeline_events.mood', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'timeline_events' and column_name = 'mood')
   union all select 'column_exists', 'timeline_events.attachments', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'timeline_events' and column_name = 'attachments')

@@ -18,6 +18,7 @@
 - [ ] `claim_due_scheduled_notifications` が `verify_compact.sql` でtrueになることを確認
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
+- [ ] `supabase/notification_email_delivery.sql` を実行
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/person_notebook_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
@@ -56,6 +57,8 @@
   - 2026-07-09監査対応: Admin判定は `family_members` から `app_admins` 専用テーブルへ変更。
   - 2026-07-09再確認: `scripts/smoke-admin-bearer.mjs` で一時 `app_admins` 行を作成し、`/api/admin/env-check` がBearer認証を受け付けることを確認。確認後、一時データは削除済み。
 - [x] `/api/cron/send-due-notifications` をdeploy対象に含める
+- [ ] Resend送信ドメインを認証し、`RESEND_API_KEY` / `NOTIFICATION_EMAIL_FROM` を設定
+- [ ] 期限通知メールと月1確認メールをテスト受信し、通知OFF後は送られないことを確認
 - [x] `/api/cron/purge-anonymous-cases` をdeploy対象に含める
 - [ ] Stripe関連env 3項目を設定
 

@@ -13,6 +13,12 @@ alter table scheduled_notifications
 alter table scheduled_notifications
   add column if not exists claimed_at timestamptz;
 
+alter table scheduled_notifications
+  add column if not exists push_sent_at timestamptz;
+
+alter table scheduled_notifications
+  add column if not exists email_sent_at timestamptz;
+
 do $$
 begin
   if exists (

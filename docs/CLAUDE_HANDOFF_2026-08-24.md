@@ -137,7 +137,8 @@ ID単位でマージし、409復元で未送信の日記を消さない設計に
 
 1. 本物のconsult APIを5ターン実行し、品質・token・原価を実測
 2. Stripe checkout → plan反映 → 解約後の既存記録閲覧をE2E確認
-3. 期限通知と月1確認のメール通知を実装・確認
+3. 期限通知と月1確認のメール通知はコード実装済み。本番で
+   `supabase/notification_email_delivery.sql` を適用し、Resend環境変数を設定して実受信を確認
 
 3家族テストはコード上GOです。ただし、実機で写真・別端末復元・意図的409時の日記保持を確認し、
 利用者がどこで迷うかを観察してください。
@@ -160,4 +161,3 @@ git diff --check
 5. 本番deployを行った場合はdeployment IDとURLも台帳へ記録
 
 秘密情報や実値のAPI key、SMTP password、service role keyは文書やcommitへ書かないでください。
-

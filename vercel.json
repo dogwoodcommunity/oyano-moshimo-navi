@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/send-due-notifications",
-      "schedule": "0 9 * * *"
+      "schedule": "0 0 * * *"
     },
     {
       "path": "/api/cron/purge-anonymous-cases",

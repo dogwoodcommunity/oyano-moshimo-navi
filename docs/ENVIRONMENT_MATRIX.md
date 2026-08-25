@@ -12,6 +12,9 @@
 | `STRIPE_SUPPORT_PACK_PRICE_ID` | support pack時 | no | 発動サポートパックPrice |
 | `STRIPE_WEBHOOK_SECRET` | support pack時 | no | Stripe Webhook署名検証 |
 | `CRON_SECRET` | notification時 | no | Cron手動実行保護 |
+| `RESEND_API_KEY` | メール通知時 | no | 期限・月1確認メールをResend APIから送信 |
+| `NOTIFICATION_EMAIL_FROM` | メール通知時 | no | Resendで認証済みの送信元。表示名つき形式も可 |
+| `NOTIFICATION_EMAIL_REPLY_TO` | 任意 | no | 通知メールへの返信を受ける窓口 |
 | `ANTHROPIC_API_KEY` | 長期相談時 | no | `/api/consult` からClaude APIを呼ぶ |
 | `CONSULT_CLIENT_DAILY_LIMIT` | 任意 | no | 利用者ごとの相談回数/日。既定5 |
 | `CONSULT_FAMILY_MONTHLY_LIMIT` | 任意 | no | Family Plusの相談成功回数/月。既定30。家族単位で判定 |
@@ -60,4 +63,6 @@ https://<web-domain>
 - `SUPABASE_SERVICE_ROLE_KEY` は絶対に `NEXT_PUBLIC_` / `EXPO_PUBLIC_` にしない。
 - `STRIPE_SECRET_KEY` と `STRIPE_WEBHOOK_SECRET` はWebサーバーだけに置く。
 - `ANTHROPIC_API_KEY` もWebサーバーだけに置く。未設定の場合、長期相談は503を返し、手帳の他の機能は通常どおり動く。
+- `RESEND_API_KEY` と `NOTIFICATION_EMAIL_FROM` のどちらかが未設定なら、メール通知だけを停止し、端末通知は継続する。
+- メール通知を有効にする前に `supabase/notification_email_delivery.sql` を本番DBへ適用する。未適用なら二重送信防止のためメールだけを停止する。
 - Expoアプリ内に外部Web決済CTAを置かない。

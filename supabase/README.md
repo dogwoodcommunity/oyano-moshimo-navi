@@ -10,22 +10,23 @@ SQL Editorで以下の順に実行する。
 4. `notification_delivery_hardening.sql`
 5. `task_notification_generation.sql`
 6. `monthly_checkin_notifications.sql`
-7. `handoff_security_hardening.sql`
-8. `handoff_consume_rpc.sql`
-9. `create_initial_family_person.sql`
-10. `sensitive_info_consent_hardening.sql`
-11. `product_seed.sql`
-12. `indexes.sql`
-13. `api_grants.sql`
-14. `production_rls.sql`
-15. `family_invite_rpc.sql`
-16. `admin_auth_hardening.sql`
-17. `family_owner_succession.sql`
-18. `account_deletion_pipeline.sql`
-19. `public_api_rate_limits.sql`
-20. `anonymous_case_retention.sql`
-21. `storage_setup.sql`
-22. `regional_sponsor_data.sql`
+7. `notification_email_delivery.sql`
+8. `handoff_security_hardening.sql`
+9. `handoff_consume_rpc.sql`
+10. `create_initial_family_person.sql`
+11. `sensitive_info_consent_hardening.sql`
+12. `product_seed.sql`
+13. `indexes.sql`
+14. `api_grants.sql`
+15. `production_rls.sql`
+16. `family_invite_rpc.sql`
+17. `admin_auth_hardening.sql`
+18. `family_owner_succession.sql`
+19. `account_deletion_pipeline.sql`
+20. `public_api_rate_limits.sql`
+21. `anonymous_case_retention.sql`
+22. `storage_setup.sql`
+23. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -40,8 +41,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-23. `verify_setup.sql`
-24. `verify_compact.sql`
+24. `verify_setup.sql`
+25. `verify_compact.sql`
 
 ## 重要
 

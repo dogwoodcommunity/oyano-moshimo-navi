@@ -283,6 +283,8 @@ create table if not exists scheduled_notifications (
   scheduled_for timestamptz not null,
   status text not null default 'scheduled',
   claimed_at timestamptz,
+  push_sent_at timestamptz,
+  email_sent_at timestamptz,
   sent_at timestamptz,
   opened_at timestamptz,
   created_at timestamptz default now(),

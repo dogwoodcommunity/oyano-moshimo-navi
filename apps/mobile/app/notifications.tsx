@@ -79,12 +79,12 @@ export default function NotificationsScreen() {
         <MaterialCommunityIcons color={colors.greenDark} name="bell-check-outline" size={26} />
         <View style={styles.digestText}>
           <Text style={styles.digestTitle}>通知はまとめて送ります</Text>
-          <Text style={styles.body}>同じ日に複数の期限がある場合は、できるだけ1通にまとめます。通知を増やしすぎない方針です。</Text>
+          <Text style={styles.body}>同じ日に複数の期限がある場合は、できるだけ1通にまとめます。端末通知と登録メールに共通の設定です。</Text>
         </View>
       </View>
 
       <PreferenceCard
-        body="法定期限や重要な手続きは、近づいた時だけ通知します。"
+        body="法定期限や重要な手続きは、近づいた時だけ端末と登録メールへ知らせます。"
         disabled={isSaving}
         icon="calendar-clock"
         onChange={(value) => void updatePreferences({ remindersEnabled: value })}
@@ -105,7 +105,7 @@ export default function NotificationsScreen() {
       </View>
 
       <PreferenceCard
-        body="親御さんの状況に変化がないか、月1回だけ確認します。変化がなければ何もしなくて大丈夫です。"
+        body="親御さんの状況に変化がないか、端末と登録メールへ月1回だけ知らせます。変化がなければ何もしなくて大丈夫です。"
         disabled={isSaving}
         icon="calendar-refresh-outline"
         onChange={(value) => void updatePreferences({ dailyDigestEnabled: value })}

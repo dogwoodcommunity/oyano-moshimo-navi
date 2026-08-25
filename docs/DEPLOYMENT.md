@@ -22,6 +22,9 @@ STRIPE_SECRET_KEY=
 STRIPE_SUPPORT_PACK_PRICE_ID=
 STRIPE_WEBHOOK_SECRET=
 CRON_SECRET=
+RESEND_API_KEY=
+NOTIFICATION_EMAIL_FROM=
+NOTIFICATION_EMAIL_REPLY_TO=
 NEXT_PUBLIC_APP_SCHEME=oyanomoshimo
 NEXT_PUBLIC_WEB_BASE_URL=
 ```
@@ -63,10 +66,14 @@ NEXT_PUBLIC_WEB_BASE_URL=
 反映が古いまま見える場合は、PWAのService Workerキャッシュが残っている可能性がある。
 `apps/web/public/sw.js` の `CACHE_VERSION` を上げてから再デプロイする。
 
-Vercel Cronから `/api/cron/send-due-notifications` を実行する。HobbyプランではCron頻度に制限があるため、初期は1日1回で公開し、通知運用を始める段階でPro化または外部cronを検討する。`CRON_SECRET` を設定する場合、手動確認では以下のように叩く。
+Vercel Cronから `/api/cron/send-due-notifications` を実行する。Cron式はUTC基準なので、`0 0 * * *` が日本時間09:00。HobbyプランではCron頻度に制限があるため、初期は1日1回で公開し、通知運用を始める段階でPro化または外部cronを検討する。
+
+メール通知を有効にする場合は、先に `supabase/notification_email_delivery.sql` を本番DBへ適用し、Resendで送信ドメインを認証して `RESEND_API_KEY` と `NOTIFICATION_EMAIL_FROM` をVercelへ設定する。SQL未適用または環境変数不足の時はメールだけを停止し、既存の端末通知を継続する。
+
+`CRON_SECRET` を設定した環境を手動確認する場合は、URLへ秘密情報を載せずAuthorization headerで送る。
 
 ```bash
-curl "https://<web-domain>/api/cron/send-due-notifications?cronToken=<CRON_SECRET>"
+curl -H "Authorization: Bearer <CRON_SECRET>" "https://<web-domain>/api/cron/send-due-notifications"
 ```
 
 公開後の確認:

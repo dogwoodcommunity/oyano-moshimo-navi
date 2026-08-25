@@ -158,7 +158,9 @@ with required_columns(table_name, column_name) as (
     ('timeline_events', 'metadata'),
     ('cases', 'consent_to_sensitive_info'),
     ('cases', 'sensitive_info_consent_version'),
-    ('cases', 'sensitive_info_consented_at')
+    ('cases', 'sensitive_info_consented_at'),
+    ('scheduled_notifications', 'push_sent_at'),
+    ('scheduled_notifications', 'email_sent_at')
 )
 select
   'column_exists' as check_type,
