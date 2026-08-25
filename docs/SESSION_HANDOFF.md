@@ -9151,3 +9151,17 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 
 - 採用した10人の正確なクラウドワークス表示名をVercel Productionの `MONITOR_ALLOWED_CROWDWORKS_NAMES` へ登録して再deployする。
 - 許可名が未設定の間、本番の最終回答APIは意図的に503で受付停止する。実在モニター名を使った本番の保存完了テストは、10人の表示名設定後に1件だけ実施する。
+
+commit・本番:
+
+- 実装commit: `160734e` (`Verify seven-day monitor journey`)。`origin/main` へpush済み。
+- GitHub Actions CI `32814137788` はweb/mobile typecheck、web build、smokeを含めすべて成功。
+- GitHub ActionsのVercel workflow `32814137763` は、Vercel secrets未設定のため設計どおりdeploy jobをスキップした。
+- 既存projectを明示してVercel CLIからproduction deploymentを実行し、READYとalias更新を確認した。
+- deployment ID: `2ZxzeofNfUJH6JpVzSGVkNo9XFVW`。
+- deployment URL: `https://oyano-moshimo-navi-7xq193kw6-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` は全項目成功。
+- 本番 `WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app pnpm smoke:monitor` は全項目成功。許可名未設定の503も意図した受付停止として確認した。
+- 本番 `/sw.js` でcache `v44` を確認した。
+- `vercel link` が一時生成した `.vercel/` と `.env.local` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-monitor-final/` へ退避した。`.env.local` の内容は表示していない。
