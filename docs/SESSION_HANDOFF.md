@@ -8921,3 +8921,48 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - モニター新規登録: `https://oyano-moshimo-navi.vercel.app/start?monitor=1`。
 - 最終アンケート項目プレビュー: `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1`。
 - deploy時に一時生成された `.vercel/` と `.env.local` は、それぞれworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-biz-mincho` と `/private/tmp/oyano-moshimo-navi-env-local-20260825-biz-mincho` へ退避した。
+
+## 2026-08-25 追記 241 — BIZ UDP明朝から軽いNoto Serif JPへ変更
+
+ユーザーから、追記240で採用したBIZ UDP明朝も文字が見にくいため、別の読みやすい字体を試すよう要望があった。
+
+判断:
+
+- BIZ UDP明朝は700の太字で縦線が強くなり、この画面の大きな見出しや太字本文では黒く詰まって見えていた。
+- 代わりに `Noto Serif JP` を採用した。明朝系の雰囲気は残しながら線のバランスが素直で、通常本文から大見出しまで同じ書体で読みやすくできる。
+- 読みやすさを優先し、読み込む太さは400・600だけにした。既存CSSが700以上を指定する箇所も600で表示されるため、太字が過度に黒くならない。
+- ロゴの「親のもしもナビ」は、ユーザー指定どおり従来の日本語システムゴシック体を維持した。
+
+変更:
+
+- `next/font/google` の読み込みを `BIZ_UDPMincho` から `Noto_Serif_JP` 400・600へ変更した。
+- 全画面の共通font variableを `--font-readable-serif` へ変更し、本文・見出し・ボタン・入力欄・通常手帳・モニター関連画面へ `Noto Serif JP` を適用した。
+- フォント読込前は `Yu Mincho`、`Hiragino Mincho ProN` などの明朝系fallbackを使う。
+- ロゴ用の `--font-brand` と既存ロゴセレクタは変更していない。
+- PWA更新用にservice worker cacheを `v39` へ上げた。
+
+確認:
+
+- `git diff --check` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- build完了後に単独実行した `CI=true pnpm --filter web run typecheck` 成功。最初にbuildと並列実行したtypecheckだけは、buildが `.next/types` を入れ替えたため一時的にTS6053となったが、コードエラーではない。
+- ローカルの通常手帳で、ロゴはゴシックのまま、手帳名、案内、日記、操作名がNoto Serif JPになることを実ブラウザで確認した。
+- ローカル `/monitor`、`/start?monitor=1`、`/monitor/report?preview=1` を実ブラウザで開き、募集・登録・最終回答が同じNoto Serif JPになり、BIZ UDP明朝より線が軽く表示されることを確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- ローカル `smoke-monitor-journey` は、発行済みモニター名allowlistがないため最終回答拒否が503、クラウド同期設定がないため未認証同期が501となる既知の2項目だけ失敗した。字体変更による回帰ではない。
+- 本番 `/monitor` と `/monitor/report?preview=1` を実ブラウザで開き、新字体が反映され、文字切れがないことを確認した。
+- 本番 `/start?monitor=1` のHTMLに「はじめての手帳登録」「市区町村（必須・番地不要）」が含まれることを確認した。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v39` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_J2wHDUJMqiNeE4RvB79FCx5BnCuH` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-qnxox0snh-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- モニター募集: `https://oyano-moshimo-navi.vercel.app/monitor`。
+- モニター新規登録: `https://oyano-moshimo-navi.vercel.app/start?monitor=1`。
+- 最終アンケート項目プレビュー: `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1`。
+- deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-noto-serif` へ退避した。今回は `.env.local` は生成されなかった。

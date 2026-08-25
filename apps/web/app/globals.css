@@ -1,7 +1,7 @@
 :root {
   color-scheme: light;
   --font-brand: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", "Yu Gothic", Meiryo, sans-serif;
-  --font-ui: var(--font-readable-mincho), "BIZ UDPMincho", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
+  --font-ui: var(--font-readable-serif), "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", "Hiragino Mincho Pro", serif;
   --font-body: var(--font-ui);
   --font-rounded: var(--font-ui);
   --font-serif: var(--font-ui);

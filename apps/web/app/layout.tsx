@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { BIZ_UDPMincho } from "next/font/google";
+import { Noto_Serif_JP } from "next/font/google";
 import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
@@ -8,7 +8,7 @@ import "./globals.css";
 const criticalCss = `
   *,*::before,*::after{box-sizing:border-box}
   html{background:#faf7ee;color:#33424a}
-  body{margin:0;background:#faf7ee;color:#33424a;font-family:var(--font-readable-mincho),"BIZ UDPMincho","Yu Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro",serif;font-size:18px;letter-spacing:0}
+  body{margin:0;background:#faf7ee;color:#33424a;font-family:var(--font-readable-serif),"Noto Serif JP","Yu Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro",serif;font-size:18px;letter-spacing:0}
   a{color:inherit;text-decoration:none}
   button,input,select,textarea{font:inherit}
   .shell{min-height:100vh}
@@ -49,11 +49,11 @@ const criticalCss = `
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
 `;
 
-const readableMincho = BIZ_UDPMincho({
+const readableSerif = Noto_Serif_JP({
   display: "swap",
   subsets: ["latin"],
-  variable: "--font-readable-mincho",
-  weight: ["400", "700"]
+  variable: "--font-readable-serif",
+  weight: ["400", "600"]
 });
 
 export const metadata: Metadata = {
@@ -89,7 +89,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={readableMincho.variable} lang="ja">
+    <html className={readableSerif.variable} lang="ja">
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
       </head>
