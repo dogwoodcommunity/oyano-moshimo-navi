@@ -9036,3 +9036,39 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-7obbx0o3u-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-mood-choice` へ退避した。今回は `.env.local` は生成されなかった。
+
+## 2026-08-25 追記 244 — 記録本文を強調し、3つの操作を小型化
+
+ユーザーから、過去の記録カードで「内容を編集する」「確認することを作る」「AIに相談する」の3ボタンが大きすぎて、実際に記録した内容を見つけにくいと指摘された。また「確認することを作る」という名称も意味が分かりにくかった。
+
+変更:
+
+- 記録本文を「記録した内容」という見出し付きの淡いクリーム色の枠へ入れた。
+- 記録本文は18px・太字へ上げ、左側へ金色のアクセント線を付け、カード内で最初に目に入るようにした。
+- 3つの操作ボタンを記録本文の直下から外し、「ナビからの寄り添い」の後、カード最下部へ移動した。
+- 操作欄へ小さく「この記録の操作」と表示した。
+- ボタンの補足文を外し、44pxのタップ領域を保ったまま高さと余白を縮小した。スマホでも3つを1列に並べる。
+- 表示名を「編集」「確認リストに追加」「AIに相談」へ短縮した。
+- 各ボタンには詳しい `aria-label` を残し、短い表示名でも操作内容を読み上げられるようにした。
+- PWA更新用にservice worker cacheを `v42` へ上げた。
+
+確認:
+
+- `git diff --check` 成功。
+- `CI=true pnpm --filter web run typecheck` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- ローカルの過去記録で、「記録した内容」の枠が日付直下に表示され、その後にナビ欄、最後に小型の3ボタンが出ることを実ブラウザで確認した。
+- 小型化後の「編集」を押すと編集画面が開くことを確認し、「変更せず閉じる」で終了した。記録内容は変更していない。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番の既存3件で「記録した内容」の枠と本文強調が反映されることを実ブラウザで確認した。本番データの追加・編集は行っていない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v42` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_CXYLrw2LpfF8Bx5Ws1wYqxsfBccm` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-qzbn5uuka-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-compact-diary-actions` へ退避した。今回は `.env.local` は生成されなかった。

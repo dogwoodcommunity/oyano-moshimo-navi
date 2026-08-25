@@ -3144,7 +3144,10 @@ export default function FamilyBoardPage() {
                                     </div>
                                   </div>
                                 ) : (
-                                  <p>{entry.body}</p>
+                                  <div className="diary-entry-body">
+                                    <span>記録した内容</span>
+                                    <p>{entry.body}</p>
+                                  </div>
                                 )}
                                 {entry.attachments.length > 0 ? (
                                   <div className="entry-attachments">
@@ -3156,24 +3159,6 @@ export default function FamilyBoardPage() {
                                     ))}
                                   </div>
                                 ) : null}
-                                <div className="diary-entry-actions">
-                                  <button
-                                    disabled={editingDiaryId === entry.id}
-                                    type="button"
-                                    onClick={() => openDiaryEditor(entry)}
-                                  >
-                                    <strong>{editingDiaryId === entry.id ? "上で編集中" : "内容を編集する"}</strong>
-                                    <small>日付や記録内容を直す</small>
-                                  </button>
-                                  <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>
-                                    <strong>確認することを作る</strong>
-                                    <small>家族や病院にあとで聞く項目</small>
-                                  </button>
-                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>
-                                    <strong>AIに相談する</strong>
-                                    <small>この記録をもとに質問する</small>
-                                  </button>
-                                </div>
                                 {diaryUpdatedId === entry.id ? <small className="entry-feedback" role="status">変更を保存しました。</small> : null}
                                 {taskAddedEntryId === entry.id ? (
                                   <small className="entry-feedback" role="status">
@@ -3187,6 +3172,33 @@ export default function FamilyBoardPage() {
                                   <ul>
                                     {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
                                   </ul>
+                                </div>
+                                <div className="diary-entry-tools">
+                                  <span>この記録の操作</span>
+                                  <div className="diary-entry-actions">
+                                    <button
+                                      aria-label="記録内容を編集する"
+                                      disabled={editingDiaryId === entry.id}
+                                      type="button"
+                                      onClick={() => openDiaryEditor(entry)}
+                                    >
+                                      <strong>{editingDiaryId === entry.id ? "編集中" : "編集"}</strong>
+                                    </button>
+                                    <button
+                                      aria-label="この記録から確認することを作り、確認リストに追加する"
+                                      type="button"
+                                      onClick={() => addDiaryTask(activeCase.id, entry)}
+                                    >
+                                      <strong>確認リストに追加</strong>
+                                    </button>
+                                    <button
+                                      aria-label="この記録をもとにAIに相談する"
+                                      type="button"
+                                      onClick={() => openConsultFromEntry(entry)}
+                                    >
+                                      <strong>AIに相談</strong>
+                                    </button>
+                                  </div>
                                 </div>
                               </article>
                             );
