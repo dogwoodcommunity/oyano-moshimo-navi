@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { type MouseEvent, useEffect, useMemo, useState } from "react";
 import { markMonitorActivity, monitorProgress, readMonitorActivity, readMonitorSession, type MonitorSession } from "@/lib/monitorSession";
 import styles from "./MonitorTestReminder.module.css";
 
@@ -22,6 +22,18 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
 
   const cloudBackupConfirmed = Boolean(readMonitorActivity().cloudBackupConfirmed);
 
+  function openCloudBackup(event: MouseEvent<HTMLAnchorElement>) {
+    const target = document.getElementById("cloud-backup");
+    if (!(target instanceof HTMLDetailsElement)) return;
+
+    event.preventDefault();
+    target.open = true;
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#cloud-backup`);
+    window.requestAnimationFrame(() => {
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+  }
+
   if (progress.isReportDue) {
     return (
       <aside className={`${styles.notice} ${styles.due}`} aria-live="polite">
@@ -38,21 +50,6 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
   }
 
   const dueLabel = new Intl.DateTimeFormat("ja-JP", { month: "numeric", day: "numeric" }).format(progress.reportDueAt);
-  if (!cloudBackupConfirmed) {
-    return (
-      <aside className={styles.notice} aria-live="polite">
-        <div className={styles.copy}>
-          <span className={styles.label}>7日間モニター {progress.dayNumber}日目</span>
-          <h2>初日の必須課題：クラウドの控えを作ってください。</h2>
-          <p>メール確認まで完了すると、履歴削除や端末故障でも手帳を戻せます。テスト中は同じブラウザを使い、履歴を削除しないでください。</p>
-        </div>
-        <Link className={styles.button} href="/home?cloud=1#cloud-backup">
-          クラウドの控えを作る
-        </Link>
-      </aside>
-    );
-  }
-
   return (
     <aside className={styles.notice} aria-live="polite">
       <div className={styles.copy}>
@@ -61,13 +58,25 @@ export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebo
         <p>
           7日間、毎日1回ずつ記録します。あと{progress.daysRemaining}日です。最終アンケートは{dueLabel}以降、ここに大きく表示します。
         </p>
+        {!cloudBackupConfirmed && hasNotebook ? (
+          <p className={styles.optionalNote}>
+            クラウド保存は任意です。使わない場合は、同じブラウザを使い、履歴を削除しないでください。
+          </p>
+        ) : null}
       </div>
-      <Link
-        className={hasRecordToday ? styles.smallLink : styles.button}
-        href={hasRecordToday ? "/monitor" : hasNotebook ? "/home#today-diary" : "/start"}
-      >
-        {hasRecordToday ? "テスト内容を確認" : hasNotebook ? "今日の記録を書く" : "手帳を作る"}
-      </Link>
+      <div className={styles.actions}>
+        <Link
+          className={hasRecordToday ? styles.smallLink : styles.button}
+          href={hasRecordToday ? "/monitor" : hasNotebook ? "/home#today-diary" : "/start"}
+        >
+          {hasRecordToday ? "テスト内容を確認" : hasNotebook ? "今日の記録を書く" : "手帳を作る"}
+        </Link>
+        {!cloudBackupConfirmed && hasNotebook ? (
+          <a className={styles.optionalLink} href="#cloud-backup" onClick={openCloudBackup}>
+            クラウド保存を見る（任意）
+          </a>
+        ) : null}
+      </div>
     </aside>
   );
 }

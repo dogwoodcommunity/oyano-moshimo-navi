@@ -8698,3 +8698,52 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-qmpsqyh43-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 236 — モニターのクラウド保存を任意化し、誤った移動を修正
+
+ユーザーから、7日間モニターで「クラウドの控えを作る」を必須にする必要性が分からず、そのボタンを押してもクラウド保存欄ではなく「今日の記録」が見えるとの指摘があった。
+
+判断:
+
+- 7日間モニターの主目的は、日記を迷わず書き続けられるかを確認すること。初日にメール確認まで必須にすると、認証での脱落が日記体験の評価へ混ざるため、クラウド保存は任意の安全策へ変更した。
+- 端末内データ消失のリスク対策として、同じスマートフォン・同じブラウザを使い、プライベートブラウズや履歴・サイトデータ削除を避ける注意は維持した。
+- 追記233の「クラウドの控えを初日の必須課題にする」という判断は、この追記で上書きする。
+
+原因:
+
+- クラウド同期が未完了の場合、モニター案内が日記案内を早期returnで置き換え、「クラウドの控え」が初日の主課題として大きく表示されていた。
+- ボタンは同じ `/home` 内の `?cloud=1#cloud-backup` へNext.jsのクライアント遷移をしていたが、クラウド欄を開く処理はページ初回mount時だけだった。同一ページ遷移では処理が再実行されず、閉じたクラウド欄の見出しが固定ヘッダーに隠れ、その直後の「今日の記録」が見えていた。
+
+変更:
+
+- モニター案内はクラウド同期状態に関係なく、「今日の記録を1回保存してください」を主課題として表示するようにした。
+- クラウド保存は「クラウド保存を見る（任意）」という補助リンクへ下げ、「使わない場合は、同じブラウザを使い、履歴を削除しない」と明記した。
+- 任意リンクを押した時は、`#cloud-backup` の `details` をその場で開き、URL hashを更新してからクラウド欄へsmooth scrollするようにした。
+- クラウド欄へ `scroll-margin-top: 110px` を追加し、固定ヘッダーに見出しが隠れないようにした。
+- `/monitor` の初日説明も「手帳を1冊作る。クラウド保存は使いたい人だけ」に変更した。
+- `docs/FAMILY_TEST_PROTOCOL.md`、`docs/TEST_COOPERATION_REQUEST.md`、`docs/CLAUDE_MONITOR_REVIEW_PACKET.md` を任意方針へ揃えた。Claude資料には、必須化すると初日の脱落要因になり日記体験の評価を濁すため方針変更したことを明記した。
+- リポジトリ外のユーザー向け `outputs/CLAUDE_MONITOR_REVIEW_PACKET.md` も同じ内容へ更新し、リポジトリ内資料と一致させた。
+- PWA更新用にservice worker cacheを `v34` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカルのfresh monitorで手帳を作成し、案内の主見出しが「今日の記録を1回保存してください」、クラウド導線が「クラウド保存を見る（任意）」になることを実操作確認した。
+- ローカルで任意リンクを押すと、URLが `#cloud-backup` になり、クラウド欄がopen、クラウド欄上端が約110px、今日の記録は約815px先になることを確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番 `/monitor` でクラウド保存が任意と表示され、旧「クラウドの控えを作る」必須説明がないことを確認した。
+- 本番 `/home` で日記が主課題、クラウド保存が任意表示になることを確認した。
+- 本番で任意リンクを押すと `#cloud-backup` がopenになり、クラウド欄上端が約110px、今日の記録は約843px先になることを実操作確認した。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v34` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment: `dpl_FPahdEQgw8bTMeQ2DnhJ93oEYD8s` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-414om829k-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-1241` へ退避した。

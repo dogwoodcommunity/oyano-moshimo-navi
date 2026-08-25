@@ -44,7 +44,7 @@ export function MonitorStart() {
               <span>1</span>
               <div className={styles.stepBody}>
                 <strong>初日</strong>
-                <p>手帳を1冊作り、メール確認まで進んでクラウドの控えを作る</p>
+                <p>手帳を1冊作る。クラウド保存は使いたい人だけで構いません</p>
               </div>
             </li>
             <li>

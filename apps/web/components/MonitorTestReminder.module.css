@@ -51,6 +51,22 @@
   margin: 6px 0 0;
 }
 
+.copy .optionalNote {
+  color: #596b64;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.65;
+  margin-top: 8px;
+}
+
+.actions {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  gap: 8px;
+}
+
 .button,
 .smallLink {
   align-items: center;
@@ -62,6 +78,17 @@
   min-height: 50px;
   padding: 10px 17px;
   text-align: center;
+}
+
+.optionalLink {
+  color: #385c50;
+  font-size: 14px;
+  font-weight: 850;
+  line-height: 1.5;
+  padding: 5px 8px;
+  text-align: center;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .button {
@@ -93,6 +120,11 @@
 
   .button,
   .smallLink {
+    width: 100%;
+  }
+
+  .actions {
+    align-items: stretch;
     width: 100%;
   }
 
