@@ -8301,3 +8301,37 @@ GitHub・本番:
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - 本番 `/sw.js` でcache `v22` を確認。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 226 — モニターの既存手帳を開始画面から再開
+
+追記225の反映後、ユーザーからiPhoneの `/start` で状況カードを押しても次へ進まないとの再指摘があった。端末にはモニターテストで作成済みの無料手帳が1冊あり、同じ開始画面から2冊目を作ろうとして手帳上限で止まっていたことが原因。
+
+変更:
+
+- 既存のモニターセッションと手帳が同じ端末にある場合、`/start` を再表示せず `/home` へ自動的に戻すようにした。
+- 自動遷移前に画面が残って状況カードを押した場合も、2冊目を作ろうとせず既存の `/home` へ進むフォールバックを追加した。
+- 通常利用ですでに手帳がある人が初めてモニターURLを開いた場合は、勝手に既存手帳へ切り替えない。ページ表示前からモニターセッションが存在する端末だけを再開対象にした。
+- `/start?reset=1&monitor=1` の明示的なやり直し導線は自動遷移の対象外。確認後にテストデータを消して最初から登録できる既存仕様を維持した。
+- 新規端末では従来どおり、呼び名・関係・都道府県・市区町村が未入力なら状況カード押下時に4項目のエラーを表示する。
+- PWA更新用にservice worker cacheを `v23` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカルの新規originでモニターセッションを開始し、必須4項目をダミー入力して手帳を作成できることを確認。
+- 同じoriginで `/start` を開き直すと `/home` へ自動遷移することを確認。
+- 新規originの未入力押下では、追記225の必須4項目エラーが維持されることを確認。
+- ローカルと本番の `scripts/smoke-web.mjs` 成功。
+- 本番production aliasの既存モニター端末で `/start` を開き、初回表示のまま `/home` へ自動遷移することを実操作確認。
+- 本番 `/sw.js` でcache `v23` を確認。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `a1f2718` (`Resume existing monitor notebook`)。
+- Vercel production deployment: `dpl_35ekQtm5hfSW3tfB9ggjWr7mc1Rq` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-o7513h44s-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
