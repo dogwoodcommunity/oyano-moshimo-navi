@@ -6270,6 +6270,42 @@ textarea {
   box-shadow: 0 0 0 4px rgba(39, 100, 71, 0.1);
 }
 
+.start-profile-error-summary {
+  background: #fff3ed;
+  border: 2px solid rgba(173, 65, 30, 0.38);
+  border-radius: 16px;
+  color: #8d3f1e;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.start-profile-error-summary strong {
+  font-size: 17px;
+  line-height: 1.45;
+}
+
+.start-profile-error-summary p {
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.55;
+  margin: 0;
+}
+
+.start-profile-grid label.is-error,
+.start-profile-grid label.is-error:focus-within {
+  background: #fff8f4;
+  border-color: #ad411e;
+  box-shadow: 0 0 0 3px rgba(173, 65, 30, 0.12);
+}
+
+.start-profile-grid .start-field-error {
+  color: #9b3518;
+  font-size: 14px;
+  font-weight: 900;
+  line-height: 1.45;
+}
+
 .start-profile-grid span {
   color: var(--muted);
   font-size: 16px;
@@ -14187,6 +14223,7 @@ textarea {
   font-weight: 800;
   margin: 12px 0 0;
   padding: 12px 14px;
+  scroll-margin-top: 100px;
 }
 
 .toc-error p { margin: 0; }

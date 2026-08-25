@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
@@ -41,6 +41,20 @@ const moreItems: TocItem[] = [
 
 const allStatusItems = [...primaryItems, ...moreItems];
 
+type RequiredProfileField = "displayName" | "relationship" | "parentPrefecture" | "parentCity";
+
+const requiredProfileLabels: Record<RequiredProfileField, string> = {
+  displayName: "呼び名",
+  relationship: "関係",
+  parentPrefecture: "都道府県",
+  parentCity: "市区町村"
+};
+
+function missingRequiredProfileFields(profile: Partial<PersonProfile>): RequiredProfileField[] {
+  return (Object.keys(requiredProfileLabels) as RequiredProfileField[])
+    .filter((field) => !profile[field]?.trim());
+}
+
 function statusTitle(status: ParentStatus) {
   return allStatusItems.find((item) => item.key === status)?.title ?? "現在の状況";
 }
@@ -72,6 +86,7 @@ export default function StartPage() {
   const [choosingStatus, setChoosingStatus] = useState<ParentStatus | null>(null);
   const [chooseError, setChooseError] = useState<string | null>(null);
   const [limitReached, setLimitReached] = useState(false);
+  const [profileValidationAttempted, setProfileValidationAttempted] = useState(false);
   const [profileDraft, setProfileDraft] = useState<Partial<PersonProfile>>({
     displayName: "",
     fullName: "",
@@ -80,6 +95,11 @@ export default function StartPage() {
     parentPrefecture: "",
     parentCity: ""
   });
+  const displayNameInputRef = useRef<HTMLInputElement>(null);
+  const relationshipInputRef = useRef<HTMLInputElement>(null);
+  const parentPrefectureInputRef = useRef<HTMLSelectElement>(null);
+  const parentCityInputRef = useRef<HTMLInputElement>(null);
+  const chooseErrorRef = useRef<HTMLDivElement>(null);
 
   // 開いた時点で埋まっているなら、選ばせる前に伝える。
   // 11個の選択肢を読んで押してから断られるのは、いちばん徒労になる。
@@ -117,18 +137,44 @@ export default function StartPage() {
     setProfileDraft((current) => ({ ...current, [field]: value }));
   }
 
+  function focusRequiredField(field: RequiredProfileField) {
+    const target = field === "displayName"
+      ? displayNameInputRef.current
+      : field === "relationship"
+        ? relationshipInputRef.current
+        : field === "parentPrefecture"
+          ? parentPrefectureInputRef.current
+          : parentCityInputRef.current;
+    if (!target) return;
+    target.scrollIntoView({ behavior: "smooth", block: "center" });
+    target.focus({ preventScroll: true });
+  }
+
+  function focusChooseError() {
+    window.requestAnimationFrame(() => {
+      chooseErrorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+      chooseErrorRef.current?.focus({ preventScroll: true });
+    });
+  }
+
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
-    setChooseError(null);
-    if (
-      !profileDraft.displayName?.trim() ||
-      !profileDraft.relationship?.trim() ||
-      !profileDraft.parentPrefecture?.trim() ||
-      !profileDraft.parentCity?.trim()
-    ) {
-      setChooseError("先に、呼び名・関係・親御さんの都道府県・市区町村を入力してください。番地や詳細住所は不要です。");
+    if (limitReached) {
+      setProfileValidationAttempted(false);
+      setChooseError(notebookQuota().message);
+      focusChooseError();
       return;
     }
+
+    const missingFields = missingRequiredProfileFields(profileDraft);
+    if (missingFields.length > 0) {
+      setChooseError(null);
+      setProfileValidationAttempted(true);
+      window.requestAnimationFrame(() => focusRequiredField(missingFields[0]));
+      return;
+    }
+    setChooseError(null);
+    setProfileValidationAttempted(false);
     setChoosingStatus(status);
     try {
       const record = await createCase(status, compactProfile(profileDraft, status));
@@ -143,10 +189,15 @@ export default function StartPage() {
       );
       setLimitReached(error instanceof NotebookLimitError);
       setChoosingStatus(null);
+      focusChooseError();
     }
   }
 
   const personLabel = profileDraft.displayName?.trim() || profileDraft.fullName?.trim() || "この人";
+  const missingRequiredFields = profileValidationAttempted
+    ? missingRequiredProfileFields(profileDraft)
+    : [];
+  const missingRequiredFieldSet = new Set(missingRequiredFields);
 
   return (
     <main className="paper-bg notebook-start-page">
@@ -187,51 +238,73 @@ export default function StartPage() {
           <h2>最初は4つだけ入れれば大丈夫です。</h2>
           <p>呼び名、関係、親御さんの都道府県と市区町村を入れてください。番地や詳細住所は入力しません。</p>
         </div>
+        {missingRequiredFields.length > 0 ? (
+          <div className="start-profile-error-summary" id="start-profile-error-summary" role="alert">
+            <strong>入力されていない必須項目があります。</strong>
+            <p>{missingRequiredFields.map((field) => requiredProfileLabels[field]).join("、")} を入力してください。</p>
+          </div>
+        ) : null}
         <div className="start-profile-grid">
-          <label>
+          <label className={missingRequiredFieldSet.has("displayName") ? "is-error" : undefined}>
             <span>呼び名（必須）</span>
             <input
+              aria-describedby={missingRequiredFieldSet.has("displayName") ? "display-name-error" : undefined}
+              aria-invalid={missingRequiredFieldSet.has("displayName")}
               autoComplete="off"
               inputMode="text"
               required
               onChange={(event) => updateProfileDraft("displayName", event.target.value)}
               placeholder="例：お母さん、義父さん"
+              ref={displayNameInputRef}
               value={profileDraft.displayName ?? ""}
             />
+            {missingRequiredFieldSet.has("displayName") ? <small className="start-field-error" id="display-name-error">呼び名を入力してください。</small> : null}
           </label>
-          <label>
+          <label className={missingRequiredFieldSet.has("relationship") ? "is-error" : undefined}>
             <span>関係（必須）</span>
             <input
+              aria-describedby={missingRequiredFieldSet.has("relationship") ? "relationship-error" : undefined}
+              aria-invalid={missingRequiredFieldSet.has("relationship")}
               autoComplete="off"
               inputMode="text"
               required
               onChange={(event) => updateProfileDraft("relationship", event.target.value)}
               placeholder="例：母、父、義母、叔父"
+              ref={relationshipInputRef}
               value={profileDraft.relationship ?? ""}
             />
+            {missingRequiredFieldSet.has("relationship") ? <small className="start-field-error" id="relationship-error">関係を入力してください。</small> : null}
           </label>
-          <label>
+          <label className={missingRequiredFieldSet.has("parentPrefecture") ? "is-error" : undefined}>
             <span>親御さんの都道府県（必須）</span>
             <select
+              aria-describedby={missingRequiredFieldSet.has("parentPrefecture") ? "parent-prefecture-error" : undefined}
+              aria-invalid={missingRequiredFieldSet.has("parentPrefecture")}
               onChange={(event) => updateProfileDraft("parentPrefecture", event.target.value)}
+              ref={parentPrefectureInputRef}
               required
               value={profileDraft.parentPrefecture ?? ""}
             >
               <option value="">選択してください</option>
               {PREFECTURES.map((prefecture) => <option key={prefecture} value={prefecture}>{prefecture}</option>)}
             </select>
+            {missingRequiredFieldSet.has("parentPrefecture") ? <small className="start-field-error" id="parent-prefecture-error">都道府県を選んでください。</small> : null}
           </label>
-          <label>
+          <label className={missingRequiredFieldSet.has("parentCity") ? "is-error" : undefined}>
             <span>市区町村（必須・番地不要）</span>
             <input
+              aria-describedby={missingRequiredFieldSet.has("parentCity") ? "parent-city-error" : undefined}
+              aria-invalid={missingRequiredFieldSet.has("parentCity")}
               autoComplete="address-level2"
               inputMode="text"
               maxLength={80}
               onChange={(event) => updateProfileDraft("parentCity", event.target.value)}
               placeholder="例：神戸市、西宮市"
+              ref={parentCityInputRef}
               required
               value={profileDraft.parentCity ?? ""}
             />
+            {missingRequiredFieldSet.has("parentCity") ? <small className="start-field-error" id="parent-city-error">市区町村を入力してください。</small> : null}
           </label>
           <label>
             <span>フルネーム</span>
@@ -261,12 +334,22 @@ export default function StartPage() {
           <h2>{personLabel}に一番近いカードを1つ押してください。</h2>
           <p>押すと、この人の手帳と確認リストを作って家族ボードに戻ります。</p>
         </div>
+        {chooseError ? (
+          <div className="toc-error" ref={chooseErrorRef} role="alert" tabIndex={-1}>
+            <p>{chooseError}</p>
+            {limitReached ? (
+              <p className="toc-error-actions">
+                <Link href="/plans#plus">Plusを見る</Link>
+                <Link className="secondary" href="/home">いまの手帳へ戻る</Link>
+              </p>
+            ) : null}
+          </div>
+        ) : null}
         <div className="toc-chapter">
           <h2 className="chapter-tab teal">これから備える</h2>
           <div className="toc-list">
             {primaryItems.map((item) => (
               <StatusRow
-                disabled={limitReached}
                 choosingStatus={choosingStatus}
                 item={item}
                 key={item.key}
@@ -282,7 +365,6 @@ export default function StartPage() {
           <div className="toc-list">
             {moreItems.map((item) => (
               <StatusRow
-                disabled={limitReached}
                 choosingStatus={choosingStatus}
                 item={item}
                 key={item.key}
@@ -292,18 +374,6 @@ export default function StartPage() {
             ))}
           </div>
         </details>
-
-        {chooseError ? (
-          <div className="toc-error" role="status">
-            <p>{chooseError}</p>
-            {limitReached ? (
-              <p className="toc-error-actions">
-                <Link href="/plans#plus">Plusを見る</Link>
-                <Link className="secondary" href="/home">いまの手帳へ戻る</Link>
-              </p>
-            ) : null}
-          </div>
-        ) : null}
       </section>
     </main>
   );
@@ -312,12 +382,10 @@ export default function StartPage() {
 function StatusRow({
   choosingStatus,
   item,
-  disabled,
   onChoose,
   tone
 }: {
   choosingStatus: ParentStatus | null;
-  disabled?: boolean;
   item: TocItem;
   onChoose: (status: ParentStatus) => void;
   tone: "teal" | "sand";
@@ -326,7 +394,7 @@ function StatusRow({
   return (
     <button
       className={`toc-row ${tone} ${isChoosing ? "is-opening" : ""}`}
-      disabled={Boolean(choosingStatus) || Boolean(disabled)}
+      disabled={Boolean(choosingStatus)}
       aria-label={`${item.title}でこの人の手帳を作る`}
       onClick={() => onChoose(item.key)}
       type="button"
