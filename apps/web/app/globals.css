@@ -9970,11 +9970,15 @@ textarea {
 }
 
 .history-preview-card p {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 5;
   color: var(--ink);
+  display: -webkit-box;
   font-size: 17px;
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
+  overflow: hidden;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
 }
