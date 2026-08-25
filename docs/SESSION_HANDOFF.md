@@ -8236,3 +8236,38 @@ GitHub:
 - 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
 - 本番 `/start` で「最初は4つだけ」「市区町村（必須・番地不要）」、`/monitor` で「都道府県・市区町村」、`/sw.js` でcache `v20` を確認。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に作業ツリーから削除した。どちらもVercel linkで再生成可能な、commit対象外の一時設定。
+
+## 2026-08-25 追記 224 — 状況カードの無反応と初回登録の必須エラーを改善
+
+ユーザーから、iPhoneの `/start` で状況カードを押せないように見える画面キャプチャと、必須未入力時にエラーを出す要望があった。原因は2つあり、必須エラーが11個の状況カードより下に出るためスマホでは見えなかったこと、既に無料枠の手帳1冊がある端末ではカード自体をdisabledにしていたこと。
+
+実装:
+
+- 未入力のまま状況カードを押すと、基本情報欄に「入力されていない必須項目があります」と未入力項目名を表示。
+- 呼び名、関係、都道府県、市区町村の各欄を赤枠にし、それぞれの入力欄の下に具体的なエラーを表示。`aria-invalid` / `aria-describedby` / `role=alert` を付けた。
+- 状況カードを押した場所から、最初の未入力欄へ自動スクロールしてfocusする。エラーは入力に応じて項目ごとに消える。
+- 手帳上限でも状況カードをdisabledにせず、押したときに「無料は1冊まで」の理由、Plus、いまの手帳へ戻る導線へ自動スクロールする。
+- 一般エラーと手帳上限の案内を状況カード一覧の下から、状況選択見出しの直下へ移動。
+- PWA更新用にservice worker cacheを `v21` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `corepack pnpm --filter mobile run typecheck` 成功。
+- `corepack pnpm run doctor:local` 成功。
+- ローカル本番ビルド3100番で `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- アプリ内ブラウザの390×844pxで、未入力の状況カードがenabled、押下後に4項目のエラー、エラー要約、呼び名欄のfocus、`aria-invalid=true` 4件を確認。
+- 4項目にダミー入力後は `/home?created=...` へ遷移することを確認。その後 `/start` を開き直し、手帳上限時もカードがenabledで、押下後に上限エラーへfocusすることを確認。
+- `git diff --check` 成功。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `3c4f0d7` (`Show registration validation errors`)。
+- Vercel production deployment: `dpl_2ymQkGVn4s7Kb6Jta5fQkSdTjrWm` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-mqulztk47-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。本番 `/sw.js` がcache `v21`、`/start` で市区町村必須表示と状況カードを確認。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
