@@ -241,7 +241,7 @@ export function MonitorReportForm() {
           <section className={styles.completeCard}>
             <p className={styles.eyebrow}>7日間モニター {gate.dayNumber}日目</p>
             <h1>最終報告は、7日間を終えた翌日に表示されます。</h1>
-            <p>回答開始は{dueLabel} 0:00です。{gate.periodStatus}今日は「今日の記録」を1件残して、手帳の使い心地を確かめてください。</p>
+            <p>回答開始は{dueLabel} 0:00です。{gate.periodStatus}1日1回を目安に、7日間で3回以上「今日の記録」を残してください。</p>
             <div className={styles.actions} style={{ marginTop: 24 }}>
               <Link className={styles.primary} href="/home#today-diary">今日の記録を書く</Link>
               <Link className={styles.secondary} href="/home">手帳へ戻る</Link>
@@ -283,7 +283,7 @@ export function MonitorReportForm() {
           <RadioField name="careSituation" title="現在の状況に近いもの" options={["要介護・要支援の家族がいる", "介護が始まりそう・備えている", "過去に介護を経験した", "回答しない"]} />
           <RadioField name="device" title="主に使った端末" options={["iPhone", "Android", "パソコン", "その他"]} />
           <RadioField name="usagePeriod" title="何日間、画面を開きましたか？" options={["7日間", "4〜6日", "2〜3日", "初日だけ"]} />
-          <RadioField name="recordCount" title="7日間で「今日の記録」を何日保存しましたか？" options={["7日すべて", "5〜6日", "2〜4日", "1日", "保存できなかった"]} />
+          <RadioField name="recordCount" title="7日間で「今日の記録」を何日保存しましたか？" options={["7日すべて", "5〜6日", "3〜4日", "2日", "1日", "保存できなかった"]} />
           <RadioField name="checklistTried" title="確認リストを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった", "使う必要がなかった"]} />
           <RadioField name="documentMemoTried" title="書類の所在メモを試しましたか？" options={["試して使えた", "試したが使えなかった", "見つけられなかった", "使う必要がなかった"]} />
           <RadioField name="familyInviteTried" title="家族招待の画面を開いて、手順を確認できましたか？" options={["手順を確認できた", "開いたが手順が分からなかった", "見つけられなかった", "使う必要がなかった"]} />

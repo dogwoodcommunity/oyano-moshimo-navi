@@ -51,14 +51,14 @@ export function MonitorStart() {
               <span>2</span>
               <div className={styles.stepBody}>
                 <strong>7日間</strong>
-                <p>1日1回、「今日の記録」を毎日書く（合計7回）</p>
+                <p>1日1回を目安に、「今日の記録」を3回以上書く</p>
               </div>
             </li>
             <li>
               <span>3</span>
               <div className={styles.stepBody}>
                 <strong>期間中</strong>
-                <p>確認リスト・書類の所在メモ・AI相談を各1回試す。家族招待は画面を開いて手順を確認する（送信は任意）</p>
+                <p>過去の記録を見返し、確認リスト・書類の所在メモ・AI相談を各1回試す。家族招待は画面を開いて手順を確認する（送信は任意）</p>
               </div>
             </li>
             <li>
