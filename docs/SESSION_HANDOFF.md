@@ -8223,3 +8223,16 @@ GitHub:
 GitHub:
 
 - 実装commit: `2de8689` (`Require parent municipality in web registration`)。
+- 引き継ぎcommit: `67994a8` (`Record municipality requirement handoff`)。
+- `29761a2..67994a8` を `origin/main` へpush済み。
+- GitHub Actions CI run `32795875885` は成功。Web/Mobile typecheck、Web build、smokeがすべて成功。
+- Vercel deploy workflow run `32795875838` はcheck成功、deploy jobはVercel secrets未設定のためskip。
+
+本番反映・最終確認:
+
+- Vercel CLIでproduction deployを実行し、deployment `dpl_CDmuoJHLiA67dEJ2MtbvijToBoXX` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-kg98z82jj-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/start` で「最初は4つだけ」「市区町村（必須・番地不要）」、`/monitor` で「都道府県・市区町村」、`/sw.js` でcache `v20` を確認。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に作業ツリーから削除した。どちらもVercel linkで再生成可能な、commit対象外の一時設定。
