@@ -76,13 +76,15 @@ export function AdminMonitorFeedback() {
         <div className="admin-feedback-list">
           {rows.map((row, index) => {
             const metadata = row.metadata ?? {};
-            const monitorCode = value(metadata, "monitorCode") || `回答 ${rows.length - index}`;
+            const crowdworksName = value(metadata, "crowdworksName")
+              || value(metadata, "monitorCode")
+              || `回答 ${rows.length - index}`;
             const screenshots = row.screenshotUrls ?? [];
             return (
               <details className="admin-feedback-card" key={row.id} open={index === 0}>
                 <summary>
                   <div>
-                    <strong>{monitorCode}</strong>
+                    <strong>{crowdworksName}</strong>
                     <span>{new Date(row.created_at).toLocaleString("ja-JP")}</span>
                   </div>
                   <div className="admin-feedback-tags">
@@ -94,6 +96,7 @@ export function AdminMonitorFeedback() {
                   <section>
                     <h3>モニターについて</h3>
                     <dl>
+                      <div><dt>クラウドワークス名</dt><dd>{answer(crowdworksName)}</dd></div>
                       <div><dt>年代</dt><dd>{answer(value(metadata, "ageGroup"))}</dd></div>
                       <div><dt>介護する相手</dt><dd>{answer(value(metadata, "careRelation"))}</dd></div>
                       <div><dt>現在の状況</dt><dd>{answer(value(metadata, "careSituation"))}</dd></div>

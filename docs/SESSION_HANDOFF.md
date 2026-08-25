@@ -8535,3 +8535,38 @@ GitHub・本番:
 - リポジトリ外のユーザー向け同内容ファイルを `outputs/CLAUDE_MONITOR_REVIEW_PACKET.md` に作成した。
 - アプリ本体の挙動変更、本番再deploy、回答送信、画像アップロードは行っていない。
 - 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+## 2026-08-25 追記 232 — モニター回答者名をクラウドワークス表示名へ変更
+
+ユーザーから「モニター番号」の意味が分かりにくく、クラウドワークス上の名前で回答者を照合したいとの要望があったため、最終アンケートの先頭項目と保存形式を変更した。
+
+変更:
+
+- 「モニター番号またはニックネーム」を「クラウドワークスで使っている名前」へ変更した。
+- 「クラウドワークスのプロフィールに表示されている名前を入力してください。」という説明と、入力例「やまだ123」を追加した。
+- この項目は引き続き必須。空欄ではブラウザの必須入力エラーが働き、送信処理へ進まない。
+- 新規回答は `monitorCode` ではなく `crowdworksName` として保存する。form versionは `2026-08-25-crowdworks-name`。
+- 更新前の画面を開いたままの利用者から旧 `monitorCode` が届いた場合も、APIで `crowdworksName` に正規化して受け付ける。
+- 管理画面は新しい `crowdworksName` を回答見出しと「クラウドワークス名」に表示し、既存回答の `monitorCode` もfallback表示する。
+- Claudeレビュー資料 `docs/CLAUDE_MONITOR_REVIEW_PACKET.md` と、リポジトリ外の `outputs/CLAUDE_MONITOR_REVIEW_PACKET.md` も新項目・新データキーへ更新した。
+- PWA更新用にservice worker cacheを `v31` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- build完了後に `corepack pnpm --filter web run typecheck` を単独実行し成功。最初の並列実行時はbuildが `.next/types` を作り直す競合で一度失敗したが、コード起因ではない。
+- `git diff --check` 成功。
+- ローカル本番ビルドの `/monitor/report?preview=1` で、新ラベル、説明、placeholderを確認。
+- 同画面で `required=true`、空欄時 `validity.valueMissing=true`、formに `novalidate` がないことを確認。
+- 本番 `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1` でも新ラベルと必須属性を確認。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v31` を確認。
+- 回答送信・画像アップロードは実行していない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- Vercel production deployment: `dpl_3x3XRuP5QVGewEttwDj6syYNJSa7` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-nnbeekczi-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。

@@ -123,7 +123,7 @@ export function MonitorReportForm() {
     try {
       const screenshotPaths = await Promise.all(screenshots.map(uploadScreenshot));
       const payload = {
-        monitorCode: String(form.get("monitorCode") ?? "").trim(),
+        crowdworksName: String(form.get("crowdworksName") ?? "").trim(),
         ageGroup: String(form.get("ageGroup") ?? ""),
         careRelation: String(form.get("careRelation") ?? ""),
         careSituation: String(form.get("careSituation") ?? ""),
@@ -244,8 +244,9 @@ export function MonitorReportForm() {
 
         <form className={styles.formCard} onSubmit={submit}>
           <div className={styles.field}>
-            <label htmlFor="monitorCode">モニター番号またはニックネーム<span className={styles.required}>必須</span></label>
-            <input className={styles.input} id="monitorCode" name="monitorCode" maxLength={40} required placeholder="例：モニター03" />
+            <label htmlFor="crowdworksName">クラウドワークスで使っている名前<span className={styles.required}>必須</span></label>
+            <p className={styles.help}>クラウドワークスのプロフィールに表示されている名前を入力してください。</p>
+            <input className={styles.input} id="crowdworksName" name="crowdworksName" maxLength={40} required placeholder="例：やまだ123" autoComplete="username" />
           </div>
 
           <RadioField name="ageGroup" title="あなたの年代" options={["40代未満", "40代", "50代", "60代", "70代以上"]} />

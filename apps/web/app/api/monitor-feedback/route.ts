@@ -3,7 +3,7 @@ import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 const REQUIRED_TEXT_FIELDS = [
-  "monitorCode",
+  "crowdworksName",
   "ageGroup",
   "careRelation",
   "careSituation",
@@ -36,7 +36,8 @@ export async function POST(request: Request) {
   if (!body) return NextResponse.json({ message: "回答を読み込めませんでした。" }, { status: 400 });
 
   const metadata: Record<string, unknown> = {
-    monitorCode: safeText(body.monitorCode, 40),
+    // `monitorCode` is accepted for already-open pages from the previous form version.
+    crowdworksName: safeText(body.crowdworksName ?? body.monitorCode, 40),
     ageGroup: safeText(body.ageGroup, 20),
     careRelation: safeText(body.careRelation, 40),
     careSituation: safeText(body.careSituation, 80),
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
           .slice(0, 3)
           .map((value) => value.slice(0, 300))
       : [],
-    formVersion: "2026-08-24-7day"
+    formVersion: "2026-08-25-crowdworks-name"
   };
 
   if (REQUIRED_TEXT_FIELDS.some((field) => !metadata[field])) {
