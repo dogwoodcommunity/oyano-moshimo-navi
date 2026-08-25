@@ -1,11 +1,11 @@
--- Family-wide first successful AI consultation trial.
--- Run after schema.sql. The API marks this timestamp only after a consult succeeds.
+-- Family-wide latest successful free AI consultation timestamp.
+-- Run after schema.sql. The API uses this legacy-named column for the JST daily free allowance.
 
 alter table public.families
   add column if not exists consult_trial_used_at timestamptz;
 
 comment on column public.families.consult_trial_used_at is
-  'First successful free AI consultation timestamp. Null means the family trial is still available.';
+  'Latest successful free AI consultation timestamp. Free families can consult once per JST calendar day.';
 
 create index if not exists idx_families_consult_trial_used_at
 on public.families(consult_trial_used_at);

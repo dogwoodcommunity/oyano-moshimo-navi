@@ -27,7 +27,7 @@ create table if not exists families (
   name text not null,
   owner_user_id uuid references profiles(id) on delete set null,
   plan text not null default 'free',
-  consult_trial_used_at timestamptz,
+  consult_trial_used_at timestamptz, -- legacy name: latest successful daily-free consult timestamp
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );

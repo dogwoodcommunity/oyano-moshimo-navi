@@ -64,8 +64,8 @@ export default function ConsultScreen() {
   const [access, setAccess] = useState<ConsultAccess>({
     signedIn: false,
     plan: "free",
-    trialAvailable: false,
-    trialUsedAt: null,
+    dailyFreeAvailable: false,
+    dailyFreeUsedAt: null,
     canConsult: false
   });
 
@@ -109,7 +109,7 @@ export default function ConsultScreen() {
     .slice(0, CONSULT_MAX_ENTRIES)
     .map((entry) => ({ date: entry.date, mood: entry.mood, body: entry.body }));
   const hasSubstance = hasNotebookSubstance({ question: "", person: payloadPerson, entries: diaryEntries });
-  const canAsk = consent && hasSubstance && question.trim().length >= 4 && phase !== "asking";
+  const canAsk = access.canConsult && consent && hasSubstance && question.trim().length >= 4 && phase !== "asking";
 
   async function toggleConsent() {
     const next = !consent;
@@ -282,9 +282,20 @@ export default function ConsultScreen() {
           style={[styles.primaryButton, !canAsk && styles.primaryButtonDisabled]}
         >
           <Text style={styles.primaryButtonText}>
-            {phase === "asking" ? "整理しています…" : turns.length > 0 ? "続けて相談する" : "相談メモを作る"}
+            {phase === "asking"
+              ? "整理しています…"
+              : !access.canConsult
+                ? access.signedIn ? "今日の無料相談は利用済みです" : "メール確認後に使えます"
+                : turns.length > 0 ? "続けて相談する" : "相談メモを作る"}
           </Text>
         </Pressable>
+        {!access.canConsult && access.signedIn ? (
+          <Link asChild href="/account/plan">
+            <Pressable style={styles.plusButton}>
+              <Text style={styles.plusButtonText}>Plusで今日も続けて相談する</Text>
+            </Pressable>
+          </Link>
+        ) : null}
         {!hasSubstance ? (
           <Text style={styles.hint}>
             先に記録を1件書くか、プロフィールを2つ以上埋めてください。記録がないと、一般論しか返せません。
@@ -319,11 +330,11 @@ function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
     );
   }
 
-  if (access.trialAvailable) {
+  if (access.dailyFreeAvailable) {
     return (
       <View style={styles.accessNotice}>
-        <Text style={styles.accessTitle}>1回だけ無料でためせます</Text>
-        <Text style={styles.accessText}>相談に成功した時だけ、おためし枠を使います。失敗では消費しません。</Text>
+        <Text style={styles.accessTitle}>今日は1回、無料で相談できます</Text>
+        <Text style={styles.accessText}>相談に成功した時だけ今日の枠を使います。失敗では減らず、毎日0時に戻ります。</Text>
       </View>
     );
   }
@@ -331,8 +342,8 @@ function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
   if (access.signedIn) {
     return (
       <View style={styles.accessNoticeMuted}>
-        <Text style={styles.accessTitle}>おためし相談は使いました</Text>
-        <Text style={styles.accessText}>続きはPlusで使えます。手帳と記録はこのまま無料で使えます。</Text>
+        <Text style={styles.accessTitle}>今日の無料相談は利用済みです</Text>
+        <Text style={styles.accessText}>明日0時からまた1回使えます。今すぐ続ける場合はPlusで使えます。</Text>
       </View>
     );
   }

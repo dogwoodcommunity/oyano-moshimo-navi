@@ -2872,7 +2872,7 @@ export default function FamilyBoardPage() {
                     少し直す
                   </button>
                 </div>
-                <small>AI相談は初回1回無料です。続けて相談したい時はFamily Plus（月980円・年9,800円）で使えます。</small>
+                <small>AI相談は1日1回無料です。同じ日に続けて相談したい時はFamily Plus（月980円・年9,800円）で使えます。</small>
               </article>
             ) : null}
           </section>

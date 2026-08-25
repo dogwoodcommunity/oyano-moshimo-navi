@@ -20,7 +20,7 @@ const plans = [
       "1人目の手帳と家族ボード",
       `家族招待はあなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`,
       "日々の記録・確認リスト",
-      "長期相談を初回1回だけおためし"
+      "AI相談を1日1回"
     ],
     cta: "無料で始める",
     href: "/home",
@@ -48,7 +48,7 @@ export default function PlansPage() {
     <main className="container">
       <section className="result-summary">
         <p className="pill">料金と使い方</p>
-        <h1 className="page-title">1人目は無料。複数管理と長期相談は有料へ。</h1>
+        <h1 className="page-title">1人目と1日1回のAI相談は無料。必要な時だけPlusへ。</h1>
         <p className="lead">
           親のもしもナビは、家族の手帳として続けて使うアプリです。まず1人分の記録を整え、必要になった時だけ複数管理や長期相談を追加できます。
           支払いは家族手帳ごとです。招待された人が、同じ手帳で二重に支払う必要はありません。
@@ -101,7 +101,7 @@ export default function PlansPage() {
         </div>
         <div className="plan-compare-row">
           <span>相談</span>
-          <strong>無料: 初回1回</strong>
+          <strong>無料: 1日1回</strong>
           <strong>Plus: 1日5回・月30回</strong>
         </div>
         <div className="plan-compare-row">

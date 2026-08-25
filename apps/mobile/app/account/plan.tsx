@@ -12,7 +12,7 @@ const rows = [
   ["家族招待", `あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`],
   ["期限通知", "基本通知あり"],
   ["写真", "10枚目安"],
-  ["AI相談", "初回1回だけ無料"]
+  ["AI相談", "1日1回無料"]
 ];
 
 export default function AccountPlanScreen() {

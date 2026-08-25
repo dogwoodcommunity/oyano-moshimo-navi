@@ -11,8 +11,8 @@ export type ConsultOutcome =
 export type ConsultAccess = {
   signedIn: boolean;
   plan: "free" | "plus";
-  trialAvailable: boolean;
-  trialUsedAt: string | null;
+  dailyFreeAvailable: boolean;
+  dailyFreeUsedAt: string | null;
   canConsult: boolean;
 };
 
@@ -87,14 +87,19 @@ export async function fetchConsultAccess(): Promise<ConsultAccess> {
   try {
     const headers = await buildConsultHeaders();
     const response = await fetch(`${baseUrl}/api/consult`, { headers });
-    const data = await response.json().catch(() => null) as Partial<ConsultAccess> | null;
+    const data = await response.json().catch(() => null) as (Partial<ConsultAccess> & {
+      trialAvailable?: boolean;
+      trialUsedAt?: string | null;
+    }) | null;
     if (!response.ok || !data?.signedIn) return signedOutAccess();
 
     return {
       signedIn: true,
       plan: data.plan === "plus" ? "plus" : "free",
-      trialAvailable: Boolean(data.trialAvailable),
-      trialUsedAt: typeof data.trialUsedAt === "string" ? data.trialUsedAt : null,
+      dailyFreeAvailable: Boolean(data.dailyFreeAvailable ?? data.trialAvailable),
+      dailyFreeUsedAt: typeof data.dailyFreeUsedAt === "string"
+        ? data.dailyFreeUsedAt
+        : typeof data.trialUsedAt === "string" ? data.trialUsedAt : null,
       canConsult: Boolean(data.canConsult)
     };
   } catch {
@@ -117,8 +122,8 @@ function signedOutAccess(): ConsultAccess {
   return {
     signedIn: false,
     plan: "free",
-    trialAvailable: false,
-    trialUsedAt: null,
+    dailyFreeAvailable: false,
+    dailyFreeUsedAt: null,
     canConsult: false
   };
 }

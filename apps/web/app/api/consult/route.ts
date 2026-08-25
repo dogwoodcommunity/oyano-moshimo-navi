@@ -16,7 +16,9 @@ import {
   CONSULT_PER_CLIENT_DAILY_LIMIT,
   CONSULT_PER_FAMILY_MONTHLY_LIMIT,
   CONSULT_SERVICE_DAILY_LIMIT,
-  currentJstMonthStart
+  currentJstDayStart,
+  currentJstMonthStart,
+  wasUsedOnCurrentJstDay
 } from "@/lib/consultLimits";
 import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
@@ -26,17 +28,18 @@ export const maxDuration = 60;
 
 const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
 const ONE_DAY_SECONDS = 86_400;
-const DEVICE_TRIAL_COOKIE = "oyano_consult_trial_used_v01";
+// Cookie名は既存端末の利用日時を移行するため旧名を維持する。
+const DEVICE_DAILY_FREE_COOKIE = "oyano_consult_trial_used_v01";
 
 type ConsultAccessState = {
   userId?: string;
   familyId?: string;
   plan: "free" | "plus";
-  trialUsedAt: string | null;
-  trialAvailable: boolean;
+  dailyFreeUsedAt: string | null;
+  dailyFreeAvailable: boolean;
   canConsult: boolean;
-  mode: "plus" | "trial" | "device-trial" | "locked";
-  trialFamilyId?: string;
+  mode: "plus" | "daily-free" | "device-daily-free" | "daily-locked";
+  dailyFreeFamilyId?: string;
 };
 
 type ConsultAccessResult = ConsultAccessState | { response: NextResponse };
@@ -134,28 +137,29 @@ function isAccessError(result: ConsultAccessResult): result is { response: NextR
   return "response" in result;
 }
 
-function readDeviceTrialAccess(request: NextRequest, userId?: string): ConsultAccessState {
-  const trialUsedAt = request.cookies.get(DEVICE_TRIAL_COOKIE)?.value ?? null;
+function readDeviceDailyFreeAccess(request: NextRequest, userId?: string): ConsultAccessState {
+  const dailyFreeUsedAt = request.cookies.get(DEVICE_DAILY_FREE_COOKIE)?.value ?? null;
+  const dailyFreeAvailable = !wasUsedOnCurrentJstDay(dailyFreeUsedAt);
   return {
     userId,
     plan: "free",
-    trialUsedAt,
-    trialAvailable: !trialUsedAt,
-    canConsult: !trialUsedAt,
-    mode: trialUsedAt ? "locked" : "device-trial"
+    dailyFreeUsedAt,
+    dailyFreeAvailable,
+    canConsult: dailyFreeAvailable,
+    mode: dailyFreeAvailable ? "device-daily-free" : "daily-locked"
   };
 }
 
 async function readConsultAccess(request: NextRequest): Promise<ConsultAccessResult> {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) {
-    return readDeviceTrialAccess(request);
+    return readDeviceDailyFreeAccess(request);
   }
 
   const supabase = getServerSupabase();
   if (!supabase) {
-    // クラウドの利用状況を確認できない時も、端末のおためし相談まで止めない。
-    return readDeviceTrialAccess(request);
+    // クラウドの利用状況を確認できない時も、端末の1日1回相談まで止めない。
+    return readDeviceDailyFreeAccess(request);
   }
 
   const { data: userData, error: userError } = await supabase.auth.getUser(token);
@@ -176,9 +180,9 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .eq("user_id", user.id);
 
   if (membershipError) {
-    // 家族プランの確認障害で、端末に残っている初回無料相談まで止めない。
+    // 家族プランの確認障害でも、端末側の1日1回判定へ安全に戻す。
     console.error("[consult] failed to read family memberships", membershipError);
-    return readDeviceTrialAccess(request, user.id);
+    return readDeviceDailyFreeAccess(request, user.id);
   }
 
   const familyIds = (memberships ?? [])
@@ -186,7 +190,7 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .filter(Boolean);
 
   if (familyIds.length === 0) {
-    return readDeviceTrialAccess(request, user.id);
+    return readDeviceDailyFreeAccess(request, user.id);
   }
 
   const { data: families, error: familyError } = await supabase
@@ -196,7 +200,7 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
 
   if (familyError) {
     console.error("[consult] failed to read family plans", familyError);
-    return readDeviceTrialAccess(request, user.id);
+    return readDeviceDailyFreeAccess(request, user.id);
   }
 
   const baseFamilyRows = (families ?? [])
@@ -213,36 +217,40 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .in("id", familyIds);
 
   if (trialError) {
-    // 古いDBでおためし管理列が未適用でも、Plus判定と端末の初回無料相談は使える。
+    // 古いDBで利用日時列が未適用でも、Plus判定と端末の1日1回相談は使える。
     console.error("[consult] failed to read family trial status", trialError);
     if (plusFamilyWithoutTrial) {
       return {
         userId: user.id,
         familyId: plusFamilyWithoutTrial.id,
         plan: "plus",
-        trialUsedAt: null,
-        trialAvailable: false,
+        dailyFreeUsedAt: null,
+        dailyFreeAvailable: false,
         canConsult: true,
         mode: "plus"
       };
     }
-    return readDeviceTrialAccess(request, user.id);
+    return readDeviceDailyFreeAccess(request, user.id);
   }
 
-  const trialUsedAtByFamily = new Map((trialRows ?? []).map((family) => [
+  const dailyFreeUsedAtByFamily = new Map((trialRows ?? []).map((family) => [
     typeof family.id === "string" ? family.id : "",
     typeof family.consult_trial_used_at === "string" ? family.consult_trial_used_at : null
   ]));
   const familyRows = baseFamilyRows.map((family) => ({
     ...family,
-    trialUsedAt: trialUsedAtByFamily.get(family.id) ?? null
+    dailyFreeUsedAt: dailyFreeUsedAtByFamily.get(family.id) ?? null
   }));
   const plusFamily = familyRows.find((family) => family.plan === "plus");
-  const trialFamily = familyRows.find((family) => !family.trialUsedAt);
-  const primaryFamily = plusFamily ?? trialFamily ?? familyRows[0];
+  const deviceDailyFreeUsedAt = request.cookies.get(DEVICE_DAILY_FREE_COOKIE)?.value ?? null;
+  const deviceUsedToday = wasUsedOnCurrentJstDay(deviceDailyFreeUsedAt);
+  const dailyFreeFamily = deviceUsedToday
+    ? undefined
+    : familyRows.find((family) => !wasUsedOnCurrentJstDay(family.dailyFreeUsedAt));
+  const primaryFamily = plusFamily ?? dailyFreeFamily ?? familyRows[0];
 
   if (!primaryFamily) {
-    return readDeviceTrialAccess(request, user.id);
+    return readDeviceDailyFreeAccess(request, user.id);
   }
 
   if (plusFamily) {
@@ -250,35 +258,36 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
       userId: user.id,
       familyId: plusFamily.id,
       plan: "plus",
-      trialUsedAt: plusFamily.trialUsedAt,
-      trialAvailable: false,
+      dailyFreeUsedAt: plusFamily.dailyFreeUsedAt,
+      dailyFreeAvailable: false,
       canConsult: true,
       mode: "plus"
     };
   }
 
+  const dailyFreeAvailable = Boolean(dailyFreeFamily);
   return {
     userId: user.id,
     familyId: primaryFamily.id,
     plan: "free",
-    trialUsedAt: primaryFamily.trialUsedAt,
-    trialAvailable: Boolean(trialFamily),
-    canConsult: Boolean(trialFamily),
-    mode: trialFamily ? "trial" : "locked",
-    trialFamilyId: trialFamily?.id
+    dailyFreeUsedAt: deviceUsedToday ? deviceDailyFreeUsedAt : primaryFamily.dailyFreeUsedAt,
+    dailyFreeAvailable,
+    canConsult: dailyFreeAvailable,
+    mode: dailyFreeAvailable ? "daily-free" : "daily-locked",
+    dailyFreeFamilyId: dailyFreeFamily?.id
   };
 }
 
-async function authorizePlusConsult(request: NextRequest): Promise<ConsultAccessResult> {
+async function authorizeConsult(request: NextRequest): Promise<ConsultAccessResult> {
   const access = await readConsultAccess(request);
   if (isAccessError(access)) return access;
 
   if (!access.canConsult) {
     return {
       response: jsonError(
-        "plus_required",
-        "おためし相談は使いました。続きはPlusで使えます。手帳と記録はこのまま無料で使えます。",
-        402
+        "daily_free_limit",
+        "今日の無料AI相談は利用済みです。明日また1回使えます。今すぐ続けたい場合はFamily Plusで使えます。手帳と記録はこのまま無料です。",
+        429
       )
     };
   }
@@ -293,9 +302,12 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({
     signedIn: Boolean(access.userId),
     plan: access.plan,
-    trialAvailable: access.trialAvailable,
-    trialUsedAt: access.trialUsedAt,
-    canConsult: access.canConsult
+    dailyFreeAvailable: access.dailyFreeAvailable,
+    dailyFreeUsedAt: access.dailyFreeUsedAt,
+    canConsult: access.canConsult,
+    // 旧アプリとの互換用。意味は「本日の無料枠」に変更済み。
+    trialAvailable: access.dailyFreeAvailable,
+    trialUsedAt: access.dailyFreeUsedAt
   });
 }
 
@@ -335,7 +347,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const authorized = await authorizePlusConsult(request);
+  const authorized = await authorizeConsult(request);
   if (isAccessError(authorized)) return authorized.response;
 
   if (!hasNotebookSubstance(payload)) {
@@ -476,15 +488,18 @@ export async function POST(request: NextRequest) {
       outcome: "success"
     });
 
-    if (authorized.trialFamilyId) {
+    if (authorized.dailyFreeFamilyId) {
       const supabase = getServerSupabase();
       const usedAt = new Date().toISOString();
-      const { error: trialError } = await supabase!.from("families")
+      let updateQuery = supabase!.from("families")
         .update({ consult_trial_used_at: usedAt, updated_at: usedAt })
-        .eq("id", authorized.trialFamilyId)
-        .is("consult_trial_used_at", null);
+        .eq("id", authorized.dailyFreeFamilyId);
+      updateQuery = authorized.dailyFreeUsedAt
+        ? updateQuery.lt("consult_trial_used_at", currentJstDayStart())
+        : updateQuery.is("consult_trial_used_at", null);
+      const { error: trialError } = await updateQuery;
       if (trialError) {
-        console.error("[consult] failed to mark consult trial", trialError);
+        console.error("[consult] failed to mark daily free consult", trialError);
       }
     }
 
@@ -494,11 +509,12 @@ export async function POST(request: NextRequest) {
       model: MODEL,
       consult: {
         mode: authorized.mode,
+        dailyFreeConsumed: authorized.mode !== "plus",
         trialConsumed: authorized.mode !== "plus"
       }
     });
     if (authorized.mode !== "plus") {
-      result.cookies.set(DEVICE_TRIAL_COOKIE, new Date().toISOString(), {
+      result.cookies.set(DEVICE_DAILY_FREE_COOKIE, new Date().toISOString(), {
         httpOnly: true,
         maxAge: 60 * 60 * 24 * 365,
         sameSite: "lax",

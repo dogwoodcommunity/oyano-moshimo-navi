@@ -47,8 +47,8 @@ type ConversationTurn = {
 type ConsultAccess = {
   signedIn: boolean;
   plan: "free" | "plus";
-  trialAvailable: boolean;
-  trialUsedAt: string | null;
+  dailyFreeAvailable: boolean;
+  dailyFreeUsedAt: string | null;
   canConsult: boolean;
 };
 
@@ -190,8 +190,8 @@ export function ConsultPanel() {
       ? "利用条件を確認しています…"
       : turns.length > 0
         ? "続けて相談する"
-      : consultAccess?.trialAvailable
-        ? "初回無料でAI相談する"
+      : consultAccess?.dailyFreeAvailable
+        ? "今日の無料AI相談を使う"
         : "AI相談をはじめる";
 
   useEffect(() => {
@@ -452,9 +452,9 @@ export function ConsultPanel() {
               ? "利用条件を確認中"
               : consultAccess?.plan === "plus"
                 ? "Family Plus・1日5回／月30回まで"
-                : consultAccess?.trialAvailable
-                  ? "最初の1回答は無料です"
-                  : "無料回答は利用済みです"}
+                : consultAccess?.dailyFreeAvailable
+                  ? "無料・今日は1回相談できます"
+                  : "今日の無料相談は利用済みです"}
           </p>
         </header>
 
@@ -475,7 +475,7 @@ export function ConsultPanel() {
             <p>
               {consultAccess?.plan === "plus"
                 ? "一度答えた後も、この画面で会話の続きを聞けます。"
-                : "最初の1回答は無料です。2回答目からFamily Plusで会話を続けられます。"}
+                : "無料では1日1回答まで使えます。毎日0時に、また1回相談できます。"}
             </p>
             <p className="consult-suggestion-guide">下の質問例を押すと、入力欄の末尾に追加されます。いま入っている文章は消えません。</p>
             <div className="consult-suggestions">
@@ -596,8 +596,8 @@ export function ConsultPanel() {
           <h2>{turns.length > 0 ? "続けて聞きたいことを書いてください" : "相談内容を書く"}</h2>
           {needsPlus ? (
             <div className="consult-followup-gate">
-              <strong>無料のおためし回答はここまでです。</strong>
-              <p>Family Plusなら、上の会話を引き継いだまま続けて質問できます。</p>
+              <strong>今日の無料AI相談は利用済みです。</strong>
+              <p>明日0時からまた1回使えます。Family Plusなら、今日のうちも会話を続けられます。</p>
               <Link className="consult-submit consult-submit-link" href="/plans#plus">
                 Plusでこの相談を続ける
               </Link>

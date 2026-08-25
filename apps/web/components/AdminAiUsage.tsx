@@ -14,7 +14,7 @@ type FamilyUsage = {
   outputTokens: number;
   estimatedCostUsd: number;
   estimatedCostYen: number;
-  limitStatus: "ok" | "near" | "limit" | "trial";
+  limitStatus: "ok" | "near" | "limit" | "daily-free";
 };
 
 type UsageResponse = {
@@ -41,7 +41,7 @@ type UsageResponse = {
 function statusLabel(status: FamilyUsage["limitStatus"]) {
   if (status === "limit") return "月上限";
   if (status === "near") return "上限間近";
-  if (status === "trial") return "無料おためし";
+  if (status === "daily-free") return "無料・1日1回";
   return "利用可";
 }
 
@@ -95,7 +95,7 @@ export function AdminAiUsage() {
       </div>
 
       <p className="admin-metrics-note" style={{ marginBottom: 14 }}>
-        無料は初回1回答だけ。2回答目からFamily Plus、Plusは1日{limits.perClientDaily}回・月{limits.perFamilyMonthly}回です。
+        無料は1日1回答、Plusは1日{limits.perClientDaily}回・月{limits.perFamilyMonthly}回です。
         回数と原価は回答に利用したAI APIログから集計しています。
       </p>
 
@@ -118,8 +118,8 @@ export function AdminAiUsage() {
               <tr key={row.key}>
                 <td>{row.label}</td>
                 <td><span className={row.plan === "plus" ? "admin-chip success" : "admin-chip"}>{row.plan}</span></td>
-                <td className="numeric">{row.todaySuccessfulAnswers}</td>
-                <td className="numeric">{row.successfulAnswers} / {row.plan === "plus" ? limits.perFamilyMonthly : 1}</td>
+                <td className="numeric">{row.todaySuccessfulAnswers} / {row.plan === "plus" ? limits.perClientDaily : 1}</td>
+                <td className="numeric">{row.successfulAnswers}{row.plan === "plus" ? ` / ${limits.perFamilyMonthly}` : ""}</td>
                 <td className="numeric">{row.apiCalls}</td>
                 <td className="numeric">
                   {row.inputTokens.toLocaleString("ja-JP")} in<br />

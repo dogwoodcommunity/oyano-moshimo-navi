@@ -45,7 +45,7 @@ function rounded(value: number, digits = 6) {
 }
 
 function familyLabel(row: UsageLogRow) {
-  if (row.target_type !== "family" || !row.target_id) return "端末おためし";
+  if (row.target_type !== "family" || !row.target_id) return "未ログイン端末";
   return `家族 ${row.target_id.slice(0, 8)}`;
 }
 
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
       estimatedCostUsd: rounded(row.estimatedCostUsd),
       estimatedCostYen: Math.round(row.estimatedCostUsd * CONSULT_COST_USD_JPY_RATE),
       limitStatus: row.plan !== "plus"
-        ? "trial"
+        ? "daily-free"
         : row.successfulAnswers >= CONSULT_PER_FAMILY_MONTHLY_LIMIT
           ? "limit"
           : row.successfulAnswers >= Math.ceil(CONSULT_PER_FAMILY_MONTHLY_LIMIT * 0.8)

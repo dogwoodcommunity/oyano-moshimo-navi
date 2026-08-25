@@ -54,3 +54,10 @@ export function currentJstDayStart(now = new Date()): string {
   const jst = new Date(now.getTime() + jstOffsetMs);
   return new Date(Date.UTC(jst.getUTCFullYear(), jst.getUTCMonth(), jst.getUTCDate()) - jstOffsetMs).toISOString();
 }
+
+export function wasUsedOnCurrentJstDay(usedAt: string | null | undefined, now = new Date()): boolean {
+  if (!usedAt) return false;
+  const usedAtMs = Date.parse(usedAt);
+  if (!Number.isFinite(usedAtMs)) return false;
+  return usedAtMs >= Date.parse(currentJstDayStart(now));
+}
