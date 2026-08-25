@@ -9978,6 +9978,7 @@ textarea {
   font-weight: 800;
   line-height: 1.75;
   margin: 0;
+  max-height: 8.75em;
   overflow: hidden;
   overflow-wrap: anywhere;
   white-space: pre-wrap;
