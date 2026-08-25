@@ -8781,3 +8781,47 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-3hi80e9o1-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-1300` へ退避した。
+
+## 2026-08-25 追記 238 — 日記カードの確認項目作成とボタン配色を明確化
+
+ユーザーから、日記カードの「確認リストに追加」が何をする操作か分からず、中央だけ緑色なので「緑のボタンだけが操作できるのか」と見えるとの指摘があった。
+
+原因:
+
+- 「確認リストに追加」は、日記本文を判定して「薬・服薬について確認する」など、家族や病院へあとで確認する項目を即時作成する機能だが、ボタン内に説明がなかった。
+- 日記カードの3つの操作はすべて押せるにもかかわらず、CSSの `nth-child(2)` で中央の確認リスト操作だけを緑色にしていた。緑が「唯一押せる」「選択中」と誤解される配色だった。
+- 編集欄を開いた後も下に「内容を編集する」ボタンが残り、同じ操作をもう一度押せるように見えていた。
+
+変更:
+
+- ボタン名を「確認リストに追加」から「確認することを作る」へ変更し、下に「家族や病院にあとで聞く項目」と補足した。
+- 日記カードの3操作へそれぞれ補足を追加した。「内容を編集する / 日付や記録内容を直す」「確認することを作る / 家族や病院にあとで聞く項目」「AIに相談する / この記録をもとに質問する」。
+- 3つの補助操作から緑背景を外し、すべて同じ白地・青緑文字・枠線のデザインへ統一した。緑は「変更を保存する」など、その場の主操作だけに残した。
+- 編集欄が開いている時は、最初のボタンを「上で編集中」と表示してdisabledにし、灰色で押せない状態を示すようにした。
+- 確認項目を作成した後は、「『薬・服薬について確認する』を、あとで確認することに追加しました」のように、実際に作られた項目名を表示するようにした。
+- 確認リストの冒頭説明を「病院に聞くことや家族へ頼むことを、あとで忘れず確認するための一覧」へ変更した。手入力の確定ボタンも「確認することを追加」へ変更した。
+- 日記のまとめ説明も「編集、あとで確認することの作成、AI相談」へ変更した。
+- PWA更新用にservice worker cacheを `v36` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `git diff --check` 成功。
+- ローカルで架空の日記を作り、3つの補助ボタンの背景がすべて `rgb(248, 251, 245)`、文字色がすべて `rgb(47, 110, 130)` で一致することを確認した。
+- 「内容を編集する」を押すと「上で編集中」になり、disabled、灰色背景へ変わることを確認した。
+- 「確認することを作る」を押すと、日記内容に応じた「薬・服薬について確認する」という項目名付きの完了表示が出ることを確認した。
+- 確認リストへ移動し、新しい説明文と作成された項目が表示されることを確認した。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番 `/home` でも新しい名称と補足が表示され、3つの補助ボタンの背景・文字色が一致することを確認した。本番では確認項目の追加操作を行わず、利用データを変更していない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v36` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment: `dpl_C9XzuuFsbGd71JrKsHzrjF5Q8mvy` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-7su9goagq-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-1316` へ退避した。

@@ -1430,10 +1430,30 @@
   touch-action: manipulation;
 }
 
-.diary-entry-actions button:nth-child(2) {
-  background: #0f6a45;
-  border-color: #0f6a45;
-  color: #fff;
+.diary-entry-actions button {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.diary-entry-actions button strong {
+  color: inherit;
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.diary-entry-actions button small {
+  color: #65757a;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.diary-entry-actions button:disabled {
+  background: #f1f2ef;
+  border-color: #e0e2df;
+  color: #747d79;
+  cursor: default;
+  opacity: 0.76;
 }
 
 .diary-entry-actions button:hover,
@@ -1442,6 +1462,11 @@
 .diary-entry-actions a:focus-visible {
   box-shadow: 0 0 0 4px rgba(47, 110, 130, 0.12);
   outline: none;
+}
+
+.diary-entry-actions button:disabled:hover,
+.diary-entry-actions button:disabled:focus-visible {
+  box-shadow: none;
 }
 
 .diary-edit-panel {

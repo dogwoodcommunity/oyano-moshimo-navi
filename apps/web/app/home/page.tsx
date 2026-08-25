@@ -3059,7 +3059,7 @@ export default function FamilyBoardPage() {
                   <div className="record-tags" aria-label="記録から見えるテーマ">
                     {recordDigest.tags.map((tag) => <span key={tag}>{tag}</span>)}
                   </div>
-                  <p className="history-card-note">カレンダーの日付を押すと、その日の記録だけを見返せます。記録ごとに編集、確認リスト追加、AI相談ができます。</p>
+                  <p className="history-card-note">カレンダーの日付を押すと、その日の記録だけを見返せます。記録ごとに編集、あとで確認することの作成、AI相談ができます。</p>
                   <button className="record-digest-consult" type="button" onClick={openConsultFromDigest}>
                     記録をもとにAI相談する
                   </button>
@@ -3203,12 +3203,29 @@ export default function FamilyBoardPage() {
                                   </div>
                                 ) : null}
                                 <div className="diary-entry-actions">
-                                  <button type="button" onClick={() => openDiaryEditor(entry)}>内容を編集する</button>
-                                  <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>確認リストに追加</button>
-                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>AIに相談する</button>
+                                  <button
+                                    disabled={editingDiaryId === entry.id}
+                                    type="button"
+                                    onClick={() => openDiaryEditor(entry)}
+                                  >
+                                    <strong>{editingDiaryId === entry.id ? "上で編集中" : "内容を編集する"}</strong>
+                                    <small>日付や記録内容を直す</small>
+                                  </button>
+                                  <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>
+                                    <strong>確認することを作る</strong>
+                                    <small>家族や病院にあとで聞く項目</small>
+                                  </button>
+                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>
+                                    <strong>AIに相談する</strong>
+                                    <small>この記録をもとに質問する</small>
+                                  </button>
                                 </div>
                                 {diaryUpdatedId === entry.id ? <small className="entry-feedback" role="status">変更を保存しました。</small> : null}
-                                {taskAddedEntryId === entry.id ? <small className="entry-feedback">確認リストに追加しました。</small> : null}
+                                {taskAddedEntryId === entry.id ? (
+                                  <small className="entry-feedback" role="status">
+                                    「{diaryTaskTitle(entry)}」を、あとで確認することに追加しました。
+                                  </small>
+                                ) : null}
                                 <div className="entry-advice">
                                   <strong>ナビからの寄り添い</strong>
                                   <em>{diaryCompanionComment(entry)}</em>
@@ -3463,7 +3480,7 @@ export default function FamilyBoardPage() {
             </div>
             <article className="nb-card task-list-card">
               <p className="task-list-help">
-                確認リストは、あとから家族の言葉に直せます。既存カードを押すと編集、新しく気づいたことは下の「確認項目を追加」から足せます。
+                確認リストは、病院に聞くことや家族へ頼むことを、あとで忘れず確認するための一覧です。既存カードを押すと編集、新しく気づいたことは下の「確認項目を追加」から足せます。
               </p>
               <div className={`task-add-card ${taskComposerOpen ? "is-open" : ""}`}>
                 <div className="task-add-head">
@@ -3550,7 +3567,7 @@ export default function FamilyBoardPage() {
                     </label>
                     <div className="task-edit-footer">
                       <button type="button" onClick={() => addManualTask(activeCase.id)}>
-                        確認リストに追加
+                        確認することを追加
                       </button>
                       <button type="button" onClick={() => setTaskComposerOpen(false)}>
                         やめる
@@ -3558,7 +3575,7 @@ export default function FamilyBoardPage() {
                     </div>
                   </div>
                 ) : null}
-                {newTaskSaved ? <small className="task-add-feedback">確認リストに追加しました。</small> : null}
+                {newTaskSaved ? <small className="task-add-feedback">確認することを追加しました。</small> : null}
               </div>
               {activeTasks.length > 0 ? (
                 <>
