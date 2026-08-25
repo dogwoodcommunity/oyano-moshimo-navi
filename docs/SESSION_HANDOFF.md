@@ -8335,3 +8335,42 @@ GitHub・本番:
 - deployment URL: `https://oyano-moshimo-navi-o7513h44s-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
+
+## 2026-08-25 追記 227 — 無料AI相談を日本時間で1日1回に変更
+
+ユーザーから、AI相談を1日1回使える形にする方針決定があった。無料家族と未ログインのWeb/PWA端末は日本時間で毎日1回答を無料、Family Plusは従来どおり1日5回答・月30回答とした。
+
+実装:
+
+- 無料家族は `families.consult_trial_used_at` を「最後に成功した無料相談日時」として再利用し、日本時間の当日0時より前またはnullなら1回相談できるようにした。
+- 未ログイン端末は既存のHttpOnly Cookie `oyano_consult_trial_used_v01` の日時を再利用。同じ端末で当日1回答まで、翌日0時に自動で再開する。
+- 相談成功時だけ利用日時を更新する。入力不備、AI拒否、不正な回答、外部APIエラーではその日の無料枠を減らさない。
+- 同じ日の2回目はHTTP 429 `daily_free_limit` とし、「明日また1回」「今すぐ続ける場合はPlus」を案内する。
+- Family Plusの1日5回答・月30回答、サービス全体1日50回答、出力上限1,600tokenは変更していない。
+- WebのAI相談画面、記録保存後の案内、料金比較、モバイル相談画面・プラン詳細、運営AI原価画面を1日1回仕様へ統一した。
+- 旧モバイルとの展開順を壊さないよう、GET `/api/consult` の `trialAvailable` / `trialUsedAt` は互換フィールドとして残し、新しい `dailyFreeAvailable` / `dailyFreeUsedAt` も返す。
+- 既存DB列とCookieをそのまま使うため、追加migrationや本番Supabaseでの手作業は不要。
+- PWA更新用にservice worker cacheを `v24` へ上げた。
+
+確認:
+
+- `corepack pnpm --filter web run typecheck` 成功。
+- `corepack pnpm --filter mobile run typecheck` 成功。
+- `corepack pnpm --filter web run build` 成功。162ページを生成。
+- `corepack pnpm run doctor:local` 成功。
+- ローカルと本番の `scripts/smoke-web.mjs` 成功。
+- ローカル・本番GET `/api/consult` で、Cookieなしは `dailyFreeAvailable: true`、前日のCookieもtrue、当日のCookieはfalseになることを確認。
+- ローカルPOST `/api/consult` で、当日のCookieはHTTP 429 `daily_free_limit`、前日のCookieは無料枠判定を通過して次の手帳内容検証（HTTP 422）へ進むことを確認。外部AI APIは呼んでいない。
+- 本番の既存モニター端末で `/consult` を開き、「今日の無料相談は利用済み」「明日0時からまた1回」「Plusなら今日のうちも続けられる」の表示を実操作確認。
+- 本番 `/sw.js` でcache `v24` を確認。
+- `git diff --check` 成功。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+GitHub・本番:
+
+- 実装commit: `6c44471` (`Allow one free AI consult daily`)。
+- Vercel production deployment: `dpl_2y1MgbXDoD3QdvpQ8tePz1XaV9ab` がREADY。
+- deployment URL: `https://oyano-moshimo-navi-d3tpn0jfr-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy用に一時生成された `.env.local` と `.vercel/` は、本番確認後に削除済み。
