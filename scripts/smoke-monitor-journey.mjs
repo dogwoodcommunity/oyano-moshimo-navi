@@ -61,13 +61,8 @@ const invalidFeedback = await read("/api/monitor-feedback", {
   headers: { "Content-Type": "application/json" },
   body: "{}"
 });
-if ([400, 503].includes(invalidFeedback.response.status)) {
-  ok(
-    invalidFeedback.response.status === 400
-      ? "未入力の最終報告を拒否"
-      : "許可名未設定時は最終回答の受付を停止",
-    invalidFeedback.response.status
-  );
+if (invalidFeedback.response.status === 400) {
+  ok("未入力の最終報告を拒否", invalidFeedback.response.status);
 } else {
   fail("未入力の最終報告を拒否", invalidFeedback.response.status);
 }

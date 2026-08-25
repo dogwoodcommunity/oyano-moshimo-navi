@@ -9165,3 +9165,60 @@ commit・本番:
 - 本番 `WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app pnpm smoke:monitor` は全項目成功。許可名未設定の503も意図した受付停止として確認した。
 - 本番 `/sw.js` でcache `v44` を確認した。
 - `vercel link` が一時生成した `.vercel/` と `.env.local` は、worktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-monitor-final/` へ退避した。`.env.local` の内容は表示していない。
+
+## 2026-08-25 追記 247 — 固定人数・事前許可名を廃止し、参加者向けモニターセットを作成
+
+ユーザーから、実際に何人へ送るかは未確定で、ランダムに選んだ参加者へ送るため、採用者名を先に登録する方式ではなく、最終回答フォームで本人がクラウドワークス表示名を入力する運用へ変更するよう指示があった。また、参加者へそのまま渡せる説明書を含むモニターセットの作成依頼があった。
+
+回答者名の変更:
+
+- `MONITOR_ALLOWED_CROWDWORKS_NAMES` による事前許可名照合を回答APIから廃止した。参加人数と参加者名を事前に固定しない。
+- 最終回答フォームでは「あなたのクラウドワークス表示名」と表示し、本人がプロフィール画面の表示名をそのまま入力する。
+- 「事前にお伝えするモニター番号はありません」とフォーム内に明記した。
+- 表示名が空欄の場合は、画像アップロード前の事前確認でHTTP 400とし、「クラウドワークスのプロフィールに表示されている名前を入力してください」と表示する。
+- 同じ表示名の再送を最新回答で上書きする既存仕様は継続した。
+- 管理者の環境変数確認APIと `docs/ENVIRONMENT_MATRIX.md` から、不要になった許可名環境変数を削除した。
+- `scripts/smoke-monitor-journey.mjs` は、未入力回答が必ず400になることを検証する内容へ戻した。
+
+モニター資料:
+
+- `docs/MONITOR_PARTICIPANT_GUIDE.md` を新規作成した。開始URL、初日登録、毎日の記録、期間中に試す機能、8日目0:00の最終回答、本人入力する表示名、スクリーンショット、個人情報、困った時の連絡までを参加者向けの言葉でまとめた。
+- `docs/MONITOR_SEND_MESSAGE.txt` を新規作成した。ランダムに選んだ参加者へクラウドワークスからそのまま送れる文面で、固定人数やモニター番号を使わない。
+- `docs/TEST_COOPERATION_REQUEST.md`、`docs/FAMILY_TEST_PROTOCOL.md`、`docs/CLAUDE_MONITOR_REVIEW_PACKET.md` を固定10人・許可名方式から参加人数未固定の運用へ更新した。
+- 参加人数が5人未満なら比率で合否を作らず定性判断、5人以上なら前向きな支払意向30%と5日以上記録70%を暫定の参考線にする形へ変更した。
+- 配布用として、4ページのPDF、編集用DOCX、コピペ送付文を作成した。3ファイルを `親のもしもナビ_7日間モニター参加セット.zip` にまとめ、ZIP内は文字化けを避けるため `monitor_guide.pdf`、`monitor_guide.docx`、`send_message.txt` のASCII名にした。
+- 配布成果物はリポジトリ外のCodex出力フォルダ `outputs/` に保存した。リポジトリには内容の正本となるMarkdownと送付文だけを保存した。
+
+文書検証:
+
+- Documentsスキルの `compact_reference_guide` と `customer_pack` を基準に、Letter、四辺1インチ、本文11pt相当、実番号リスト、固定幅9360 DXAの表としてDOCXを生成した。
+- 内蔵LibreOfficeへ日本語フォントを検証時だけ追加してPDF化し、全4ページを100%表示で目視確認した。文字欠け、重なり、表の崩れ、孤立ページ、途中切れはない。
+- PDFへArial Unicode MSが埋め込まれていること、4ページ、Letter、リンク付きであることを確認した。
+- `unzip -t` でDOCXの全構成ファイルが正常、表8件が `tblW=9360`、`tblInd=120`、4セクションが `pgSz=12240x15840`、余白1440、header/footer 708であることを確認した。
+- ZIPは3ファイルだけを含むことを `unzip -l` で確認した。
+
+実装確認:
+
+- `pnpm --filter web run typecheck` 成功。
+- `pnpm test:monitor-timeline` 成功。朝開始、深夜開始、月またぎ、年またぎ、7日目終了から8日目0:00の境界を確認。
+- `pnpm --filter web run build` 成功。162ページを生成。
+- `pnpm lint` はESLint設定ファイルが未作成のため、Next.jsの対話式設定画面で停止した。コードのlint違反ではなく、既存のリポジトリ設定上の制約。
+- production buildのローカル起動で `node scripts/smoke-web.mjs http://127.0.0.1:3100` と `WEB_BASE_URL=http://127.0.0.1:3100 pnpm smoke:monitor` が成功した。
+- ローカルAPIで未登録の任意名 `ランダム参加者_123` の事前確認がHTTP 200 `{"ok":true}`、空欄がHTTP 400になることを確認した。回答本体や画像は保存していない。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_6h1fyDfK4DcCnqQzy8BrkhBEuSWR` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-m9lpqblbo-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` と `WEB_BASE_URL=https://oyano-moshimo-navi.vercel.app pnpm smoke:monitor` は全項目成功。
+- 本番APIで、事前登録していない任意の表示名がHTTP 200、空欄がHTTP 400になることを確認した。`validateOnly` だけを使い、回答本体や画像は保存していない。
+- deploy時に使用した `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-random-monitor-kit` へ退避した。`.env.local` は生成していない。
+
+現在の運用:
+
+- 参加人数は固定しない。参加者を選んだら、配布セットの `send_message.txt` と `monitor_guide.pdf` を渡す。
+- 最終回答では、参加者本人がクラウドワークスのプロフィール表示名を入力する。事前名簿登録とモニター番号発行は不要。
+- 支払管理表には、本人が入力した表示名、提出日時、支払状態、削除予定日、削除依頼を記録する。

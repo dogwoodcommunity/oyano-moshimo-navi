@@ -133,7 +133,7 @@ export function MonitorReportForm() {
       });
       const participantBody = await participantResponse.json().catch(() => ({}));
       if (!participantResponse.ok) {
-        throw new Error(participantBody.message ?? "クラウドワークスで使っている名前を確認できませんでした。");
+        throw new Error(participantBody.message ?? "クラウドワークスのプロフィールに表示されている名前を入力してください。");
       }
 
       const screenshotPaths = await Promise.all(screenshots.map(uploadScreenshot));
@@ -273,8 +273,8 @@ export function MonitorReportForm() {
 
         <form className={styles.formCard} onSubmit={submit}>
           <div className={styles.field}>
-            <label htmlFor="crowdworksName">クラウドワークスで使っている名前<span className={styles.required}>必須</span></label>
-            <p className={styles.help}>クラウドワークスのプロフィールに表示されている名前を入力してください。</p>
+            <label htmlFor="crowdworksName">あなたのクラウドワークス表示名<span className={styles.required}>必須</span></label>
+            <p className={styles.help}>ご自身のプロフィール画面に表示されている名前を、そのまま入力してください。事前にお伝えするモニター番号はありません。</p>
             <input className={styles.input} id="crowdworksName" name="crowdworksName" maxLength={40} required placeholder="例：やまだ123" autoComplete="username" />
           </div>
 

@@ -30,12 +30,6 @@ function participantKey(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("ja-JP");
 }
 
-function allowedParticipantKeys() {
-  const raw = process.env.MONITOR_ALLOWED_CROWDWORKS_NAMES?.trim();
-  if (!raw) return null;
-  return new Set(raw.split(",").map((value) => participantKey(value.trim())).filter(Boolean));
-}
-
 function safeIsoDate(value: unknown) {
   return typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : null;
 }
@@ -89,14 +83,10 @@ export async function POST(request: Request) {
   if (!body) return NextResponse.json({ message: "回答を読み込めませんでした。" }, { status: 400 });
 
   const crowdworksName = safeText(body.crowdworksName ?? body.monitorCode, 40);
+  if (!crowdworksName) {
+    return NextResponse.json({ message: "クラウドワークスのプロフィールに表示されている名前を入力してください。" }, { status: 400 });
+  }
   const crowdworksNameKey = participantKey(crowdworksName);
-  const allowedKeys = allowedParticipantKeys();
-  if (!allowedKeys) {
-    return NextResponse.json({ message: "モニター回答の受付準備中です。運営へご連絡ください。" }, { status: 503 });
-  }
-  if (!allowedKeys.has(crowdworksNameKey)) {
-    return NextResponse.json({ message: "クラウドワークスで使っている名前を確認してください。" }, { status: 400 });
-  }
   if (body.validateOnly === true) {
     return NextResponse.json({ ok: true });
   }
