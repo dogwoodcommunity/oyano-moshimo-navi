@@ -33,6 +33,7 @@ type ReportGate =
 
 export function MonitorReportForm() {
   const [gate, setGate] = useState<ReportGate>({ status: "checking" });
+  const [preview, setPreview] = useState(false);
   const [stops, setStops] = useState<string[]>([]);
   const [screenshots, setScreenshots] = useState<File[]>([]);
   const [sending, setSending] = useState(false);
@@ -40,6 +41,13 @@ export function MonitorReportForm() {
   const [completed, setCompleted] = useState(false);
 
   useEffect(() => {
+    const previewRequested = new URLSearchParams(window.location.search).get("preview") === "1";
+    if (previewRequested) {
+      setPreview(true);
+      setGate({ status: "due" });
+      return;
+    }
+
     const session = readMonitorSession();
     if (!session) {
       setGate({ status: "not-started" });
@@ -100,6 +108,10 @@ export function MonitorReportForm() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError("");
+    if (preview) {
+      setError("これは確認用画面です。実際の回答は7日間のモニター終了後に送信できます。");
+      return;
+    }
     if (screenshots.length !== 3) {
       setError("気になった画面のスクリーンショットを3枚添付してください。");
       return;
@@ -224,6 +236,12 @@ export function MonitorReportForm() {
           <p className={styles.lead}>約15問、15分ほどです。実名やご家族の病気・住所は書かず、スクショにも個人情報を写さないでください。</p>
         </section>
 
+        {preview ? (
+          <p className={styles.notice} role="note">
+            これは回答項目を確認するためのプレビューです。入力内容と画像は送信できません。実際の回答フォームは7日間のモニター終了後に開きます。
+          </p>
+        ) : null}
+
         <form className={styles.formCard} onSubmit={submit}>
           <div className={styles.field}>
             <label htmlFor="monitorCode">モニター番号またはニックネーム<span className={styles.required}>必須</span></label>
@@ -271,8 +289,8 @@ export function MonitorReportForm() {
           </div>
 
           {error && <p className={styles.error} role="alert">{error}</p>}
-          <button className={styles.primary} disabled={sending} type="submit">
-            {sending ? "回答と画像を送信しています…" : "7日間の検証結果を送信する"}
+          <button className={styles.primary} disabled={sending || preview} type="submit">
+            {preview ? "プレビューでは送信できません" : sending ? "回答と画像を送信しています…" : "7日間の検証結果を送信する"}
           </button>
         </form>
       </div>
