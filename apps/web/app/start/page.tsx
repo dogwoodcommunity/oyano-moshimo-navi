@@ -159,13 +159,6 @@ export default function StartPage() {
 
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
-    if (limitReached) {
-      setProfileValidationAttempted(false);
-      setChooseError(notebookQuota().message);
-      focusChooseError();
-      return;
-    }
-
     const missingFields = missingRequiredProfileFields(profileDraft);
     if (missingFields.length > 0) {
       setChooseError(null);
@@ -173,6 +166,14 @@ export default function StartPage() {
       window.requestAnimationFrame(() => focusRequiredField(missingFields[0]));
       return;
     }
+
+    if (limitReached) {
+      setProfileValidationAttempted(false);
+      setChooseError(notebookQuota().message);
+      focusChooseError();
+      return;
+    }
+
     setChooseError(null);
     setProfileValidationAttempted(false);
     setChoosingStatus(status);
