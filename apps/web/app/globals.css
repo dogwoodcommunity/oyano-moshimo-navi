@@ -1324,16 +1324,19 @@
 
 .diary-month-group {
   display: grid;
-  gap: 10px;
+  gap: 16px;
 }
 
 .diary-month-head {
   align-items: flex-start;
-  background: #eef5f0;
+  background: #e1eee7;
+  border: 1.5px solid #bdd3c7;
+  border-left: 6px solid #2f6e82;
   border-radius: 16px;
+  box-shadow: 0 5px 12px rgba(47, 110, 130, 0.08);
   display: grid;
   gap: 5px;
-  padding: 12px 14px;
+  padding: 13px 15px;
 }
 
 .diary-month-head h3 {
@@ -1353,12 +1356,14 @@
 }
 
 .diary-entry-card {
-  background: #fffdf8;
-  border: 1px solid rgba(174, 135, 72, 0.24);
+  background: #fff;
+  border: 1.5px solid #cdbd9e;
+  border-left: 5px solid #82a6a2;
   border-radius: 18px;
+  box-shadow: 0 10px 22px rgba(74, 63, 44, 0.1);
   display: grid;
-  gap: 9px;
-  padding: 14px;
+  gap: 12px;
+  padding: 16px;
   scroll-margin-top: 96px;
 }
 
@@ -1588,17 +1593,20 @@
 }
 
 .entry-advice {
-  background: #f6f8f4;
+  background: #eaf3ed;
+  border: 1.5px solid #bdd4c6;
   border-radius: 14px;
   display: grid;
-  gap: 8px;
-  padding: 12px;
+  gap: 10px;
+  padding: 14px;
 }
 
 .entry-advice > strong {
+  border-bottom: 1px solid #c7dbce;
   color: var(--primary-deep);
   font-size: 16px;
   font-weight: 900;
+  padding-bottom: 8px;
 }
 
 .entry-advice > p {
@@ -1610,8 +1618,8 @@
 }
 
 .entry-advice > em {
-  background: #fffdf6;
-  border: 1px solid #eadfc9;
+  background: #fff;
+  border: 1.5px solid #d5c39f;
   border-radius: 14px;
   color: var(--ink);
   display: block;
@@ -1620,6 +1628,13 @@
   font-weight: 850;
   line-height: 1.75;
   padding: 11px 12px;
+}
+
+.entry-advice ul {
+  background: #f8fbf8;
+  border: 1px solid #d6e3da;
+  border-radius: 12px;
+  padding: 11px 12px 11px 30px;
 }
 
 .entry-attachments {
@@ -9842,6 +9857,9 @@ textarea {
 }
 
 .history-card {
+  background: #f3eee3;
+  border: 1.5px solid #cfc1a4;
+  box-shadow: 0 14px 30px rgba(67, 59, 43, 0.11);
   display: grid;
 }
 
@@ -10147,11 +10165,11 @@ textarea {
 }
 
 .history-record-list {
-  background: #f7f3e9;
-  border-top: 1px solid var(--hairline);
+  background: #ede7d9;
+  border-top: 2px solid #d3c5a8;
   display: grid;
-  gap: 14px;
-  padding: 16px;
+  gap: 18px;
+  padding: 18px;
 }
 
 .history-record-list-head {

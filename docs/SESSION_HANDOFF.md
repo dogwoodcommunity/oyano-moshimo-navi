@@ -8966,3 +8966,39 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - モニター新規登録: `https://oyano-moshimo-navi.vercel.app/start?monitor=1`。
 - 最終アンケート項目プレビュー: `https://oyano-moshimo-navi.vercel.app/monitor/report?preview=1`。
 - deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-noto-serif` へ退避した。今回は `.env.local` は生成されなかった。
+
+## 2026-08-25 追記 242 — 過去の記録カードの背景境界を強調
+
+ユーザーから、過去の手帳でページ背景、記録カード、カード内のナビ説明の色が近く、領域の境目が分かりにくいと指摘された。
+
+変更:
+
+- 過去の手帳全体を淡いベージュの面にし、外枠と影を少し強めた。
+- 記録一覧の背景を一段濃いベージュへ変更し、カレンダーとの境界を2pxの線で明示した。
+- 月見出しを淡い緑へ変更し、外枠、影、左側の青緑アクセント線を追加した。
+- 1件ごとの記録カードを白にし、ベージュの外枠、影、左側の青緑アクセント線を追加した。
+- 月見出し、記録カード、次の記録の間隔を広げた。
+- 「ナビからの寄り添い」を淡い緑の面と緑の外枠で区切り、見出し下へ境界線を追加した。
+- ナビのひとことを白い内側カードにし、確認ポイント一覧もさらに薄い面と外枠で分けた。
+- PWA更新用にservice worker cacheを `v40` へ上げた。
+
+確認:
+
+- `git diff --check` 成功。
+- `CI=true pnpm --filter web run typecheck` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- ローカルの実データで過去の記録を表示し、外側ベージュ、緑の月見出し、白い記録カード、緑のナビ欄、白いナビコメントの5段階が視覚的に分かれることを実ブラウザで確認した。
+- 同じモニターテスト中の手帳画面でも新しい境界表示になることを確認した。通常版とモニター版は同じ記録部品を使う。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番で「記録を見る」から過去の手帳へ移動し、8月24日の2件を選択して、月見出しと各記録カードの境界が新表示になることを実ブラウザで確認した。本番データの追加・編集は行っていない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v40` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_GehAjJ9jtRtD3ccr2U8U8WQcu82n` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-5pbktymtl-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-card-contrast` へ退避した。今回は `.env.local` は生成されなかった。
