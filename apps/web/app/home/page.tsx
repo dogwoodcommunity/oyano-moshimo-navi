@@ -1174,6 +1174,7 @@ export default function FamilyBoardPage() {
   const [diaryEditForms, setDiaryEditForms] = useState<Record<string, DiaryEditForm>>({});
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
   const [diarySavedId, setDiarySavedId] = useState<string | null>(null);
+  const [diaryUpdatedId, setDiaryUpdatedId] = useState<string | null>(null);
   const [taskAddedEntryId, setTaskAddedEntryId] = useState<string | null>(null);
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
@@ -1296,6 +1297,7 @@ export default function FamilyBoardPage() {
     setProfileEditorOpen(false);
     setEditingDiaryId(null);
     setDiarySavedId(null);
+    setDiaryUpdatedId(null);
     setTaskAddedEntryId(null);
     setEditingTaskKey(null);
     setTaskSavedKey(null);
@@ -1796,6 +1798,7 @@ export default function FamilyBoardPage() {
     setEditingDiaryId(null);
     setTaskAddedEntryId(null);
     setDiarySavedId(entry.id);
+    setDiaryUpdatedId(null);
     if (storageWarning) {
       setRecordStorageTone("warning");
       setRecordStorageMessage(storageWarning);
@@ -1815,10 +1818,42 @@ export default function FamilyBoardPage() {
     }));
     setEditingDiaryId(entry.id);
     setDiarySavedId(null);
+    setDiaryUpdatedId(null);
+  }
+
+  function scrollToDiaryEntry(entryId: string) {
+    window.setTimeout(() => {
+      const drawer = document.querySelector<HTMLDetailsElement>("#diary-history-drawer");
+      if (drawer) drawer.open = true;
+      window.requestAnimationFrame(() => {
+        document.getElementById(`diary-entry-${entryId}`)?.scrollIntoView({
+          block: "start",
+          behavior: "smooth"
+        });
+      });
+    }, 80);
+  }
+
+  function openDiaryEditorAndScroll(entry: DiaryEntry) {
+    setSelectedDiaryDate(entry.date);
+    setDiaryCalendarMonth(monthInputValue(entry.date));
+    setRecordFilter("all");
+    openDiaryEditor(entry);
+    scrollToDiaryEntry(entry.id);
+  }
+
+  function closeDiaryEditor(entry: DiaryEntry) {
+    setDiaryEditForms((current) => ({
+      ...current,
+      [entry.id]: diaryEditSeed(entry)
+    }));
+    setEditingDiaryId(null);
+    setDiaryUpdatedId(null);
   }
 
   function updateDiaryEditForm(entryId: string, patch: Partial<DiaryEditForm>) {
     setDiarySavedId(null);
+    setDiaryUpdatedId(null);
     setDiaryEditForms((current) => ({
       ...current,
       [entryId]: {
@@ -1849,7 +1884,8 @@ export default function FamilyBoardPage() {
       [entryId]: diaryEditSeed(updated)
     }));
     setEditingDiaryId(null);
-    setDiarySavedId(entryId);
+    setDiarySavedId(null);
+    setDiaryUpdatedId(entryId);
     setDiaryCalendarMonth(monthInputValue(updated.date));
     setSelectedDiaryDate(updated.date);
     setRecordFilter("all");
@@ -1860,9 +1896,7 @@ export default function FamilyBoardPage() {
       setRecordStorageTone("info");
       setRecordStorageMessage(`${formatLongDate(updated.date)}の記録を更新しました。`);
     }
-    window.setTimeout(() => {
-      document.querySelector("#diary-save-complete")?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 80);
+    scrollToDiaryEntry(entryId);
   }
 
   function addDiaryTask(caseId: string, entry: DiaryEntry) {
@@ -2881,8 +2915,8 @@ export default function FamilyBoardPage() {
                   <button type="button" onClick={() => openNotebookSection("#diary-history")}>
                     保存された記録を見る
                   </button>
-                  <button type="button" onClick={() => openDiaryEditor(savedDiaryEntry)}>
-                    少し直す
+                  <button type="button" onClick={() => openDiaryEditorAndScroll(savedDiaryEntry)}>
+                    この記録を編集する
                   </button>
                 </div>
                 <small>AI相談は1日1回無料です。同じ日に続けて相談したい時はFamily Plus（月980円・年9,800円）で使えます。</small>
@@ -3046,9 +3080,9 @@ export default function FamilyBoardPage() {
                         </span>
                       </div>
                       <p>{clipText(entry.body, 96)}</p>
-                      <a className="history-preview-action" href={`#diary-entry-${entry.id}`}>
-                        この記録を見返す・編集する <span aria-hidden="true">›</span>
-                      </a>
+                      <button className="history-preview-action" type="button" onClick={() => openDiaryEditorAndScroll(entry)}>
+                        内容を確認・編集する <span aria-hidden="true">›</span>
+                      </button>
                     </article>
                   ))}
                 </div>
@@ -3056,7 +3090,7 @@ export default function FamilyBoardPage() {
                 <p className="diary-empty">まだ記録はありません。今日の一言から手帳が育ちます。</p>
               )}
               {activeEntries.length > 0 ? (
-                <details className="history-drawer" open>
+                <details className="history-drawer" id="diary-history-drawer" open>
                   <summary>すべての記録を見返す・編集する ›</summary>
                   {selectedDiaryDate ? (
                     <div className="selected-date-notice">
@@ -3115,6 +3149,10 @@ export default function FamilyBoardPage() {
                                 </div>
                                 {isEditing ? (
                                   <div className="diary-edit-panel" aria-label="日記の編集">
+                                    <div className="diary-edit-panel-head">
+                                      <strong>この記録を編集しています</strong>
+                                      <p>内容を直したら、一番下の「変更を保存する」を押してください。記録内容は空欄では保存できません。</p>
+                                    </div>
                                     <label>
                                       日付
                                       <input
@@ -3147,8 +3185,8 @@ export default function FamilyBoardPage() {
                                       ))}
                                     </div>
                                     <div className="diary-edit-actions">
-                                      <button type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>記録を保存</button>
-                                      <button type="button" onClick={() => setEditingDiaryId(null)}>閉じる</button>
+                                      <button disabled={!editForm.body.trim()} type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>変更を保存する</button>
+                                      <button type="button" onClick={() => closeDiaryEditor(entry)}>変更せず閉じる</button>
                                     </div>
                                   </div>
                                 ) : (
@@ -3165,11 +3203,11 @@ export default function FamilyBoardPage() {
                                   </div>
                                 ) : null}
                                 <div className="diary-entry-actions">
-                                  <button type="button" onClick={() => openDiaryEditor(entry)}>この記録を編集</button>
+                                  <button type="button" onClick={() => openDiaryEditor(entry)}>内容を編集する</button>
                                   <button type="button" onClick={() => addDiaryTask(activeCase.id, entry)}>確認リストに追加</button>
-                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>この記録でAI相談</button>
+                                  <button type="button" onClick={() => openConsultFromEntry(entry)}>AIに相談する</button>
                                 </div>
-                                {diarySavedId === entry.id ? <small className="entry-feedback">記録を更新しました。</small> : null}
+                                {diaryUpdatedId === entry.id ? <small className="entry-feedback" role="status">変更を保存しました。</small> : null}
                                 {taskAddedEntryId === entry.id ? <small className="entry-feedback">確認リストに追加しました。</small> : null}
                                 <div className="entry-advice">
                                   <strong>ナビからの寄り添い</strong>
