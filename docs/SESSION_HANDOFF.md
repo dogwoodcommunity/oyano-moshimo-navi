@@ -9002,3 +9002,37 @@ Claudeから、7日間モニターは条件付きGOだが、募集前に自己�
 - deployment URL: `https://oyano-moshimo-navi-5pbktymtl-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-card-contrast` へ退避した。今回は `.env.local` は生成されなかった。
+
+## 2026-08-25 追記 243 — 記録種類が選択操作であることを明示
+
+ユーザーから、記録入力画面の「通常・変化あり・急ぎ」が押して選択できる項目であることを画面に書いた方がよいと指摘された。
+
+変更:
+
+- 3つの選択肢の上に「記録の種類を選ぶ」「3つから1つ選択できます」を表示した。
+- 現在選ばれている項目の中へ「選択中」を表示した。
+- 各ボタンへ `aria-pressed` を追加し、読み上げでも選択状態が分かるようにした。
+- 新しい記録を書く画面と、過去記録の編集画面の両方へ同じ案内を追加した。
+- 選択肢全体へ外枠を追加し、選択中の白い項目は影を少し強めた。
+- PWA更新用にservice worker cacheを `v41` へ上げた。
+
+確認:
+
+- `git diff --check` 成功。
+- `CI=true pnpm --filter web run typecheck` 成功。
+- `CI=true pnpm --filter web run build` 成功。162ページを生成。
+- ローカルの新規記録画面で案内文と「通常 / 選択中」を確認した。「変化あり」を押すと「選択中」が変化ありへ移り、DOM上の押下状態も切り替わることを実ブラウザで確認した。確認後は通常へ戻した。
+- ローカルの過去記録で「内容を編集する」を開き、編集画面にも同じ案内文と選択中表示が出ることを確認した。保存せず「変更せず閉じる」で終了し、記録内容は変更していない。
+- ローカル `node scripts/smoke-web.mjs http://localhost:3100` 成功。
+- 本番の新規記録画面で「記録の種類を選ぶ」「3つから1つ選択できます」「選択中」が表示されることを実ブラウザで確認した。本番では選択や保存を行っていない。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` 成功。
+- 本番 `/sw.js` でcache `v41` を確認。
+- build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+本番:
+
+- Vercel production deployment `dpl_6ZNcVj3aCU1PAEUaGyc2F1kpQEM9` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-7obbx0o3u-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に一時生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-mood-choice` へ退避した。今回は `.env.local` は生成されなかった。

@@ -2847,21 +2847,29 @@ export default function FamilyBoardPage() {
                 <p>「🎤」が見当たらない時は、そのまま文字で入力してください。</p>
               </details>
               <div className="record-tool-row">
-                <div className="mood-segment" aria-label="今日の変化">
-                  {([
-                    ["stable", "通常"],
-                    ["changed", "変化あり"],
-                    ["urgent", "急ぎ"]
-                  ] as const).map(([value, label]) => (
-                    <button
-                      className={activeForm.mood === value ? "is-active" : ""}
-                      key={value}
-                      type="button"
-                      onClick={() => updateForm(activeCase.id, { mood: value })}
-                    >
-                      {label}
-                    </button>
-                  ))}
+                <div className="mood-choice">
+                  <div className="mood-choice-head">
+                    <strong>記録の種類を選ぶ</strong>
+                    <span>3つから1つ選択できます</span>
+                  </div>
+                  <div className="mood-segment" aria-label="今日の変化">
+                    {([
+                      ["stable", "通常"],
+                      ["changed", "変化あり"],
+                      ["urgent", "急ぎ"]
+                    ] as const).map(([value, label]) => (
+                      <button
+                        aria-pressed={activeForm.mood === value}
+                        className={activeForm.mood === value ? "is-active" : ""}
+                        key={value}
+                        type="button"
+                        onClick={() => updateForm(activeCase.id, { mood: value })}
+                      >
+                        <span>{label}</span>
+                        {activeForm.mood === value ? <small>選択中</small> : null}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <label className="file-button">
                   写真を追加
@@ -3106,21 +3114,29 @@ export default function FamilyBoardPage() {
                                         onChange={(event) => updateDiaryEditForm(entry.id, { body: event.target.value })}
                                       />
                                     </label>
-                                    <div className="mood-segment" aria-label="記録の種類">
-                                      {([
-                                        ["stable", "通常"],
-                                        ["changed", "変化あり"],
-                                        ["urgent", "急ぎ"]
-                                      ] as const).map(([value, label]) => (
-                                        <button
-                                          className={editForm.mood === value ? "is-active" : ""}
-                                          key={value}
-                                          type="button"
-                                          onClick={() => updateDiaryEditForm(entry.id, { mood: value })}
-                                        >
-                                          {label}
-                                        </button>
-                                      ))}
+                                    <div className="mood-choice">
+                                      <div className="mood-choice-head">
+                                        <strong>記録の種類を選ぶ</strong>
+                                        <span>3つから1つ選択できます</span>
+                                      </div>
+                                      <div className="mood-segment" aria-label="記録の種類">
+                                        {([
+                                          ["stable", "通常"],
+                                          ["changed", "変化あり"],
+                                          ["urgent", "急ぎ"]
+                                        ] as const).map(([value, label]) => (
+                                          <button
+                                            aria-pressed={editForm.mood === value}
+                                            className={editForm.mood === value ? "is-active" : ""}
+                                            key={value}
+                                            type="button"
+                                            onClick={() => updateDiaryEditForm(entry.id, { mood: value })}
+                                          >
+                                            <span>{label}</span>
+                                            {editForm.mood === value ? <small>選択中</small> : null}
+                                          </button>
+                                        ))}
+                                      </div>
                                     </div>
                                     <div className="diary-edit-actions">
                                       <button disabled={!editForm.body.trim()} type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>変更を保存する</button>
