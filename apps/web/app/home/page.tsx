@@ -3016,13 +3016,24 @@ export default function FamilyBoardPage() {
                 </div>
               ) : null}
               {visibleRecentEntries.length > 0 ? (
-                visibleRecentEntries.map((entry) => (
-                  <div className="nb-row history-row" key={entry.id}>
-                    <time>{formatLongDate(entry.date)}</time>
-                    <strong>{entry.body}</strong>
-                    <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                <div className="recent-entry-list" aria-label="最近の記録">
+                  <div className="recent-entry-list-head">
+                    <strong>{selectedDiaryDate ? `${formatLongDate(selectedDiaryDate)}の記録` : "最近の記録"}</strong>
+                    <span>{visibleRecentEntries.length}件</span>
                   </div>
-                ))
+                  {visibleRecentEntries.map((entry) => (
+                    <article className="history-preview-card" key={entry.id}>
+                      <div className="history-preview-meta">
+                        <time>{formatLongDate(entry.date)}</time>
+                        <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                      </div>
+                      <p>{entry.body}</p>
+                      <a className="history-preview-action" href={`#diary-entry-${entry.id}`}>
+                        この記録を見返す・編集する <span aria-hidden="true">›</span>
+                      </a>
+                    </article>
+                  ))}
+                </div>
               ) : (
                 <p className="diary-empty">まだ記録はありません。今日の一言から手帳が育ちます。</p>
               )}

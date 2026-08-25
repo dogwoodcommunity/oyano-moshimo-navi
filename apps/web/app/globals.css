@@ -9917,20 +9917,84 @@ textarea {
   touch-action: manipulation;
 }
 
-.history-row {
-  grid-template-columns: 74px minmax(0, 1fr) auto;
+.recent-entry-list {
+  background: #f7f3e9;
+  border-top: 1px solid var(--hairline);
+  display: grid;
+  gap: 10px;
+  padding: 16px;
 }
 
-.history-row time {
+.recent-entry-list-head {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.recent-entry-list-head strong {
+  color: var(--ink);
+  font-family: var(--font-serif), serif;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.recent-entry-list-head span {
   color: var(--ink-faint);
   font-size: 16px;
   font-weight: 900;
 }
 
-.history-row strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+.history-preview-card {
+  background: #fff;
+  border: 1px solid rgba(207, 194, 168, 0.78);
+  border-radius: 16px;
+  box-shadow: 0 8px 18px rgba(57, 65, 55, 0.06);
+  display: grid;
+  gap: 11px;
+  padding: 14px;
+}
+
+.history-preview-meta {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.history-preview-meta time {
+  color: var(--tab-sand-ink);
+  font-size: 16px;
+  font-weight: 900;
+}
+
+.history-preview-card p {
+  color: var(--ink);
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.75;
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.history-preview-action {
+  align-items: center;
+  border-top: 1px solid var(--hairline);
+  color: #2f6e82;
+  display: flex;
+  font-size: 16px;
+  font-weight: 900;
+  gap: 6px;
+  justify-content: space-between;
+  padding-top: 10px;
+  text-decoration: none;
+}
+
+.history-preview-action span {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .history-drawer {
@@ -12176,15 +12240,6 @@ textarea {
 
   .setup-preview-grid {
     grid-template-columns: 1fr;
-  }
-
-  .history-row {
-    grid-template-columns: 68px minmax(0, 1fr);
-  }
-
-  .history-row .mood-badge {
-    grid-column: 2;
-    justify-self: start;
   }
 
   .diary-entry-actions,
