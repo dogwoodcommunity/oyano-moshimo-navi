@@ -84,8 +84,6 @@ type DiaryCalendarCell = {
   tone: "none" | "stable" | "changed" | "urgent";
 };
 
-const PREFECTURE_PROMPT_MIN_DIARY_ENTRIES = 2;
-
 const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
   { id: "overview", label: "今日", note: "まず見る" },
   { id: "record", label: "記録", note: "書く・見返す" },
@@ -114,8 +112,6 @@ const emptyDiaryForm: DiaryFormState = blankDiaryForm();
 const MAX_LOCAL_PHOTO_COUNT = 3;
 const MAX_LOCAL_PHOTO_EDGE = 1280;
 const LOCAL_PHOTO_QUALITY = 0.78;
-const PREFECTURE_PROMPT_SKIP_KEY = "oyano_parent_prefecture_prompt_skipped_v01";
-
 type PreparedPhoto = {
   attachment: DiaryAttachment;
   blob: Blob;
@@ -409,26 +405,6 @@ function relationshipName(caseRecord: CaseRecord) {
   return relationshipLabels[relationship] ?? "家族";
 }
 
-function readPrefecturePromptSkipped(): Record<string, true> {
-  if (typeof window === "undefined") return {};
-
-  try {
-    const parsed = JSON.parse(window.localStorage.getItem(PREFECTURE_PROMPT_SKIP_KEY) ?? "{}");
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
-    return parsed as Record<string, true>;
-  } catch {
-    return {};
-  }
-}
-
-function writePrefecturePromptSkipped(value: Record<string, true>) {
-  try {
-    window.localStorage.setItem(PREFECTURE_PROMPT_SKIP_KEY, JSON.stringify(value));
-  } catch {
-    // This prompt is convenience-only. If browser storage is blocked, the profile itself still saves.
-  }
-}
-
 function profileSeed(caseRecord: CaseRecord): PersonProfile {
   const profile = caseRecord.personProfile ?? {};
   const targetName = caseRecord.answers.targetName?.trim() ?? "";
@@ -458,6 +434,7 @@ function profileCompletion(profile: PersonProfile) {
     profile.displayName,
     profile.relationship,
     profile.parentPrefecture,
+    profile.parentCity,
     profile.birthDate,
     profile.careStatus,
     profile.keyContact,
@@ -484,6 +461,7 @@ function missingProfileItems(profile: PersonProfile) {
     ["呼び名", profile.displayName],
     ["関係", profile.relationship],
     ["親御さんの都道府県", profile.parentPrefecture],
+    ["親御さんの市区町村", profile.parentCity],
     ["生年月日", profile.birthDate],
     ["いまの状態", profile.careStatus],
     ["主な連絡窓口", profile.keyContact],
@@ -1198,8 +1176,8 @@ export default function FamilyBoardPage() {
   const [taskAddedEntryId, setTaskAddedEntryId] = useState<string | null>(null);
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
+  const [profileLocationErrorCaseId, setProfileLocationErrorCaseId] = useState<string | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
-  const [prefecturePromptSkipped, setPrefecturePromptSkipped] = useState<Record<string, true>>({});
   const [prefecturePromptDrafts, setPrefecturePromptDrafts] = useState<Record<string, PrefecturePromptDraft>>({});
   const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
   const [editingTaskKey, setEditingTaskKey] = useState<string | null>(null);
@@ -1253,7 +1231,6 @@ export default function FamilyBoardPage() {
     setActiveCaseId((current) => current ?? localCases[0]?.id ?? null);
     setDiaryEntries(Object.fromEntries(localCases.map((item) => [item.id, listDiaryEntries(item.id)])));
     setProfileForms(Object.fromEntries(localCases.map((item) => [item.id, profileSeed(item)])));
-    setPrefecturePromptSkipped(readPrefecturePromptSkipped());
     setPrefecturePromptDrafts(Object.fromEntries(localCases.map((item) => {
       const profile = profileSeed(item);
       return [item.id, {
@@ -1347,9 +1324,7 @@ export default function FamilyBoardPage() {
   const shouldPromptParentPrefecture = Boolean(
     activeCase &&
     activeProfile &&
-    activeEntries.length >= PREFECTURE_PROMPT_MIN_DIARY_ENTRIES &&
-    !activeProfile.parentPrefecture?.trim() &&
-    !prefecturePromptSkipped[activeCase.id]
+    (!activeProfile.parentPrefecture?.trim() || !activeProfile.parentCity?.trim())
   );
   const activeProfileCompletion = activeProfile ? profileCompletion(activeProfile) : { filled: 0, total: 0, percent: 0 };
   const activeMissingProfileItems = activeProfile ? missingProfileItems(activeProfile) : [];
@@ -1540,6 +1515,7 @@ export default function FamilyBoardPage() {
 
   function updateProfileForm(caseId: string, patch: Partial<PersonProfile>) {
     setProfileSavedCaseId(null);
+    setProfileLocationErrorCaseId(null);
     setProfileForms((current) => ({
       ...current,
       [caseId]: {
@@ -1559,15 +1535,9 @@ export default function FamilyBoardPage() {
     }));
   }
 
-  function skipParentPrefecturePrompt(caseId: string) {
-    const next = { ...prefecturePromptSkipped, [caseId]: true as const };
-    setPrefecturePromptSkipped(next);
-    writePrefecturePromptSkipped(next);
-  }
-
   function saveParentPrefecturePrompt(caseId: string) {
     const draft = prefecturePromptDrafts[caseId];
-    if (!draft?.parentPrefecture?.trim()) return;
+    if (!draft?.parentPrefecture?.trim() || !draft.parentCity?.trim()) return;
 
     const profile = profileForms[caseId] ?? {};
     const nextProfile = {
@@ -1584,12 +1554,16 @@ export default function FamilyBoardPage() {
       [caseId]: profileSeed(updated)
     }));
     setProfileSavedCaseId(caseId);
-    skipParentPrefecturePrompt(caseId);
   }
 
   function saveProfile(caseId: string) {
     const profile = profileForms[caseId];
     if (!profile) return;
+    if (!profile.parentPrefecture?.trim() || !profile.parentCity?.trim()) {
+      setProfileSavedCaseId(null);
+      setProfileLocationErrorCaseId(caseId);
+      return;
+    }
 
     const updated = updateCaseProfile(caseId, profile);
     if (!updated) return;
@@ -1600,7 +1574,7 @@ export default function FamilyBoardPage() {
       [caseId]: profileSeed(updated)
     }));
     setProfileSavedCaseId(caseId);
-    if (profile.parentPrefecture?.trim()) skipParentPrefecturePrompt(caseId);
+    setProfileLocationErrorCaseId(null);
   }
 
   function openTaskEditor(caseId: string, taskIndex: number, task: TaskWithDue) {
@@ -2225,7 +2199,7 @@ export default function FamilyBoardPage() {
             <h1>まず、1人分だけ手帳を作ります。</h1>
             <p>
               父母、義父母、祖父母、親戚など、気になる人を1人だけ選びます。
-              最初は呼び名と関係だけで大丈夫です。
+              呼び名、関係、都道府県、市区町村の4つから始めます。
             </p>
             <Link className="first-run-primary" href="/start">
               <strong>1人目の登録を始める</strong>
@@ -2238,8 +2212,8 @@ export default function FamilyBoardPage() {
               <li>
                 <span>1</span>
                 <div>
-                  <strong>呼び名と関係を入れる</strong>
-                  <small>本名や詳しい情報はあとから足せます。</small>
+                  <strong>誰の手帳かと地域を入れる</strong>
+                  <small>地域は市区町村まで。番地や本名は不要です。</small>
                 </div>
               </li>
               <li>
@@ -2415,21 +2389,22 @@ export default function FamilyBoardPage() {
               </p>
             </article>
             {shouldPromptParentPrefecture && activeCase ? (
-              <article className="nb-card parent-prefecture-prompt" aria-label="親御さんの都道府県入力">
+              <article className="nb-card parent-prefecture-prompt" aria-label="親御さんの居住地入力">
                 <div>
                   <p className="nb-eyebrow">地域設定</p>
-                  <h2>記録が増えてきたので、親御さんの地域を入れてください。</h2>
+                  <h2>親御さんの都道府県と市区町村を入れてください。</h2>
                   <p>
                     地域の相談先や手続きの案内は、利用者ではなく親御さんの居住地を基準に近づけます。
-                    市区町村は任意で、あとから変更できます。
+                    番地や詳細住所は入力せず、あとから変更できます。
                   </p>
                 </div>
                 <div className="parent-prefecture-form">
                   <label>
-                    <span>都道府県</span>
+                    <span>都道府県（必須）</span>
                     <select
                       value={activePrefecturePromptDraft.parentPrefecture}
                       onChange={(event) => updatePrefecturePromptDraft(activeCase.id, { parentPrefecture: event.target.value })}
+                      required
                     >
                       <option value="">選択してください</option>
                       {PREFECTURES.map((prefecture) => (
@@ -2438,9 +2413,11 @@ export default function FamilyBoardPage() {
                     </select>
                   </label>
                   <label>
-                    <span>市区町村（任意）</span>
+                    <span>市区町村（必須・番地不要）</span>
                     <input
+                      maxLength={80}
                       placeholder="例: 神戸市、西宮市"
+                      required
                       value={activePrefecturePromptDraft.parentCity}
                       onChange={(event) => updatePrefecturePromptDraft(activeCase.id, { parentCity: event.target.value })}
                     />
@@ -2450,13 +2427,10 @@ export default function FamilyBoardPage() {
                   <button
                     className="profile-save-button"
                     type="button"
-                    disabled={!activePrefecturePromptDraft.parentPrefecture}
+                    disabled={!activePrefecturePromptDraft.parentPrefecture.trim() || !activePrefecturePromptDraft.parentCity.trim()}
                     onClick={() => saveParentPrefecturePrompt(activeCase.id)}
                   >
                     保存する
-                  </button>
-                  <button className="secondary" type="button" onClick={() => skipParentPrefecturePrompt(activeCase.id)}>
-                    あとで入力する
                   </button>
                 </div>
               </article>
@@ -3279,10 +3253,11 @@ export default function FamilyBoardPage() {
                       />
                     </label>
                     <label>
-                      <span>親御さんの居住都道府県</span>
+                      <span>親御さんの居住都道府県（必須）</span>
                       <select
                         value={activeProfile.parentPrefecture ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { parentPrefecture: event.target.value })}
+                        required
                       >
                         <option value="">選択してください</option>
                         {PREFECTURES.map((prefecture) => (
@@ -3291,9 +3266,11 @@ export default function FamilyBoardPage() {
                       </select>
                     </label>
                     <label>
-                      <span>市区町村</span>
+                      <span>市区町村（必須・番地不要）</span>
                       <input
+                        maxLength={80}
                         placeholder="例: 神戸市、西宮市"
+                        required
                         value={activeProfile.parentCity ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { parentCity: event.target.value })}
                       />
@@ -3397,7 +3374,13 @@ export default function FamilyBoardPage() {
                   <button className="profile-save-button" type="button" onClick={() => saveProfile(activeCase.id)}>
                     保存する
                   </button>
-                  {profileSavedCaseId === activeCase.id ? <span>保存しました</span> : <small>あとから何度でも更新できます。</small>}
+                  {profileLocationErrorCaseId === activeCase.id ? (
+                    <span role="alert">都道府県と市区町村の両方を入力してください。</span>
+                  ) : profileSavedCaseId === activeCase.id ? (
+                    <span>保存しました</span>
+                  ) : (
+                    <small>あとから何度でも更新できます。</small>
+                  )}
                 </div>
               </details>
             </article>

@@ -120,8 +120,13 @@ export default function StartPage() {
   async function choose(status: ParentStatus) {
     if (choosingStatus) return;
     setChooseError(null);
-    if (!profileDraft.displayName?.trim() || !profileDraft.relationship?.trim() || !profileDraft.parentPrefecture?.trim()) {
-      setChooseError("先に、呼び名・関係・親御さんの都道府県を入力してください。詳しい情報はあとから足せます。");
+    if (
+      !profileDraft.displayName?.trim() ||
+      !profileDraft.relationship?.trim() ||
+      !profileDraft.parentPrefecture?.trim() ||
+      !profileDraft.parentCity?.trim()
+    ) {
+      setChooseError("先に、呼び名・関係・親御さんの都道府県・市区町村を入力してください。番地や詳細住所は不要です。");
       return;
     }
     setChoosingStatus(status);
@@ -179,8 +184,8 @@ export default function StartPage() {
       <section className="notebook-card start-profile-card" aria-label="管理する人の基本情報">
         <div className="start-section-heading">
           <span>1. 誰の手帳ですか</span>
-          <h2>最初は3つだけ入れれば大丈夫です。</h2>
-          <p>呼び名、関係、親御さんの都道府県を入れてください。フルネームや生年月日は、手帳を作ったあとに何度でも編集できます。</p>
+          <h2>最初は4つだけ入れれば大丈夫です。</h2>
+          <p>呼び名、関係、親御さんの都道府県と市区町村を入れてください。番地や詳細住所は入力しません。</p>
         </div>
         <div className="start-profile-grid">
           <label>
@@ -188,6 +193,7 @@ export default function StartPage() {
             <input
               autoComplete="off"
               inputMode="text"
+              required
               onChange={(event) => updateProfileDraft("displayName", event.target.value)}
               placeholder="例：お母さん、義父さん"
               value={profileDraft.displayName ?? ""}
@@ -198,6 +204,7 @@ export default function StartPage() {
             <input
               autoComplete="off"
               inputMode="text"
+              required
               onChange={(event) => updateProfileDraft("relationship", event.target.value)}
               placeholder="例：母、父、義母、叔父"
               value={profileDraft.relationship ?? ""}
@@ -207,6 +214,7 @@ export default function StartPage() {
             <span>親御さんの都道府県（必須）</span>
             <select
               onChange={(event) => updateProfileDraft("parentPrefecture", event.target.value)}
+              required
               value={profileDraft.parentPrefecture ?? ""}
             >
               <option value="">選択してください</option>
@@ -214,12 +222,14 @@ export default function StartPage() {
             </select>
           </label>
           <label>
-            <span>市区町村（任意）</span>
+            <span>市区町村（必須・番地不要）</span>
             <input
               autoComplete="address-level2"
               inputMode="text"
+              maxLength={80}
               onChange={(event) => updateProfileDraft("parentCity", event.target.value)}
               placeholder="例：神戸市、西宮市"
+              required
               value={profileDraft.parentCity ?? ""}
             />
           </label>
