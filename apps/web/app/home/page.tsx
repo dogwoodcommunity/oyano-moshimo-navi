@@ -372,7 +372,7 @@ async function prepareLocalPhoto(file: File): Promise<PreparedPhoto | null> {
   }
 
   if (file.size > compressedSize + 64_000) {
-    warning = "写真を軽くして追加しました。メール確認済みなら、クラウドにも控え保存します。";
+    warning = "写真を軽くして追加しました。メール確認済みなら、クラウドにも保存します。";
   }
 
   return {
@@ -1196,7 +1196,7 @@ export default function FamilyBoardPage() {
   const [cloudEmail, setCloudEmail] = useState("");
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
-  const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。1分でクラウド控えを作れます。");
+  const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。メール確認をするとクラウドにも保存できます。");
   const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
   const [canManageFamilyBilling, setCanManageFamilyBilling] = useState(() => readCanManageFamilyBilling());
   const [lastCloudSyncedAt, setLastCloudSyncedAt] = useState<string | null>(null);
@@ -1261,9 +1261,9 @@ export default function FamilyBoardPage() {
       setCloudEmail((current) => current || session?.user.email || "");
       setCloudStatus("idle");
       if (handled && session) {
-        setCloudMessage("メール確認できました。この手帳は変更のたびに自動で控え保存されます。");
+        setCloudMessage("メール確認できました。この手帳は変更のたびにクラウドへ自動保存されます。");
       } else if (session) {
-        setCloudMessage("ログイン済みです。この手帳は変更のたびに自動で控え保存されます。");
+        setCloudMessage("ログイン済みです。この手帳は変更のたびにクラウドへ自動保存されます。");
       }
     });
 
@@ -1682,7 +1682,7 @@ export default function FamilyBoardPage() {
     const slots = Math.max(0, MAX_LOCAL_PHOTO_COUNT - current.files.length);
     if (slots === 0) {
       setRecordStorageTone("warning");
-      setRecordStorageMessage("写真は1回の記録につき3枚までにしています。メール確認済みなら、追加した写真はクラウドにも控え保存します。");
+      setRecordStorageMessage("写真は1回の記録につき3枚までにしています。メール確認済みなら、追加した写真はクラウドにも保存します。");
       return;
     }
 
@@ -1706,8 +1706,8 @@ export default function FamilyBoardPage() {
       setRecordStorageTone("info");
       setRecordStorageMessage(
         uploadedCount > 0
-          ? "写真を追加しました。クラウドにも控え保存しています。保存ボタンを押すと今日の記録に残ります。"
-          : "写真を追加しました。保存ボタンを押すと今日の記録に残ります。メール確認をするとクラウドにも控え保存できます。"
+          ? "写真を追加しました。クラウドにも保存しています。保存ボタンを押すと今日の記録に残ります。"
+          : "写真を追加しました。保存ボタンを押すと今日の記録に残ります。メール確認をするとクラウドにも保存できます。"
       );
     }
   }
@@ -1935,7 +1935,7 @@ export default function FamilyBoardPage() {
     const email = cloudEmail.trim();
     if (!email) {
       setCloudStatus("error");
-      setCloudMessage("控え保存に使うメールアドレスを入力してください。");
+      setCloudMessage("クラウド保存に使うメールアドレスを入力してください。");
       return;
     }
 
@@ -1979,7 +1979,7 @@ export default function FamilyBoardPage() {
       setCloudAutoStatus("saving");
     } else {
       setCloudStatus("syncing");
-      setCloudMessage("クラウドに控え保存しています。");
+      setCloudMessage("クラウドに保存しています。");
     }
 
     try {
@@ -2012,10 +2012,10 @@ export default function FamilyBoardPage() {
       const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
       if (!options.silent || notice) {
         setCloudMessage(
-          `クラウドに控え保存しました。対象者${result.syncedPeople ?? payload.cases.length}人、記録${result.syncedEntries ?? payload.diaryEntries.length}件。${notice}`
+          `クラウドに保存しました。対象者${result.syncedPeople ?? payload.cases.length}人、記録${result.syncedEntries ?? payload.diaryEntries.length}件。${notice}`
         );
       } else {
-        setCloudMessage("ログイン済みです。変更は自動で控え保存されています。");
+        setCloudMessage("ログイン済みです。変更はクラウドへ自動保存されています。");
       }
     } finally {
       cloudSyncInFlightRef.current = false;
@@ -2083,7 +2083,7 @@ export default function FamilyBoardPage() {
     firstCloudLoadDoneRef.current = true;
     if (skipInitialCloudRestoreRef.current) {
       skipInitialCloudRestoreRef.current = false;
-      setCloudMessage("初めて使う人の見え方で表示しています。手帳を作ると、この端末とクラウド控えに保存できます。");
+      setCloudMessage("初めて使う人の見え方で表示しています。手帳を作ると、この端末とクラウドに保存できます。");
       setCloudStatus("idle");
       return;
     }
@@ -2438,42 +2438,42 @@ export default function FamilyBoardPage() {
             <details className="cloud-backup-disclosure" id="cloud-backup" ref={cloudBackupRef}>
               <summary>
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                <span>保存状態</span>
-                <strong>{cloudUserEmail ? "クラウド控え中" : "控え保存はあとで設定できます"}</strong>
+                <span>手帳データの保存先</span>
+                <strong>{cloudUserEmail ? "この端末とクラウドに保存" : "今はこの端末だけに保存"}</strong>
               </summary>
-              <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳の保存状態">
+              <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳データの保存先">
                 <div className="cloud-backup-head">
                   <div className="cloud-backup-icon" aria-hidden="true">
                     <img src="/brand/watch-bird-mark.svg" alt="" />
                   </div>
                   <div>
-                    <p className="nb-eyebrow">{cloudUserEmail ? "控え保存中" : "保存状態"}</p>
-                    <h2>{cloudUserEmail ? "この手帳はクラウドにも残ります" : "今はこの端末だけに保存されています"}</h2>
+                    <p className="nb-eyebrow">手帳データの保存先</p>
+                    <h2>{cloudUserEmail ? "この手帳はクラウドにも保存されています" : "今はこの端末だけに保存されています"}</h2>
                     <p>
                       {cloudUserEmail
-                        ? "プロフィール、日記、写真メモ、確認リストの変更は自動で控え保存されます。"
-                        : "このままでも使えます。ただ、履歴削除・機種変更・端末故障で消えることがあるため、1人目を作ったら控え保存まで済ませておくのがおすすめです。"}
+                        ? "プロフィール、日記、写真メモ、確認リストの変更はクラウドへ自動保存されます。"
+                        : "このままでも使えます。ただ、履歴削除・機種変更・端末故障で消えることがあるため、メール確認をしてクラウドにも保存しておくと安心です。"}
                     </p>
                   </div>
                 </div>
-                <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "控え保存でできること" : "控え保存をおすすめする理由"}>
+                <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "クラウド保存でできること" : "クラウド保存をおすすめする理由"}>
                   {cloudUserEmail ? (
                     <>
-                      <li>変更のたびに自動で控え保存します</li>
+                      <li>変更のたびにクラウドへ自動保存します</li>
                       <li>機種変更後もメール確認で復元できます</li>
                       <li>家族共有の土台になります</li>
                     </>
                   ) : (
                     <>
                       <li>メール確認だけで始められます</li>
-                      <li>確認後は日記・プロフィール・確認リストを自動保存します</li>
-                      <li>心配な時はJSON控えもダウンロードできます</li>
+                      <li>確認後は日記・プロフィール・確認リストをクラウドへ自動保存します</li>
+                      <li>手帳データをファイルでもダウンロードできます</li>
                     </>
                   )}
                 </ul>
                 {cloudUserEmail ? (
                   <div className="cloud-linked-box">
-                    <span>控え保存先</span>
+                    <span>クラウド保存先</span>
                     <strong>{cloudUserEmail}</strong>
                     <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
                       <span aria-hidden="true" />
@@ -2491,7 +2491,7 @@ export default function FamilyBoardPage() {
                 ) : (
                   <div className="cloud-form">
                     <label>
-                      <span>控え保存に使うメールアドレス</span>
+                      <span>クラウド保存に使うメールアドレス</span>
                       <input
                         inputMode="email"
                         placeholder="例: family@example.com"
@@ -2501,7 +2501,7 @@ export default function FamilyBoardPage() {
                       />
                     </label>
                     <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
-                      {cloudStatus === "sending" ? "送信中" : "メールで控え保存を始める"}
+                      {cloudStatus === "sending" ? "送信中" : "メールでクラウド保存を始める"}
                     </button>
                   </div>
                 )}
@@ -2797,9 +2797,15 @@ export default function FamilyBoardPage() {
                 value={activeForm.body}
                 onChange={(event) => updateForm(activeCase.id, { body: event.target.value })}
               />
-              {/* 入力の壁はタップより先に「打つこと」にある。OSの音声入力で足りるので、
-                  専用の録音機能を作る前に、使える手段があることだけ伝えておく。 */}
-              <p className="diary-voice-hint">キーボードのマイクボタンで、話すだけでも書けます。</p>
+              <details className="diary-voice-help">
+                <summary>声で入力する方法を見る（使わなくても大丈夫）</summary>
+                <ol>
+                  <li>上の白い入力欄を押します。</li>
+                  <li>画面下に出る文字入力画面（キーボード）の「🎤」を押します。</li>
+                  <li>残したい内容を話します。</li>
+                </ol>
+                <p>「🎤」が見当たらない時は、そのまま文字で入力してください。</p>
+              </details>
               <div className="record-tool-row">
                 <div className="mood-segment" aria-label="今日の変化">
                   {([
@@ -2915,6 +2921,9 @@ export default function FamilyBoardPage() {
                   <p>
                     保存後に出る「この記録でAI相談する」から、質問文が入ったチャットへ進みます。毎回ゼロから説明しなくてよくなります。
                   </p>
+                  <p className="record-ai-storage-note">
+                    AIの回答は自動保存されません。残したい回答で「この回答を手帳に残す」を押すと、「過去の手帳」にAI相談メモとして保存されます。
+                  </p>
                 </div>
               </div>
               <div className="record-ai-actions">
@@ -3025,7 +3034,9 @@ export default function FamilyBoardPage() {
                     <article className="history-preview-card" key={entry.id}>
                       <div className="history-preview-meta">
                         <time>{formatLongDate(entry.date)}</time>
-                        <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                        <span className={`mood-badge ${entry.body.trimStart().startsWith("相談メモ:") ? "is-consult" : `is-${entry.mood}`}`}>
+                          {entry.body.trimStart().startsWith("相談メモ:") ? "AI相談メモ" : moodLabel(entry.mood)}
+                        </span>
                       </div>
                       <p>{clipText(entry.body, 96)}</p>
                       <a className="history-preview-action" href={`#diary-entry-${entry.id}`}>
@@ -3091,7 +3102,9 @@ export default function FamilyBoardPage() {
                               <article className={`diary-entry-card ${isEditing ? "is-editing" : ""}`} id={`diary-entry-${entry.id}`} key={entry.id}>
                                 <div className="diary-entry-meta">
                                   <time>{formatLongDate(entry.date)}</time>
-                                  <span className={`mood-badge is-${entry.mood}`}>{moodLabel(entry.mood)}</span>
+                                  <span className={`mood-badge ${entry.body.trimStart().startsWith("相談メモ:") ? "is-consult" : `is-${entry.mood}`}`}>
+                                    {entry.body.trimStart().startsWith("相談メモ:") ? "AI相談メモ" : moodLabel(entry.mood)}
+                                  </span>
                                 </div>
                                 {isEditing ? (
                                   <div className="diary-edit-panel" aria-label="日記の編集">

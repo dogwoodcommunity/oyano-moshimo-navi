@@ -153,7 +153,7 @@ export function InviteAccept({ token }: { token: string }) {
       <h2>この招待を受け取りますか</h2>
       <p>
         {signedInEmail ? `${signedInEmail} として確認済みです。` : "確認済みです。"}
-        参加すると、同じ手帳のクラウド控えを見られるようになります。手帳を作った人の家族プランに参加するだけなので、別の支払いは不要です。
+        参加すると、クラウドに保存された同じ手帳を見られるようになります。手帳を作った人の家族プランに参加するだけなので、別の支払いは不要です。
       </p>
       <button className="family-primary" disabled={phase === "joining"} onClick={join} type="button">
         {phase === "joining" ? "参加しています…" : "この手帳に参加する"}

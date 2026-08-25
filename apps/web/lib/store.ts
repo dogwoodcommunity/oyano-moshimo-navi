@@ -103,7 +103,7 @@ let memoryDiaryEntries: DiaryEntry[] = [];
 let lastNotebookStorageWarning: string | null = null;
 
 function storageWarningMessage() {
-  return "端末内の保存容量が足りず、今回の変更を端末に残せていない可能性があります。写真を減らすか、クラウド控えを作ってからもう一度保存してください。";
+  return "端末内の保存容量が足りず、今回の変更を端末に残せていない可能性があります。写真を減らすか、クラウド保存を設定してからもう一度保存してください。";
 }
 
 export function consumeNotebookStorageWarning(): string | null {

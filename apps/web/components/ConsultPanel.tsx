@@ -340,7 +340,7 @@ export function ConsultPanel() {
     updateTurn(turn.id, {
       saved: true,
       saveSyncPhase: "saving",
-      saveSyncMessage: "クラウド控えにも保存しています。"
+      saveSyncMessage: "クラウドにも保存しています。"
     });
 
     try {
@@ -348,7 +348,7 @@ export function ConsultPanel() {
       if (!client) {
         updateTurn(turn.id, {
           saveSyncPhase: "local-only",
-          saveSyncMessage: "この端末の手帳に残しました。クラウド控えは家族ボードでメール確認後に保存されます。"
+          saveSyncMessage: "この端末の手帳に残しました。家族ボードでメール確認をすると、クラウドにも保存できます。"
         });
         return;
       }
@@ -358,7 +358,7 @@ export function ConsultPanel() {
       if (!accessToken) {
         updateTurn(turn.id, {
           saveSyncPhase: "local-only",
-          saveSyncMessage: "この端末の手帳に残しました。クラウド控えは家族ボードでメール確認後に保存されます。"
+          saveSyncMessage: "この端末の手帳に残しました。家族ボードでメール確認をすると、クラウドにも保存できます。"
         });
         return;
       }
@@ -379,19 +379,19 @@ export function ConsultPanel() {
       if (!response.ok) {
         updateTurn(turn.id, {
           saveSyncPhase: "error",
-          saveSyncMessage: "この端末の手帳には残しました。クラウド控えは家族ボードで確認してください。"
+          saveSyncMessage: "この端末の手帳には残しました。クラウド保存は家族ボードで確認してください。"
         });
         return;
       }
 
       updateTurn(turn.id, {
         saveSyncPhase: "saved",
-        saveSyncMessage: "クラウド控えにも保存しました。"
+        saveSyncMessage: "クラウドにも保存しました。"
       });
     } catch {
       updateTurn(turn.id, {
         saveSyncPhase: "error",
-        saveSyncMessage: "この端末の手帳には残しました。通信できる場所で家族ボードを開くと控え保存できます。"
+        saveSyncMessage: "この端末の手帳には残しました。通信できる場所で家族ボードを開くと、クラウドにも保存できます。"
       });
     }
   }
@@ -457,6 +457,14 @@ export function ConsultPanel() {
                   : "今日の無料相談は利用済みです"}
           </p>
         </header>
+
+        <div className="consult-storage-note" role="note">
+          <strong>AIの回答は、自動では保存されません。</strong>
+          <p>
+            この画面を閉じると回答は消えます。残したい回答だけ、回答の下にある「この回答を手帳に残す」を押してください。
+            手帳の「過去の手帳」に「AI相談メモ」として保存されます。
+          </p>
+        </div>
 
         {openedFromRecord && turns.length === 0 ? (
           <div className="consult-ready-card" role="status">
@@ -565,11 +573,11 @@ export function ConsultPanel() {
                       onClick={() => saveToNotebook(turn)}
                       type="button"
                     >
-                      {turn.saveSyncPhase === "saving" ? "手帳に残しています…" : turn.saved ? "手帳に保存済み" : "この回答を手帳に残す"}
+                      {turn.saveSyncPhase === "saving" ? "手帳に残しています…" : turn.saved ? "AI相談メモとして保存済み" : "この回答を手帳に残す"}
                     </button>
                     {turn.saved ? (
                       <p role="status">
-                        今日の記録として手帳に残しました。
+                        手帳の「過去の手帳」に「AI相談メモ」として保存しました。
                         {turn.saveSyncMessage ? <span>{turn.saveSyncMessage}</span> : null}
                         <Link href="/home#diary-history">手帳で見る</Link>
                       </p>

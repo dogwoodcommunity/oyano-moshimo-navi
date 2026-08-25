@@ -9611,6 +9611,16 @@ textarea {
   margin: 7px 0 0;
 }
 
+.record-ai-head .record-ai-storage-note {
+  background: #fff;
+  border-left: 4px solid #2f6e82;
+  border-radius: 4px 12px 12px 4px;
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.7;
+  padding: 10px 12px;
+}
+
 .record-ai-actions {
   display: grid;
   gap: 8px;
@@ -10000,6 +10010,11 @@ textarea {
 .history-preview-action span {
   font-size: 24px;
   line-height: 1;
+}
+
+.mood-badge.is-consult {
+  background: #eee9f7;
+  color: #604a84;
 }
 
 .history-drawer {
@@ -11724,8 +11739,9 @@ textarea {
   align-items: center;
   cursor: pointer;
   display: grid;
-  gap: 8px 10px;
-  grid-template-columns: 34px minmax(0, auto) minmax(0, 1fr);
+  gap: 2px 10px;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
   list-style: none;
   min-height: 48px;
   padding: 5px 8px;
@@ -11740,38 +11756,45 @@ textarea {
   border: 1px solid rgba(36, 66, 78, 0.12);
   border-radius: 50%;
   height: 34px;
+  grid-column: 1;
+  grid-row: 1 / span 2;
   padding: 3px;
   width: 34px;
 }
 
 .cloud-backup-disclosure summary span {
   color: var(--ink-faint);
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 900;
+  grid-column: 2;
+  grid-row: 1;
 }
 
 .cloud-backup-disclosure summary strong {
   color: var(--ink);
   font-size: 17px;
   font-weight: 950;
+  grid-column: 2;
+  grid-row: 2;
   line-height: 1.4;
 }
 
 .cloud-backup-disclosure summary::after {
   background: #eef5ee;
-  border-radius: 50%;
+  border-radius: 999px;
   color: #176345;
-  content: "開";
-  font-size: 16px;
+  content: "見る";
+  font-size: 15px;
   font-weight: 950;
   grid-column: 3;
+  grid-row: 1 / span 2;
   justify-self: end;
   line-height: 1;
-  padding: 8px 7px;
+  padding: 9px 10px;
 }
 
 .cloud-backup-disclosure[open] summary::after {
-  content: "閉";
+  content: "閉じる";
 }
 
 .cloud-guard-card {
@@ -13157,6 +13180,29 @@ textarea {
   padding: 10px 12px;
 }
 
+.consult-storage-note {
+  background: #f6f7f1;
+  border: 1px solid rgba(47, 110, 130, 0.2);
+  border-radius: 14px;
+  display: grid;
+  gap: 5px;
+  padding: 12px 14px;
+}
+
+.consult-storage-note strong {
+  color: var(--ink);
+  font-size: 18px;
+  line-height: 1.5;
+}
+
+.consult-storage-note p {
+  color: var(--ink-sub);
+  font-size: 16px;
+  font-weight: 750;
+  line-height: 1.75;
+  margin: 0;
+}
+
 .consult-thread,
 .consult-turn,
 .consult-message {
@@ -14450,13 +14496,35 @@ textarea {
   margin: 0;
 }
 
-/* 記録欄の下の補足。中高年向けに本文と同じ16pxを守る。 */
-.diary-voice-hint {
-  color: var(--ink-faint);
+/* 音声入力は用語だけで済ませず、必要な人だけ手順を開けるようにする。 */
+.diary-voice-help {
+  background: #f7f5ee;
+  border: 1px solid rgba(174, 135, 72, 0.22);
+  border-radius: 14px;
+  color: var(--ink-sub);
   font-size: 16px;
   font-weight: 800;
   line-height: 1.6;
   margin: 6px 0 0;
+  padding: 10px 12px;
+}
+
+.diary-voice-help summary {
+  color: #2f6e82;
+  cursor: pointer;
+  font-weight: 950;
+}
+
+.diary-voice-help ol {
+  display: grid;
+  gap: 5px;
+  margin: 10px 0 0;
+  padding-left: 24px;
+}
+
+.diary-voice-help p {
+  color: var(--ink-faint);
+  margin: 8px 0 0;
 }
 
 .plan-trust-panel h2,

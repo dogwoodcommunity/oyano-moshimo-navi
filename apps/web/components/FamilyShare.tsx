@@ -241,11 +241,11 @@ export function FamilyShare() {
         <section className="family-card">
           <h2>家族を招待する</h2>
           <p>
-            招待した人には、同じ手帳のクラウド控えが見えるようになります。
+            招待した人には、クラウドに保存した同じ手帳が見えるようになります。
             課金は家族手帳ごとです。招待された家族に、別の課金ボタンは出しません。
           </p>
           <p className="family-note">
-            まだクラウド控えを作っていない場合は、先に <Link href="/home">手帳上部の「保存状態」</Link> から保存しておいてください。招待した家族には、控えた内容が見えます。
+            まだクラウドに保存していない場合は、先に <Link href="/home">手帳上部の「手帳データの保存先」</Link> から保存してください。招待した家族には、保存した内容が見えます。
           </p>
           <div className="family-field">
             <label htmlFor="family-invite-email">招待する人のメールアドレス</label>
