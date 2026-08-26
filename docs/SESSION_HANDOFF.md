@@ -9311,7 +9311,9 @@ commit・GitHub・本番:
 
 commit・GitHub・本番:
 
-- 実装commit: `7c82eeb` (`Fix mobile legal disclosure layout`)。
+- 実装commit: `7c82eeb` (`Fix mobile legal disclosure layout`)。引き継ぎ更新commit `0037255` とともに `origin/main` へpush済み。
+- GitHub Actions CI `32975926283` はweb/mobile typecheck、web build、smokeを含めすべて成功。
+- GitHub Actions Vercel workflow `32975926296` は成功。
 - Vercel production deployment `dpl_2GXXV9UGkpYwbdPD2ZSAj4jBgjdY` はREADY。
 - deployment URL: `https://oyano-moshimo-navi-edg2sx8y2-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
