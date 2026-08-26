@@ -4535,6 +4535,8 @@ textarea {
   display: grid;
   gap: 14px;
   max-width: 860px;
+  min-width: 0;
+  width: 100%;
 }
 
 .legal-panel h2 {
@@ -4546,6 +4548,103 @@ textarea {
 .legal-panel h2:first-of-type {
   border-top: 0;
   padding-top: 0;
+}
+
+.legal-disclosure-table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+}
+
+.legal-disclosure-table th,
+.legal-disclosure-table td {
+  border-bottom: 1px solid var(--line);
+  overflow-wrap: anywhere;
+  padding: 14px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.legal-disclosure-table th {
+  color: var(--green-dark);
+  font-size: 16px;
+  font-weight: 900;
+  line-height: 1.55;
+  width: 190px;
+}
+
+.legal-disclosure-table td {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1.75;
+}
+
+.legal-disclosure-table tr:last-child th,
+.legal-disclosure-table tr:last-child td {
+  border-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .legal-page,
+  .legal-hero,
+  .legal-panel {
+    min-width: 0;
+  }
+
+  .legal-page {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .legal-hero,
+  .legal-panel {
+    padding: 20px 18px;
+  }
+
+  .legal-hero .page-title {
+    font-size: clamp(32px, 10vw, 44px);
+    overflow-wrap: anywhere;
+  }
+
+  .legal-disclosure-table,
+  .legal-disclosure-table tbody,
+  .legal-disclosure-table tr,
+  .legal-disclosure-table th,
+  .legal-disclosure-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .legal-disclosure-table tr {
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    gap: 5px;
+    padding: 15px 0;
+  }
+
+  .legal-disclosure-table th,
+  .legal-disclosure-table td {
+    border-bottom: 0;
+    padding: 0;
+  }
+
+  .legal-disclosure-table th {
+    font-size: 16px;
+  }
+
+  .legal-disclosure-table td {
+    font-size: 16px;
+    line-height: 1.75;
+  }
+
+  .legal-disclosure-table tr:first-child {
+    padding-top: 4px;
+  }
+
+  .legal-disclosure-table tr:last-child {
+    border-bottom: 0;
+    padding-bottom: 4px;
+  }
 }
 
 .sponsors-page {

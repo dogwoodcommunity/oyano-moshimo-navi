@@ -1,6 +1,6 @@
 export default function TokushohoPage() {
   return (
-    <main className="container">
+    <main className="container legal-page">
       <section className="legal-hero">
         <p className="pill">Legal</p>
         <h1 className="page-title">特定商取引法に基づく表記</h1>
@@ -10,7 +10,7 @@ export default function TokushohoPage() {
         <p className="hint">
           以下はリリース前の叩き台です。正式公開前に、BEECHの正式名称、代表者、住所、電話番号、問い合わせ窓口、返金条件を法務確認のうえ確定します。
         </p>
-        <table className="admin-table">
+        <table className="legal-disclosure-table">
           <tbody>
             <tr><th>販売事業者</th><td>BEECH [正式名称を要確定]</td></tr>
             <tr><th>運営責任者</th><td>[代表者または通信販売業務責任者を要確定]</td></tr>
