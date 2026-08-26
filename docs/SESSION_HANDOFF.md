@@ -9283,3 +9283,36 @@ commit・GitHub・本番:
 - deployment URL: `https://oyano-moshimo-navi-d9m9chdly-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に生成された `.vercel/` はworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260825-monitor-three-records` へ退避した。`.env.local` は生成していない。
+
+## 2026-08-26 追記 249 — 特商法ページのスマホ横崩れを修正
+
+モニター参加者から、スマートフォンのBraveで「特定商取引法に基づく表記」ページのレイアウトが横に崩れるとの報告とスクリーンショットが届いた。広告ブロックのオン・オフでは変化しないとの申告だった。
+
+原因と修正:
+
+- `/legal/tokushoho` が管理画面用の `.admin-table` を直接利用しており、同クラスの `min-width: 680px` がスマホでも有効になっていた。画面幅390pxでdocument幅721px、表幅680pxとなることを本番で再現した。
+- 特商法ページの表を公開ページ専用の `.legal-disclosure-table` へ分離した。管理画面の表には変更を加えていない。
+- PC・タブレットでは従来どおり項目名と内容の2列、640px以下では各項目を「項目名→内容」の縦並びにした。
+- 長いURLや文言も画面外へ出ないよう `overflow-wrap: anywhere`、`table-layout: fixed`、関連コンテナの `min-width: 0` を設定した。
+- スマホではページ左右余白、カード内余白、見出しサイズも特商法ページの範囲だけ調整した。
+- PWA更新用にservice worker cacheを `v46` へ上げた。
+
+確認:
+
+- 修正前の本番は390px幅でdocument幅721px、横はみ出しあり。修正後の本番はviewport/document/bodyがすべて390px、表幅320px、14行すべて画面内、横はみ出しなし。
+- ローカルproduction buildを320px、390px、768px、1280pxで確認し、全幅でdocument幅とviewport幅が一致して横はみ出しがない。640px以下は縦並び、768px以上は2列表となることを確認した。
+- 本番390px幅の目視確認で、ヘッダー、見出し、説明、販売事業者・運営責任者の項目と内容が1画面幅に収まることを確認した。ブラウザconsoleのwarning/errorは0件。
+- `pnpm --filter web run typecheck` 成功。
+- `pnpm --filter web run build` 成功。162ページを生成。
+- `pnpm --filter web run lint` はESLint設定ファイルが未作成のため、Next.jsの対話式初回設定で停止した。コードのlint違反ではなく既存設定上の制約。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` は全項目成功。
+- 本番 `/sw.js` でcache `v46` を確認した。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+commit・GitHub・本番:
+
+- 実装commit: `7c82eeb` (`Fix mobile legal disclosure layout`)。
+- Vercel production deployment `dpl_2GXXV9UGkpYwbdPD2ZSAj4jBgjdY` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-edg2sx8y2-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- deploy時に生成された `.vercel/` と `.env.local` は、内容を表示せずworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260826-legal-mobile/` へ退避した。
