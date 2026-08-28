@@ -9318,3 +9318,30 @@ commit・GitHub・本番:
 - deployment URL: `https://oyano-moshimo-navi-edg2sx8y2-dogwoodcommunity1.vercel.app`。
 - production alias: `https://oyano-moshimo-navi.vercel.app`。
 - deploy時に生成された `.vercel/` と `.env.local` は、内容を表示せずworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260826-legal-mobile/` へ退避した。
+
+## 2026-08-28 追記 250 — モニターテスト途中経過の可視性を確認
+
+ユーザーから「今のモニターの使用状況が分かるか」と質問があり、本番の管理画面、回答API、端末内計測、匿名funnel、Vercel request logsの保存範囲を読み取り確認した。
+
+確認結果:
+
+- 現在、モニター固有の自動計測は `oyano_monitor_session_v01` と `oyano_monitor_activity_v01` として各参加者のlocalStorageに保存される。
+- 計測対象は開始日時、手帳を開いた回数・日数、記録保存回数・日数、過去記録、確認リスト、書類メモ、家族招待、AI相談、クラウド控えなど。
+- これらは8日目の最終回答送信時に `usageMetrics` として初めてサーバーへ届き、`audit_logs.action = monitor_feedback_submitted` に保存される。
+- したがって、運営側で正確に確認できるのは最終回答を提出済みの参加者だけ。テスト途中の「開始人数」「現在何日目」「現在の記録日数」「途中離脱」はリアルタイムでは分からない。
+- 汎用の `funnel_events` には `person_created`、`record_written`、`consult_asked` などが匿名保存されるが、モニター識別子を持たず、通常利用・運営確認・モニターを区別できないため、モニター人数として数えてはいけない。
+- Vercel request logsでも `/monitor`、`/home`、`/api/events` などのリクエストは確認できるが、Next.jsのprefetchや運営確認を含み、匿名イベントの種類や参加者単位を判別できない。正式な途中経過集計には使えない。
+- `/admin/monitor-feedback` は管理者メール認証または緊急用管理キーが必要。今回のブラウザは未認証で、Supabase DashboardもGitHubログイン画面で停止したため、回答者名・自由記述・提出済み件数のDB確定値は読み取っていない。認証情報の入力やメール送信も行っていない。
+
+今後リアルタイム確認を可能にする場合の最小案:
+
+- モニター開始時に個人情報を含まないランダムなsession IDを発行する。
+- 次回アクセス時に、端末内に既にある開始日、最終利用日時、記録した日数、各機能の確認有無だけをサーバーへ同期する。日記本文、写真、氏名、地域は送らない。
+- 管理画面へ「進行中 / 何日目 / 最終利用 / 記録日数 / 機能確認 / 最終回答済み」を追加する。
+- 既に開始済みの参加者も、修正版を次に開いた時点で端末内の既存計測を同期できる。
+
+作業状態:
+
+- 本番データ、回答、設定は変更していない。
+- 確認用に生成された `.vercel/`、`.env.local`、production env一時ファイルは、内容を表示せずworktree外の `/private/tmp/oyano-monitor-status-check-20260828/` へ退避した。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
