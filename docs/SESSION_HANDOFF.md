@@ -9345,3 +9345,17 @@ commit・GitHub・本番:
 - 本番データ、回答、設定は変更していない。
 - 確認用に生成された `.vercel/`、`.env.local`、production env一時ファイルは、内容を表示せずworktree外の `/private/tmp/oyano-monitor-status-check-20260828/` へ退避した。
 - 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+## 2026-08-28 追記 251 — モニター利用状況を再確認
+
+ユーザーから現時点の状況確認があり、2026-08-28 10:47〜10:51 JSTに本番管理画面と取得可能なVercelログを読み取り確認した。
+
+確認結果:
+
+- `/admin/monitor-feedback` は引き続き管理者認証前で、回答一覧・提出済み件数は取得していない。認証メール送信、認証情報入力、本番データ変更は行っていない。
+- 現在取得できたserverless logは、今回の確認による `GET /api/admin/monitor-feedback` の401だけだった。
+- 現在取得できるログ内に最終回答送信の `POST /api/monitor-feedback` はなかった。ただしVercelログの取得可能期間は短く、過去の送信が既に保存範囲外の可能性があるため「提出0件」とは判断しない。
+- `/home` のアクセスが1件あったが、モニター識別子がなく、通常利用・運営確認・モニターを区別できないためモニター利用として数えていない。
+- 正確に確認できるのは、管理者認証後の `audit_logs.action = monitor_feedback_submitted` の行数と提出済み回答の集計。開始済み人数、現在の日数、途中の記録回数は端末内保存のみのため、現仕様では運営側から取得できない。
+- Vercel production envのpullも読み取り目的で確認したが、secretはすべて `[SENSITIVE]` placeholderとなり、service roleを使ったDB集計は行っていない。秘密情報は表示していない。
+- コード、本番データ、設定は変更していない。未追跡の `review_exports/` は変更・追加・commit対象外。
