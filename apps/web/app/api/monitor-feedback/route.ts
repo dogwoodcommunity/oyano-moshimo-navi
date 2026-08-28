@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { MONITOR_CAMPAIGN_ID } from "@/lib/monitorCampaign";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
@@ -28,6 +29,13 @@ function safeText(value: unknown, maxLength: number) {
 
 function participantKey(value: string) {
   return value.normalize("NFKC").toLocaleLowerCase("ja-JP");
+}
+
+function safeUuid(value: unknown) {
+  return typeof value === "string"
+    && /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+    ? value.toLowerCase()
+    : null;
 }
 
 function safeIsoDate(value: unknown) {
@@ -123,6 +131,8 @@ export async function POST(request: Request) {
           .slice(0, 3)
           .map((value) => value.slice(0, 300))
       : [],
+    monitorSessionId: safeUuid(body.monitorSessionId),
+    monitorCampaignId: MONITOR_CAMPAIGN_ID,
     usageMetrics: safeUsageMetrics(body.usageMetrics),
     submittedAt: new Date().toISOString(),
     formVersion: "2026-08-25-monitor-review-v2"

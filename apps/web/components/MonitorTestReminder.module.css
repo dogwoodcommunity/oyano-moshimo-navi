@@ -17,6 +17,12 @@
   border-left-color: #ad671e;
 }
 
+.consent {
+  background: #fff8eb;
+  border-color: #d4af67;
+  border-left-color: #a8661d;
+}
+
 .copy {
   min-width: 0;
 }
@@ -55,6 +61,14 @@
   color: #596b64;
   font-size: 15px;
   font-weight: 750;
+  line-height: 1.65;
+  margin-top: 8px;
+}
+
+.copy .trackingNote {
+  color: #52645d;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1.65;
   margin-top: 8px;
 }
@@ -99,6 +113,18 @@
   min-width: 218px;
 }
 
+.consentSecondary {
+  background: #fff;
+  border: 1px solid #8a9892;
+  border-radius: 8px;
+  color: #3f514a;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 850;
+  min-height: 46px;
+  padding: 9px 14px;
+}
+
 .smallLink {
   color: #1f654d;
   text-decoration: underline;
@@ -119,7 +145,8 @@
   }
 
   .button,
-  .smallLink {
+  .smallLink,
+  .consentSecondary {
     width: 100%;
   }
 

@@ -161,6 +161,7 @@ export function MonitorReportForm() {
         usefulPoint: String(form.get("usefulPoint") ?? "").trim(),
         missingPoint: String(form.get("missingPoint") ?? "").trim(),
         screenshotPaths,
+        monitorSessionId: session?.sessionId ?? null,
         usageMetrics: session ? collectMonitorUsageMetrics(session) : null
       };
 

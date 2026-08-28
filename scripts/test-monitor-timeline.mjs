@@ -18,7 +18,9 @@ const module = { exports: {} };
 vm.runInNewContext(compiled, {
   module,
   exports: module.exports,
-  require: requireFromWeb,
+  require: (id) => id === "@/lib/monitorCampaign"
+    ? { MONITOR_CAMPAIGN_ID: "crowdworks-2026-08" }
+    : requireFromWeb(id),
   window: undefined,
   Date,
   JSON,
@@ -26,7 +28,14 @@ vm.runInNewContext(compiled, {
   Set
 });
 
-const { monitorPeriodStatus, monitorProgress } = module.exports;
+const {
+  buildMonitorProgressSyncPayload,
+  monitorCalendarDayNumber,
+  monitorPeriodStatus,
+  monitorProgress,
+  normalizeMonitorSession,
+  shouldSyncMonitorProgress
+} = module.exports;
 
 function at(value) {
   return new Date(value);
@@ -69,3 +78,86 @@ verifyJourney("年またぎ", "2026-12-31T18:00:00+09:00", [
 ]);
 
 console.log("OK   7日目終了から翌日0:00のアンケート開放境界");
+
+const legacySessionId = "11111111-1111-4111-8111-111111111111";
+const legacySession = normalizeMonitorSession(
+  { startedAt: "2026-08-25T10:00:00+09:00" },
+  () => legacySessionId
+);
+assert.deepEqual(
+  JSON.parse(JSON.stringify(legacySession)),
+  {
+    session: {
+      sessionId: legacySessionId,
+      startedAt: "2026-08-25T10:00:00+09:00"
+    },
+    upgraded: true
+  }
+);
+assert.equal(normalizeMonitorSession({ startedAt: "invalid" }, () => legacySessionId), null);
+console.log("OK   既存モニター端末へ名前を含まないsession IDを追加");
+
+function activityEvent(occurrences) {
+  return {
+    count: occurrences.length,
+    firstAt: occurrences[0],
+    lastAt: occurrences.at(-1),
+    occurrences
+  };
+}
+
+const progressPayload = buildMonitorProgressSyncPayload(
+  legacySession.session,
+  {
+    appOpened: activityEvent([
+      "2026-08-25T10:05:00+09:00",
+      "2026-08-26T09:00:00+09:00"
+    ]),
+    dailyRecordSaved: activityEvent([
+      "2026-08-25T10:15:00+09:00",
+      "2026-08-27T20:00:00+09:00",
+      "2026-09-01T00:05:00+09:00"
+    ]),
+    diaryHistoryOpened: activityEvent(["2026-08-26T09:05:00+09:00"]),
+    checklistOpened: activityEvent(["2026-08-27T09:05:00+09:00"])
+  },
+  at("2026-08-28T12:00:00+09:00")
+);
+
+assert.deepEqual(Object.keys(progressPayload).sort(), [
+  "campaignId",
+  "dayNumber",
+  "isReportDue",
+  "lastSeenAt",
+  "reportDueAt",
+  "sessionId",
+  "startedAt",
+  "usageMetrics",
+  "version"
+].sort());
+assert.equal(progressPayload.campaignId, "crowdworks-2026-08");
+assert.equal(progressPayload.dayNumber, 4);
+assert.equal(progressPayload.usageMetrics.appOpenCount, 2);
+assert.equal(progressPayload.usageMetrics.appOpenDistinctDayCount, 2);
+assert.equal(progressPayload.usageMetrics.manualRecordSaveCount, 2);
+assert.equal(progressPayload.usageMetrics.manualRecordDistinctDayCount, 2);
+assert.equal(progressPayload.usageMetrics.lastManualRecordDayNumber, 3);
+assert.equal(progressPayload.usageMetrics.diaryHistoryOpened, true);
+assert.equal(progressPayload.usageMetrics.checklistOpened, true);
+assert.equal(progressPayload.usageMetrics.documentMemoSaved, false);
+assert.equal(monitorCalendarDayNumber(legacySession.session.startedAt, "2026-08-27T20:00:00+09:00"), 3);
+assert.equal(JSON.stringify(progressPayload).includes("記録本文"), false);
+console.log("OK   名前なし途中経過は7日間内の回数・日数・機能到達だけを含む");
+
+assert.equal(shouldSyncMonitorProgress(null, legacySessionId, at("2026-08-28T12:00:00+09:00")), true);
+assert.equal(shouldSyncMonitorProgress(
+  { sessionId: legacySessionId, lastAttemptAt: "2026-08-28T12:00:00+09:00" },
+  legacySessionId,
+  at("2026-08-28T12:00:14+09:00")
+), false);
+assert.equal(shouldSyncMonitorProgress(
+  { sessionId: legacySessionId, lastAttemptAt: "2026-08-28T12:00:00+09:00" },
+  legacySessionId,
+  at("2026-08-28T12:00:15+09:00")
+), true);
+console.log("OK   名前なし途中経過の15秒間引き境界");

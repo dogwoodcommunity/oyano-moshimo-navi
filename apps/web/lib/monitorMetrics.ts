@@ -54,41 +54,45 @@ export function collectMonitorUsageMetrics(session: MonitorSession, now = new Da
   const activity = readMonitorActivity();
   const startedAtMs = Date.parse(session.startedAt);
   const capturedAtMs = now.getTime();
+  const progress = monitorProgress(session, now);
+  const reportDueAtMs = progress.reportDueAt.getTime();
+  const measurementEndMs = Math.min(capturedAtMs, reportDueAtMs - 1);
+  const occurredDuringTest = (value: string) => {
+    const occurredAt = timestamp(value);
+    return occurredAt !== null && occurredAt >= startedAtMs && occurredAt <= measurementEndMs;
+  };
   const casesDuringTest = notebook.cases
     .filter((item) => {
       const createdAt = timestamp(item.createdAt);
-      return createdAt !== null && createdAt >= startedAtMs && createdAt <= capturedAtMs;
+      return createdAt !== null && createdAt >= startedAtMs && createdAt <= measurementEndMs;
     })
     .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   const entriesDuringTest = notebook.diaryEntries.filter((entry) => {
     const createdAt = timestamp(entry.createdAt);
-    return createdAt !== null && createdAt >= startedAtMs && createdAt <= capturedAtMs;
+    return createdAt !== null && createdAt >= startedAtMs && createdAt <= measurementEndMs;
   });
   const manualRecordOccurrences = activity.dailyRecordSaved?.occurrences
-    .filter((value) => {
-      const occurredAt = timestamp(value);
-      return occurredAt !== null && occurredAt >= startedAtMs && occurredAt <= capturedAtMs;
-    }) ?? [];
+    .filter(occurredDuringTest) ?? [];
   const appOpenOccurrences = activity.appOpened?.occurrences
-    .filter((value) => {
-      const occurredAt = timestamp(value);
-      return occurredAt !== null && occurredAt >= startedAtMs && occurredAt <= capturedAtMs;
-    }) ?? [];
+    .filter(occurredDuringTest) ?? [];
   const firstNotebookCreatedAt = casesDuringTest[0]?.createdAt ?? null;
   const registrationDurationSeconds = firstNotebookCreatedAt
     ? Math.max(0, Math.round((Date.parse(firstNotebookCreatedAt) - startedAtMs) / 1000))
     : null;
   const taskUpdateCount = notebook.cases.reduce((count, item) => count + (item.result?.tasks ?? []).filter((task) => {
     const updatedAt = timestamp(task.updatedAt);
-    return updatedAt !== null && updatedAt >= startedAtMs && updatedAt <= capturedAtMs;
+    return updatedAt !== null && updatedAt >= startedAtMs && updatedAt <= measurementEndMs;
   }).length, 0);
   const lastManualOccurrence = manualRecordOccurrences.at(-1);
+  const featureUsed = (name: keyof typeof activity) => (
+    activity[name]?.occurrences.some(occurredDuringTest) ?? false
+  );
 
   return {
     version: 1,
     capturedAt: now.toISOString(),
     monitorStartedAt: session.startedAt,
-    reportDueAt: monitorProgress(session, now).reportDueAt.toISOString(),
+    reportDueAt: progress.reportDueAt.toISOString(),
     notebookCreatedAt: firstNotebookCreatedAt,
     registrationDurationSeconds,
     appOpenCount: appOpenOccurrences.length,
@@ -99,11 +103,11 @@ export function collectMonitorUsageMetrics(session: MonitorSession, now = new Da
     manualRecordDistinctDayCount: new Set(manualRecordOccurrences.map(localDateKey).filter(Boolean)).size,
     lastManualRecordDayNumber: lastManualOccurrence ? calendarDayNumber(session.startedAt, lastManualOccurrence) : null,
     taskUpdateCount,
-    diaryHistoryOpened: Boolean(activity.diaryHistoryOpened),
-    checklistOpened: Boolean(activity.checklistOpened),
-    documentMemoSaved: Boolean(activity.documentMemoSaved),
-    familyInviteOpened: Boolean(activity.familyInviteOpened),
-    aiConsultCompleted: Boolean(activity.aiConsultCompleted),
-    cloudBackupConfirmed: Boolean(activity.cloudBackupConfirmed)
+    diaryHistoryOpened: featureUsed("diaryHistoryOpened"),
+    checklistOpened: featureUsed("checklistOpened"),
+    documentMemoSaved: featureUsed("documentMemoSaved"),
+    familyInviteOpened: featureUsed("familyInviteOpened"),
+    aiConsultCompleted: featureUsed("aiConsultCompleted"),
+    cloudBackupConfirmed: featureUsed("cloudBackupConfirmed")
   };
 }

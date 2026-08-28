@@ -1,9 +1,15 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect } from "react";
+import { grantMonitorProgressConsent, scheduleMonitorProgressSync } from "@/lib/monitorSession";
 import styles from "./monitor.module.css";
 
 export function MonitorStart() {
+  useEffect(() => {
+    scheduleMonitorProgressSync();
+  }, []);
+
   function restart() {
     const approved = window.confirm(
       "このブラウザに残っている親のもしもナビのテストデータを消して、最初からやり直します。よろしいですか？"
@@ -73,11 +79,14 @@ export function MonitorStart() {
 
         <p className={styles.notice}>
           7日間は開始時と同じスマホ・同じブラウザを使い、プライベートブラウズを使ったり履歴やサイトデータを削除したりしないでください。市区町村はテスト用の架空の内容で構いません。実名、病名、番地以下の詳細住所、電話番号、暗証番号、マイナンバーなどの個人情報は入力しないでください。呼び名は「お母さん」「テスト母」、記録は架空の内容で大丈夫です。添付するスクショにも個人情報を写さないでください。
+          <span className={styles.trackingNote}>
+            途中で困っている方を把握するため、開始日・最終利用・記録した日数・各機能を試したかだけを、名前を含まない端末識別番号とともに運営へ送ります。呼び名、地域、記録本文、写真、相談内容は途中経過として送りません。最終回答を送ると、途中経過と入力したクラウドワークス名が紐づきます。途中経過も回答と同じく、モニター終了後6か月を目安に削除します。
+          </span>
         </p>
 
         <div className={styles.actions}>
-          <Link className={styles.primary} href="/start?monitor=1">
-            7日間のテストを始める
+          <Link className={styles.primary} href="/start?monitor=1" onClick={() => grantMonitorProgressConsent()}>
+            内容に同意して7日間のテストを始める
           </Link>
           <button className={styles.dangerLink} type="button" onClick={restart}>
             以前のテストデータを消して最初からやり直す

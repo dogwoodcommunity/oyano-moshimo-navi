@@ -15518,7 +15518,7 @@ textarea {
 }
 
 .admin-metrics-summary {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
 }
 
 .admin-metrics-summary article {
@@ -15531,10 +15531,66 @@ textarea {
   margin-left: 3px;
 }
 
+.admin-inline-link {
+  color: var(--admin-blue);
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .admin-feedback-list {
   display: grid;
   gap: 12px;
   margin-top: 20px;
+}
+
+.admin-monitor-refresh {
+  align-items: center;
+  border-bottom: 1px solid var(--admin-line);
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin: 14px 0 24px;
+  padding-bottom: 14px;
+}
+
+.admin-monitor-refresh p {
+  color: var(--admin-muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.admin-monitor-refresh button {
+  background: #fff;
+  border: 1px solid #9bb9c4;
+  border-radius: 6px;
+  color: var(--admin-blue);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 900;
+  min-height: 40px;
+  padding: 8px 12px;
+}
+
+.admin-monitor-refresh button:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.admin-monitor-section {
+  margin-top: 24px;
+}
+
+.admin-monitor-section + .admin-monitor-section {
+  border-top: 2px solid var(--admin-line);
+  margin-top: 34px;
+  padding-top: 30px;
+}
+
+.admin-monitor-section > h2 {
+  color: var(--admin-ink);
+  font-size: 24px;
+  margin: 0 0 8px;
 }
 
 .admin-feedback-card {
@@ -15774,6 +15830,15 @@ textarea {
 
   .admin-dashboard-card {
     min-height: 0;
+  }
+
+  .admin-monitor-refresh {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-monitor-refresh button {
+    width: 100%;
   }
 
   .admin-feedback-card > summary {

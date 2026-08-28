@@ -21,6 +21,8 @@ async function read(path, init) {
 const monitor = await read("/monitor");
 if (monitor.response.ok
   && monitor.text.includes("7日間のテストを始める")
+  && monitor.text.includes("名前を含まない端末識別番号")
+  && monitor.text.includes("内容に同意して")
   && !monitor.text.includes("最終日の結果を報告する")) {
   ok("開始時に最終報告ボタンを表示しない", monitor.response.status);
 } else {
@@ -65,6 +67,106 @@ if (invalidFeedback.response.status === 400) {
   ok("未入力の最終報告を拒否", invalidFeedback.response.status);
 } else {
   fail("未入力の最終報告を拒否", invalidFeedback.response.status);
+}
+
+const invalidProgress = await read("/api/monitor-progress", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: "{}"
+});
+if (invalidProgress.response.status === 400) {
+  ok("不正な名前なし途中経過を拒否", invalidProgress.response.status);
+} else {
+  fail("不正な名前なし途中経過を拒否", invalidProgress.response.status);
+}
+
+const progressStartedAt = new Date();
+const progressDueAt = new Date(progressStartedAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+const validProgress = await read("/api/monitor-progress", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    validateOnly: true,
+    version: 1,
+    campaignId: "crowdworks-2026-08",
+    sessionId: "11111111-1111-4111-8111-111111111111",
+    startedAt: progressStartedAt.toISOString(),
+    reportDueAt: progressDueAt.toISOString(),
+    lastSeenAt: progressStartedAt.toISOString(),
+    dayNumber: 1,
+    isReportDue: false,
+    usageMetrics: {
+      appOpenCount: 0,
+      appOpenDistinctDayCount: 0,
+      manualRecordSaveCount: 0,
+      manualRecordDistinctDayCount: 0,
+      lastManualRecordDayNumber: null,
+      diaryHistoryOpened: false,
+      checklistOpened: false,
+      documentMemoSaved: false,
+      familyInviteOpened: false,
+      aiConsultCompleted: false,
+      cloudBackupConfirmed: false
+    }
+  })
+});
+let validProgressBody = {};
+try {
+  validProgressBody = JSON.parse(validProgress.text);
+} catch {
+  // The assertion below reports the status without echoing response contents.
+}
+if (validProgress.response.ok && validProgressBody.validated === true && validProgressBody.stored === false) {
+  ok("名前なし途中経過を保存せず検証", validProgress.response.status);
+} else {
+  fail("名前なし途中経過を保存せず検証", validProgress.response.status);
+}
+
+const wrongCampaignProgress = await read("/api/monitor-progress", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    campaignId: "another-campaign",
+    version: 1,
+    sessionId: "11111111-1111-4111-8111-111111111111",
+    startedAt: progressStartedAt.toISOString(),
+    reportDueAt: progressDueAt.toISOString(),
+    lastSeenAt: progressStartedAt.toISOString(),
+    dayNumber: 1,
+    usageMetrics: {
+      appOpenCount: 0,
+      appOpenDistinctDayCount: 0,
+      manualRecordSaveCount: 0,
+      manualRecordDistinctDayCount: 0,
+      lastManualRecordDayNumber: null,
+      diaryHistoryOpened: false,
+      checklistOpened: false,
+      documentMemoSaved: false,
+      familyInviteOpened: false,
+      aiConsultCompleted: false,
+      cloudBackupConfirmed: false
+    }
+  })
+});
+if (wrongCampaignProgress.response.status === 400) {
+  ok("別モニター募集の途中経過を混在させない", wrongCampaignProgress.response.status);
+} else {
+  fail("別モニター募集の途中経過を混在させない", wrongCampaignProgress.response.status);
+}
+
+const unsignedMonitorAdmin = await read("/api/admin/monitor-feedback");
+if (unsignedMonitorAdmin.response.status === 401) {
+  ok("モニター途中経過の管理APIを未認証では表示しない", unsignedMonitorAdmin.response.status);
+} else {
+  fail("モニター途中経過の管理APIを未認証では表示しない", unsignedMonitorAdmin.response.status);
+}
+
+
+const unsignedProgressOnlyAdmin = await read("/api/admin/monitor-feedback?progressOnly=1");
+if (unsignedProgressOnlyAdmin.response.status === 401) {
+  ok("軽量な途中経過APIも未認証では表示しない", unsignedProgressOnlyAdmin.response.status);
+} else {
+  fail("軽量な途中経過APIも未認証では表示しない", unsignedProgressOnlyAdmin.response.status);
 }
 
 const invalidScreenshot = await read("/api/monitor-feedback/screenshot", {
