@@ -9415,3 +9415,17 @@ commit・GitHub・本番:
 - ブラウザで `/monitor` の同意説明、送らない項目、6か月削除、同意付き開始ボタンが表示されることを確認した。
 - build時のSupabase JS Node 20非推奨警告は継続。今回の変更起因の失敗ではない。
 - 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+commit・GitHub・本番:
+
+- 実装・資料commit: `6a8100f` (`Track monitor progress with consent`)。`origin/main` へpush済み。
+- GitHub Actions CI `33136409349` はweb/mobile typecheck、web build、smokeを含めすべて成功。
+- GitHub Actions Vercel workflow `33136409356` はcheck成功。Vercel secrets未設定のためdeploy jobは設計どおりスキップされ、本番はVercel CLIで反映した。
+- Vercel production deployment `dpl_7euwm2xRk6K7fU6Dwb7BJASN94rf` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-jkvrh94m1-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` は全項目成功。
+- 本番 `node scripts/smoke-monitor-journey.mjs https://oyano-moshimo-navi.vercel.app` は、期間中gate、初期登録、AI相談状態、未入力回答400、途中経過validate-only 200、別campaign 400、管理API未認証401、画像なし400、クラウド同期未認証401を確認して成功。途中経過はvalidate-onlyだけを使い、本番集計を汚していない。
+- 本番ブラウザで `/monitor` の送信項目・送らない項目・クラウドワークス名との紐づけ・6か月削除・「内容に同意して7日間のテストを始める」を確認した。
+- 本番 `/sw.js` でcache `v47` を確認した。
+- deploy時に生成された `.vercel/` と `.env.local` は、内容を表示せずworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260828.mdbZtC/` へ退避した。
