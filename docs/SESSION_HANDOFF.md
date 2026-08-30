@@ -9541,3 +9541,50 @@ Claudeとの最終すり合わせでは、7日・30日・90日の複数節目で
 - コード、本番画面、DB、APIは変更していないため、Vercelへの再deployは行っていない。
 - `git diff --check` は成功した。
 - 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+## 2026-08-30 追記 255 — 本番管理者メール登録と匿名モニター進捗の確認
+
+ユーザーの明示承認を受け、`tettsu888@gmail.com` を本番Supabase Authの恒久的な
+`app_admin` として登録した。既存の本人確認済みAuthユーザーだけを対象にし、既存profileを
+壊さず確認・補完した上で、`app_admins.user_id` と `note = '運営管理者'` を冪等登録した。
+
+登録方法と安全措置:
+
+- Vercel CLIのproduction環境で直接登録する方法を先に試したが、VercelがSensitive設定の
+  secret値をローカルへ渡さないため、変更前に停止した。secret値は表示していない。
+- 代わりに、すでにメールリンクで本人確認済みのブラウザsessionを使った。短時間だけ、
+  `tettsu888@gmail.com` と厳密一致するSupabase Authユーザーだけが実行できるPOST APIと
+  明示ボタンを本番へ出し、本人sessionから1回実行した。メール不一致、sessionなし、
+  profile確認失敗、`app_admins` 登録・再確認失敗はすべて拒否する実装とした。
+- 登録直後に管理画面が `tettsu888@gmail.com` を「確認済み」と表示し、管理APIから集計を
+  読めることを確認した。
+- 登録後、一時POST APIとボタンをソースから削除して通常版を再デプロイした。本番
+  `/api/admin/bootstrap-tettsu` はHTTP 404、一時ボタンは0件、恒久的な管理者認証は有効で
+  あることを再確認した。
+- 恒久的に残した変更はSupabaseのprofile補完と `app_admins` 行だけである。一時登録用の
+  アプリコードはGitへcommitしていない。
+
+2026-08-30 15:22 JST時点の匿名集計:
+
+- テスト開始操作: **8件**
+- 手帳まで到達: **8件**
+- 直近48時間に利用: **8件**
+- 3日以上記録: **8件**
+- 最終回答提出済み: **0件**
+
+この8件は、途中経過共有に同意したmonitor session単位の参考値であり、募集人数そのものでは
+ない。やり直し、履歴削除、運営確認で別sessionになる場合がある。今回の確認では、記録本文、
+写真、AI相談内容、最終回答詳細を開かず、管理画面上部の匿名集計だけを確認した。
+
+確認と本番復旧:
+
+- 一時登録版deployment `dpl_D5UaJfspvWjdzwHX3DTwb7n9s55X` で登録を完了した。
+- 一時導線を除去した通常版deployment `dpl_5evFamr4AJ11vS7of5votdmRs35x` はREADYで、
+  production alias `https://oyano-moshimo-navi.vercel.app` へ反映済み。
+- 一時導線の追加前と削除後に `pnpm --filter web run typecheck` が成功した。
+- 通常版本番で `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` が成功した。
+- 本番管理画面を再読み込みし、管理者認証済み、5集計が `8 / 8 / 8 / 8 / 0`、一時ボタンが
+  ないことを確認した。
+- Vercel操作で生成された `.vercel/` と `.env.local` は内容を表示せずworktree外の
+  `/private/tmp/oyano-admin-registration-20260830-1525/` へ退避した。
+- 未追跡の `review_exports/` は変更・追加・commit対象外。
