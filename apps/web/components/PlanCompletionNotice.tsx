@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { listLocalCases, readPlan } from "@/lib/store";
 
@@ -17,13 +18,21 @@ import { listLocalCases, readPlan } from "@/lib/store";
  */
 export function PlanCompletionNotice() {
   // localStorage を読むので、サーバー描画との食い違いを避けて描画後に判定する。
-  const [state, setState] = useState<{ show: boolean; plus: boolean }>({ show: false, plus: false });
+  const [state, setState] = useState<{
+    show: boolean;
+    plus: boolean;
+    people: { id: string; name: string }[];
+  }>({ show: false, plus: false, people: [] });
 
   useEffect(() => {
     const cases = listLocalCases();
     setState({
       show: cases.length > 0 && cases.every((caseRecord) => caseRecord.selectedStatus === "completed"),
-      plus: readPlan() === "plus"
+      plus: readPlan() === "plus",
+      people: cases.map((caseRecord) => ({
+        id: caseRecord.id,
+        name: caseRecord.personProfile?.displayName?.trim() || "この人"
+      }))
     });
   }, []);
 
@@ -32,7 +41,7 @@ export function PlanCompletionNotice() {
   return (
     <section className="panel plan-complete-notice" role="status">
       <p className="pill">一区切りついた家族へ</p>
-      <h2>役目を終えたようです。</h2>
+      <h2>これまでの日々を、一冊に残せます。</h2>
       {state.plus ? (
         <p>
           Plusをやめても、これまでの記録はずっと読み返せます。
@@ -44,6 +53,17 @@ export function PlanCompletionNotice() {
           いつでも見返せる場所として残しておいてください。
         </p>
       )}
+      <p>
+        日々の記録と写真は、家族で振り返れる「思い出の手帳PDF」に無料でまとめられます。
+        今すぐ作らなくても、手帳からあとで作れます。大切な記録はクラウド保存を設定してください。
+      </p>
+      <div className="plan-memory-book-links">
+        {state.people.map((person) => (
+          <Link className="secondary" href={`/memory-book/${person.id}`} key={person.id}>
+            {person.name}の思い出の手帳PDFを作る
+          </Link>
+        ))}
+      </div>
       <p className="plan-complete-note">
         こちらで勝手に解約することはありません。この案内も、この画面を開いたときだけ出ます。
       </p>

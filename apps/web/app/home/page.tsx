@@ -2280,6 +2280,13 @@ export default function FamilyBoardPage() {
                   <small>プロフィール、確認リスト、写真は手帳の中で整理します。</small>
                 </div>
               </li>
+              <li>
+                <span>4</span>
+                <div>
+                  <strong>積み重ねた記録を一冊に残す</strong>
+                  <small>日々の記録と写真を、無料の「思い出の手帳PDF」にまとめられます。</small>
+                </div>
+              </li>
             </ol>
           </article>
           <Link className="first-run-crisis" href="/crisis">
@@ -3256,6 +3263,23 @@ export default function FamilyBoardPage() {
               {activeEntries.length === 0 ? (
                 <p className="diary-empty">まだ記録はありません。「今日の記録を書く」から、まず1行残してください。</p>
               ) : null}
+            </article>
+            <article className="nb-card memory-book-offer">
+              <div className="memory-book-offer-mark" aria-hidden="true">
+                <img src="/brand/watch-bird-mark.svg" alt="" />
+              </div>
+              <div>
+                <span>いつかのために</span>
+                <h2>毎日の1行は、あとで一冊の手帳になります。</h2>
+                <p>
+                  これまでの記録と写真を、家族で振り返れる「思い出の手帳」にまとめられます。
+                  PDFの作成と保存は無料です。
+                </p>
+                <small>紙の本の印刷・製本・配送は含みません。</small>
+              </div>
+              <Link className="memory-book-offer-link" href={`/memory-book/${activeCase.id}`}>
+                {activeEntries.length > 0 ? `記録${activeEntries.length}件を無料PDFにまとめる` : "無料PDFの内容を見る"}
+              </Link>
             </article>
           </section>
 

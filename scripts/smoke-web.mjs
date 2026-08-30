@@ -23,6 +23,7 @@ const checks = [
   { path: "/diagnosis", label: "diagnosis" },
   { path: "/result/smoke-case", label: "result fallback" },
   { path: "/result/smoke-case/share", label: "result share fallback" },
+  { path: "/memory-book/smoke-case", label: "memory book fallback" },
   { path: "/invite/smoke-token", label: "invite fallback" },
   { path: "/support-pack", label: "support pack" },
   { path: "/manifest.webmanifest", label: "pwa manifest" },

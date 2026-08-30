@@ -94,6 +94,11 @@ export default function ResultPage() {
       body: "体調、発言、病院・介護先からの連絡、家族で決めたことを1分で記録。あとから家族や相談先に説明しやすくします。"
     },
     {
+      label: "無料",
+      title: "記録がたまったら、一冊のPDFへ",
+      body: "積み重ねた日々の記録と写真は、家族で振り返る『思い出の手帳PDF』に無料でまとめられます。"
+    },
+    {
       label: "Plus",
       title: "必要になったら広げる",
       body: "2人目以降の登録、容量拡張、長期相談、家族会議用PDFは有料プランで追加します。"
@@ -219,11 +224,11 @@ export default function ResultPage() {
         <div className="handoff-choice-grid" aria-label="家族ボードで続けること">
           <div>
             <strong>無料で始める</strong>
-            <span>1人目のプロフィール、日記、写真、確認リスト</span>
+            <span>1人目のプロフィール、日記、写真、確認リスト、思い出の手帳PDF</span>
           </div>
           <div>
             <strong>Plusで広げる</strong>
-            <span>2人目以降、容量拡張、長期相談、PDF出力</span>
+            <span>2人目以降、容量拡張、長期相談、家族会議用PDF</span>
           </div>
         </div>
         <div className="actions">

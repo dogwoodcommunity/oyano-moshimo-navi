@@ -16,6 +16,7 @@ const boardPaths = [
   "/family",
   "/plans",
   "/emergency-card",
+  "/memory-book",
   "/checklists",
   "/install",
   "/support-pack"

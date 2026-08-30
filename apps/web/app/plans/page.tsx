@@ -20,7 +20,8 @@ const plans = [
       "1人目の手帳と家族ボード",
       `家族招待はあなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`,
       "日々の記録・確認リスト",
-      "AI相談を1日1回"
+      "AI相談を1日1回",
+      "手帳にある記録をまとめる思い出の手帳PDF"
     ],
     cta: "無料で始める",
     href: "/home",
@@ -83,7 +84,18 @@ export default function PlansPage() {
         <h2>手帳の記録は、あとから見返せることを優先します。</h2>
         <p>
           Family Plusをやめても、これまで残した基本の記録は読み返せます。
-          追加対象者、容量拡張、PDF、長期相談などのPlus機能だけが止まります。
+          追加対象者、容量拡張、家族会議用PDF、長期相談などのPlus機能だけが止まります。
+          日々の記録をまとめる「思い出の手帳PDF」は、無料のまま作れます。
+        </p>
+      </section>
+
+      <section className="panel plan-trust-panel">
+        <p className="pill">記録の先まで無料</p>
+        <h2>毎日の1行を、あとで一冊のPDFへ。</h2>
+        <p>
+          看取りやその後の手続きが一区切りついた時も、手帳に残した記録と写真を日付順にまとめ、
+          家族で振り返る「思い出の手帳PDF」として無料で保存できます。
+          紙の本の印刷・製本・配送は含みません。
         </p>
       </section>
 
@@ -106,8 +118,8 @@ export default function PlansPage() {
         </div>
         <div className="plan-compare-row">
           <span>出力</span>
-          <strong>無料: 緊急カード</strong>
-          <strong>Plus: 家族会議PDF</strong>
+          <strong>無料: 緊急カード・思い出の手帳PDF</strong>
+          <strong>Plus: 無料の出力 + 家族会議PDF</strong>
         </div>
       </section>
 
