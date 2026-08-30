@@ -9472,3 +9472,16 @@ commit・GitHub・本番:
 - 最初に2件が選ばれること、1件をPDFから外せること、下部のPDF保存導線、iPhone/Androidの保存手順を確認した。PDFから外して手帳へ戻っても、元の2件が残ることを確認した。
 - `/memory-book/smoke-case` のHTMLに `noindex, nofollow` が含まれることを確認した。
 - 未追跡の `review_exports/` は変更・追加・commit対象外。
+
+commit・GitHub・本番:
+
+- 実装・資料commit: `f0823dd` (`Add free memory book PDF`)。`origin/main` へpush済み。
+- GitHub Actions CI `33286758844` はweb/mobile typecheck、web build、smokeを含めすべて成功。
+- GitHub Actions Vercel workflow `33286758854` はcheck成功。Vercel secrets未設定のためdeploy jobは設計どおりスキップされ、本番はVercel CLIで反映した。
+- Vercel production deployment `dpl_A1XW9w785WwjvvSYTqoCGJ9VaKoP` はREADY。
+- deployment URL: `https://oyano-moshimo-navi-5irdlncts-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- 本番 `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` と `node scripts/smoke-monitor-journey.mjs https://oyano-moshimo-navi.vercel.app` は全項目成功。モニター途中経過はvalidate-onlyだけを使い、本番集計を汚していない。
+- 本番で `/memory-book/smoke-case` の200応答、`noindex, nofollow`、`/plans` の無料PDFと紙の印刷・製本・配送を含まない説明、`/sw.js` のcache `v48` を確認した。
+- 本番ブラウザで存在しない手帳の安全なfallbackと、料金ページの表示を確認した。ブラウザconsoleのwarning/errorは0件。
+- deploy時に生成された `.vercel/` と `.env.local` は、内容を表示せずworktree外の `/private/tmp/oyano-moshimo-navi-vercel-link-20260830-memory-book.LdKTnI/` へ退避した。
