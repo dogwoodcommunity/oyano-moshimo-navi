@@ -82,8 +82,29 @@ for (const prerequisite of [
 ]) {
   assert.ok(migration.includes(prerequisite), `migration must add legacy prerequisite ${prerequisite}`);
 }
+
+function sqlFunctionBlock(functionName) {
+  const start = migration.indexOf(`create or replace function public.${functionName}`);
+  assert.ok(start >= 0, `missing SQL function ${functionName}`);
+  const end = migration.indexOf("\n$$;", start);
+  assert.ok(end > start, `unterminated SQL function ${functionName}`);
+  return migration.slice(start, end + 4);
+}
+
+const digestFunctionNames = [
+  "notebook_people_cloud_hash",
+  "notebook_task_cloud_hash",
+  "notebook_timeline_cloud_hash",
+  "sync_notebook_v2"
+];
+assert.equal(migration.match(/\bdigest\(/g)?.length, digestFunctionNames.length);
+for (const functionName of digestFunctionNames) {
+  const block = sqlFunctionBlock(functionName);
+  assert.match(block, /set search_path = pg_catalog, extensions, public, pg_temp/);
+  assert.match(block, /\bdigest\(/);
+}
 assert.match(migration, /create or replace function public\.sync_notebook_v2/);
-assert.match(migration, /security definer[\s\S]*set search_path = public, pg_temp/);
+assert.match(sqlFunctionBlock("sync_notebook_v2"), /security definer/);
 assert.match(migration, /notebook_sync_service_role_required/);
 assert.match(migration, /v_role not in \('owner', 'admin', 'member'\)/);
 assert.match(migration, /for update/);

@@ -10007,3 +10007,35 @@ Anthropic利用量だけが利用量に応じて増える。現在進行中の�
 4. 実行結果、production deployment URL、公開alias、E2E結果を次の追記へ残しcommit・pushする。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 265 — 本番pgcrypto配置差を補正、失敗分の完全rollbackを確認
+
+ChromeのSupabase自動翻訳をユーザー本人が停止し、英語の原文表示へ戻した。確定済みの
+`notebook_atomic_sync_v2.sql` を最初に実行したところ、本番Supabaseではpgcryptoの `digest()` が
+`extensions` schemaにある一方、hash関数の固定 `search_path` が `public, pg_temp` だけだったため、
+`ERROR: 42883: function digest(bytea, unknown) does not exist` で停止した。
+
+データ保全確認:
+
+- migration全体は明示的な `begin` / `commit` transaction内のため、エラー時に列追加、backfill、index、
+  trigger、RPC、auditの全変更がrollbackされた。
+- 直後のread-only SQLで `people.profile` が存在しないことと、件数が変更前と同じ
+  `people=4`、`tasks=8`、`timeline_events=0`、`audit_logs=44`、
+  `monitor_progress_synced=10`、`monitor_feedback_submitted=5` であることを再確認した。
+- `digest(bytea,text)` と `digest(text,text)` はいずれも `extensions` schemaにあり、
+  `anon` / `authenticated` / `service_role` は同schemaへのCREATE権限を持たないことも確認した。
+  現在進行中のモニター記録と回答は削除・変更されていない。
+
+互換修正:
+
+- `digest()` を直接呼ぶ3つのcanonical hash関数と `sync_notebook_v2` だけを、固定
+  `search_path = pg_catalog, extensions, public, pg_temp` に変更した。Supabase管理schemaを
+  `public` より先にし、通常PostgreSQLでpgcryptoが `public` に入る構成もfallbackとして維持する。
+- 静的testへ、`digest()` 呼出しが上記4関数だけにあり、各関数が同じ固定search pathを持つ検査を追加した。
+- PostgreSQL 16で、pgcrypto=`extensions` の現行schema、7前提列欠落の旧本番相当schema、
+  pgcrypto=`public` の通常構成をすべて再現し、migrationとregressionが成功した。
+- `test-notebook-sync-safety`、`test-notebook-sync-runtime`、`git diff --check` は成功。
+
+次は、この互換修正をpushしたうえで同じ本番migrationを再実行する。成功後に列、件数、RPC、index、
+triggerを確認し、`ai_consult_memory.sql` と `verify_compact.sql` が成功した場合だけVercel本番Webを
+deployする。未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。

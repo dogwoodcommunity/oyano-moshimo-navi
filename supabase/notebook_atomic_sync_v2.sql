@@ -108,12 +108,15 @@ $$;
 -- Canonical hashes intentionally omit server timestamps and client-only sync
 -- timestamps. A task list is versioned as task rows, not as part of the person
 -- profile, so a diary/task edit cannot accidentally acquire profile authority.
+-- Supabase installs pgcrypto in `extensions`, while a stock PostgreSQL install
+-- commonly uses `public`. Search the managed extension schema first and retain
+-- `public` as the portable fallback; pg_catalog is pinned ahead of both.
 create or replace function public.notebook_people_cloud_hash(p_row public.people)
 returns text
 language sql
 immutable
 strict
-set search_path = public, pg_temp
+set search_path = pg_catalog, extensions, public, pg_temp
 as $$
   select encode(
     digest(
@@ -146,7 +149,7 @@ returns text
 language sql
 immutable
 strict
-set search_path = public, pg_temp
+set search_path = pg_catalog, extensions, public, pg_temp
 as $$
   select encode(
     digest(
@@ -169,7 +172,7 @@ returns text
 language sql
 immutable
 strict
-set search_path = public, pg_temp
+set search_path = pg_catalog, extensions, public, pg_temp
 as $$
   select encode(
     digest(
@@ -762,7 +765,7 @@ create or replace function public.sync_notebook_v2(
 returns jsonb
 language plpgsql
 security definer
-set search_path = public, pg_temp
+set search_path = pg_catalog, extensions, public, pg_temp
 as $$
 declare
   v_cases jsonb := coalesce(p_cases, '[]'::jsonb);
