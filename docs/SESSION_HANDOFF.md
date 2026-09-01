@@ -10324,7 +10324,8 @@ Vercel production反映:
 ユーザーがCodex内ブラウザーでGitHub / Supabaseへ再ログインした後、本番project
 `ypnuxyfirlvbsqujocuy` のSQL Editorで件数だけをread-only queryした。実行したのは
 `audit_logs` の `monitor_progress_synced` / `monitor_feedback_submitted` を集計するSELECT 1回だけで、
-INSERT・UPDATE・DELETE、回答本文や画像の取得、保存済みqueryの作成は行っていない。
+INSERT・UPDATE・DELETE、回答本文や画像の取得、SQL EditorのSaveボタン操作は行っていない。実行後の
+Editor URLにはquery IDが付いたため、Supabase UI側のautosave draftとしてSELECT本文が残る可能性はある。
 
 2026-09-01の再確認値:
 
