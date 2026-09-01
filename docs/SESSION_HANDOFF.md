@@ -10191,3 +10191,69 @@ Vercel production:
 - 実AI送信、cron実行、モニター記録の編集・削除、認証済みの書き込みsmokeは行っていない。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 270 — AI記憶の送信前競合・cron認証・実DB分離testを追加（本番未deploy）
+
+追記269の本番反映後、モニター画面・日記・回答を変更せずに安全監査とローカル回帰testを続けた。
+本番Supabaseのブラウザーsessionは期限切れでlogin画面へ戻ったため、追加SQLやread-only queryを実行せず、
+最新の本番確認値は `monitor_progress_synced=10`、`monitor_feedback_submitted=5` のまま扱っている。
+管理画面の最新集計は11 session / 回答5 / 回答期間中の未回答2 / まだ回答日前4であり、全回答が揃う前の
+手帳UI大幅変更は引き続き停止する。
+
+AI長期記憶の外部送信境界:
+
+- 相談用の長期記憶を読んだ後、別端末や家族操作で記憶の訂正・除外・resetが起きても、従来は
+  Anthropic呼出し後にしかmemory version / reset時刻の競合を検出できなかった。回答保存・表示は止まるが、
+  古い記憶を外部AIへ送った後になるprivacy上のraceだった。
+- `/api/consult` で、Anthropicを呼ぶ直前に現在の家族権限・同意を取り直した同じauthorizationを使い、
+  memory versionとreset時刻も再照合するようにした。競合時はHTTP 409 `memory_conflict` で止まり、
+  Anthropic呼出し0回・相談履歴保存0回となる。AI応答後の既存snapshot再照合も残した。
+- fake Anthropicを使うroute-level testを追加し、送信前競合=AI 0回、応答中競合=AI 1回かつ保存0回、
+  変更なし=AI 1回かつ保存1回を動的に確認した。実AIは呼んでおらず費用は発生していない。
+
+cron認証のfail-closed化:
+
+- `CRON_SECRET` が未設定・空・空白だけのとき従来は認証を通していた。現在本番は未認証401で秘密値が
+  設定済みだが、将来の環境設定事故で匿名診断削除や通知送信を開かないよう、未設定時は503で停止する
+  実装に変更した。
+- 正しいBearerだけ成功、未設定/空/空白=503、tokenなし/Basic/誤token/同長誤token=401のtestを追加した。
+- GitHub CIへcron認証、モニター日程・保持期限、手帳sync safety/runtime、AI記憶+route、
+  AI記憶PostgreSQL RLSの7 testを追加した。
+
+AI記憶RLSの実PostgreSQL回帰:
+
+- `supabase/ai_consult_memory_regression.sql` を追加した。本番SQL Editorへは入れず、破棄専用PostgreSQLでだけ
+  実行するtransactional testで、全fixture/mutationは最後にrollbackする。
+- PostgreSQL 16の破棄専用containerを合計4回作成し、2回目以降はREADME記載の正式順
+  `schema.sql` → `api_grants.sql` → `production_rls.sql` → `ai_consult_memory.sql` 2回 → regressionで成功した。
+  独立レビューでservice role CRUD検査のany-of偽陽性を見つけ、16権限の個別判定へ修正後、現行bytesを
+  3回目で再確認した。さらにauthenticated/anonのTRUNCATE/REFERENCES/TRIGGER否定と自動runnerを追加し、
+  4回目はCIと同じ `test:consult-memory:sql` で成功した。migrationの冪等性も確認後、4台とも停止・
+  自動削除され、残存containerがないことを確認した。既存Docker DBには触れていない。
+- 家族A/Bの共有記憶分離、相談thread/turnの本人限定、同意の本人限定、owner/member/viewerの共有記憶閲覧、
+  家族解除直後の4table即時遮断、authenticated直接更新拒否、anon拒否、service role限定CRUD、constraintを
+  実row/RLSで確認した。
+
+ローカル検証:
+
+- `test:cron-auth`、`test:consult-memory`（core + route）、`test:monitor-timeline`、
+  `test:monitor-retention`、`test:notebook-sync-safety`、`test:notebook-sync-runtime`: すべて成功。
+- Web/Mobile TypeScript: 成功。最初にWeb typecheckとbuildを同時実行した回だけ、buildが `.next/types` を
+  再生成する競合でTS6053となった。build完了後の単独再実行はWeb/Mobileとも成功した。
+- Web production build: 成功。静的ページ162/162。Node 20のSupabase将来非対応warningだけ。
+- `git diff --check`: 成功。
+
+この追記時点では本番Webの再deploy、本番DB変更、実AI送信、cron手動実行を行っていない。
+公開中は追記269のdeployment `dpl_3VA94uxX7aKFTShrutdKcVdoeNUJ` のままである。今回のコードを本番へ
+反映する場合は、対象が `/api/consult` の送信前guardと共通cron認証であることを説明し、明示承認後にdeploy、
+未認証cron 401、空質問consult 400、公開smokeを再確認する。
+
+保持期限監査では `purge_stale_anonymous_cases` の削除先は `cases` だけで、`audit_logs.target_id` に
+caseへの外部キー/cascadeがないことを確認した。モニター途中経過・回答は別処理で基準日から暦月6か月後だけが
+対象なので、現在のモニター情報が次回cronで消えることはない。
+
+次の優先順は、(1)今回の安全修正の本番deploy承認、(2)残り6 sessionの最終回答回収、(3)全回答確定後の
+手帳UI再設計、(4)課金開始前に特商法・プライバシーの未確定事業者情報を正式化、(5)匿名診断のcase IDだけで
+上書きできる導線へ所有tokenとtransactional RPCを追加、である。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。

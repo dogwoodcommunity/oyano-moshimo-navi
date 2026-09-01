@@ -3,7 +3,9 @@ import { NextResponse } from "next/server";
 
 export function verifyCron(request: Request) {
   const expected = process.env.CRON_SECRET;
-  if (!expected) return null;
+  if (!expected?.trim()) {
+    return NextResponse.json({ error: "Cron authorization is not configured" }, { status: 503 });
+  }
 
   const auth = request.headers.get("authorization");
   const token = auth?.startsWith("Bearer ") ? auth.slice("Bearer ".length) : null;

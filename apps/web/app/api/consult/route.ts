@@ -502,8 +502,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // 記憶を読んだ後に家族から外れた／別端末で同意を取り消した場合も、
-  // 外部AIへ送る直前に現在の権限と同意を取り直して止める。
+  // 記憶を読んだ後に家族から外れた／別端末で同意を取り消した／
+  // 記憶を訂正・除外・削除した場合も、外部AIへ送る直前に止める。
   if (durableAuthorization && durableContext) {
     try {
       durableAuthorization = await authorizeConsultPerson(request, { personId: durableContext.personId });
@@ -512,6 +512,10 @@ export async function POST(request: NextRequest) {
         payload.memoryConsentVersion ?? "",
         "consult-api"
       );
+      await assertConsultMemorySnapshot(durableAuthorization, {
+        memoryVersion: durableContext.memoryState.memoryVersion,
+        memoryResetAt: durableContext.memoryState.memoryResetAt
+      });
     } catch (error) {
       if (error instanceof ConsultMemoryAccessError) {
         return jsonError(error.code, error.message, error.status);
@@ -519,7 +523,14 @@ export async function POST(request: NextRequest) {
       if (error instanceof ConsultMemoryConsentRequiredError) {
         return jsonError(error.code, error.message, error.status);
       }
-      console.error("[consult] failed to recheck durable consent", error);
+      if (error instanceof ConsultMemoryConflictError) {
+        return jsonError(
+          error.code,
+          "相談を送る前にAIの記憶が変更または削除されました。最新の状態を読み直して、もう一度お試しください。",
+          409
+        );
+      }
+      console.error("[consult] failed to recheck durable access", error);
       return jsonError("consent_failed", "長期記憶の同意状態を確認できませんでした。時間をおいてお試しください。", 503);
     }
   }

@@ -47,7 +47,11 @@ SQL Editorで以下の順に実行する。
 26. `verify_setup.sql`
 27. `verify_compact.sql`
 
-`notebook_atomic_sync_v2_regression.sql` は破棄可能なローカルPostgreSQL専用で、本番SQL Editorでは実行しない。
+`notebook_atomic_sync_v2_regression.sql` と `ai_consult_memory_regression.sql` は破棄可能な
+ローカルPostgreSQL専用で、本番SQL Editorでは実行しない。AI記憶の回帰SQLは `schema.sql`、
+`api_grants.sql`、`production_rls.sql`、`ai_consult_memory.sql` を適用したテストDBで実行する。
+Dockerを使える環境ではrepository rootで `pnpm run test:consult-memory:sql` を実行すると、専用の
+PostgreSQL 16 containerを作成し、migrationを2回適用して回帰SQLを実行後、containerを自動削除する。
 
 ## 重要
 

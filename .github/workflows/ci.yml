@@ -33,6 +33,27 @@ jobs:
       - name: Typecheck mobile
         run: pnpm --filter mobile run typecheck
 
+      - name: Test monitor timeline
+        run: pnpm run test:monitor-timeline
+
+      - name: Test monitor retention
+        run: pnpm run test:monitor-retention
+
+      - name: Test cron authentication
+        run: pnpm run test:cron-auth
+
+      - name: Test notebook sync safety
+        run: pnpm run test:notebook-sync-safety
+
+      - name: Test notebook sync runtime
+        run: pnpm run test:notebook-sync-runtime
+
+      - name: Test consult memory
+        run: pnpm run test:consult-memory
+
+      - name: Test consult memory PostgreSQL RLS
+        run: pnpm run test:consult-memory:sql
+
       - name: Build web
         run: pnpm --filter web run build
 
