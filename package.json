@@ -24,6 +24,8 @@
     "smoke:monitor": "node scripts/smoke-monitor-journey.mjs",
     "test:monitor-timeline": "node scripts/test-monitor-timeline.mjs",
     "test:monitor-retention": "node scripts/test-monitor-retention.mjs",
+    "test:notebook-sync-safety": "node scripts/test-notebook-sync-safety.mjs",
+    "test:notebook-sync-runtime": "node scripts/test-notebook-sync-runtime.mjs",
     "smoke:notebook-sync": "node scripts/smoke-notebook-sync.mjs",
     "smoke:production-consent": "node scripts/smoke-production-consent.mjs",
     "test:consult-memory": "node scripts/test-consult-memory.mjs",

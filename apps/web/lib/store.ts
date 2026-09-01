@@ -23,6 +23,9 @@ export type EditableTask = DiagnosisResult["tasks"][number] & {
   assignee?: string;
   note?: string;
   updatedAt?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
+  cloudSyncedUpdatedAt?: string;
 };
 
 export type LocalDiagnosisResult = Omit<DiagnosisResult, "tasks"> & {
@@ -42,6 +45,10 @@ export type CaseRecord = {
   handoffToken?: string;
   supportPackStatus?: "none" | "requested" | "paid" | "reviewing" | "report_ready";
   updatedAt?: string;
+  cloudPersonId?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
+  cloudSyncedUpdatedAt?: string;
 };
 
 export type PersonProfile = {
@@ -85,6 +92,16 @@ export type DiaryEntry = {
   attachments: DiaryAttachment[];
   createdAt: string;
   updatedAt?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
+  cloudSyncedUpdatedAt?: string;
+};
+
+export type NotebookCloudBinding = {
+  version: 1;
+  authUserId: string;
+  familyId: string | null;
+  email?: string;
 };
 
 export type NotebookExport = {
@@ -97,7 +114,8 @@ export type NotebookExport = {
 const STORAGE_KEY = "oyano_cases_v03";
 const PLAN_STORAGE_KEY = "oyano_plan_v01";
 const FAMILY_BILLING_MANAGER_STORAGE_KEY = "oyano_family_billing_manager_v01";
-const DIARY_STORAGE_KEY = "oyano_diary_entries_v01";
+const DIARY_STORAGE_NAME = "oyano_diary_entries_v01";
+const NOTEBOOK_CLOUD_BINDING_STORAGE_KEY = "oyano_notebook_cloud_binding_v01";
 let memoryCases: CaseRecord[] = [];
 let memoryDiaryEntries: DiaryEntry[] = [];
 let lastNotebookStorageWarning: string | null = null;
@@ -146,16 +164,21 @@ function readCases(): CaseRecord[] {
   }
 }
 
-function writeCases(cases: CaseRecord[]) {
+function writeCases(cases: CaseRecord[]): boolean {
   memoryCases = [...cases];
   const storage = getLocalStorage();
-  if (!storage) return;
+  if (!storage) {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
 
   try {
     storage.setItem(STORAGE_KEY, JSON.stringify(cases));
     lastNotebookStorageWarning = null;
+    return true;
   } catch {
     lastNotebookStorageWarning = storageWarningMessage();
+    return false;
   }
 }
 
@@ -172,7 +195,7 @@ function readDiaryEntries(): DiaryEntry[] {
   if (!storage) return memoryDiaryEntries;
 
   try {
-    const raw = storage.getItem(DIARY_STORAGE_KEY);
+    const raw = storage.getItem(DIARY_STORAGE_NAME);
     return raw ? JSON.parse(raw) as DiaryEntry[] : [];
   } catch {
     return memoryDiaryEntries;
@@ -197,28 +220,75 @@ function diaryEntryForNotebookStorage(entry: DiaryEntry): DiaryEntry {
   };
 }
 
-function writeDiaryEntries(entries: DiaryEntry[]) {
+function writeDiaryEntries(entries: DiaryEntry[]): boolean {
   memoryDiaryEntries = [...entries];
   const storage = getLocalStorage();
-  if (!storage) return;
+  if (!storage) {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
 
   try {
-    storage.setItem(DIARY_STORAGE_KEY, JSON.stringify(entries.map(diaryEntryForNotebookStorage)));
+    storage.setItem(DIARY_STORAGE_NAME, JSON.stringify(entries.map(diaryEntryForNotebookStorage)));
     lastNotebookStorageWarning = null;
+    return true;
   } catch {
     lastNotebookStorageWarning = storageWarningMessage();
+    return false;
   }
 }
 
-function touchCaseUpdatedAt(caseId: string, updatedAt: string) {
-  const cases = readCases();
-  const existing = cases.find((item) => item.id === caseId);
-  if (!existing) return;
+export function readNotebookCloudBinding(): NotebookCloudBinding | null {
+  const storage = getLocalStorage();
+  if (!storage) return null;
 
-  writeCases([
-    { ...existing, updatedAt },
-    ...cases.filter((item) => item.id !== caseId)
-  ]);
+  try {
+    const parsed = JSON.parse(storage.getItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY) ?? "null") as Partial<NotebookCloudBinding> | null;
+    if (!parsed || parsed.version !== 1 || typeof parsed.authUserId !== "string" || !parsed.authUserId) return null;
+    return {
+      version: 1,
+      authUserId: parsed.authUserId,
+      familyId: typeof parsed.familyId === "string" && parsed.familyId ? parsed.familyId : null,
+      ...(typeof parsed.email === "string" && parsed.email ? { email: parsed.email } : {})
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function writeNotebookCloudBinding(binding: NotebookCloudBinding): boolean {
+  const storage = getLocalStorage();
+  if (!storage) return false;
+  try {
+    storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(binding));
+    return true;
+  } catch {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+}
+
+export function notebookCloudBindingMatches(
+  binding: NotebookCloudBinding | null,
+  authUserId: string | null,
+  familyId: string | null
+) {
+  return Boolean(
+    binding
+    && authUserId
+    && binding.authUserId === authUserId
+    && binding.familyId === familyId
+  );
+}
+
+export function clearNotebookCloudBinding() {
+  const storage = getLocalStorage();
+  if (!storage) return;
+  try {
+    storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
+  } catch {
+    // A blocked storage API is already handled by the identity guard in the UI.
+  }
 }
 
 export function listDiaryEntries(caseId: string): DiaryEntry[] {
@@ -241,15 +311,231 @@ function diaryEntryTimestamp(entry: DiaryEntry) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function mergeDiaryEntries(remoteEntries: DiaryEntry[], localEntries: DiaryEntry[]) {
+function caseRecordTimestamp(caseRecord: CaseRecord) {
+  const timestamp = Date.parse(caseRecord.updatedAt || caseRecord.createdAt);
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+export type NotebookMergeConflict = {
+  kind: "profile" | "task" | "diary";
+  id: string;
+  caseId: string;
+};
+
+type CloudTrackedRecord = {
+  cloudRevision?: number;
+  cloudSyncedUpdatedAt?: string;
+  updatedAt?: string;
+  createdAt?: string;
+};
+
+function cloudRevision(value: CloudTrackedRecord) {
+  return Number.isInteger(value.cloudRevision) && Number(value.cloudRevision) >= 0
+    ? Number(value.cloudRevision)
+    : null;
+}
+
+function hasUnsyncedCloudChange(value: CloudTrackedRecord) {
+  if (cloudRevision(value) === null || !value.cloudSyncedUpdatedAt) return false;
+  return (value.updatedAt || value.createdAt || "") !== value.cloudSyncedUpdatedAt;
+}
+
+function chooseCloudTrackedRecord<T extends CloudTrackedRecord>(
+  remote: T,
+  local: T,
+  onConflict: () => void,
+  timestamp: (value: T) => number
+): T {
+  const remoteRevision = cloudRevision(remote);
+  const localRevision = cloudRevision(local);
+
+  if (remoteRevision !== null && localRevision !== null) {
+    if (remoteRevision > localRevision) {
+      if (hasUnsyncedCloudChange(local)) {
+        onConflict();
+        return local;
+      }
+      return remote;
+    }
+    if (localRevision > remoteRevision) {
+      onConflict();
+      return local;
+    }
+  } else if (remoteRevision !== localRevision) {
+    // A legacy/unbound local record must never silently replace a revisioned
+    // cloud record. Keep it visible and require an explicit resolution.
+    onConflict();
+    return local;
+  }
+
+  return timestamp(local) > timestamp(remote) ? local : remote;
+}
+
+function editableTaskTimestamp(task: EditableTask) {
+  const timestamp = Date.parse(task.updatedAt || "");
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function canonicalNotebookValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonicalNotebookValue);
+  if (!value || typeof value !== "object") return value;
+
+  const output: Record<string, unknown> = {};
+  Object.entries(value as Record<string, unknown>)
+    .filter(([key]) => !key.startsWith("cloud") && key !== "previewUrl" && key !== "createdAt" && key !== "updatedAt")
+    .sort(([left], [right]) => left.localeCompare(right))
+    .forEach(([key, nested]) => {
+      output[key] = canonicalNotebookValue(nested);
+    });
+  return output;
+}
+
+function notebookValuesMatch(left: unknown, right: unknown) {
+  return JSON.stringify(canonicalNotebookValue(left)) === JSON.stringify(canonicalNotebookValue(right));
+}
+
+function caseProfileSnapshot(caseRecord: CaseRecord) {
+  return {
+    selectedStatus: caseRecord.selectedStatus,
+    answers: caseRecord.answers,
+    personProfile: caseRecord.personProfile,
+    summary: caseRecord.result?.summary
+  };
+}
+
+export function canAdoptNotebookCloudIdentity(input: {
+  remoteCases: CaseRecord[];
+  localCases: CaseRecord[];
+}) {
+  if (input.localCases.length === 0 || input.remoteCases.length === 0) return false;
+  const remoteById = new Map(input.remoteCases.map((item) => [item.id, item]));
+  const overlapping = input.localCases.filter((item) => remoteById.has(item.id));
+  return overlapping.length > 0 && overlapping.every((localCase) => {
+    const remoteCase = remoteById.get(localCase.id);
+    return Boolean(remoteCase && notebookValuesMatch(caseProfileSnapshot(remoteCase), caseProfileSnapshot(localCase)));
+  });
+}
+
+function adoptMatchingCloudMetadata(
+  remoteCases: CaseRecord[],
+  localCases: CaseRecord[],
+  remoteEntries: DiaryEntry[],
+  localEntries: DiaryEntry[]
+) {
+  const remoteCaseById = new Map(remoteCases.map((item) => [item.id, item]));
+  const nextLocalCases = localCases.map((localCase) => {
+    const remoteCase = remoteCaseById.get(localCase.id);
+    if (!remoteCase) return localCase;
+    const remoteTasks = new Map((remoteCase.result?.tasks ?? []).map((task) => [task.id, task]));
+    const tasks = localCase.result?.tasks.map((task) => {
+      const remoteTask = remoteTasks.get(task.id);
+      if (!remoteTask || !notebookValuesMatch(remoteTask, task)) return task;
+      return {
+        ...task,
+        cloudRevision: remoteTask.cloudRevision,
+        cloudHash: remoteTask.cloudHash,
+        cloudSyncedUpdatedAt: task.updatedAt
+      };
+    });
+    const profileMatches = notebookValuesMatch(caseProfileSnapshot(remoteCase), caseProfileSnapshot(localCase));
+    return {
+      ...localCase,
+      ...(profileMatches ? {
+        cloudPersonId: remoteCase.cloudPersonId,
+        cloudRevision: remoteCase.cloudRevision,
+        cloudHash: remoteCase.cloudHash,
+        cloudSyncedUpdatedAt: localCase.updatedAt ?? localCase.createdAt
+      } : {}),
+      ...(tasks && localCase.result ? { result: { ...localCase.result, tasks } } : {})
+    };
+  });
+  const remoteEntryById = new Map(remoteEntries.map((entry) => [`${entry.caseId}:${entry.id}`, entry]));
+  const nextLocalEntries = localEntries.map((entry) => {
+    const remoteEntry = remoteEntryById.get(`${entry.caseId}:${entry.id}`);
+    if (!remoteEntry || !notebookValuesMatch(remoteEntry, entry)) return entry;
+    return {
+      ...entry,
+      cloudRevision: remoteEntry.cloudRevision,
+      cloudHash: remoteEntry.cloudHash,
+      cloudSyncedUpdatedAt: entry.updatedAt ?? entry.createdAt
+    };
+  });
+  return { localCases: nextLocalCases, localEntries: nextLocalEntries };
+}
+
+function mergeTasks(
+  caseId: string,
+  remoteTasks: EditableTask[],
+  localTasks: EditableTask[],
+  conflicts: NotebookMergeConflict[]
+) {
+  const merged = new Map<string, EditableTask>();
+  remoteTasks.forEach((task, index) => merged.set(task.id || `remote-${index}`, task));
+  localTasks.forEach((task, index) => {
+    const id = task.id || `local-${index}`;
+    const existing = merged.get(id);
+    if (!existing) {
+      merged.set(id, task);
+      return;
+    }
+    merged.set(id, chooseCloudTrackedRecord(existing, task, () => {
+      conflicts.push({ kind: "task", id, caseId });
+    }, editableTaskTimestamp));
+  });
+  return [...merged.values()];
+}
+
+function mergeCaseRecords(
+  remoteCases: CaseRecord[],
+  localCases: CaseRecord[],
+  conflicts: NotebookMergeConflict[]
+) {
+  const merged = new Map<string, CaseRecord>();
+
+  remoteCases.forEach((caseRecord) => merged.set(caseRecord.id, caseRecord));
+  localCases.forEach((caseRecord) => {
+    const existing = merged.get(caseRecord.id);
+    if (!existing) {
+      merged.set(caseRecord.id, caseRecord);
+      return;
+    }
+
+    const selected = chooseCloudTrackedRecord(existing, caseRecord, () => {
+      conflicts.push({ kind: "profile", id: caseRecord.id, caseId: caseRecord.id });
+    }, caseRecordTimestamp);
+    const tasks = mergeTasks(
+      caseRecord.id,
+      existing.result?.tasks ?? [],
+      caseRecord.result?.tasks ?? [],
+      conflicts
+    );
+    merged.set(caseRecord.id, {
+      ...selected,
+      ...(selected.result ? { result: { ...selected.result, tasks } } : {})
+    });
+  });
+
+  return Array.from(merged.values())
+    .sort((a, b) => caseRecordTimestamp(b) - caseRecordTimestamp(a) || b.createdAt.localeCompare(a.createdAt));
+}
+
+function mergeDiaryEntries(
+  remoteEntries: DiaryEntry[],
+  localEntries: DiaryEntry[],
+  conflicts: NotebookMergeConflict[]
+) {
   const merged = new Map<string, DiaryEntry>();
 
   remoteEntries.forEach((entry) => merged.set(entry.id, entry));
   localEntries.forEach((entry) => {
     const existing = merged.get(entry.id);
-    if (!existing || diaryEntryTimestamp(entry) > diaryEntryTimestamp(existing)) {
+    if (!existing) {
       merged.set(entry.id, entry);
+      return;
     }
+    merged.set(entry.id, chooseCloudTrackedRecord(existing, entry, () => {
+      conflicts.push({ kind: "diary", id: entry.id, caseId: entry.caseId });
+    }, diaryEntryTimestamp));
   });
 
   return Array.from(merged.values())
@@ -257,14 +543,127 @@ function mergeDiaryEntries(remoteEntries: DiaryEntry[], localEntries: DiaryEntry
 }
 
 export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
-  const mergedDiaryEntries = mergeDiaryEntries(input.diaryEntries, readDiaryEntries());
+  const conflicts: NotebookMergeConflict[] = [];
+  const adopted = adoptMatchingCloudMetadata(input.cases, readCases(), input.diaryEntries, readDiaryEntries());
+  const mergedCases = mergeCaseRecords(input.cases, adopted.localCases, conflicts);
+  const mergedDiaryEntries = mergeDiaryEntries(input.diaryEntries, adopted.localEntries, conflicts);
 
-  writeCases(input.cases);
-  writeDiaryEntries(mergedDiaryEntries);
+  const casesPersisted = writeCases(mergedCases);
+  const diaryEntriesPersisted = writeDiaryEntries(mergedDiaryEntries);
 
   return {
+    cases: mergedCases,
+    diaryEntries: mergedDiaryEntries,
+    conflicts,
+    persisted: casesPersisted && diaryEntriesPersisted
+  };
+}
+
+export function overwriteLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
+  const casesPersisted = writeCases(input.cases);
+  const diaryEntriesPersisted = writeDiaryEntries(input.diaryEntries);
+  return {
     cases: input.cases,
-    diaryEntries: mergedDiaryEntries
+    diaryEntries: input.diaryEntries,
+    conflicts: [] as NotebookMergeConflict[],
+    persisted: casesPersisted && diaryEntriesPersisted
+  };
+}
+
+export type NotebookCloudRevisionResult = {
+  caseRevisions?: Array<{
+    localCaseId: string;
+    personId?: string;
+    cloudRevision: number;
+    cloudHash?: string;
+    profileApplied?: boolean;
+  }>;
+  taskRevisions?: Array<{ localCaseId: string; localTaskId: string; cloudRevision: number; cloudHash?: string }>;
+  diaryRevisions?: Array<{ localCaseId: string; localDiaryId: string; cloudRevision: number; cloudHash?: string }>;
+};
+
+export function applyNotebookCloudRevisions(
+  result: NotebookCloudRevisionResult,
+  syncedSnapshot?: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }
+) {
+  const caseRevisionById = new Map((result.caseRevisions ?? []).map((item) => [item.localCaseId, item]));
+  const taskRevisionById = new Map((result.taskRevisions ?? []).map((item) => [`${item.localCaseId}:${item.localTaskId}`, item]));
+  const diaryRevisionById = new Map((result.diaryRevisions ?? []).map((item) => [`${item.localCaseId}:${item.localDiaryId}`, item]));
+  const sentCaseById = new Map((syncedSnapshot?.cases ?? []).map((item) => [item.id, item]));
+  const sentTaskById = new Map<string, EditableTask>();
+  (syncedSnapshot?.cases ?? []).forEach((caseRecord) => {
+    (caseRecord.result?.tasks ?? []).forEach((task) => {
+      sentTaskById.set(`${caseRecord.id}:${task.id ?? ""}`, task);
+    });
+  });
+  const sentDiaryById = new Map(
+    (syncedSnapshot?.diaryEntries ?? []).map((entry) => [`${entry.caseId}:${entry.id}`, entry])
+  );
+  let hasConcurrentChanges = false;
+  const rejectedProfileCaseIds: string[] = [];
+
+  const nextCases = readCases().map((caseRecord) => {
+    const revision = caseRevisionById.get(caseRecord.id);
+    const sentCase = sentCaseById.get(caseRecord.id);
+    if (syncedSnapshot && !sentCase) hasConcurrentChanges = true;
+    const tasks = caseRecord.result?.tasks.map((task) => {
+      const taskRevision = taskRevisionById.get(`${caseRecord.id}:${task.id ?? ""}`);
+      const sentTask = sentTaskById.get(`${caseRecord.id}:${task.id ?? ""}`);
+      if (syncedSnapshot && !sentTask) hasConcurrentChanges = true;
+      if (!taskRevision) return task;
+      const matchesSent = !sentTask || notebookValuesMatch(task, sentTask);
+      if (!matchesSent) hasConcurrentChanges = true;
+      return {
+        ...task,
+        cloudRevision: taskRevision.cloudRevision,
+        cloudHash: taskRevision.cloudHash,
+        cloudSyncedUpdatedAt: matchesSent
+          ? task.updatedAt
+          : sentTask?.updatedAt ?? task.cloudSyncedUpdatedAt
+      };
+    });
+    const profileMatchesSent = !sentCase
+      || notebookValuesMatch(caseProfileSnapshot(caseRecord), caseProfileSnapshot(sentCase));
+    if (revision?.profileApplied === false) rejectedProfileCaseIds.push(caseRecord.id);
+    else if (revision && !profileMatchesSent) hasConcurrentChanges = true;
+    return {
+      ...caseRecord,
+      ...(revision ? { cloudPersonId: revision.personId ?? caseRecord.cloudPersonId } : {}),
+      ...(revision && revision.profileApplied !== false ? {
+        cloudRevision: revision.cloudRevision,
+        cloudHash: revision.cloudHash,
+        cloudSyncedUpdatedAt: profileMatchesSent
+          ? caseRecord.updatedAt ?? caseRecord.createdAt
+          : sentCase?.updatedAt ?? sentCase?.createdAt ?? caseRecord.cloudSyncedUpdatedAt
+      } : {}),
+      ...(tasks && caseRecord.result ? { result: { ...caseRecord.result, tasks } } : {})
+    };
+  });
+  const nextDiaryEntries = readDiaryEntries().map((entry) => {
+    const revision = diaryRevisionById.get(`${entry.caseId}:${entry.id}`);
+    const sentEntry = sentDiaryById.get(`${entry.caseId}:${entry.id}`);
+    if (syncedSnapshot && !sentEntry) hasConcurrentChanges = true;
+    if (!revision) return entry;
+    const matchesSent = !sentEntry || notebookValuesMatch(entry, sentEntry);
+    if (!matchesSent) hasConcurrentChanges = true;
+    return {
+      ...entry,
+      cloudRevision: revision.cloudRevision,
+      cloudHash: revision.cloudHash,
+      cloudSyncedUpdatedAt: matchesSent
+        ? entry.updatedAt ?? entry.createdAt
+        : sentEntry?.updatedAt ?? sentEntry?.createdAt ?? entry.cloudSyncedUpdatedAt
+    };
+  });
+
+  const casesPersisted = writeCases(nextCases);
+  const diaryEntriesPersisted = writeDiaryEntries(nextDiaryEntries);
+  return {
+    cases: nextCases,
+    diaryEntries: nextDiaryEntries,
+    persisted: casesPersisted && diaryEntriesPersisted,
+    hasConcurrentChanges,
+    rejectedProfileCaseIds
   };
 }
 
@@ -277,8 +676,9 @@ export function resetLocalNotebookData() {
 
   try {
     storage.removeItem(STORAGE_KEY);
-    storage.removeItem(DIARY_STORAGE_KEY);
+    storage.removeItem(DIARY_STORAGE_NAME);
     storage.removeItem(PLAN_STORAGE_KEY);
+    storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
   } catch {
     // If storage removal is blocked, the in-memory state above still gives
     // the current session a fresh start.
@@ -294,9 +694,6 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
     updatedAt: now
   };
   writeDiaryEntries([entry, ...readDiaryEntries()]);
-  const diaryStorageWarning = lastNotebookStorageWarning;
-  touchCaseUpdatedAt(input.caseId, now);
-  if (diaryStorageWarning) lastNotebookStorageWarning = diaryStorageWarning;
   trackFunnel("record_written");
   return entry;
 }
@@ -318,9 +715,6 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
   };
 
   writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
-  const diaryStorageWarning = lastNotebookStorageWarning;
-  touchCaseUpdatedAt(existing.caseId, now);
-  if (diaryStorageWarning) lastNotebookStorageWarning = diaryStorageWarning;
   return updated;
 }
 
@@ -395,7 +789,6 @@ export function updateCaseTask(caseId: string, taskIndex: number, patch: Partial
 
   const record: CaseRecord = {
     ...existing,
-    updatedAt: now,
     result: {
       ...existing.result,
       tasks
@@ -429,7 +822,6 @@ export function addCaseTask(caseId: string, task: Partial<EditableTask> & Pick<E
 
   const record: CaseRecord = {
     ...existing,
-    updatedAt: now,
     result: {
       ...existing.result,
       tasks: [nextTask, ...existing.result.tasks]

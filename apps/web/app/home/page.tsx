@@ -11,6 +11,8 @@ import { markMonitorActivity } from "@/lib/monitorSession";
 import {
   addCaseTask,
   addDiaryEntry,
+  applyNotebookCloudRevisions,
+  canAdoptNotebookCloudIdentity,
   consumeNotebookStorageWarning,
   createLocalId,
   diaryAdvice,
@@ -18,11 +20,15 @@ import {
   exportNotebookData,
   listDiaryEntries,
   listLocalCases,
+  notebookCloudBindingMatches,
+  overwriteLocalNotebook,
+  readNotebookCloudBinding,
   readCanManageFamilyBilling,
   replaceLocalNotebook,
   resetLocalNotebookData,
   updateDiaryEntry,
   updateCaseProfile,
+  writeNotebookCloudBinding,
   writeCanManageFamilyBilling,
   writePlan,
   updateCaseTask,
@@ -60,6 +66,8 @@ type TaskEditForm = {
 type RecordFilter = "all" | "changed" | "attachments";
 type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synced" | "error";
 type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
+type CloudIdentityStatus = "checking" | "ready" | "needs-confirmation" | "different-account" | "family-selection" | "blocked";
+type CloudFamilyOption = { id: string; name: string; role: "owner" | "admin" | "member" | "viewer" };
 type NotebookTab = "overview" | "record" | "profile" | "tasks" | "media";
 type HandbookStepState = "done" | "now" | "next";
 type ConsultDraft = {
@@ -74,6 +82,7 @@ type NotebookSyncPayload = {
 };
 const NOTEBOOK_CLOUD_SYNC_BATCH_SIZE = 500;
 const NOTEBOOK_CLOUD_RESTORE_LIMIT = 20_000;
+const NOTEBOOK_CLOUD_SYNC_RETRY_DELAYS = [1_000, 3_000, 10_000] as const;
 type PrefecturePromptDraft = {
   parentPrefecture: string;
   parentCity: string;
@@ -1203,7 +1212,12 @@ export default function FamilyBoardPage() {
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("record");
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
+  const [cloudUserId, setCloudUserId] = useState<string | null>(null);
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
+  const [cloudFamilyId, setCloudFamilyId] = useState<string | null>(null);
+  const [cloudFamilies, setCloudFamilies] = useState<CloudFamilyOption[]>([]);
+  const [cloudMemberRole, setCloudMemberRole] = useState<CloudFamilyOption["role"] | null>(null);
+  const [cloudIdentityStatus, setCloudIdentityStatus] = useState<CloudIdentityStatus>("checking");
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
   const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。メール確認をするとクラウドにも保存できます。");
   const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
@@ -1213,10 +1227,22 @@ export default function FamilyBoardPage() {
   const lastSyncedPayloadRef = useRef("");
   const cloudSyncInFlightRef = useRef(false);
   const pendingAutoSyncPayloadRef = useRef<NotebookSyncPayload | null>(null);
+  const cloudSyncRetryCountRef = useRef(0);
+  const cloudSyncRetrySignatureRef = useRef("");
+  const cloudSyncRetryTimerRef = useRef<number | null>(null);
   const cloudRestoringRef = useRef(false);
+  const cloudIdentityOnlyRef = useRef(false);
   const firstCloudLoadDoneRef = useRef(false);
+  const lastAuthUserIdRef = useRef<string | null>(null);
+  const cloudAuthGenerationRef = useRef(0);
   const skipInitialCloudRestoreRef = useRef(false);
   const cloudBackupRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => () => {
+    if (cloudSyncRetryTimerRef.current !== null) {
+      window.clearTimeout(cloudSyncRetryTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1266,7 +1292,23 @@ export default function FamilyBoardPage() {
         setCloudMessage(`メール確認に失敗しました: ${error}`);
         return;
       }
+      const nextUserId = session?.user.id ?? null;
+      if (lastAuthUserIdRef.current !== nextUserId) {
+        cloudAuthGenerationRef.current += 1;
+        if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+        if (cloudSyncRetryTimerRef.current !== null) window.clearTimeout(cloudSyncRetryTimerRef.current);
+        autoSyncTimerRef.current = null;
+        cloudSyncRetryTimerRef.current = null;
+        pendingAutoSyncPayloadRef.current = null;
+        firstCloudLoadDoneRef.current = false;
+        lastSyncedPayloadRef.current = "";
+        setCloudFamilyId(null);
+        setCloudMemberRole(null);
+        setCloudIdentityStatus("checking");
+      }
+      lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
+      setCloudUserId(nextUserId);
       setCloudEmail((current) => current || session?.user.email || "");
       setCloudStatus("idle");
       if (handled && session) {
@@ -1277,13 +1319,33 @@ export default function FamilyBoardPage() {
     });
 
     const { data } = client.auth.onAuthStateChange((_event, session) => {
+      const nextUserId = session?.user.id ?? null;
+      if (lastAuthUserIdRef.current !== nextUserId) {
+        cloudAuthGenerationRef.current += 1;
+        if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+        if (cloudSyncRetryTimerRef.current !== null) window.clearTimeout(cloudSyncRetryTimerRef.current);
+        autoSyncTimerRef.current = null;
+        cloudSyncRetryTimerRef.current = null;
+        pendingAutoSyncPayloadRef.current = null;
+        firstCloudLoadDoneRef.current = false;
+        lastSyncedPayloadRef.current = "";
+        setCloudFamilyId(null);
+        setCloudMemberRole(null);
+        setCloudIdentityStatus("checking");
+      }
+      lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
+      setCloudUserId(nextUserId);
       setCloudEmail((current) => current || session?.user.email || "");
       if (!session) {
         firstCloudLoadDoneRef.current = false;
         lastSyncedPayloadRef.current = "";
         setLastCloudSyncedAt(null);
         setCloudAutoStatus("idle");
+        setCloudFamilyId(null);
+        setCloudFamilies([]);
+        setCloudMemberRole(null);
+        setCloudIdentityStatus("checking");
         setCanManageFamilyBilling(true);
         writeCanManageFamilyBilling(true);
       }
@@ -1299,6 +1361,12 @@ export default function FamilyBoardPage() {
     if (cases.length === 0) return undefined;
     return cases.find((item) => item.id === activeCaseId) ?? cases[0];
   }, [activeCaseId, cases]);
+  const cloudRoleIsBound = Boolean(
+    cloudUserId && cloudIdentityStatus === "ready" && cloudMemberRole
+  );
+  const cloudContentReadOnly = cloudRoleIsBound && cloudMemberRole === "viewer";
+  const cloudProfileReadOnly = cloudRoleIsBound
+    && (cloudMemberRole === "member" || cloudMemberRole === "viewer");
 
   useEffect(() => {
     setProfileEditorOpen(false);
@@ -1545,7 +1613,18 @@ export default function FamilyBoardPage() {
     }));
   }
 
+  function showCloudRoleReadOnlyMessage(kind: "profile" | "content") {
+    setRecordStorageTone("warning");
+    setRecordStorageMessage(kind === "profile"
+      ? "この家族では基本情報を変更できるのは管理者だけです。記録と確認リストはそのまま使えます。"
+      : "この家族では閲覧のみの権限です。記録を変更するには家族の管理者へ権限変更を依頼してください。");
+  }
+
   function saveParentPrefecturePrompt(caseId: string) {
+    if (cloudProfileReadOnly) {
+      showCloudRoleReadOnlyMessage("profile");
+      return;
+    }
     const draft = prefecturePromptDrafts[caseId];
     if (!draft?.parentPrefecture?.trim() || !draft.parentCity?.trim()) return;
 
@@ -1567,6 +1646,10 @@ export default function FamilyBoardPage() {
   }
 
   function saveProfile(caseId: string) {
+    if (cloudProfileReadOnly) {
+      showCloudRoleReadOnlyMessage("profile");
+      return;
+    }
     const profile = profileForms[caseId];
     if (!profile) return;
     if (!profile.parentPrefecture?.trim() || !profile.parentCity?.trim()) {
@@ -1622,6 +1705,10 @@ export default function FamilyBoardPage() {
   }
 
   function saveTaskEdit(caseId: string, taskIndex: number) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const key = taskEditKey(caseId, taskIndex);
     const form = taskForms[key];
     if (!form) return;
@@ -1651,6 +1738,10 @@ export default function FamilyBoardPage() {
   }
 
   function addManualTask(caseId: string) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const title = newTaskForm.title.trim();
     if (!title) return;
 
@@ -1673,6 +1764,10 @@ export default function FamilyBoardPage() {
   }
 
   function quickUpdateTask(caseId: string, taskIndex: number, patch: Partial<EditableTask>) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const updated = updateCaseTask(caseId, taskIndex, patch);
     if (!updated) return;
 
@@ -1689,6 +1784,10 @@ export default function FamilyBoardPage() {
   }
 
   async function attachFiles(caseId: string, fileList: FileList | null) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const current = forms[caseId] ?? emptyDiaryForm;
     const slots = Math.max(0, MAX_LOCAL_PHOTO_COUNT - current.files.length);
     if (slots === 0) {
@@ -1777,6 +1876,10 @@ export default function FamilyBoardPage() {
   }
 
   function saveDiary(caseId: string) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const form = forms[caseId] ?? emptyDiaryForm;
     if (!form.body.trim() && form.files.length === 0) {
       setDiaryValidationCaseId(caseId);
@@ -1876,6 +1979,10 @@ export default function FamilyBoardPage() {
   }
 
   function saveDiaryEdit(caseId: string, entryId: string) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const form = diaryEditForms[entryId];
     if (!form || !form.body.trim()) return;
 
@@ -1912,6 +2019,10 @@ export default function FamilyBoardPage() {
   }
 
   function addDiaryTask(caseId: string, entry: DiaryEntry) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
     const updated = addCaseTask(caseId, {
       title: diaryTaskTitle(entry),
       description: `${formatLongDate(entry.date)}の記録から追加: ${entry.body.slice(0, 90)}`,
@@ -2013,9 +2124,67 @@ export default function FamilyBoardPage() {
     writeCanManageFamilyBilling(canManage);
   }
 
+  function bindNotebookToCurrentIdentity(familyId: string | null) {
+    if (!cloudUserId) return false;
+    const persisted = writeNotebookCloudBinding({
+      version: 1,
+      authUserId: cloudUserId,
+      familyId,
+      ...(cloudUserEmail ? { email: cloudUserEmail } : {})
+    });
+    if (!persisted) {
+      setCloudIdentityStatus("blocked");
+      setCloudAutoStatus("error");
+      setCloudStatus("error");
+      setCloudMessage("この端末で保存先の本人確認情報を保持できません。ブラウザの保存設定を確認するまで自動保存は行いません。");
+      return false;
+    }
+    setCloudFamilyId(familyId);
+    setCloudIdentityStatus("ready");
+    return true;
+  }
+
+  function confirmCurrentNotebookCloudBinding() {
+    if (!cloudUserId || !cloudUserEmail) return;
+    const familyName = cloudFamilies.find((family) => family.id === cloudFamilyId)?.name;
+    const destination = familyName ? `${familyName}（${cloudUserEmail}）` : cloudUserEmail;
+    if (!window.confirm(`この端末にある手帳を「${destination}」のクラウド保存へ紐づけます。よろしいですか？`)) return;
+    if (!bindNotebookToCurrentIdentity(cloudFamilyId)) return;
+    void syncNotebookToCloud({ payload: notebookSyncPayload() });
+  }
+
+  function chooseCloudFamily(familyId: string) {
+    setCloudFamilyId(familyId);
+    setCloudIdentityStatus("checking");
+    const identityOnly = cloudIdentityOnlyRef.current;
+    void restoreNotebookFromCloud({ familyId, identityOnly });
+  }
+
   async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
+    const authGeneration = cloudAuthGenerationRef.current;
     const payload = options.payload ?? notebookSyncPayload();
+    const binding = readNotebookCloudBinding();
+    if (
+      !cloudUserId
+      || cloudIdentityStatus !== "ready"
+      || !notebookCloudBindingMatches(binding, cloudUserId, cloudFamilyId)
+    ) {
+      setCloudAutoStatus("error");
+      if (!options.silent) {
+        setCloudStatus("error");
+        setCloudMessage("保存先の本人・家族が確認できていないため、自動送信していません。保存先を確認してください。");
+      }
+      return;
+    }
     const signature = notebookPayloadSignature(payload);
+    if (cloudSyncRetryTimerRef.current !== null) {
+      window.clearTimeout(cloudSyncRetryTimerRef.current);
+      cloudSyncRetryTimerRef.current = null;
+    }
+    if (!options.silent || cloudSyncRetrySignatureRef.current !== signature) {
+      cloudSyncRetryCountRef.current = 0;
+      cloudSyncRetrySignatureRef.current = signature;
+    }
 
     if (cloudSyncInFlightRef.current) {
       if (options.silent) pendingAutoSyncPayloadRef.current = payload;
@@ -2024,6 +2193,7 @@ export default function FamilyBoardPage() {
 
     const token = await getAccessToken({ silent: options.silent });
     if (!token) return;
+    if (authGeneration !== cloudAuthGenerationRef.current) return;
 
     cloudSyncInFlightRef.current = true;
     if (options.silent) {
@@ -2033,6 +2203,8 @@ export default function FamilyBoardPage() {
       setCloudMessage("クラウドに保存しています。");
     }
 
+    let syncCompleted = false;
+    let retryableFailure = false;
     try {
       const diaryBatches: DiaryEntry[][] = payload.diaryEntries.length > 0
         ? Array.from(
@@ -2046,6 +2218,8 @@ export default function FamilyBoardPage() {
       let syncedEntries = 0;
       let syncedPeople = 0;
       let lastResult: Record<string, unknown> = {};
+      let latestRevisionState: ReturnType<typeof applyNotebookCloudRevisions> | null = null;
+      let profileWriteRejected = false;
       const notices = new Set<string>();
 
       for (const diaryEntries of diaryBatches) {
@@ -2055,13 +2229,31 @@ export default function FamilyBoardPage() {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ cases: payload.cases, diaryEntries })
+          body: JSON.stringify({
+            familyId: cloudFamilyId,
+            createFamily: cloudFamilyId === null,
+            requestId: createLocalId("sync"),
+            cases: payload.cases,
+            diaryEntries
+          })
         });
 
         const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (authGeneration !== cloudAuthGenerationRef.current) return;
         if (!response.ok) {
+          const errorCode = typeof result.error === "string" ? result.error : "";
+          const isConflict = errorCode === "notebook_conflict" || errorCode === "notebook_entry_conflict";
+          retryableFailure = !isConflict && (
+            response.status === 408
+            || response.status === 425
+            || response.status === 429
+            || response.status >= 500
+          );
+          if (retryableFailure && !pendingAutoSyncPayloadRef.current) {
+            pendingAutoSyncPayloadRef.current = payload;
+          }
           setCloudAutoStatus("error");
-          if (!options.silent || result.error === "notebook_conflict") {
+          if (!options.silent || isConflict || !retryableFailure) {
             setCloudStatus("error");
             setCloudMessage(
               typeof result.message === "string"
@@ -2070,11 +2262,42 @@ export default function FamilyBoardPage() {
                   ? result.error
                   : "クラウド保存に失敗しました。"
             );
+          } else {
+            setCloudMessage("変更をクラウドへ保存できませんでした。通信を確認しながら自動で再試行します。");
           }
           return;
         }
 
         lastResult = result;
+        if (
+          result.memberRole === "owner"
+          || result.memberRole === "admin"
+          || result.memberRole === "member"
+          || result.memberRole === "viewer"
+        ) setCloudMemberRole(result.memberRole);
+        if (typeof result.familyId === "string" && result.familyId) {
+          const resolvedFamilyId = result.familyId;
+          setCloudFamilyId(resolvedFamilyId);
+          writeNotebookCloudBinding({
+            version: 1,
+            authUserId: cloudUserId,
+            familyId: resolvedFamilyId,
+            ...(cloudUserEmail ? { email: cloudUserEmail } : {})
+          });
+        }
+        latestRevisionState = applyNotebookCloudRevisions({
+          caseRevisions: Array.isArray(result.caseRevisions) ? result.caseRevisions as never[] : [],
+          taskRevisions: Array.isArray(result.taskRevisions) ? result.taskRevisions as never[] : [],
+          diaryRevisions: Array.isArray(result.diaryRevisions) ? result.diaryRevisions as never[] : []
+        }, payload);
+        reloadNotebookState(latestRevisionState.cases, latestRevisionState.diaryEntries);
+        if (latestRevisionState.hasConcurrentChanges) {
+          pendingAutoSyncPayloadRef.current = notebookSyncPayload(
+            latestRevisionState.cases,
+            latestRevisionState.diaryEntries
+          );
+        }
+        if (latestRevisionState.rejectedProfileCaseIds.length > 0) profileWriteRejected = true;
         syncedEntries += typeof result.syncedEntries === "number" ? result.syncedEntries : diaryEntries.length;
         syncedPeople = Math.max(
           syncedPeople,
@@ -2085,38 +2308,88 @@ export default function FamilyBoardPage() {
 
       writePlan(typeof lastResult.plan === "string" ? lastResult.plan : null);
       applyFamilyBillingState(lastResult);
-      lastSyncedPayloadRef.current = signature;
+      if (profileWriteRejected) {
+        setCloudIdentityStatus("blocked");
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("この家族では基本情報を変更する権限がないため、その変更はクラウドへ保存していません。端末の内容は残しています。管理者に確認してからクラウドの控えを読み直してください。");
+        return;
+      }
+      syncCompleted = true;
+      cloudSyncRetryCountRef.current = 0;
+      cloudSyncRetrySignatureRef.current = "";
+      const savedSignature = latestRevisionState && !latestRevisionState.hasConcurrentChanges
+        ? notebookPayloadSignature(notebookSyncPayload(latestRevisionState.cases, latestRevisionState.diaryEntries))
+        : signature;
+      lastSyncedPayloadRef.current = savedSignature;
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");
       markMonitorActivity("cloudBackupConfirmed");
       // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
       const notice = notices.size > 0 ? ` ${[...notices].join(" ")}` : "";
-      if (!options.silent || notice) {
+      if (latestRevisionState && !latestRevisionState.persisted) {
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("クラウドへの保存は完了しましたが、この端末の保存容量が足りず、保存済みの印を端末に残せませんでした。記録はクラウドに残っています。");
+      } else if (!options.silent || notice) {
         setCloudMessage(
           `クラウドに保存しました。対象者${syncedPeople}人、記録${syncedEntries}件。${notice}`
         );
       } else {
         setCloudMessage("ログイン済みです。変更はクラウドへ自動保存されています。");
       }
+    } catch {
+      retryableFailure = true;
+      if (!pendingAutoSyncPayloadRef.current) pendingAutoSyncPayloadRef.current = payload;
+      setCloudAutoStatus("error");
+      setCloudStatus("error");
+      setCloudMessage("クラウドへ接続できませんでした。端末の記録は残したまま、自動で再試行します。");
     } finally {
       cloudSyncInFlightRef.current = false;
-      const pendingPayload = pendingAutoSyncPayloadRef.current;
+      if (authGeneration !== cloudAuthGenerationRef.current) {
+        pendingAutoSyncPayloadRef.current = null;
+        return;
+      }
+      const requestedPendingPayload = pendingAutoSyncPayloadRef.current;
       pendingAutoSyncPayloadRef.current = null;
-      if (pendingPayload) {
+      if (requestedPendingPayload) {
+        const storedCases = listLocalCases();
+        const pendingPayload = notebookSyncPayload(
+          storedCases,
+          storedCases.flatMap((caseRecord) => listDiaryEntries(caseRecord.id))
+        );
         const pendingSignature = notebookPayloadSignature(pendingPayload);
         if (pendingSignature !== lastSyncedPayloadRef.current) {
-          window.setTimeout(() => {
+          const failedAttempt = cloudSyncRetryCountRef.current;
+          const retryDelay = retryableFailure
+            ? NOTEBOOK_CLOUD_SYNC_RETRY_DELAYS[failedAttempt]
+            : syncCompleted
+              ? 150
+              : undefined;
+          if (retryDelay === undefined) {
+            if (retryableFailure) {
+              setCloudStatus("error");
+              setCloudMessage("クラウド保存を複数回試しましたが完了しませんでした。端末の記録は残っています。通信を確認して『今すぐクラウドに保存』を押してください。");
+            }
+            return;
+          }
+          if (retryableFailure) cloudSyncRetryCountRef.current = failedAttempt + 1;
+          if (cloudSyncRetryTimerRef.current !== null) window.clearTimeout(cloudSyncRetryTimerRef.current);
+          cloudSyncRetryTimerRef.current = window.setTimeout(() => {
+            cloudSyncRetryTimerRef.current = null;
             void syncNotebookToCloud({ silent: true, payload: pendingPayload });
-          }, 150);
+          }, retryDelay);
         }
       }
     }
   }
 
-  async function restoreNotebookFromCloud(options: { silent?: boolean } = {}) {
+  async function restoreNotebookFromCloud(options: { silent?: boolean; familyId?: string | null; identityOnly?: boolean } = {}) {
+    const authGeneration = cloudAuthGenerationRef.current;
     const token = await getAccessToken({ silent: options.silent });
     if (!token) return;
+    if (authGeneration !== cloudAuthGenerationRef.current) return;
 
     cloudRestoringRef.current = true;
     if (options.silent) {
@@ -2129,20 +2402,38 @@ export default function FamilyBoardPage() {
     try {
       let diaryOffset = 0;
       let firstResult: Record<string, unknown> | null = null;
-      const restoredEntries: DiaryEntry[] = [];
+      let expectedDiaryEntriesTotal: number | null = null;
+      const restoredEntriesById = new Map<string, DiaryEntry>();
+      const requestedFamilyId = options.familyId !== undefined
+        ? options.familyId
+        : readNotebookCloudBinding()?.authUserId === cloudUserId
+          ? readNotebookCloudBinding()?.familyId ?? null
+          : cloudFamilyId;
 
       while (true) {
+        const params = new URLSearchParams({
+          diaryOffset: String(diaryOffset),
+          diaryLimit: String(NOTEBOOK_CLOUD_SYNC_BATCH_SIZE)
+        });
+        if (requestedFamilyId) params.set("familyId", requestedFamilyId);
         const response = await fetch(
-          `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_SYNC_BATCH_SIZE}`,
+          `/api/notebook/sync?${params.toString()}`,
           { headers: { Authorization: `Bearer ${token}` } }
         );
         const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (authGeneration !== cloudAuthGenerationRef.current) return;
         if (!response.ok) {
-          setCloudAutoStatus("error");
-          if (!options.silent) {
-            setCloudStatus("error");
-            setCloudMessage(typeof result.error === "string" ? result.error : "クラウドから復元できませんでした。");
+          if (result.error === "family_selection_required" && Array.isArray(result.families)) {
+            setCloudFamilies(result.families as CloudFamilyOption[]);
+            setCloudIdentityStatus("family-selection");
+            setCloudAutoStatus("idle");
+            setCloudStatus("idle");
+            setCloudMessage("クラウド保存先の家族を選んでください。選ぶまで端末の手帳は送信しません。");
+            return;
           }
+          setCloudAutoStatus("error");
+          setCloudStatus("error");
+          setCloudMessage(typeof result.message === "string" ? result.message : typeof result.error === "string" ? result.error : "クラウドから復元できませんでした。");
           return;
         }
 
@@ -2158,7 +2449,16 @@ export default function FamilyBoardPage() {
           return;
         }
 
-        restoredEntries.push(...diaryEntries);
+        if (expectedDiaryEntriesTotal === null) {
+          expectedDiaryEntriesTotal = diaryEntriesTotal;
+        } else if (diaryEntriesTotal !== expectedDiaryEntriesTotal) {
+          setCloudAutoStatus("error");
+          setCloudStatus("error");
+          setCloudMessage("読み込み中にクラウドの記録が更新されました。端末の記録は変更していません。もう一度復元してください。");
+          return;
+        }
+
+        diaryEntries.forEach((entry) => restoredEntriesById.set(entry.id, entry));
         const hasMore = result.diaryEntriesHasMore === true;
         if (!hasMore) break;
         if (diaryEntries.length === 0) {
@@ -2170,48 +2470,138 @@ export default function FamilyBoardPage() {
         diaryOffset += diaryEntries.length;
       }
 
+      if (restoredEntriesById.size !== (expectedDiaryEntriesTotal ?? 0)) {
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("クラウドの記録を重複なく最後まで読み込めなかったため、端末の記録は変更していません。もう一度復元してください。");
+        return;
+      }
+
       const result = firstResult ?? {};
       const restoredCases = Array.isArray(result.cases) ? result.cases as CaseRecord[] : [];
+      const restoredEntries = [...restoredEntriesById.values()];
+      const resolvedFamilyId = typeof result.familyId === "string" && result.familyId ? result.familyId : null;
+      const remoteFamilies = Array.isArray(result.families) ? result.families as CloudFamilyOption[] : [];
+      setCloudFamilies(remoteFamilies);
+      setCloudFamilyId(resolvedFamilyId);
+      if (
+        result.memberRole === "owner"
+        || result.memberRole === "admin"
+        || result.memberRole === "member"
+        || result.memberRole === "viewer"
+      ) setCloudMemberRole(result.memberRole);
+      else setCloudMemberRole(null);
       writePlan(typeof result.plan === "string" ? result.plan : null);
       applyFamilyBillingState(result);
-      const restoredNotebook = replaceLocalNotebook({
-        cases: restoredCases,
-        diaryEntries: restoredEntries
+      if (options.identityOnly) {
+        cloudIdentityOnlyRef.current = false;
+        if (!bindNotebookToCurrentIdentity(resolvedFamilyId)) return;
+        setCloudAutoStatus("idle");
+        setCloudStatus("idle");
+        setCloudMessage("新規画面で表示しています。ここから作る手帳だけを、確認済みのクラウド保存先へ保存します。");
+        return;
+      }
+      const currentPayload = notebookSyncPayload();
+      const hasLocalNotebook = currentPayload.cases.length > 0 || currentPayload.diaryEntries.length > 0;
+      const hasRemoteNotebook = restoredCases.length > 0 || restoredEntries.length > 0;
+      const binding = readNotebookCloudBinding();
+      const bindingMatches = notebookCloudBindingMatches(binding, cloudUserId, resolvedFamilyId);
+
+      if (hasLocalNotebook && binding?.authUserId && binding.authUserId !== cloudUserId) {
+        setCloudIdentityStatus("different-account");
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("この端末の手帳は別のログインアカウントに紐づいています。今のアカウントへは送信していません。元のアカウントへ戻すか、先に手帳をダウンロードして新規画面へ切り替えてください。");
+        return;
+      }
+
+      const canAdoptExistingIdentity = canAdoptNotebookCloudIdentity({
+        remoteCases: restoredCases,
+        localCases: currentPayload.cases
       });
-      reloadNotebookState(restoredCases, restoredNotebook.diaryEntries);
-      lastSyncedPayloadRef.current = notebookPayloadSignature(notebookSyncPayload(restoredNotebook.cases, restoredNotebook.diaryEntries));
+      if (hasLocalNotebook && !bindingMatches && !canAdoptExistingIdentity) {
+        if (hasRemoteNotebook) {
+          setCloudIdentityStatus("blocked");
+          setCloudAutoStatus("error");
+          setCloudStatus("error");
+          setCloudMessage("端末とクラウドの両方に別々の手帳があります。混ぜずに止めています。端末の手帳をダウンロードしてから、どちらを使うか確認してください。");
+        } else {
+          setCloudIdentityStatus("needs-confirmation");
+          setCloudAutoStatus("idle");
+          setCloudStatus("idle");
+          setCloudMessage(`この端末の手帳はまだ保存先が未確認です。「${cloudUserEmail ?? "現在のアカウント"}に紐づけて保存」を押すまで送信しません。`);
+        }
+        return;
+      }
+
+      const restoredNotebook = hasLocalNotebook
+        ? replaceLocalNotebook({ cases: restoredCases, diaryEntries: restoredEntries })
+        : overwriteLocalNotebook({ cases: restoredCases, diaryEntries: restoredEntries });
+      if (!bindNotebookToCurrentIdentity(resolvedFamilyId)) return;
+      reloadNotebookState(restoredNotebook.cases, restoredNotebook.diaryEntries);
+      const remotePayload = notebookSyncPayload(restoredCases, restoredEntries);
+      const mergedPayload = notebookSyncPayload(restoredNotebook.cases, restoredNotebook.diaryEntries);
+      const remoteSignature = notebookPayloadSignature(remotePayload);
+      const mergedSignature = notebookPayloadSignature(mergedPayload);
+      lastSyncedPayloadRef.current = remoteSignature;
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");
-      setCloudMessage(options.silent ? "クラウドの控えを読み込みました。これからの変更は自動で保存されます。" : "クラウドの控えをこの端末に戻しました。");
+      if (!restoredNotebook.persisted) {
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("クラウドの記録は残っていますが、この端末の保存容量が足りず、端末内へ最後まで保存できませんでした。再読み込み後はもう一度クラウドから読み込んでください。");
+      } else if (restoredNotebook.conflicts.length > 0) {
+        setCloudIdentityStatus("blocked");
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("同じ項目がこの端末と別の端末の両方で変更されています。自動では上書きせず、この端末の内容を残しています。手帳をダウンロードしてから内容を確認してください。");
+      } else if (mergedSignature !== remoteSignature) {
+        setCloudMessage("クラウドの控えを読み込みました。端末にだけ残っていた新しい変更を、続けてクラウドへ保存します。");
+        window.setTimeout(() => {
+          void syncNotebookToCloud({ silent: true, payload: mergedPayload });
+        }, 150);
+      } else {
+        setCloudMessage(options.silent ? "クラウドの控えを読み込みました。これからの変更は自動で保存されます。" : "クラウドの控えをこの端末に戻しました。");
+      }
+    } catch {
+      setCloudIdentityStatus("blocked");
+      setCloudAutoStatus("error");
+      setCloudStatus("error");
+      setCloudMessage("通信が途中で切れたため、クラウドの記録を最後まで読み込めませんでした。端末に保存済みの記録は残っています。通信を確認して、もう一度「復元」を押してください。");
     } finally {
       cloudRestoringRef.current = false;
     }
   }
 
   useEffect(() => {
-    if (!loaded || !cloudUserEmail || firstCloudLoadDoneRef.current) return;
+    if (!loaded || !cloudUserEmail || !cloudUserId || firstCloudLoadDoneRef.current) return;
 
     firstCloudLoadDoneRef.current = true;
     if (skipInitialCloudRestoreRef.current) {
       skipInitialCloudRestoreRef.current = false;
       setCloudMessage("初めて使う人の見え方で表示しています。手帳を作ると、この端末とクラウドに保存できます。");
       setCloudStatus("idle");
+      setCloudIdentityStatus("checking");
+      cloudIdentityOnlyRef.current = true;
+      void restoreNotebookFromCloud({ silent: true, identityOnly: true });
       return;
     }
 
-    const payload = notebookSyncPayload();
-    const shouldRestoreFromCloud = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("cloud") === "1";
-    if (shouldRestoreFromCloud || payload.cases.length === 0) {
-      void restoreNotebookFromCloud({ silent: true });
-      return;
-    }
-
-    void syncNotebookToCloud({ silent: true, payload });
-  }, [loaded, cloudUserEmail, cases.length]);
+    // Always identify the exact auth user/family and read the cloud first.
+    // Local data is never POSTed merely because an auth session exists.
+    void restoreNotebookFromCloud({ silent: true });
+  }, [loaded, cloudUserEmail, cloudUserId]);
 
   useEffect(() => {
-    if (!loaded || !cloudUserEmail || !firstCloudLoadDoneRef.current || cloudRestoringRef.current) return undefined;
+    if (
+      !loaded
+      || !cloudUserEmail
+      || !cloudUserId
+      || cloudIdentityStatus !== "ready"
+      || !firstCloudLoadDoneRef.current
+      || cloudRestoringRef.current
+    ) return undefined;
 
     const payload = notebookSyncPayload();
     const signature = notebookPayloadSignature(payload);
@@ -2230,7 +2620,7 @@ export default function FamilyBoardPage() {
         autoSyncTimerRef.current = null;
       }
     };
-  }, [loaded, cloudUserEmail, cases, diaryEntries]);
+  }, [loaded, cloudUserEmail, cloudUserId, cloudIdentityStatus, cloudFamilyId, cases, diaryEntries]);
 
   function downloadNotebookExport() {
     const data = exportNotebookData();
@@ -2521,6 +2911,7 @@ export default function FamilyBoardPage() {
                   <label>
                     <span>都道府県（必須）</span>
                     <select
+                      disabled={cloudProfileReadOnly}
                       value={activePrefecturePromptDraft.parentPrefecture}
                       onChange={(event) => updatePrefecturePromptDraft(activeCase.id, { parentPrefecture: event.target.value })}
                       required
@@ -2534,6 +2925,7 @@ export default function FamilyBoardPage() {
                   <label>
                     <span>市区町村（必須・番地不要）</span>
                     <input
+                      disabled={cloudProfileReadOnly}
                       maxLength={80}
                       placeholder="例: 神戸市、西宮市"
                       required
@@ -2546,7 +2938,7 @@ export default function FamilyBoardPage() {
                   <button
                     className="profile-save-button"
                     type="button"
-                    disabled={!activePrefecturePromptDraft.parentPrefecture.trim() || !activePrefecturePromptDraft.parentCity.trim()}
+                    disabled={cloudProfileReadOnly || !activePrefecturePromptDraft.parentPrefecture.trim() || !activePrefecturePromptDraft.parentCity.trim()}
                     onClick={() => saveParentPrefecturePrompt(activeCase.id)}
                   >
                     保存する
@@ -2558,7 +2950,7 @@ export default function FamilyBoardPage() {
               <summary>
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <span>手帳データの保存先</span>
-                <strong>{cloudUserEmail ? "この端末とクラウドに保存" : "今はこの端末だけに保存"}</strong>
+                <strong>{cloudUserEmail && cloudIdentityStatus === "ready" ? "この端末とクラウドに保存" : "今はこの端末だけに保存"}</strong>
               </summary>
               <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳データの保存先">
                 <div className="cloud-backup-head">
@@ -2567,16 +2959,16 @@ export default function FamilyBoardPage() {
                   </div>
                   <div>
                     <p className="nb-eyebrow">手帳データの保存先</p>
-                    <h2>{cloudUserEmail ? "この手帳はクラウドにも保存されています" : "今はこの端末だけに保存されています"}</h2>
+                    <h2>{cloudUserEmail && cloudIdentityStatus === "ready" ? "この手帳はクラウドにも保存されています" : "今はこの端末だけに保存されています"}</h2>
                     <p>
-                      {cloudUserEmail
+                      {cloudUserEmail && cloudIdentityStatus === "ready"
                         ? "プロフィール、日記、写真メモ、確認リストの変更はクラウドへ自動保存されます。"
                         : "クラウド保存とは、手帳の控えをインターネット上にも残す機能です。記録の変更を自動で控えに残し、履歴削除・機種変更・端末故障のあとも、メール確認で手帳を戻せます。使うかどうかは任意です。"}
                     </p>
                   </div>
                 </div>
-                <ul className="cloud-trust-list" aria-label={cloudUserEmail ? "クラウド保存でできること" : "クラウド保存をおすすめする理由"}>
-                  {cloudUserEmail ? (
+                <ul className="cloud-trust-list" aria-label={cloudUserEmail && cloudIdentityStatus === "ready" ? "クラウド保存でできること" : "クラウド保存をおすすめする理由"}>
+                  {cloudUserEmail && cloudIdentityStatus === "ready" ? (
                     <>
                       <li>変更のたびにクラウドへ自動保存します</li>
                       <li>機種変更後もメール確認で復元できます</li>
@@ -2594,6 +2986,17 @@ export default function FamilyBoardPage() {
                   <div className="cloud-linked-box">
                     <span>クラウド保存先</span>
                     <strong>{cloudUserEmail}</strong>
+                    {cloudMemberRole ? (
+                      <small>
+                        この家族での権限: {cloudMemberRole === "owner"
+                          ? "作成者"
+                          : cloudMemberRole === "admin"
+                            ? "共同管理者"
+                            : cloudMemberRole === "member"
+                              ? "記録メンバー"
+                              : "閲覧のみ"}
+                      </small>
+                    ) : null}
                     <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
                       <span aria-hidden="true" />
                       <em>
@@ -2624,12 +3027,29 @@ export default function FamilyBoardPage() {
                     </button>
                   </div>
                 )}
+                {cloudIdentityStatus === "family-selection" ? (
+                  <div className="cloud-form" aria-label="クラウド保存先の家族を選ぶ">
+                    <span>保存先の家族を選んでください</span>
+                    {cloudFamilies.map((family) => (
+                      <button key={family.id} type="button" onClick={() => chooseCloudFamily(family.id)}>
+                        {family.name}を選ぶ
+                      </button>
+                    ))}
+                  </div>
+                ) : null}
+                {cloudIdentityStatus === "needs-confirmation" && cloudUserEmail ? (
+                  <div className="cloud-form">
+                    <button type="button" onClick={confirmCurrentNotebookCloudBinding}>
+                      {cloudUserEmail}に紐づけて保存
+                    </button>
+                  </div>
+                ) : null}
                 <p className="cloud-message">{cloudMessage}</p>
                 <div className="cloud-action-row">
-                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudIdentityStatus !== "ready" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     今すぐ保存
                   </button>
-                  <button type="button" onClick={() => restoreNotebookFromCloud()} disabled={!cloudUserEmail || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => restoreNotebookFromCloud({ familyId: cloudFamilyId })} disabled={!cloudUserEmail || cloudIdentityStatus === "different-account" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     復元
                   </button>
                   <button type="button" onClick={downloadNotebookExport}>
@@ -2885,6 +3305,11 @@ export default function FamilyBoardPage() {
               <span className="aside">{activeEntries.length}件</span>
             </div>
             <article className="nb-card today-record-card">
+              {cloudContentReadOnly ? (
+                <p className="record-storage-message is-warning" role="status">
+                  この家族では閲覧のみです。記録を追加・編集するには管理者へ権限変更を依頼してください。
+                </p>
+              ) : null}
               <div className="record-guide">
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <p className="record-help">体調、会話、病院や介護先からの連絡を短く残します。保存すると、この下にナビからのひとことと、日付別の記録が残ります。</p>
@@ -2984,7 +3409,7 @@ export default function FamilyBoardPage() {
               {recordStorageMessage ? (
                 <p className={`record-storage-message is-${recordStorageTone}`}>{recordStorageMessage}</p>
               ) : null}
-              <button className="nb-save" type="button" onClick={() => saveDiary(activeCase.id)}>
+              <button className="nb-save" type="button" disabled={cloudContentReadOnly} onClick={() => saveDiary(activeCase.id)}>
                 この人の手帳に残す
               </button>
             </article>
@@ -3226,7 +3651,7 @@ export default function FamilyBoardPage() {
                                       </div>
                                     </div>
                                     <div className="diary-edit-actions">
-                                      <button disabled={!editForm.body.trim()} type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>変更を保存する</button>
+                                      <button disabled={cloudContentReadOnly || !editForm.body.trim()} type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>変更を保存する</button>
                                       <button type="button" onClick={() => closeDiaryEditor(entry)}>変更せず閉じる</button>
                                     </div>
                                   </div>
@@ -3265,7 +3690,7 @@ export default function FamilyBoardPage() {
                                   <div className="diary-entry-actions">
                                     <button
                                       aria-label="記録内容を編集する"
-                                      disabled={editingDiaryId === entry.id}
+                                      disabled={cloudContentReadOnly || editingDiaryId === entry.id}
                                       type="button"
                                       onClick={() => openDiaryEditor(entry)}
                                     >
@@ -3273,6 +3698,7 @@ export default function FamilyBoardPage() {
                                     </button>
                                     <button
                                       aria-label="この記録から確認することを作り、確認リストに追加する"
+                                      disabled={cloudContentReadOnly}
                                       type="button"
                                       onClick={() => addDiaryTask(activeCase.id, entry)}
                                     >
@@ -3377,10 +3803,15 @@ export default function FamilyBoardPage() {
                   <strong>基本情報を足すほど、日記・確認リスト・相談が使いやすくなります。</strong>
                   <p>まずはフルネーム、病院・ケア先、緊急連絡先だけでも入れておくと、家族で同じ前提を持てます。</p>
                 </div>
-                <button type="button" onClick={() => setProfileEditorOpen(true)}>
+                <button type="button" disabled={cloudProfileReadOnly} onClick={() => setProfileEditorOpen(true)}>
                   プロフィールを編集する
                 </button>
               </div>
+              {cloudProfileReadOnly ? (
+                <p className="record-storage-message is-warning" role="status">
+                  基本情報は管理者だけが変更できます。あなたは記録と確認リストを利用できます。
+                </p>
+              ) : null}
               {activeMissingProfileItems.length > 0 ? (
                 <div className="profile-missing-box" aria-label="未入力のプロフィール項目">
                   <span>まだ足せる項目</span>
@@ -3410,7 +3841,7 @@ export default function FamilyBoardPage() {
               >
                 <summary>編集欄を開く・閉じる</summary>
                 {activeProfile ? (
-                  <div className="profile-form-grid" id="profile-edit-fields" aria-label="対象者プロフィール編集">
+                  <fieldset className="profile-form-grid profile-permission-fieldset" disabled={cloudProfileReadOnly} id="profile-edit-fields" aria-label="対象者プロフィール編集">
                     <label>
                       <span>フルネーム</span>
                       <input
@@ -3550,11 +3981,11 @@ export default function FamilyBoardPage() {
                         onChange={(event) => updateProfileForm(activeCase.id, { importantPeopleNote: event.target.value })}
                       />
                     </label>
-                  </div>
+                  </fieldset>
                 ) : null}
                 <p className="profile-safe-note">暗証番号・パスワード・マイナンバーの画像は保管できません。</p>
                 <div className="profile-save-row">
-                  <button className="profile-save-button" type="button" onClick={() => saveProfile(activeCase.id)}>
+                  <button className="profile-save-button" type="button" disabled={cloudProfileReadOnly} onClick={() => saveProfile(activeCase.id)}>
                     保存する
                   </button>
                   {profileLocationErrorCaseId === activeCase.id ? (
@@ -3576,6 +4007,11 @@ export default function FamilyBoardPage() {
               <Link className="aside-link" href={`/result/${activeCase.id}`}>整理結果を見る</Link>
             </div>
             <article className="nb-card task-list-card">
+              {cloudContentReadOnly ? (
+                <p className="record-storage-message is-warning" role="status">
+                  この家族では閲覧のみです。確認リストを変更するには管理者へ権限変更を依頼してください。
+                </p>
+              ) : null}
               <p className="task-list-help">
                 確認リストは、病院に聞くことや家族へ頼むことを、あとで忘れず確認するための一覧です。既存カードを押すと編集、新しく気づいたことは下の「確認項目を追加」から足せます。
               </p>
@@ -3587,6 +4023,7 @@ export default function FamilyBoardPage() {
                     <p>病院に聞くこと、家族へ頼むこと、写真で残すことを1件ずつ追加できます。</p>
                   </div>
                   <button
+                    disabled={cloudContentReadOnly}
                     type="button"
                     onClick={() => {
                       setTaskComposerOpen((current) => !current);
@@ -3663,7 +4100,7 @@ export default function FamilyBoardPage() {
                       />
                     </label>
                     <div className="task-edit-footer">
-                      <button type="button" onClick={() => addManualTask(activeCase.id)}>
+                      <button type="button" disabled={cloudContentReadOnly} onClick={() => addManualTask(activeCase.id)}>
                         確認することを追加
                       </button>
                       <button type="button" onClick={() => setTaskComposerOpen(false)}>
@@ -3708,6 +4145,7 @@ export default function FamilyBoardPage() {
                           </button>
                           <button
                             className="task-edit-entry"
+                            disabled={cloudContentReadOnly}
                             type="button"
                             onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}
                           >
@@ -3720,13 +4158,13 @@ export default function FamilyBoardPage() {
                           {task.note ? <span>メモあり</span> : null}
                         </div>
                         <div className="task-quick-actions" aria-label={`${task.title}の状態変更`}>
-                          <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "doing" })}>
+                          <button type="button" disabled={cloudContentReadOnly} onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "doing" })}>
                             進行中
                           </button>
-                          <button type="button" onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "done" })}>
+                          <button type="button" disabled={cloudContentReadOnly} onClick={() => quickUpdateTask(activeCase.id, taskIndex, { progress: "done" })}>
                             完了
                           </button>
-                          <button type="button" onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}>
+                          <button type="button" disabled={cloudContentReadOnly} onClick={() => openTaskEditor(activeCase.id, taskIndex, task)}>
                             期限・担当を直す
                           </button>
                           {taskSavedKey === key ? <span>保存しました</span> : null}
@@ -3800,7 +4238,7 @@ export default function FamilyBoardPage() {
                               />
                             </label>
                             <div className="task-edit-footer">
-                              <button type="button" onClick={() => saveTaskEdit(activeCase.id, taskIndex)}>
+                              <button type="button" disabled={cloudContentReadOnly} onClick={() => saveTaskEdit(activeCase.id, taskIndex)}>
                                 変更を保存
                               </button>
                               <button type="button" onClick={() => setEditingTaskKey(null)}>

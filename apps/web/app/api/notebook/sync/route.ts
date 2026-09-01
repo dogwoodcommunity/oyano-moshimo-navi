@@ -28,6 +28,7 @@ type LocalTask = {
   title?: string;
   description?: string;
   dueDate?: string;
+  defaultDueOffsetDays?: number;
   priority?: number;
   category?: string;
   requiresProfessional?: boolean;
@@ -35,6 +36,8 @@ type LocalTask = {
   assignee?: string;
   note?: string;
   updatedAt?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
 };
 
 type LocalCase = {
@@ -45,6 +48,9 @@ type LocalCase = {
   status?: string;
   createdAt?: string;
   updatedAt?: string;
+  cloudPersonId?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
   result?: {
     summary?: string;
     tasks?: LocalTask[];
@@ -64,6 +70,9 @@ type LocalDiaryEntry = {
   body?: string;
   attachments?: unknown[];
   createdAt?: string;
+  updatedAt?: string;
+  cloudRevision?: number;
+  cloudHash?: string;
 };
 
 const parentStatuses = new Set<ParentStatus>([
@@ -107,11 +116,16 @@ function safeDate(value: unknown, fallback = japanDateInputValue()) {
 }
 
 function safeIso(value: unknown) {
+  const normalized = normalizedIso(value);
+  return normalized ?? new Date().toISOString();
+}
+
+function normalizedIso(value: unknown) {
   if (typeof value === "string") {
     const date = new Date(value);
     if (!Number.isNaN(date.getTime())) return date.toISOString();
   }
-  return new Date().toISOString();
+  return null;
 }
 
 function clampPriority(value: unknown) {
@@ -129,18 +143,25 @@ function safeText(value: unknown) {
 }
 
 function taskSnapshot(localCase: LocalCase) {
+  const fallbackUpdatedAt = normalizedIso(localCase.updatedAt)
+    ?? normalizedIso(localCase.createdAt)
+    ?? "1970-01-01T00:00:00.000Z";
+  const fallbackDueDate = safeDate(localCase.createdAt, "1970-01-01");
   return asArray<LocalTask>(localCase.result?.tasks).slice(0, 40).map((task, index) => ({
     id: safeText(task.id) || `task-${index}`,
     title: safeText(task.title) || "確認すること",
     description: safeText(task.description),
-    dueDate: safeDate(task.dueDate),
+    dueDate: safeDate(task.dueDate, fallbackDueDate),
+    defaultDueOffsetDays: Number.isFinite(Number(task.defaultDueOffsetDays)) ? Number(task.defaultDueOffsetDays) : 0,
     priority: clampPriority(task.priority),
     category: safeText(task.category) || "notebook",
     requiresProfessional: Boolean(task.requiresProfessional),
     progress: normalizeTaskProgress(task.progress),
     assignee: safeText(task.assignee),
     note: safeText(task.note),
-    updatedAt: safeIso(task.updatedAt)
+    updatedAt: normalizedIso(task.updatedAt) ?? fallbackUpdatedAt,
+    cloudRevision: Number.isInteger(Number(task.cloudRevision)) ? Number(task.cloudRevision) : null,
+    cloudHash: safeText(task.cloudHash) || null
   }));
 }
 
@@ -226,24 +247,11 @@ function newestIso(values: unknown[], fallback = new Date().toISOString()) {
 
 function localCaseUpdatedAt(localCase: LocalCase, fallback = new Date().toISOString()) {
   const profile = asRecord(localCase.personProfile);
-  const tasks = asArray<LocalTask>(localCase.result?.tasks);
   return newestIso([
     localCase.updatedAt,
     localCase.createdAt,
-    profile.updatedAt,
-    ...tasks.map((task) => task.updatedAt)
+    profile.updatedAt
   ], fallback);
-}
-
-function isStaleNotebookWrite(remoteProfile: AnyRecord, incomingLocalUpdatedAt: string) {
-  const remoteLocalUpdatedAt = remoteProfile.localUpdatedAt;
-  if (typeof remoteLocalUpdatedAt !== "string") return false;
-
-  const remoteTime = new Date(remoteLocalUpdatedAt).getTime();
-  const incomingTime = new Date(incomingLocalUpdatedAt).getTime();
-  if (Number.isNaN(remoteTime) || Number.isNaN(incomingTime)) return false;
-
-  return remoteTime > incomingTime + 1000;
 }
 
 function displayNameForCase(localCase: LocalCase) {
@@ -281,20 +289,8 @@ function postgrestMessage(error: unknown) {
   return String(error ?? "");
 }
 
-function isPeopleLocationSchemaError(error: unknown) {
-  const message = postgrestMessage(error);
-  return /people|schema cache|column/i.test(message) && /prefecture|city/i.test(message);
-}
-
-function personRowWithoutLocation(row: AnyRecord) {
-  const copy = { ...row };
-  delete copy.prefecture;
-  delete copy.city;
-  return copy;
-}
-
-function profilePayload(localCase: LocalCase, now: string) {
-  const localUpdatedAt = localCaseUpdatedAt(localCase, now);
+function profilePayload(localCase: LocalCase, fallback: string) {
+  const localUpdatedAt = localCaseUpdatedAt(localCase, fallback);
   return {
     localCaseId: localCase.id,
     localCreatedAt: localCase.createdAt,
@@ -302,8 +298,6 @@ function profilePayload(localCase: LocalCase, now: string) {
     localAnswers: asRecord(localCase.answers),
     personProfile: asRecord(localCase.personProfile),
     localResultSummary: localCase.result?.summary ?? null,
-    localTasks: taskSnapshot(localCase),
-    syncedAt: now,
     source: "pwa-notebook"
   };
 }
@@ -322,52 +316,43 @@ async function authorize(request: NextRequest) {
   return { supabase, user: data.user };
 }
 
-async function getOrCreateFamily(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, user: { id: string; email?: string | null }) {
-  const { data: memberships, error: membershipError } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", user.id)
-    .limit(1);
-
-  if (membershipError) throw membershipError;
-  if (memberships?.[0]?.family_id) return memberships[0].family_id as string;
-
-  const familyName = user.email ? `${user.email.split("@")[0]}さんの家族` : "親のもしもナビの家族";
-  const { data: family, error: familyError } = await supabase
-    .from("families")
-    .insert({ name: familyName, owner_user_id: user.id, plan: "free" })
-    .select("id")
-    .single();
-
-  if (familyError) throw familyError;
-
-  const { error: memberError } = await supabase
-    .from("family_members")
-    .insert({ family_id: family.id, user_id: user.id, role: "owner", relationship: "本人" });
-
-  if (memberError) throw memberError;
-  return family.id as string;
-}
-
 type FamilyBillingContext = {
   plan: "free" | "plus";
   isFamilyOwner: boolean;
 };
 
-async function billingContextForFamilies(
-  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
-  familyIds: string[],
+type NotebookFamilyOption = {
+  id: string;
+  name: string;
+  role: "owner" | "admin" | "member" | "viewer";
+};
+
+async function notebookFamiliesForUser(
+  supabase: ServerSupabase,
   userId: string
-): Promise<FamilyBillingContext> {
-  const { data } = await supabase
+): Promise<NotebookFamilyOption[]> {
+  const { data: memberships, error: membershipError } = await supabase
+    .from("family_members")
+    .select("family_id,role")
+    .eq("user_id", userId);
+  if (membershipError) throw membershipError;
+
+  const membershipRows = asArray<AnyRecord>(memberships);
+  const familyIds = membershipRows.map((row) => safeText(row.family_id)).filter(Boolean);
+  if (familyIds.length === 0) return [];
+
+  const { data: families, error: familiesError } = await supabase
     .from("families")
-    .select("id,plan,owner_user_id")
+    .select("id,name")
     .in("id", familyIds);
-  const rows = asArray<AnyRecord>(data);
-  return {
-    plan: rows.some((row) => row.plan === "plus") ? "plus" : "free",
-    isFamilyOwner: rows.some((row) => row.owner_user_id === userId)
-  };
+  if (familiesError) throw familiesError;
+  const nameById = new Map(asArray<AnyRecord>(families).map((row) => [safeText(row.id), safeText(row.name) || "家族の手帳"]));
+
+  return membershipRows.map((row) => {
+    const role = row.role === "owner" || row.role === "admin" || row.role === "member" ? row.role : "viewer";
+    const id = safeText(row.family_id);
+    return { id, name: nameById.get(id) ?? "家族の手帳", role };
+  }).sort((a, b) => a.name.localeCompare(b.name, "ja"));
 }
 
 async function billingContextForFamily(
@@ -407,17 +392,37 @@ export async function GET(request: NextRequest) {
   if ("error" in authorized) return authorized.error;
 
   const { supabase, user } = authorized;
-  const { data: memberships, error: membershipError } = await supabase
-    .from("family_members")
-    .select("family_id")
-    .eq("user_id", user.id);
+  let families: NotebookFamilyOption[];
+  try {
+    families = await notebookFamiliesForUser(supabase, user.id);
+  } catch (error) {
+    return jsonError(error instanceof Error ? error.message : "家族データを確認できませんでした。", 500);
+  }
 
-  if (membershipError) return jsonError(membershipError.message, 500);
-  const familyIds = asArray<AnyRecord>(memberships).map((item) => item.family_id).filter(Boolean);
-  if (familyIds.length === 0) {
+  const requestedFamilyId = safeText(request.nextUrl.searchParams.get("familyId"));
+  if (requestedFamilyId && !families.some((family) => family.id === requestedFamilyId)) {
+    return NextResponse.json({ error: "family_access_denied", message: "この家族の手帳を開く権限がありません。" }, { status: 403 });
+  }
+  if (!requestedFamilyId && families.length > 1) {
+    return NextResponse.json({
+      error: "family_selection_required",
+      message: "保存先の家族を選んでください。",
+      authUserId: user.id,
+      families
+    }, { status: 409 });
+  }
+
+  const selectedFamily = requestedFamilyId
+    ? families.find((family) => family.id === requestedFamilyId)
+    : families[0];
+  if (!selectedFamily) {
     return NextResponse.json({
       cases: [],
       diaryEntries: [],
+      authUserId: user.id,
+      familyId: null,
+      families,
+      memberRole: null,
       plan: "free",
       isFamilyOwner: true,
       canManageFamilyBilling: true,
@@ -429,11 +434,12 @@ export async function GET(request: NextRequest) {
 
   // 手帳を何冊まで作れるかの判定に使うため、planも返す。
   // これが無いと、クライアントは上限を知らないまま2冊目を作らせてしまう。
-  const billing = await billingContextForFamilies(supabase, familyIds, user.id);
+  const familyId = selectedFamily.id;
+  const billing = await billingContextForFamily(supabase, familyId, user.id);
   const { plan } = billing;
   let allowedNotebookPhotoUserIds: Set<string>;
   try {
-    allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, familyIds);
+    allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, [familyId]);
   } catch (error) {
     return jsonError(error instanceof Error ? error.message : "写真の閲覧権限を確認できませんでした。", 500);
   }
@@ -441,7 +447,7 @@ export async function GET(request: NextRequest) {
   const { data: people, error: peopleError } = await supabase
     .from("people")
     .select("*")
-    .in("family_id", familyIds)
+    .eq("family_id", familyId)
     .order("created_at", { ascending: false });
 
   if (peopleError) return jsonError(peopleError.message, 500);
@@ -451,6 +457,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       cases: [],
       diaryEntries: [],
+      authUserId: user.id,
+      familyId,
+      families,
+      memberRole: selectedFamily.role,
       plan,
       isFamilyOwner: billing.isFamilyOwner,
       canManageFamilyBilling: billing.isFamilyOwner,
@@ -479,6 +489,7 @@ export async function GET(request: NextRequest) {
       .eq("event_type", "diary")
       .order("event_date", { ascending: false })
       .order("created_at", { ascending: false })
+      .order("id", { ascending: false })
       .range(diaryOffset, diaryOffset + diaryLimit - 1)
   ]);
 
@@ -496,21 +507,50 @@ export async function GET(request: NextRequest) {
     const localCaseId = String(profile.localCaseId || person.id);
     personToLocalCaseId.set(person.id, localCaseId);
     const rawPersonProfile = asRecord(profile.personProfile);
+    // Older mobile builds stored these fields directly in people.profile.
+    // The nested PWA shape remains canonical, but reading the flat shape here
+    // prevents an existing mobile-only profile from disappearing on restore.
+    const mobilePersonProfile: AnyRecord = {
+      ...(safeText(profile.fullName) ? { fullName: safeText(profile.fullName) } : {}),
+      ...(safeText(profile.displayName || person.display_name)
+        ? { displayName: safeText(profile.displayName || person.display_name) }
+        : {}),
+      ...(safeText(profile.relationship || person.relationship_to_family)
+        ? { relationship: safeText(profile.relationship || person.relationship_to_family) }
+        : {}),
+      ...(safeText(profile.birthDate) ? { birthDate: safeText(profile.birthDate) } : {}),
+      ...(safeText(profile.careStatus || person.current_status)
+        ? { careStatus: safeText(profile.careStatus || person.current_status) }
+        : {}),
+      ...(safeText(profile.keyContact) ? { keyContact: safeText(profile.keyContact) } : {}),
+      ...(safeText(profile.hospitalOrFacility)
+        ? { hospitalOrFacility: safeText(profile.hospitalOrFacility) }
+        : {}),
+      ...(safeText(profile.medicationNote) ? { medicationNote: safeText(profile.medicationNote) } : {}),
+      ...(safeText(profile.documentLocationNote)
+        ? { documentLocationNote: safeText(profile.documentLocationNote) }
+        : {}),
+      ...(safeText(profile.familyStructure)
+        ? { familyStructureNote: safeText(profile.familyStructure) }
+        : {}),
+      ...(safeText(profile.updatedAt) ? { updatedAt: safeText(profile.updatedAt) } : {})
+    };
     const parentPrefecture = safeText(rawPersonProfile.parentPrefecture) || safeText(person.prefecture);
     const parentCity = safeText(rawPersonProfile.parentCity) || safeText(person.city);
     const personProfile: AnyRecord = {
+      ...mobilePersonProfile,
       ...rawPersonProfile,
       ...(parentPrefecture ? { parentPrefecture } : {}),
       ...(parentCity ? { parentCity } : {})
     };
     const answers = asRecord(profile.localAnswers);
     const selectedStatus = normalizeStatus(person.current_status || answers.selectedStatus);
-    const profileTasks = asArray<LocalTask>(profile.localTasks).map((task) => ({
+    const profileTasks = asArray<LocalTask>(profile.localTasks).map((task, index) => ({
       status: selectedStatus,
-      id: safeText(task.id),
+      id: safeText(task.id) || `${localCaseId}-legacy-task-${index}`,
       title: safeText(task.title) || "確認すること",
       description: safeText(task.description),
-      defaultDueOffsetDays: 0,
+      defaultDueOffsetDays: Number.isFinite(Number(task.defaultDueOffsetDays)) ? Number(task.defaultDueOffsetDays) : 0,
       priority: clampPriority(task.priority),
       category: safeText(task.category) || "notebook",
       requiresProfessional: Boolean(task.requiresProfessional),
@@ -521,16 +561,38 @@ export async function GET(request: NextRequest) {
       updatedAt: safeIso(task.updatedAt)
     }));
     const dbTasks = (tasksByPerson.get(person.id) ?? []).map((task) => ({
+      ...(() => {
+        const notebookMetadata = asRecord(task.notebook_metadata);
+        return {
+          assignee: safeText(notebookMetadata.assignee),
+          note: safeText(notebookMetadata.note),
+          requiresProfessional: Boolean(notebookMetadata.requiresProfessional),
+          defaultDueOffsetDays: Number.isFinite(Number(notebookMetadata.defaultDueOffsetDays))
+            ? Number(notebookMetadata.defaultDueOffsetDays)
+            : 0
+        };
+      })(),
       status: selectedStatus,
+      id: safeText(task.local_task_id) || safeText(task.id),
       title: task.title,
       description: task.description ?? "",
-      defaultDueOffsetDays: 0,
       priority: clampPriority(task.priority),
       category: task.category ?? "notebook",
       dueDate: safeDate(task.due_date),
       progress: normalizeTaskProgress(task.status),
-      updatedAt: safeIso(task.updated_at)
+      updatedAt: safeIso(task.updated_at),
+      cloudRevision: Number.isInteger(Number(task.cloud_revision)) ? Number(task.cloud_revision) : 0,
+      cloudHash: safeText(task.cloud_hash) || undefined,
+      cloudSyncedUpdatedAt: safeIso(task.updated_at)
     }));
+    // A legacy non-transactional sync could have written some tasks only to
+    // profile.localTasks and others to public.tasks. Keep the union so a
+    // partial old write never makes an existing task disappear. DB rows win
+    // when both sources carry the same local identity.
+    const mergedTasksById = new Map<string, LocalTask>();
+    profileTasks.forEach((task) => mergedTasksById.set(safeText(task.id), task));
+    dbTasks.forEach((task) => mergedTasksById.set(safeText(task.id), task));
+    const mergedTasks = [...mergedTasksById.values()];
     const fallbackResult = buildDiagnosisResult({
       selectedStatus,
       targetRelationship: answers.targetRelationship,
@@ -552,10 +614,14 @@ export async function GET(request: NextRequest) {
       status: "result_ready",
       createdAt: safeIso(profile.localCreatedAt || person.created_at),
       updatedAt: safeIso(profile.localUpdatedAt || person.profile_updated_at || person.updated_at || profile.localCreatedAt || person.created_at),
+      cloudPersonId: String(person.id),
+      cloudRevision: Number.isInteger(Number(person.cloud_revision)) ? Number(person.cloud_revision) : 0,
+      cloudHash: safeText(person.cloud_hash) || undefined,
+      cloudSyncedUpdatedAt: safeIso(profile.localUpdatedAt || person.profile_updated_at || person.updated_at || profile.localCreatedAt || person.created_at),
       result: {
         ...fallbackResult,
         summary: String(profile.localResultSummary || fallbackResult.summary),
-        tasks: profileTasks.length > 0 ? profileTasks : dbTasks.length > 0 ? dbTasks : []
+        tasks: mergedTasks
       },
       supportPackStatus: "none"
     };
@@ -570,13 +636,21 @@ export async function GET(request: NextRequest) {
       mood: ["stable", "changed", "urgent"].includes(event.mood) ? event.mood : "stable",
       body: String(event.body || event.title || ""),
       attachments: await attachSignedPhotoPreviews(supabase, event.attachments, allowedNotebookPhotoUserIds),
-      createdAt: safeIso(event.created_at)
+      createdAt: safeIso(metadata.localCreatedAt || event.created_at),
+      updatedAt: safeIso(metadata.localUpdatedAt || metadata.syncedAt || event.created_at),
+      cloudRevision: Number.isInteger(Number(event.cloud_revision)) ? Number(event.cloud_revision) : 0,
+      cloudHash: safeText(event.cloud_hash) || undefined,
+      cloudSyncedUpdatedAt: safeIso(metadata.localUpdatedAt || metadata.syncedAt || event.created_at)
     };
   }));
 
   return NextResponse.json({
     cases,
     diaryEntries,
+    authUserId: user.id,
+    familyId,
+    families,
+    memberRole: selectedFamily.role,
     plan,
     isFamilyOwner: billing.isFamilyOwner,
     canManageFamilyBilling: billing.isFamilyOwner,
@@ -586,66 +660,101 @@ export async function GET(request: NextRequest) {
   });
 }
 
-async function syncDiaryEntriesForPerson(input: {
-  supabase: ServerSupabase;
-  personId: string;
-  userId: string;
-  localCaseId: string;
-  diaryEntries: LocalDiaryEntry[];
-  now: string;
-  allowedNotebookPhotoUserIds: Set<string>;
-}) {
-  const { supabase, personId, userId, localCaseId, diaryEntries, now, allowedNotebookPhotoUserIds } = input;
-  const entriesByLocalId = new Map<string, LocalDiaryEntry>();
-  diaryEntries
-    .filter((item) => item.caseId === localCaseId)
-    .forEach((entry) => {
-      const localDiaryId = String(entry.id || `${localCaseId}-${entry.date || now}`);
-      entriesByLocalId.set(localDiaryId, entry);
-    });
-  const entries = [...entriesByLocalId.entries()];
-  if (entries.length === 0) return 0;
-  const localDiaryIds = entries.map(([localDiaryId]) => localDiaryId);
-  const existingEventRows: AnyRecord[] = [];
-  for (let offset = 0; offset < localDiaryIds.length; offset += 100) {
-    const { data, error } = await supabase
-      .from("timeline_events")
-      .select("id,metadata")
-      .eq("person_id", personId)
-      .eq("event_type", "diary")
-      .in("metadata->>localDiaryId", localDiaryIds.slice(offset, offset + 100));
-    if (error) throw error;
-    existingEventRows.push(...asArray<AnyRecord>(data));
-  }
-  const existingByLocalId = new Map(existingEventRows.map((row) => [String(asRecord(row.metadata).localDiaryId || ""), row]));
-  const rowsToInsert: AnyRecord[] = [];
-  const rowsToUpdate: AnyRecord[] = [];
-  entries.forEach(([localDiaryId, entry]) => {
-    const existingEvent = existingByLocalId.get(localDiaryId);
-    const eventRow = {
-      person_id: personId,
-      event_type: "diary",
-      event_date: safeDate(entry.date),
-      title: entry.mood === "urgent" ? "急ぎの記録" : entry.mood === "changed" ? "変化の記録" : "日々の記録",
-      body: String(entry.body || "記録"),
-      mood: ["stable", "changed", "urgent"].includes(entry.mood ?? "") ? entry.mood : "stable",
-      attachments: attachmentSnapshot(entry.attachments, allowedNotebookPhotoUserIds),
-      metadata: { localDiaryId, localCaseId, syncedAt: now },
-      created_by: userId
-    };
+function optionalCloudRevision(value: unknown) {
+  const revision = Number(value);
+  return Number.isInteger(revision) && revision >= 0 ? revision : null;
+}
 
-    if (existingEvent?.id) rowsToUpdate.push({ id: existingEvent.id, ...eventRow });
-    else rowsToInsert.push(eventRow);
-  });
-  for (let offset = 0; offset < rowsToUpdate.length; offset += 100) {
-    const { error } = await supabase.from("timeline_events").upsert(rowsToUpdate.slice(offset, offset + 100), { onConflict: "id" });
-    if (error) throw error;
+function diaryMood(value: unknown): "stable" | "changed" | "urgent" {
+  return value === "changed" || value === "urgent" ? value : "stable";
+}
+
+function normalizedNotebookCase(localCase: LocalCase, now: string) {
+  const localCaseId = safeText(localCase.id);
+  const selectedStatus = normalizeStatus(localCase.selectedStatus || localCase.answers?.selectedStatus);
+  const location = parentLocationForCase(localCase);
+  return {
+    localCaseId,
+    personId: safeText(localCase.cloudPersonId) || null,
+    cloudRevision: optionalCloudRevision(localCase.cloudRevision),
+    cloudHash: safeText(localCase.cloudHash) || null,
+    displayName: displayNameForCase(localCase),
+    relationshipToFamily: relationshipForCase(localCase),
+    prefecture: location.prefecture || null,
+    city: location.city || null,
+    currentStatus: selectedStatus,
+    profile: profilePayload(localCase, now),
+    localTasks: taskSnapshot(localCase).map((task, index) => ({
+      localTaskId: safeText(task.id) || `${localCaseId}-task-${index}`,
+      cloudRevision: optionalCloudRevision(task.cloudRevision),
+      cloudHash: safeText(task.cloudHash) || null,
+      title: task.title,
+      description: task.description,
+      dueDate: task.dueDate,
+      priority: task.priority,
+      category: task.category,
+      status: task.progress,
+      assignee: task.assignee,
+      note: task.note,
+      notebookMetadata: {
+        assignee: task.assignee,
+        note: task.note,
+        requiresProfessional: task.requiresProfessional,
+        defaultDueOffsetDays: task.defaultDueOffsetDays
+      },
+      localUpdatedAt: task.updatedAt
+    }))
+  };
+}
+
+function normalizedNotebookDiary(
+  entry: LocalDiaryEntry,
+  allowedNotebookPhotoUserIds: Set<string>,
+  now: string
+) {
+  const localCaseId = safeText(entry.caseId);
+  const localDiaryId = safeText(entry.id) || `${localCaseId}-${safeDate(entry.date, now.slice(0, 10))}`;
+  const mood = diaryMood(entry.mood);
+  return {
+    localCaseId,
+    localDiaryId,
+    cloudRevision: optionalCloudRevision(entry.cloudRevision),
+    cloudHash: safeText(entry.cloudHash) || null,
+    date: safeDate(entry.date),
+    title: mood === "urgent" ? "急ぎの記録" : mood === "changed" ? "変化の記録" : "日々の記録",
+    body: safeText(entry.body) || "記録",
+    mood,
+    attachments: attachmentSnapshot(entry.attachments, allowedNotebookPhotoUserIds),
+    metadata: {},
+    createdAt: normalizedIso(entry.createdAt) ?? now,
+    updatedAt: normalizedIso(entry.updatedAt) ?? normalizedIso(entry.createdAt) ?? now
+  };
+}
+
+function notebookRpcErrorResponse(error: unknown) {
+  const message = postgrestMessage(error);
+  if (/family_selection_required|notebook_sync_family_id_required|notebook_sync_choose_family_or_create/i.test(message)) {
+    return NextResponse.json({ error: "family_selection_required", message: "保存先の家族を選んでください。" }, { status: 409 });
   }
-  for (let offset = 0; offset < rowsToInsert.length; offset += 100) {
-    const { error } = await supabase.from("timeline_events").insert(rowsToInsert.slice(offset, offset + 100));
-    if (error) throw error;
+  if (/family_access_denied|family_membership_required|viewer_read_only|viewer_cannot_mutate|profile_admin_required|profile_requires_owner_or_admin|new_person_requires_owner_or_admin/i.test(message)) {
+    return NextResponse.json({ error: "family_access_denied", message: "この家族の手帳を変更する権限がありません。" }, { status: 403 });
   }
-  return entries.length;
+  if (/notebook_(case|profile|task|entry|diary|request|new_[a-z_]+)_?conflict|notebook_conflict|new_(case|task|diary)_has_cloud_identity/i.test(message)) {
+    return NextResponse.json({
+      error: "notebook_conflict",
+      message: "別の端末で新しい更新があります。自動では上書きしていません。クラウドの控えを読み込み、内容を確認してください。"
+    }, { status: 409 });
+  }
+  if (/client_upgrade_required|revision_required/i.test(message)) {
+    return NextResponse.json({
+      error: "client_upgrade_required",
+      message: "安全な保存方式へ更新されました。画面を再読み込みしてクラウドの控えを確認してください。"
+    }, { status: 409 });
+  }
+  if (/notebook_free_plan_person_limit/i.test(message)) {
+    return NextResponse.json({ error: "notebook_limit", message: NOTEBOOK_LIMIT_MESSAGE }, { status: 409 });
+  }
+  return jsonError(message || "手帳をクラウドへ保存できませんでした。", 500);
 }
 
 export async function POST(request: NextRequest) {
@@ -653,242 +762,63 @@ export async function POST(request: NextRequest) {
   if ("error" in authorized) return authorized.error;
 
   const { supabase, user } = authorized;
-  const body = await request.json().catch(() => ({}));
-  const localCases = asArray<LocalCase>(body.cases).filter((item) => item?.id);
-  const diaryEntries = asArray<LocalDiaryEntry>(body.diaryEntries).filter((item) => item?.caseId);
+  const body = asRecord(await request.json().catch(() => ({})));
+  const localCasesById = new Map<string, LocalCase>();
+  asArray<LocalCase>(body.cases).forEach((localCase) => {
+    const id = safeText(localCase?.id);
+    if (id) localCasesById.set(id, localCase);
+  });
+  const localCases = [...localCasesById.values()];
+  const diaryEntriesById = new Map<string, LocalDiaryEntry>();
+  asArray<LocalDiaryEntry>(body.diaryEntries).forEach((entry) => {
+    const caseId = safeText(entry?.caseId);
+    const id = safeText(entry?.id);
+    if (caseId && id) diaryEntriesById.set(`${caseId}:${id}`, entry);
+  });
+  const diaryEntries = [...diaryEntriesById.values()];
   if (diaryEntries.length > NOTEBOOK_SYNC_MAX_ENTRIES_PER_REQUEST) {
     return jsonError(`1回に保存できる記録は${NOTEBOOK_SYNC_MAX_ENTRIES_PER_REQUEST}件までです。記録を分けて送ってください。`, 413);
   }
+
+  const familyId = safeText(body.familyId) || null;
+  const createFamily = body.createFamily === true;
+  if (!familyId && !createFamily) {
+    return NextResponse.json({ error: "family_selection_required", message: "保存先の家族を選んでください。" }, { status: 409 });
+  }
+
+  let allowedNotebookPhotoUserIds = new Set<string>([user.id]);
+  if (familyId) {
+    try {
+      const families = await notebookFamiliesForUser(supabase, user.id);
+      if (!families.some((family) => family.id === familyId)) {
+        return NextResponse.json({ error: "family_access_denied", message: "この家族の手帳を変更する権限がありません。" }, { status: 403 });
+      }
+      allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, [familyId]);
+    } catch (error) {
+      return jsonError(error instanceof Error ? error.message : "保存権限を確認できませんでした。", 500);
+    }
+  }
+
   const now = new Date().toISOString();
-
-  const { error: profileError } = await supabase
-    .from("profiles")
-    .upsert({
-      id: user.id,
-      email: user.email ?? null,
-      display_name: user.email?.split("@")[0] ?? "利用者",
-      updated_at: now
-    });
-
-  if (profileError) return jsonError(profileError.message, 500);
-
-  let familyId: string;
-  try {
-    familyId = await getOrCreateFamily(supabase, user);
-  } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "家族データの準備に失敗しました。", 500);
+  const normalizedCases = localCases.map((localCase) => normalizedNotebookCase(localCase, now));
+  const knownCaseIds = new Set(normalizedCases.map((localCase) => localCase.localCaseId));
+  if (diaryEntries.some((entry) => !knownCaseIds.has(safeText(entry.caseId)))) {
+    return jsonError("記録の対象者を確認できませんでした。", 400);
   }
+  const normalizedDiaryEntries = diaryEntries.map((entry) => normalizedNotebookDiary(entry, allowedNotebookPhotoUserIds, now));
+  const requestId = safeText(body.requestId);
 
-  // 無料プランで作れる手帳の数を、クラウド側でも止める。
-  // 画面側の判定だけでは、古い端末や直接呼び出しをすり抜けてしまう。
-  // すでにクラウドにある手帳の更新は、上限に関係なく通す。止めるのは新しく増えるぶんだけ。
-  let billing: FamilyBillingContext;
-  try {
-    billing = await billingContextForFamily(supabase, familyId, user.id);
-  } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "家族データを確認できませんでした。", 500);
-  }
-  const { plan } = billing;
-  const { data: currentPeople, error: currentPeopleError } = await supabase
-    .from("people")
-    .select("id")
-    .eq("family_id", familyId);
-  if (currentPeopleError) return jsonError(currentPeopleError.message, 500);
-  let peopleInCloud = asArray<AnyRecord>(currentPeople).length;
-  let allowedNotebookPhotoUserIds: Set<string>;
-  try {
-    allowedNotebookPhotoUserIds = await notebookPhotoOwnerIdsForFamilies(supabase, [familyId]);
-  } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "写真の保存権限を確認できませんでした。", 500);
-  }
-
-  let syncedPeople = 0;
-  let syncedTasks = 0;
-  let syncedEntries = 0;
-  let skippedPeople = 0;
-  let skippedSharedPeople = 0;
-
-  for (const localCase of localCases) {
-    const localCaseId = String(localCase.id);
-    const selectedStatus = normalizeStatus(localCase.selectedStatus || localCase.answers?.selectedStatus);
-    const displayName = displayNameForCase(localCase);
-    const relationship = relationshipForCase(localCase);
-    const parentLocation = parentLocationForCase(localCase);
-    const profile = profilePayload(localCase, now);
-    const incomingLocalUpdatedAt = safeIso(profile.localUpdatedAt);
-
-    const { data: existingPeople, error: existingPeopleError } = await supabase
-      .from("people")
-      .select("id, profile")
-      .eq("family_id", familyId)
-      .eq("profile->>localCaseId", localCaseId)
-      .limit(1);
-
-    if (existingPeopleError) return jsonError(existingPeopleError.message, 500);
-
-    const personRow = {
-      family_id: familyId,
-      display_name: displayName,
-      relationship_to_family: relationship,
-      prefecture: parentLocation.prefecture || null,
-      city: parentLocation.city || null,
-      current_status: selectedStatus,
-      profile,
-      profile_updated_at: now,
-      updated_at: now
-    };
-
-    const existingPerson = existingPeople?.[0];
-    const existingPersonId = existingPerson?.id;
-
-    if (existingPersonId) {
-      try {
-        syncedEntries += await syncDiaryEntriesForPerson({
-          supabase,
-          personId: existingPersonId,
-          userId: user.id,
-          localCaseId,
-          diaryEntries,
-          now,
-          allowedNotebookPhotoUserIds
-        });
-      } catch (error) {
-        return jsonError(error instanceof Error ? error.message : "日記をクラウドへ保存できませんでした。", 500);
-      }
-    }
-
-    if (existingPersonId && isStaleNotebookWrite(asRecord(existingPerson.profile), incomingLocalUpdatedAt)) {
-      return NextResponse.json(
-        {
-          error: "notebook_conflict",
-          message: "別の端末で新しい更新があります。先にクラウドの控えを復元してから、もう一度保存してください。"
-        },
-        { status: 409 }
-      );
-    }
-
-    if (!existingPersonId && !billing.isFamilyOwner) {
-      skippedPeople += 1;
-      skippedSharedPeople += 1;
-      continue;
-    }
-
-    if (!existingPersonId && !canCreateNotebook(plan, peopleInCloud)) {
-      // 上限を超える新しい手帳は、クラウドへ上げない。端末の中には残る。
-      skippedPeople += 1;
-      continue;
-    }
-
-    const personId = existingPersonId
-      ? await updatePerson(supabase, existingPersonId, personRow)
-      : await insertPerson(supabase, personRow);
-
-    if (!existingPersonId) peopleInCloud += 1;
-    syncedPeople += 1;
-
-    const { data: existingTasks, error: existingTasksError } = await supabase
-      .from("tasks")
-      .select("id,title,due_date")
-      .eq("person_id", personId);
-
-    if (existingTasksError) return jsonError(existingTasksError.message, 500);
-
-    const existingTaskRows = asArray<AnyRecord>(existingTasks);
-    for (const task of taskSnapshot(localCase)) {
-      if (!task.title) continue;
-      const dueDate = safeDate(task.dueDate);
-      const existingTask = existingTaskRows.find((row) => row.title === task.title && safeDate(row.due_date) === dueDate);
-      const taskRow = {
-        person_id: personId,
-        title: task.title,
-        description: task.description ?? "",
-        due_date: dueDate,
-        status: normalizeTaskProgress(task.progress),
-        priority: clampPriority(task.priority),
-        category: task.category ?? "notebook",
-        created_by: user.id,
-        updated_at: now
-      };
-
-      if (existingTask?.id) {
-        const { error } = await supabase.from("tasks").update(taskRow).eq("id", existingTask.id);
-        if (error) return jsonError(error.message, 500);
-      } else {
-        const { error } = await supabase.from("tasks").insert(taskRow);
-        if (error) return jsonError(error.message, 500);
-      }
-      syncedTasks += 1;
-    }
-
-    if (!existingPersonId) {
-      try {
-        syncedEntries += await syncDiaryEntriesForPerson({
-          supabase,
-          personId,
-          userId: user.id,
-          localCaseId,
-          diaryEntries,
-          now,
-          allowedNotebookPhotoUserIds
-        });
-      } catch (error) {
-        return jsonError(error instanceof Error ? error.message : "日記をクラウドへ保存できませんでした。", 500);
-      }
-    }
-  }
-
-  return NextResponse.json({
-    ok: true,
-    familyId,
-    plan,
-    isFamilyOwner: billing.isFamilyOwner,
-    canManageFamilyBilling: billing.isFamilyOwner,
-    syncedPeople,
-    syncedTasks,
-    syncedEntries,
-    skippedPeople,
-    ...(skippedSharedPeople > 0
-      ? { notice: "共有された手帳では、新しい対象者の追加は手帳を作った人が行います。" }
-      : skippedPeople > 0
-        ? { notice: NOTEBOOK_LIMIT_MESSAGE }
-        : {})
+  const { data, error } = await supabase.rpc("sync_notebook_v2", {
+    p_actor_user_id: user.id,
+    p_actor_email: user.email ?? null,
+    p_family_id: familyId,
+    p_create_family: createFamily,
+    p_cases: normalizedCases,
+    p_diary_entries: normalizedDiaryEntries,
+    p_request_id: requestId || globalThis.crypto.randomUUID()
   });
-}
+  if (error) return notebookRpcErrorResponse(error);
 
-async function updatePerson(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, id: string, row: AnyRecord) {
-  let { data, error } = await supabase
-    .from("people")
-    .update(row)
-    .eq("id", id)
-    .select("id")
-    .single();
-  if (error && isPeopleLocationSchemaError(error)) {
-    ({ data, error } = await supabase
-      .from("people")
-      .update(personRowWithoutLocation(row))
-      .eq("id", id)
-      .select("id")
-      .single());
-  }
-  if (error) throw error;
-  if (!data) throw new Error("person_update_failed");
-  return data.id as string;
-}
-
-async function insertPerson(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, row: AnyRecord) {
-  let { data, error } = await supabase
-    .from("people")
-    .insert(row)
-    .select("id")
-    .single();
-  if (error && isPeopleLocationSchemaError(error)) {
-    ({ data, error } = await supabase
-      .from("people")
-      .insert(personRowWithoutLocation(row))
-      .select("id")
-      .single());
-  }
-  if (error) throw error;
-  if (!data) throw new Error("person_insert_failed");
-  return data.id as string;
+  const result = asRecord(data);
+  return NextResponse.json({ ok: true, ...result });
 }

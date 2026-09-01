@@ -85,7 +85,8 @@ export default function MemoryBookPage() {
         const accessToken = sessionData?.session?.access_token;
         if (!accessToken) return;
         let diaryOffset = 0;
-        const remoteEntries: DiaryEntry[] = [];
+        let expectedDiaryEntriesTotal: number | null = null;
+        const remoteEntriesById = new Map<string, DiaryEntry>();
         while (true) {
           const response = await fetch(
             `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_PAGE_SIZE}`,
@@ -103,12 +104,16 @@ export default function MemoryBookPage() {
           };
           if (cancelled || !result?.diaryEntries) return;
           if ((result.diaryEntriesTotal ?? 0) > NOTEBOOK_CLOUD_RESTORE_LIMIT) return;
-          remoteEntries.push(...result.diaryEntries);
+          const diaryEntriesTotal = result.diaryEntriesTotal ?? diaryOffset + result.diaryEntries.length;
+          if (expectedDiaryEntriesTotal === null) expectedDiaryEntriesTotal = diaryEntriesTotal;
+          else if (diaryEntriesTotal !== expectedDiaryEntriesTotal) return;
+          result.diaryEntries.forEach((entry) => remoteEntriesById.set(entry.id, entry));
           if (!result.diaryEntriesHasMore) break;
           if (result.diaryEntries.length === 0) return;
           diaryOffset += result.diaryEntries.length;
         }
-        const remoteById = new Map(remoteEntries.map((entry) => [entry.id, entry]));
+        if (remoteEntriesById.size !== (expectedDiaryEntriesTotal ?? 0)) return;
+        const remoteById = remoteEntriesById;
         setEntries((current) => current.map((entry) => {
           const remoteEntry = remoteById.get(entry.id);
           if (!remoteEntry) return entry;

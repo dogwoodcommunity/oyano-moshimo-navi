@@ -982,6 +982,17 @@
   padding: 14px;
 }
 
+.profile-permission-fieldset {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.profile-permission-fieldset:disabled {
+  opacity: 0.72;
+}
+
 .profile-form-grid label {
   display: grid;
   gap: 6px;
