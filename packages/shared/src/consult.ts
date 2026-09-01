@@ -27,12 +27,53 @@ export type ConsultHistoryTurn = {
   nextChecks?: string[];
 };
 
+/**
+ * クラウド手帳を根拠に組み立てた「この人専用AI」の記憶です。
+ * sourceEventId は、利用者が根拠の記録を確認・除外できるよう必ず保持します。
+ */
+export type ConsultImportantChange = {
+  sourceEventId: string;
+  date?: string;
+  mood: "changed" | "urgent";
+  summary: string;
+};
+
+export type ConsultSourceRecord = {
+  sourceEventId: string;
+  date?: string;
+  mood?: "stable" | "changed" | "urgent";
+  body: string;
+  createdAt?: string;
+};
+
+export type ConsultMemoryContext = {
+  /** 手帳の記録から機械的に作った事実の要約。AIの推測は混ぜない。 */
+  longTermSummary?: string;
+  /** 利用者が自分で確認・訂正できる補足。 */
+  userSummary?: string;
+  importantChanges?: ConsultImportantChange[];
+  latestRecords?: ConsultSourceRecord[];
+  relevantOlderRecords?: ConsultSourceRecord[];
+  /** 保存済み相談を全件集計した長期概要。手帳の事実ではなく、過去の相談・AI提案として扱う。 */
+  consultationOverview?: string;
+  /** 過去のAI回答。手帳の事実とは別欄でプロンプトへ渡す。 */
+  priorSuggestions?: ConsultHistoryTurn[];
+  memoryVersion?: number;
+};
+
 export type ConsultRequest = {
   question: string;
+  /** ログイン済みクラウド手帳では personId または localCaseId のどちらかを送る。 */
+  personId?: string;
+  localCaseId?: string;
+  /** 長期記憶へ保存する同意。durable modeでは現行versionとの完全一致が必要。 */
+  memoryConsentVersion?: string;
   person?: ConsultPerson;
   entries?: ConsultEntry[];
   tasks?: ConsultTask[];
   history?: ConsultHistoryTurn[];
+  /** サーバーだけが設定する。クライアントから届いた値は採用しない。 */
+  memory?: ConsultMemoryContext;
 };
 
 export type ConsultAnswer = {
@@ -50,6 +91,13 @@ export const CONSULT_MAX_ENTRIES = 12;
 export const CONSULT_MAX_ENTRY_LENGTH = 400;
 /** 続きの相談で遡って渡す前回までのやりとりの数。増やすほど読む時間と費用が伸びる。 */
 export const CONSULT_MAX_HISTORY = 4;
+/** durable modeは直近4件に加え、今回の質問に関連する古い相談を最大4件渡す。 */
+export const CONSULT_MAX_DURABLE_HISTORY = 8;
+
+/** v01の「外部AIへ送る同意」と区別し、長期記憶への永続保存を明示した同意。 */
+export const CONSULT_MEMORY_CONSENT_VERSION = "consult-memory-v02-2026-09-01";
+export const CONSULT_MEMORY_CONSENT_TEXT =
+  "手帳の記録から作る長期要約と、私の質問・AIの回答を対象者ごとにクラウドへ保存し、次回以降の相談に利用することに同意します。AIの記憶は確認・補足・訂正でき、自分の相談履歴は確認・削除できます。家族共有の記憶の一括削除はオーナーまたは管理者が行います。";
 
 export const CONSULT_DISCLAIMER =
   "これは家族が次に動くための整理メモです。診断、法律判断、税務判断ではありません。医療は主治医や看護師へ、手続きは役所や専門家へ確認してください。";
@@ -62,13 +110,14 @@ export const CONSULT_SENT_FIELDS = [
   "年代（生年月日そのものは送りません）",
   "病院・施設のメモ、薬・注意点のメモ",
   "家族構成メモ、本人の希望メモ",
-  "最近の記録（最大12件）と、期限が近い確認リスト",
+  "クラウド保存時は、全期間の事実要約・重要な変化と、最新12件＋相談に関連する過去6件（未保存時は最近の記録最大12件）",
+  "期限が近い確認リスト",
   "入力した相談内容",
-  "続けて相談する場合は、この画面での前回までの相談と回答の要点"
+  "あなた自身の過去相談は全件をクラウド保存し、全履歴の長期概要＋直近4回＋今回に関連する古い相談最大4回"
 ];
 
 export const CONSULT_WITHHELD_FIELDS = [
-  "氏名・呼び名",
+  "プロフィールの氏名・呼び名（自由記述に書いた氏名は自動判定できないため、相談や記録には入力しないでください）",
   "生年月日（年代だけに変換します）",
   "連絡先、緊急連絡先",
   "書類・鍵の保管場所メモ",

@@ -81,6 +81,8 @@ const parentStatuses = new Set<ParentStatus>([
 ]);
 
 const notebookPhotoBucket = "home-photos";
+const NOTEBOOK_SYNC_MAX_ENTRIES_PER_REQUEST = 500;
+const NOTEBOOK_RESTORE_MAX_PAGE_SIZE = 500;
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json({ error: message }, { status });
@@ -418,7 +420,10 @@ export async function GET(request: NextRequest) {
       diaryEntries: [],
       plan: "free",
       isFamilyOwner: true,
-      canManageFamilyBilling: true
+      canManageFamilyBilling: true,
+      diaryEntriesOffset: 0,
+      diaryEntriesTotal: 0,
+      diaryEntriesHasMore: false
     });
   }
 
@@ -448,13 +453,33 @@ export async function GET(request: NextRequest) {
       diaryEntries: [],
       plan,
       isFamilyOwner: billing.isFamilyOwner,
-      canManageFamilyBilling: billing.isFamilyOwner
+      canManageFamilyBilling: billing.isFamilyOwner,
+      diaryEntriesOffset: 0,
+      diaryEntriesTotal: 0,
+      diaryEntriesHasMore: false
     });
   }
 
-  const [{ data: tasks, error: tasksError }, { data: events, error: eventsError }] = await Promise.all([
+  const requestedOffset = Number(request.nextUrl.searchParams.get("diaryOffset") ?? "0");
+  const requestedLimit = Number(request.nextUrl.searchParams.get("diaryLimit") ?? String(NOTEBOOK_RESTORE_MAX_PAGE_SIZE));
+  const diaryOffset = Number.isFinite(requestedOffset) && requestedOffset >= 0 ? Math.floor(requestedOffset) : 0;
+  const diaryLimit = Number.isFinite(requestedLimit) && requestedLimit > 0
+    ? Math.min(Math.floor(requestedLimit), NOTEBOOK_RESTORE_MAX_PAGE_SIZE)
+    : NOTEBOOK_RESTORE_MAX_PAGE_SIZE;
+  const [{ data: tasks, error: tasksError }, {
+    data: events,
+    error: eventsError,
+    count: diaryEntriesTotal
+  }] = await Promise.all([
     supabase.from("tasks").select("*").in("person_id", personIds).order("due_date", { ascending: true }),
-    supabase.from("timeline_events").select("*").in("person_id", personIds).eq("event_type", "diary").order("event_date", { ascending: false })
+    supabase
+      .from("timeline_events")
+      .select("*", { count: "exact" })
+      .in("person_id", personIds)
+      .eq("event_type", "diary")
+      .order("event_date", { ascending: false })
+      .order("created_at", { ascending: false })
+      .range(diaryOffset, diaryOffset + diaryLimit - 1)
   ]);
 
   if (tasksError) return jsonError(tasksError.message, 500);
@@ -554,7 +579,10 @@ export async function GET(request: NextRequest) {
     diaryEntries,
     plan,
     isFamilyOwner: billing.isFamilyOwner,
-    canManageFamilyBilling: billing.isFamilyOwner
+    canManageFamilyBilling: billing.isFamilyOwner,
+    diaryEntriesOffset: diaryOffset,
+    diaryEntriesTotal: diaryEntriesTotal ?? diaryOffset + diaryEntries.length,
+    diaryEntriesHasMore: diaryOffset + diaryEntries.length < (diaryEntriesTotal ?? 0)
   });
 }
 
@@ -568,19 +596,32 @@ async function syncDiaryEntriesForPerson(input: {
   allowedNotebookPhotoUserIds: Set<string>;
 }) {
   const { supabase, personId, userId, localCaseId, diaryEntries, now, allowedNotebookPhotoUserIds } = input;
-  const { data: existingEvents, error: existingEventsError } = await supabase
-    .from("timeline_events")
-    .select("id,metadata")
-    .eq("person_id", personId)
-    .eq("event_type", "diary");
-
-  if (existingEventsError) throw existingEventsError;
-
-  let syncedEntries = 0;
-  const existingEventRows = asArray<AnyRecord>(existingEvents);
-  for (const entry of diaryEntries.filter((item) => item.caseId === localCaseId).slice(0, 500)) {
-    const localDiaryId = String(entry.id || `${localCaseId}-${entry.date || now}`);
-    const existingEvent = existingEventRows.find((row) => asRecord(row.metadata).localDiaryId === localDiaryId);
+  const entriesByLocalId = new Map<string, LocalDiaryEntry>();
+  diaryEntries
+    .filter((item) => item.caseId === localCaseId)
+    .forEach((entry) => {
+      const localDiaryId = String(entry.id || `${localCaseId}-${entry.date || now}`);
+      entriesByLocalId.set(localDiaryId, entry);
+    });
+  const entries = [...entriesByLocalId.entries()];
+  if (entries.length === 0) return 0;
+  const localDiaryIds = entries.map(([localDiaryId]) => localDiaryId);
+  const existingEventRows: AnyRecord[] = [];
+  for (let offset = 0; offset < localDiaryIds.length; offset += 100) {
+    const { data, error } = await supabase
+      .from("timeline_events")
+      .select("id,metadata")
+      .eq("person_id", personId)
+      .eq("event_type", "diary")
+      .in("metadata->>localDiaryId", localDiaryIds.slice(offset, offset + 100));
+    if (error) throw error;
+    existingEventRows.push(...asArray<AnyRecord>(data));
+  }
+  const existingByLocalId = new Map(existingEventRows.map((row) => [String(asRecord(row.metadata).localDiaryId || ""), row]));
+  const rowsToInsert: AnyRecord[] = [];
+  const rowsToUpdate: AnyRecord[] = [];
+  entries.forEach(([localDiaryId, entry]) => {
+    const existingEvent = existingByLocalId.get(localDiaryId);
     const eventRow = {
       person_id: personId,
       event_type: "diary",
@@ -593,17 +634,18 @@ async function syncDiaryEntriesForPerson(input: {
       created_by: userId
     };
 
-    if (existingEvent?.id) {
-      const { error } = await supabase.from("timeline_events").update(eventRow).eq("id", existingEvent.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase.from("timeline_events").insert(eventRow);
-      if (error) throw error;
-    }
-    syncedEntries += 1;
+    if (existingEvent?.id) rowsToUpdate.push({ id: existingEvent.id, ...eventRow });
+    else rowsToInsert.push(eventRow);
+  });
+  for (let offset = 0; offset < rowsToUpdate.length; offset += 100) {
+    const { error } = await supabase.from("timeline_events").upsert(rowsToUpdate.slice(offset, offset + 100), { onConflict: "id" });
+    if (error) throw error;
   }
-
-  return syncedEntries;
+  for (let offset = 0; offset < rowsToInsert.length; offset += 100) {
+    const { error } = await supabase.from("timeline_events").insert(rowsToInsert.slice(offset, offset + 100));
+    if (error) throw error;
+  }
+  return entries.length;
 }
 
 export async function POST(request: NextRequest) {
@@ -614,6 +656,9 @@ export async function POST(request: NextRequest) {
   const body = await request.json().catch(() => ({}));
   const localCases = asArray<LocalCase>(body.cases).filter((item) => item?.id);
   const diaryEntries = asArray<LocalDiaryEntry>(body.diaryEntries).filter((item) => item?.caseId);
+  if (diaryEntries.length > NOTEBOOK_SYNC_MAX_ENTRIES_PER_REQUEST) {
+    return jsonError(`1回に保存できる記録は${NOTEBOOK_SYNC_MAX_ENTRIES_PER_REQUEST}件までです。記録を分けて送ってください。`, 413);
+  }
   const now = new Date().toISOString();
 
   const { error: profileError } = await supabase

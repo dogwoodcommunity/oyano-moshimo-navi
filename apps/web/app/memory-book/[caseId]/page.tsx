@@ -7,6 +7,8 @@ import { getBrowserSupabase } from "@/lib/browserSupabase";
 import { getLocalCase, listDiaryEntries, type CaseRecord, type DiaryEntry } from "@/lib/store";
 
 const MAX_MEMORY_BOOK_PHOTOS = 60;
+const NOTEBOOK_CLOUD_PAGE_SIZE = 500;
+const NOTEBOOK_CLOUD_RESTORE_LIMIT = 20_000;
 
 function formatBookDate(dateString?: string) {
   if (!dateString) return "日付なし";
@@ -82,15 +84,31 @@ export default function MemoryBookPage() {
         const sessionData = client ? (await client.auth.getSession()).data : null;
         const accessToken = sessionData?.session?.access_token;
         if (!accessToken) return;
-        const response = await fetch("/api/notebook/sync", {
-          cache: "no-store",
-          credentials: "same-origin",
-          headers: { Authorization: `Bearer ${accessToken}` }
-        });
-        if (!response.ok) return;
-        const result = await response.json() as { diaryEntries?: DiaryEntry[] };
-        if (cancelled || !result?.diaryEntries) return;
-        const remoteById = new Map(result.diaryEntries.map((entry) => [entry.id, entry]));
+        let diaryOffset = 0;
+        const remoteEntries: DiaryEntry[] = [];
+        while (true) {
+          const response = await fetch(
+            `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_PAGE_SIZE}`,
+            {
+              cache: "no-store",
+              credentials: "same-origin",
+              headers: { Authorization: `Bearer ${accessToken}` }
+            }
+          );
+          if (!response.ok) return;
+          const result = await response.json() as {
+            diaryEntries?: DiaryEntry[];
+            diaryEntriesTotal?: number;
+            diaryEntriesHasMore?: boolean;
+          };
+          if (cancelled || !result?.diaryEntries) return;
+          if ((result.diaryEntriesTotal ?? 0) > NOTEBOOK_CLOUD_RESTORE_LIMIT) return;
+          remoteEntries.push(...result.diaryEntries);
+          if (!result.diaryEntriesHasMore) break;
+          if (result.diaryEntries.length === 0) return;
+          diaryOffset += result.diaryEntries.length;
+        }
+        const remoteById = new Map(remoteEntries.map((entry) => [entry.id, entry]));
         setEntries((current) => current.map((entry) => {
           const remoteEntry = remoteById.get(entry.id);
           if (!remoteEntry) return entry;

@@ -39,7 +39,9 @@ create table if not exists family_members (
   role text not null default 'member', -- owner/admin/member/viewer
   relationship text,
   created_at timestamptz default now(),
-  unique(family_id, user_id)
+  unique(family_id, user_id),
+  constraint family_members_role_allowed
+    check (role in ('owner', 'admin', 'member', 'viewer'))
 );
 
 create table if not exists people (
@@ -142,6 +144,144 @@ create table if not exists timeline_events (
   created_by uuid references profiles(id) on delete set null,
   created_at timestamptz default now()
 );
+
+create table if not exists person_ai_memories (
+  person_id uuid primary key references people(id) on delete cascade,
+  long_term_summary text not null default '',
+  user_summary text not null default '',
+  important_changes jsonb not null default '[]'::jsonb,
+  excluded_event_ids uuid[] not null default '{}'::uuid[],
+  source_event_ids uuid[] not null default '{}'::uuid[],
+  record_count integer not null default 0,
+  first_record_date date,
+  last_record_date date,
+  memory_version integer not null default 1,
+  memory_reset_at timestamptz,
+  updated_by uuid references profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint person_ai_memories_important_changes_array
+    check (jsonb_typeof(important_changes) = 'array'),
+  constraint person_ai_memories_record_count_nonnegative
+    check (record_count >= 0),
+  constraint person_ai_memories_memory_version_positive
+    check (memory_version >= 1),
+  constraint person_ai_memories_record_dates_ordered
+    check (
+      first_record_date is null
+      or last_record_date is null
+      or first_record_date <= last_record_date
+    )
+);
+
+create table if not exists ai_consult_threads (
+  id uuid primary key default uuid_generate_v4(),
+  person_id uuid not null references people(id) on delete cascade,
+  owner_user_id uuid not null references profiles(id) on delete cascade,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  constraint ai_consult_threads_person_owner_unique
+    unique (person_id, owner_user_id)
+);
+
+create table if not exists ai_consult_turns (
+  id uuid primary key default uuid_generate_v4(),
+  thread_id uuid not null references ai_consult_threads(id) on delete cascade,
+  question text not null,
+  answer jsonb not null,
+  source_event_ids uuid[] not null default '{}'::uuid[],
+  memory_version integer not null default 1,
+  saved_to_notebook_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint ai_consult_turns_question_not_blank
+    check (length(btrim(question)) > 0),
+  constraint ai_consult_turns_answer_object
+    check (jsonb_typeof(answer) = 'object'),
+  constraint ai_consult_turns_memory_version_positive
+    check (memory_version >= 1)
+);
+
+create table if not exists ai_memory_consents (
+  person_id uuid not null references people(id) on delete cascade,
+  user_id uuid not null references profiles(id) on delete cascade,
+  consent_version text not null,
+  revision integer not null default 1,
+  accepted_at timestamptz not null default now(),
+  revoked_at timestamptz,
+  updated_at timestamptz not null default now(),
+  primary key (person_id, user_id),
+  constraint ai_memory_consents_version_not_blank check (length(btrim(consent_version)) > 0),
+  constraint ai_memory_consents_revision_positive check (revision >= 1),
+  constraint ai_memory_consents_revoked_after_acceptance
+    check (revoked_at is null or revoked_at >= accepted_at)
+);
+
+comment on table person_ai_memories is
+  'Family-visible, server-maintained durable AI memory for one person. AI summaries and user corrections are stored separately.';
+comment on column person_ai_memories.long_term_summary is
+  'Server-derived, source-linked long-term fact summary. Never replaces the underlying notebook events.';
+comment on column person_ai_memories.user_summary is
+  'Family-confirmed facts and corrections supplied by a user.';
+comment on column person_ai_memories.important_changes is
+  'Ordered JSON array of important changes; each item should distinguish source facts from AI interpretation.';
+comment on column person_ai_memories.excluded_event_ids is
+  'Notebook timeline event IDs that users removed from AI memory and retrieval.';
+comment on column person_ai_memories.source_event_ids is
+  'Notebook timeline event IDs currently represented in the long-term summary.';
+comment on column person_ai_memories.memory_reset_at is
+  'User-requested memory reset boundary. Rebuilds must ignore events created at or before this timestamp.';
+comment on table ai_consult_threads is
+  'One private AI consultation thread per person and consulting user.';
+comment on table ai_consult_turns is
+  'Durable consultation questions and structured answers. Access requires both thread ownership and current family membership.';
+comment on table ai_memory_consents is
+  'Current per-user, per-person durable-memory consent. Revocation applies across devices.';
+comment on column ai_memory_consents.revision is
+  'Optimistic-lock revision. Consent changes must compare and increment this value.';
+
+create index if not exists idx_person_ai_memories_updated_at
+  on person_ai_memories(updated_at desc);
+create index if not exists idx_person_ai_memories_source_event_ids
+  on person_ai_memories using gin(source_event_ids);
+create index if not exists idx_person_ai_memories_excluded_event_ids
+  on person_ai_memories using gin(excluded_event_ids);
+create index if not exists idx_ai_consult_threads_owner_updated
+  on ai_consult_threads(owner_user_id, updated_at desc);
+create index if not exists idx_ai_consult_turns_thread_created
+  on ai_consult_turns(thread_id, created_at desc);
+create index if not exists idx_ai_consult_turns_source_event_ids
+  on ai_consult_turns using gin(source_event_ids);
+create index if not exists idx_ai_memory_consents_user_updated
+  on ai_memory_consents(user_id, updated_at desc);
+
+create or replace function touch_ai_consult_updated_at()
+returns trigger
+language plpgsql
+set search_path = public
+as $$
+begin
+  new.updated_at = now();
+  return new;
+end;
+$$;
+
+drop trigger if exists person_ai_memories_touch_updated_at
+  on person_ai_memories;
+create trigger person_ai_memories_touch_updated_at
+before update on person_ai_memories
+for each row execute function touch_ai_consult_updated_at();
+
+drop trigger if exists ai_consult_threads_touch_updated_at
+  on ai_consult_threads;
+create trigger ai_consult_threads_touch_updated_at
+before update on ai_consult_threads
+for each row execute function touch_ai_consult_updated_at();
+
+drop trigger if exists ai_memory_consents_touch_updated_at
+  on ai_memory_consents;
+create trigger ai_memory_consents_touch_updated_at
+before update on ai_memory_consents
+for each row execute function touch_ai_consult_updated_at();
 
 create table if not exists homes (
   id uuid primary key default uuid_generate_v4(),

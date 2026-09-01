@@ -22,6 +22,21 @@ import {
 } from "@/lib/consultLimits";
 import { checkPublicRateLimit, checkServiceRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
+import {
+  CONSULT_MEMORY_NOT_READY_MESSAGE,
+  ConsultMemoryAccessError,
+  ConsultMemoryConflictError,
+  ConsultMemoryConsentRequiredError,
+  ConsultMemoryNotReadyError,
+  assertConsultMemorySnapshot,
+  authorizeConsultPerson,
+  isConsultMemorySchemaMissing,
+  loadDurableConsultContext,
+  persistConsultTurn,
+  recordConsultMemoryConsent,
+  type AuthorizedConsultPerson,
+  type DurableConsultContext
+} from "@/lib/consultMemory";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -150,14 +165,20 @@ function readDeviceDailyFreeAccess(request: NextRequest, userId?: string): Consu
   };
 }
 
-async function readConsultAccess(request: NextRequest): Promise<ConsultAccessResult> {
+async function readConsultAccess(request: NextRequest, requiredFamilyId?: string): Promise<ConsultAccessResult> {
   const token = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
   if (!token) {
+    if (requiredFamilyId) {
+      return { response: jsonError("login_required", "この人専用AIを使うには、家族ボードでメール確認をしてください。", 401) };
+    }
     return readDeviceDailyFreeAccess(request);
   }
 
   const supabase = getServerSupabase();
   if (!supabase) {
+    if (requiredFamilyId) {
+      return { response: jsonError("memory_not_ready", CONSULT_MEMORY_NOT_READY_MESSAGE, 503) };
+    }
     // クラウドの利用状況を確認できない時も、端末の1日1回相談まで止めない。
     return readDeviceDailyFreeAccess(request);
   }
@@ -180,14 +201,26 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .eq("user_id", user.id);
 
   if (membershipError) {
+    if (requiredFamilyId) {
+      console.error("[consult] failed to verify required family membership", membershipError);
+      return { response: jsonError("consult_unavailable", "家族の利用状況を確認できませんでした。時間をおいてお試しください。", 503) };
+    }
     // 家族プランの確認障害でも、端末側の1日1回判定へ安全に戻す。
     console.error("[consult] failed to read family memberships", membershipError);
     return readDeviceDailyFreeAccess(request, user.id);
   }
 
-  const familyIds = (memberships ?? [])
+  let familyIds = (memberships ?? [])
     .map((membership) => typeof membership.family_id === "string" ? membership.family_id : "")
     .filter(Boolean);
+
+  if (requiredFamilyId) {
+    if (!familyIds.includes(requiredFamilyId)) {
+      return { response: jsonError("forbidden", "この手帳を見る家族権限がありません。", 403) };
+    }
+    // 別家族のPlus契約や無料枠を、この対象者の相談へ流用しない。
+    familyIds = [requiredFamilyId];
+  }
 
   if (familyIds.length === 0) {
     return readDeviceDailyFreeAccess(request, user.id);
@@ -199,6 +232,10 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
     .in("id", familyIds);
 
   if (familyError) {
+    if (requiredFamilyId) {
+      console.error("[consult] failed to read required family plan", familyError);
+      return { response: jsonError("consult_unavailable", "この手帳の利用状況を確認できませんでした。", 503) };
+    }
     console.error("[consult] failed to read family plans", familyError);
     return readDeviceDailyFreeAccess(request, user.id);
   }
@@ -230,6 +267,9 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
         mode: "plus"
       };
     }
+    if (requiredFamilyId) {
+      return { response: jsonError("consult_unavailable", "今日の相談回数を確認できませんでした。時間をおいてお試しください。", 503) };
+    }
     return readDeviceDailyFreeAccess(request, user.id);
   }
 
@@ -250,6 +290,9 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
   const primaryFamily = plusFamily ?? dailyFreeFamily ?? familyRows[0];
 
   if (!primaryFamily) {
+    if (requiredFamilyId) {
+      return { response: jsonError("consult_unavailable", "この手帳の利用状況を確認できませんでした。", 503) };
+    }
     return readDeviceDailyFreeAccess(request, user.id);
   }
 
@@ -278,8 +321,8 @@ async function readConsultAccess(request: NextRequest): Promise<ConsultAccessRes
   };
 }
 
-async function authorizeConsult(request: NextRequest): Promise<ConsultAccessResult> {
-  const access = await readConsultAccess(request);
+async function authorizeConsult(request: NextRequest, requiredFamilyId?: string): Promise<ConsultAccessResult> {
+  const access = await readConsultAccess(request, requiredFamilyId);
   if (isAccessError(access)) return access;
 
   if (!access.canConsult) {
@@ -331,6 +374,10 @@ export async function POST(request: NextRequest) {
   }
 
   const question = typeof payload?.question === "string" ? payload.question.trim() : "";
+  const durableRequested = Boolean(
+    typeof payload?.personId === "string" && payload.personId.trim()
+    || typeof payload?.localCaseId === "string" && payload.localCaseId.trim()
+  );
   if (question.length < 4) {
     return badRequest("相談したいことを、もう少しだけ書いてください。");
   }
@@ -339,7 +386,7 @@ export async function POST(request: NextRequest) {
   }
   // historyは自由入力の塊なので、形が崩れたまま通すと組み立て時に落ちたり、
   // 巨大な配列でプロンプト（＝API費用）が膨らむ。枠を消費する前にここで弾く。
-  if (payload.history !== undefined) {
+  if (!durableRequested && payload.history !== undefined) {
     const validHistory = Array.isArray(payload.history)
       && payload.history.every((turn) => Boolean(turn) && typeof turn === "object" && typeof (turn as { question?: unknown }).question === "string");
     if (!validHistory) {
@@ -347,10 +394,64 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  const authorized = await authorizeConsult(request);
+  let durableAuthorization: AuthorizedConsultPerson | null = null;
+  let durableContext: DurableConsultContext | null = null;
+  if (durableRequested) {
+    try {
+      durableAuthorization = await authorizeConsultPerson(request, {
+        personId: payload.personId,
+        localCaseId: payload.localCaseId
+      });
+      await recordConsultMemoryConsent(
+        durableAuthorization,
+        payload.memoryConsentVersion ?? "",
+        "consult-api"
+      );
+      durableContext = await loadDurableConsultContext(durableAuthorization, question);
+    } catch (error) {
+      if (error instanceof ConsultMemoryAccessError) {
+        return jsonError(error.code, error.message, error.status);
+      }
+      if (error instanceof ConsultMemoryConsentRequiredError) {
+        return jsonError(error.code, error.message, error.status);
+      }
+      if (error instanceof ConsultMemoryNotReadyError || isConsultMemorySchemaMissing(error)) {
+        return jsonError("memory_not_ready", CONSULT_MEMORY_NOT_READY_MESSAGE, 503);
+      }
+      console.error("[consult] failed to load durable memory", error);
+      return jsonError("memory_failed", "この人専用AIの記憶を読み取れませんでした。時間をおいてお試しください。", 503);
+    }
+  }
+
+  const authorized = await authorizeConsult(request, durableAuthorization?.familyId);
   if (isAccessError(authorized)) return authorized.response;
 
-  if (!hasNotebookSubstance(payload)) {
+  const effectivePayload: ConsultRequest = durableContext
+    ? {
+        question,
+        personId: durableContext.personId,
+        person: durableContext.person,
+        // プロフィール、記録、確認リスト、過去相談はすべてクラウド正本から取得する。
+        tasks: durableContext.tasks,
+        memory: durableContext.memory,
+        entries: durableContext.memory.latestRecords?.map((record) => ({
+          date: record.date,
+          mood: record.mood,
+          body: record.body
+        }))
+      }
+    : {
+        ...payload,
+        question,
+        // 長期記憶はサーバーだけが組み立てる。legacy requestに偽のmemoryを
+        // 混ぜても「手帳の事実」として扱わない。
+        memory: undefined,
+        personId: undefined,
+        localCaseId: undefined,
+        memoryConsentVersion: undefined
+      };
+
+  if (!hasNotebookSubstance(effectivePayload)) {
     return NextResponse.json(
       {
         error: "notebook_required",
@@ -400,6 +501,28 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // 記憶を読んだ後に家族から外れた／別端末で同意を取り消した場合も、
+  // 外部AIへ送る直前に現在の権限と同意を取り直して止める。
+  if (durableAuthorization && durableContext) {
+    try {
+      durableAuthorization = await authorizeConsultPerson(request, { personId: durableContext.personId });
+      await recordConsultMemoryConsent(
+        durableAuthorization,
+        payload.memoryConsentVersion ?? "",
+        "consult-api"
+      );
+    } catch (error) {
+      if (error instanceof ConsultMemoryAccessError) {
+        return jsonError(error.code, error.message, error.status);
+      }
+      if (error instanceof ConsultMemoryConsentRequiredError) {
+        return jsonError(error.code, error.message, error.status);
+      }
+      console.error("[consult] failed to recheck durable consent", error);
+      return jsonError("consent_failed", "長期記憶の同意状態を確認できませんでした。時間をおいてお試しください。", 503);
+    }
+  }
+
   const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 1 });
 
   try {
@@ -413,7 +536,7 @@ export async function POST(request: NextRequest) {
       output_config: { effort: "low" as const },
       system: CONSULT_SYSTEM_PROMPT,
       tools: [CONSULT_TOOL],
-      messages: [{ role: "user" as const, content: buildConsultPrompt({ ...payload, question }) }]
+      messages: [{ role: "user" as const, content: buildConsultPrompt(effectivePayload) }]
     };
 
     // 高速版が使えない環境では黙って通常版へ落とす。速さのために機能ごと止めない。
@@ -443,7 +566,8 @@ export async function POST(request: NextRequest) {
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
         fastMode: usedFastMode,
-        historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+        historyTurns: durableContext?.historyTurns
+          ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
         outcome: "refusal"
       });
       return NextResponse.json(
@@ -467,7 +591,8 @@ export async function POST(request: NextRequest) {
         inputTokens: response.usage.input_tokens,
         outputTokens: response.usage.output_tokens,
         fastMode: usedFastMode,
-        historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+        historyTurns: durableContext?.historyTurns
+          ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
         outcome: "invalid_response"
       });
       return NextResponse.json(
@@ -479,12 +604,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    let persistedTurn: { id: string; createdAt: string | null } | null = null;
+    if (durableAuthorization && durableContext) {
+      try {
+        // AI処理中に権限・同意が変わった場合、回答や相談文を永続化しない。
+        durableAuthorization = await authorizeConsultPerson(request, { personId: durableContext.personId });
+        await recordConsultMemoryConsent(
+          durableAuthorization,
+          payload.memoryConsentVersion ?? "",
+          "consult-api"
+        );
+        await assertConsultMemorySnapshot(durableAuthorization, {
+          memoryVersion: durableContext.memoryState.memoryVersion,
+          memoryResetAt: durableContext.memoryState.memoryResetAt
+        });
+        persistedTurn = await persistConsultTurn({
+          authorized: durableAuthorization,
+          threadId: durableContext.threadId,
+          question,
+          answer,
+          sourceEventIds: durableContext.sourceEventIds,
+          memoryVersion: durableContext.memoryState.memoryVersion
+        });
+      } catch (error) {
+        if (error instanceof ConsultMemoryAccessError) {
+          return jsonError(error.code, error.message, error.status);
+        }
+        if (error instanceof ConsultMemoryConsentRequiredError) {
+          return jsonError(error.code, error.message, error.status);
+        }
+        if (error instanceof ConsultMemoryConflictError) {
+          return jsonError(error.code, "相談中にAIの記憶が変更または削除されました。最新の状態を読み直して、もう一度お試しください。", 409);
+        }
+        if (error instanceof ConsultMemoryNotReadyError || isConsultMemorySchemaMissing(error)) {
+          return jsonError("memory_not_ready", CONSULT_MEMORY_NOT_READY_MESSAGE, 503);
+        }
+        console.error("[consult] failed to persist durable turn", error);
+        return jsonError(
+          "memory_failed",
+          "回答を長期記憶へ保存できなかったため、今回は表示しませんでした。時間をおいてもう一度お試しください。",
+          503
+        );
+      }
+    }
+
     await recordConsultUsage({
       access: authorized,
       inputTokens: response.usage.input_tokens,
       outputTokens: response.usage.output_tokens,
       fastMode: usedFastMode,
-      historyTurns: Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0,
+      historyTurns: durableContext?.historyTurns
+        ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
       outcome: "success"
     });
 
@@ -510,8 +680,28 @@ export async function POST(request: NextRequest) {
       consult: {
         mode: authorized.mode,
         dailyFreeConsumed: authorized.mode !== "plus",
-        trialConsumed: authorized.mode !== "plus"
-      }
+        trialConsumed: authorized.mode !== "plus",
+        durableMemory: Boolean(durableContext)
+      },
+      ...(durableContext ? {
+        memory: {
+          personId: durableContext.personId,
+          memoryVersion: durableContext.memoryState.memoryVersion,
+          recordCount: durableContext.memoryState.recordCount,
+          sourceEventIds: durableContext.sourceEventIds,
+          persistedTurnId: persistedTurn?.id ?? null,
+          persistedAt: persistedTurn?.createdAt ?? null
+        },
+        history: {
+          threadId: durableContext.threadId,
+          turnCount: durableContext.historyTurns + (persistedTurn ? 1 : 0),
+          latestTurn: persistedTurn ? {
+            id: persistedTurn.id,
+            savedToNotebookAt: null,
+            createdAt: persistedTurn.createdAt
+          } : null
+        }
+      } : {})
     });
     if (authorized.mode !== "plus") {
       result.cookies.set(DEVICE_DAILY_FREE_COOKIE, new Date().toISOString(), {

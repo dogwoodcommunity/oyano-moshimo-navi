@@ -26,6 +26,7 @@
     "test:monitor-retention": "node scripts/test-monitor-retention.mjs",
     "smoke:notebook-sync": "node scripts/smoke-notebook-sync.mjs",
     "smoke:production-consent": "node scripts/smoke-production-consent.mjs",
+    "test:consult-memory": "node scripts/test-consult-memory.mjs",
     "typecheck": "pnpm --filter web run typecheck && pnpm --filter mobile run typecheck"
   },
   "devDependencies": {

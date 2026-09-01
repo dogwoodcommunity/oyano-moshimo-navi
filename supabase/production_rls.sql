@@ -14,6 +14,10 @@ alter table task_comments enable row level security;
 alter table asset_categories enable row level security;
 alter table asset_items enable row level security;
 alter table timeline_events enable row level security;
+alter table person_ai_memories enable row level security;
+alter table ai_consult_threads enable row level security;
+alter table ai_consult_turns enable row level security;
+alter table ai_memory_consents enable row level security;
 alter table homes enable row level security;
 alter table home_photos enable row level security;
 alter table home_diagnoses enable row level security;
@@ -250,6 +254,66 @@ with check (
   exists (
     select 1 from people
     where people.id = timeline_events.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+drop policy if exists "person_ai_memories read family" on person_ai_memories;
+create policy "person_ai_memories read family"
+on person_ai_memories for select
+to authenticated
+using (
+  exists (
+    select 1 from people
+    where people.id = person_ai_memories.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+drop policy if exists "person_ai_memories insert family" on person_ai_memories;
+drop policy if exists "person_ai_memories update family" on person_ai_memories;
+drop policy if exists "person_ai_memories delete family" on person_ai_memories;
+
+drop policy if exists "ai_consult_threads owner family access" on ai_consult_threads;
+drop policy if exists "ai_consult_threads owner family read" on ai_consult_threads;
+create policy "ai_consult_threads owner family read"
+on ai_consult_threads for select
+to authenticated
+using (
+  owner_user_id = auth.uid()
+  and exists (
+    select 1 from people
+    where people.id = ai_consult_threads.person_id
+      and is_family_member(people.family_id)
+  )
+);
+
+drop policy if exists "ai_consult_turns owner family access" on ai_consult_turns;
+drop policy if exists "ai_consult_turns owner family read" on ai_consult_turns;
+create policy "ai_consult_turns owner family read"
+on ai_consult_turns for select
+to authenticated
+using (
+  exists (
+    select 1
+    from ai_consult_threads
+    join people on people.id = ai_consult_threads.person_id
+    where ai_consult_threads.id = ai_consult_turns.thread_id
+      and ai_consult_threads.owner_user_id = auth.uid()
+      and is_family_member(people.family_id)
+  )
+);
+
+drop policy if exists "ai_memory_consents own family read" on ai_memory_consents;
+create policy "ai_memory_consents own family read"
+on ai_memory_consents for select
+to authenticated
+using (
+  user_id = auth.uid()
+  and exists (
+    select 1
+    from people
+    where people.id = ai_memory_consents.person_id
       and is_family_member(people.family_id)
   )
 );

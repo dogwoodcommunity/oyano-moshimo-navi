@@ -24,7 +24,7 @@ export default function AdminAiUsagePage() {
             <p className="eyebrow">Current month</p>
             <h2>家族ごとの利用状況</h2>
           </div>
-          <span className="hint">相談本文は保存・表示しません</span>
+          <span className="hint">この管理画面には相談本文を表示しません</span>
         </div>
         <AdminAiUsage />
       </section>

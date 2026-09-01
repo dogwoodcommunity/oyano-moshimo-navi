@@ -3,6 +3,7 @@
 SQL Editorで以下の順に実行する。
 
 既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。
+対象者ごとの長期AI記憶と相談履歴だけを既存DBへ追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、`ai_consult_memory.sql`、`verify_compact.sql` の順だけを実行する。`ai_consult_memory.sql` 自体に新テーブルのgrant/revokeとRLSが含まれ、再実行可能で、既存の手帳記録を変更・削除しない。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
@@ -19,14 +20,15 @@ SQL Editorで以下の順に実行する。
 13. `indexes.sql`
 14. `api_grants.sql`
 15. `production_rls.sql`
-16. `family_invite_rpc.sql`
-17. `admin_auth_hardening.sql`
-18. `family_owner_succession.sql`
-19. `account_deletion_pipeline.sql`
-20. `public_api_rate_limits.sql`
-21. `anonymous_case_retention.sql`
-22. `storage_setup.sql`
-23. `regional_sponsor_data.sql`
+16. `ai_consult_memory.sql`
+17. `family_invite_rpc.sql`
+18. `admin_auth_hardening.sql`
+19. `family_owner_succession.sql`
+20. `account_deletion_pipeline.sql`
+21. `public_api_rate_limits.sql`
+22. `anonymous_case_retention.sql`
+23. `storage_setup.sql`
+24. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -41,8 +43,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-24. `verify_setup.sql`
-25. `verify_compact.sql`
+25. `verify_setup.sql`
+26. `verify_compact.sql`
 
 ## 重要
 
@@ -54,6 +56,11 @@ SQL Editorで以下の順に実行する。
 - 放置された匿名診断ケースは `anonymous_case_retention.sql` と Vercel Cron `/api/cron/purge-anonymous-cases` で削除する。
 - 地域スポンサーの前月比は `prefecture_usage_snapshots` の月次確定値から出す。
   現在値から過去を再計算しない。月次確定値は `prefecture_usage_snapshot_cron.sql` で貯める。
+- 対象者ごとのAI長期記憶は `person_ai_memories` に家族共有で保存する。AI生成の `long_term_summary` と家族が確認・訂正する `user_summary` を混ぜない。
+- AI相談履歴は `ai_consult_threads` / `ai_consult_turns` に保存する。対象者の家族メンバーであり、かつその相談スレッドを作った本人だけをWeb APIが許可し、RLSも同じ範囲へ制限する。
+- 上記3テーブルと `ai_memory_consents` は、ログイン済みクライアントにも直接の追加・更新・削除権限を与えない。長期要約、根拠ID、相談履歴、同意状態の変更は、対象者と家族権限を再確認するWeb APIからservice roleでだけ行う。
+- `excluded_event_ids` に入れた手帳記録は、再要約・関連記録検索の入力から必ず除外する。配列自体は外部キーではないため、アプリ側でも `timeline_events.person_id` との一致を検証する。
+- 記憶の削除時は元の手帳記録を消さず、派生要約と参照IDを空にして `memory_reset_at` を更新する。再構築ではその時刻以前の記録を除外し、削除した記憶が直後に復活しないようにする。
 
 ## SQL実行後に取得する値
 

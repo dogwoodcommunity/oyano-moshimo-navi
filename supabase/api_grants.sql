@@ -13,6 +13,28 @@ grant select, insert, update, delete on all tables in schema public to authentic
 grant usage, select, update on all sequences in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
 
+-- Per-person AI memory mutations are server-only. RLS still limits direct reads,
+-- while revoking client writes protects the server-derived fact/source boundary.
+revoke all
+  on table person_ai_memories, ai_consult_threads, ai_consult_turns, ai_memory_consents
+  from authenticated;
+
+grant select
+  on table person_ai_memories, ai_consult_threads, ai_consult_turns, ai_memory_consents
+  to authenticated;
+
+revoke all
+  on table person_ai_memories, ai_consult_threads, ai_consult_turns, ai_memory_consents
+  from service_role;
+
+grant select, insert, update, delete
+  on table person_ai_memories, ai_consult_threads, ai_consult_turns, ai_memory_consents
+  to service_role;
+
+revoke all
+  on table person_ai_memories, ai_consult_threads, ai_consult_turns, ai_memory_consents
+  from anon;
+
 grant select, insert, update on cases to anon;
 grant select, insert, update on case_results to anon;
 grant select, insert on consent_logs to anon;

@@ -72,6 +72,8 @@ type NotebookSyncPayload = {
   cases: CaseRecord[];
   diaryEntries: DiaryEntry[];
 };
+const NOTEBOOK_CLOUD_SYNC_BATCH_SIZE = 500;
+const NOTEBOOK_CLOUD_RESTORE_LIMIT = 20_000;
 type PrefecturePromptDraft = {
   parentPrefecture: string;
   parentCity: string;
@@ -2032,37 +2034,67 @@ export default function FamilyBoardPage() {
     }
 
     try {
-      const response = await fetch("/api/notebook/sync", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      const diaryBatches: DiaryEntry[][] = payload.diaryEntries.length > 0
+        ? Array.from(
+          { length: Math.ceil(payload.diaryEntries.length / NOTEBOOK_CLOUD_SYNC_BATCH_SIZE) },
+          (_, index) => payload.diaryEntries.slice(
+            index * NOTEBOOK_CLOUD_SYNC_BATCH_SIZE,
+            (index + 1) * NOTEBOOK_CLOUD_SYNC_BATCH_SIZE
+          )
+        )
+        : [[]];
+      let syncedEntries = 0;
+      let syncedPeople = 0;
+      let lastResult: Record<string, unknown> = {};
+      const notices = new Set<string>();
 
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setCloudAutoStatus("error");
-        if (!options.silent || result.error === "notebook_conflict") {
-          setCloudStatus("error");
-          setCloudMessage(result.message ?? result.error ?? "クラウド保存に失敗しました。");
+      for (const diaryEntries of diaryBatches) {
+        const response = await fetch("/api/notebook/sync", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ cases: payload.cases, diaryEntries })
+        });
+
+        const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (!response.ok) {
+          setCloudAutoStatus("error");
+          if (!options.silent || result.error === "notebook_conflict") {
+            setCloudStatus("error");
+            setCloudMessage(
+              typeof result.message === "string"
+                ? result.message
+                : typeof result.error === "string"
+                  ? result.error
+                  : "クラウド保存に失敗しました。"
+            );
+          }
+          return;
         }
-        return;
+
+        lastResult = result;
+        syncedEntries += typeof result.syncedEntries === "number" ? result.syncedEntries : diaryEntries.length;
+        syncedPeople = Math.max(
+          syncedPeople,
+          typeof result.syncedPeople === "number" ? result.syncedPeople : payload.cases.length
+        );
+        if (typeof result.notice === "string") notices.add(result.notice);
       }
 
-      writePlan(result.plan);
-      applyFamilyBillingState(result);
+      writePlan(typeof lastResult.plan === "string" ? lastResult.plan : null);
+      applyFamilyBillingState(lastResult);
       lastSyncedPayloadRef.current = signature;
       setLastCloudSyncedAt(new Date().toISOString());
       setCloudAutoStatus("saved");
       setCloudStatus("synced");
       markMonitorActivity("cloudBackupConfirmed");
       // 上限で上げられなかった手帳があるなら、成功報告だけで終わらせない。
-      const notice = typeof result.notice === "string" ? ` ${result.notice}` : "";
+      const notice = notices.size > 0 ? ` ${[...notices].join(" ")}` : "";
       if (!options.silent || notice) {
         setCloudMessage(
-          `クラウドに保存しました。対象者${result.syncedPeople ?? payload.cases.length}人、記録${result.syncedEntries ?? payload.diaryEntries.length}件。${notice}`
+          `クラウドに保存しました。対象者${syncedPeople}人、記録${syncedEntries}件。${notice}`
         );
       } else {
         setCloudMessage("ログイン済みです。変更はクラウドへ自動保存されています。");
@@ -2095,22 +2127,52 @@ export default function FamilyBoardPage() {
     }
 
     try {
-      const response = await fetch("/api/notebook/sync", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        setCloudAutoStatus("error");
-        if (!options.silent) {
-          setCloudStatus("error");
-          setCloudMessage(result.error ?? "クラウドから復元できませんでした。");
+      let diaryOffset = 0;
+      let firstResult: Record<string, unknown> | null = null;
+      const restoredEntries: DiaryEntry[] = [];
+
+      while (true) {
+        const response = await fetch(
+          `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_SYNC_BATCH_SIZE}`,
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (!response.ok) {
+          setCloudAutoStatus("error");
+          if (!options.silent) {
+            setCloudStatus("error");
+            setCloudMessage(typeof result.error === "string" ? result.error : "クラウドから復元できませんでした。");
+          }
+          return;
         }
-        return;
+
+        firstResult ??= result;
+        const diaryEntries = Array.isArray(result.diaryEntries) ? result.diaryEntries as DiaryEntry[] : [];
+        const diaryEntriesTotal = typeof result.diaryEntriesTotal === "number"
+          ? result.diaryEntriesTotal
+          : diaryOffset + diaryEntries.length;
+        if (diaryEntriesTotal > NOTEBOOK_CLOUD_RESTORE_LIMIT) {
+          setCloudAutoStatus("error");
+          setCloudStatus("error");
+          setCloudMessage(`クラウドに${diaryEntriesTotal}件の記録があります。安全に復元できる上限を超えたため、端末の記録は変更していません。`);
+          return;
+        }
+
+        restoredEntries.push(...diaryEntries);
+        const hasMore = result.diaryEntriesHasMore === true;
+        if (!hasMore) break;
+        if (diaryEntries.length === 0) {
+          setCloudAutoStatus("error");
+          setCloudStatus("error");
+          setCloudMessage("クラウドの記録を最後まで読み込めなかったため、端末の記録は変更していません。");
+          return;
+        }
+        diaryOffset += diaryEntries.length;
       }
 
-      const restoredCases = Array.isArray(result.cases) ? result.cases : [];
-      const restoredEntries = Array.isArray(result.diaryEntries) ? result.diaryEntries : [];
-      writePlan(result.plan);
+      const result = firstResult ?? {};
+      const restoredCases = Array.isArray(result.cases) ? result.cases as CaseRecord[] : [];
+      writePlan(typeof result.plan === "string" ? result.plan : null);
       applyFamilyBillingState(result);
       const restoredNotebook = replaceLocalNotebook({
         cases: restoredCases,
@@ -2995,7 +3057,7 @@ export default function FamilyBoardPage() {
                     保存後に出る「この記録でAI相談する」から、質問文が入ったチャットへ進みます。毎回ゼロから説明しなくてよくなります。
                   </p>
                   <p className="record-ai-storage-note">
-                    AIの回答は自動保存されません。残したい回答で「この回答を手帳に残す」を押すと、「過去の手帳」にAI相談メモとして保存されます。
+                    クラウド手帳では相談履歴を自分専用に保存し、次の相談へ引き継ぎます。家族も見る「過去の手帳」へ残す時だけ、回答の「この回答を手帳に残す」を押してください。
                   </p>
                 </div>
               </div>

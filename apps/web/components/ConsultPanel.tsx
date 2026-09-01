@@ -3,13 +3,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
-  CONSULT_MAX_ENTRIES,
+  CONSULT_MEMORY_CONSENT_TEXT,
+  CONSULT_MEMORY_CONSENT_VERSION,
   CONSULT_MAX_QUESTION_LENGTH,
   CONSULT_SENT_FIELDS,
   CONSULT_WITHHELD_FIELDS,
-  consultAnswerToHistoryTurn,
   consultAnswerToDiaryBody,
   hasNotebookSubstance,
+  normalizeConsultAnswer,
   statusLabel,
   type ConsultAnswer
 } from "@oyano/shared";
@@ -23,8 +24,6 @@ import {
   listLocalCases,
   type CaseRecord
 } from "@/lib/store";
-
-const CONSENT_STORAGE_KEY = "oyano_consult_consent_v01";
 
 const suggestedQuestions = [
   "いまの記録から、見落としていることはありますか",
@@ -44,7 +43,44 @@ type ConversationTurn = {
   saved: boolean;
   saveSyncPhase: SaveSyncPhase;
   saveSyncMessage: string;
+  createdAt?: string;
 };
+type MemoryMode = "consent-required" | "checking" | "durable" | "temporary";
+type MemoryImportantChange = {
+  id: string;
+  eventId?: string;
+  title: string;
+  detail?: string;
+  date?: string;
+  source: string;
+  status: string;
+  excluded: boolean;
+};
+type DurableMemory = {
+  longTermSummary: string;
+  userSummary: string;
+  importantChanges: MemoryImportantChange[];
+  recordCount: number;
+  firstRecordDate: string | null;
+  lastRecordDate: string | null;
+  memoryVersion: number;
+  updatedAt: string | null;
+  excludedEventIds: string[];
+};
+type DurableMemoryPayload = {
+  personId: string;
+  memory: DurableMemory;
+  turns: ConversationTurn[];
+  historyTotal: number;
+  historyHasMore: boolean;
+  historyOffset: number;
+  canEditSharedMemory: boolean;
+  canManageSharedMemory: boolean;
+};
+type MemoryLoadResult =
+  | { mode: "durable"; payload: DurableMemoryPayload }
+  | { mode: "temporary"; reason: string };
+type MemoryDeleteScope = "memory" | "history" | "all";
 type ConsultAccess = {
   signedIn: boolean;
   plan: "free" | "plus";
@@ -53,43 +89,244 @@ type ConsultAccess = {
   canConsult: boolean;
 };
 
-function readConsent(): boolean {
-  if (typeof window === "undefined") return false;
+function recordValue(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function textValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function numberValue(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : 0;
+}
+
+function importantChangeEventId(change: Record<string, unknown>) {
+  return textValue(change.eventId)
+    || textValue(change.sourceEventId)
+    || textValue(change.timelineEventId)
+    || textValue(change.id)
+    || undefined;
+}
+
+function normalizeImportantChanges(value: unknown, excludedEventIds: string[], forceExcluded = false): MemoryImportantChange[] {
+  if (!Array.isArray(value)) return [];
+  const excluded = new Set(excludedEventIds);
+
+  return value.flatMap((item, index) => {
+    const change = recordValue(item);
+    if (!change) return [];
+    const eventId = importantChangeEventId(change);
+    const title = textValue(change.title)
+      || textValue(change.summary)
+      || textValue(change.change)
+      || textValue(change.description)
+      || textValue(change.body)
+      || "記録された変化";
+    const detail = textValue(change.detail)
+      || textValue(change.reason)
+      || textValue(change.context)
+      || undefined;
+    const date = textValue(change.date)
+      || textValue(change.eventDate)
+      || textValue(change.sourceDate)
+      || undefined;
+    const source = textValue(change.source)
+      || textValue(change.sourceLabel)
+      || "手帳の記録";
+    const rawStatus = textValue(change.status)
+      || textValue(change.urgency)
+      || textValue(change.mood);
+    const status = rawStatus === "urgent"
+      ? "急ぎ"
+      : rawStatus === "changed"
+        ? "変化あり"
+        : rawStatus || "記録済み";
+    return [{
+      id: textValue(change.id) || eventId || `change-${index}`,
+      eventId,
+      title,
+      detail,
+      date,
+      source,
+      status,
+      excluded: forceExcluded || Boolean(change.excluded) || Boolean(eventId && excluded.has(eventId))
+    }];
+  });
+}
+
+function historyToTurns(value: unknown): ConversationTurn[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((item, index) => {
+    const historyItem = recordValue(item);
+    if (!historyItem) return [];
+    const answer = normalizeConsultAnswer(historyItem.answer);
+    const question = textValue(historyItem.question);
+    if (!answer || !question) return [];
+    const savedAt = textValue(historyItem.savedToNotebookAt);
+    return [{
+      id: textValue(historyItem.id) || `saved-turn-${index}`,
+      question,
+      answer,
+      disclaimer: textValue(historyItem.disclaimer),
+      saved: Boolean(savedAt),
+      saveSyncPhase: savedAt ? "saved" as const : "idle" as const,
+      saveSyncMessage: savedAt ? "手帳へ保存した相談です。" : "",
+      createdAt: textValue(historyItem.createdAt) || undefined
+    }];
+  });
+}
+
+function normalizeMemoryPayload(value: unknown): DurableMemoryPayload | null {
+  const response = recordValue(value);
+  const memory = recordValue(response?.memory);
+  const personId = textValue(response?.personId);
+  if (!response || !memory || !personId) return null;
+  const excludedEventIds = Array.isArray(memory.excludedEventIds)
+    ? memory.excludedEventIds.map(textValue).filter(Boolean)
+    : [];
+
+  const importantChanges = normalizeImportantChanges(memory.importantChanges, excludedEventIds);
+  const excludedSources = normalizeImportantChanges(response.excludedSources, excludedEventIds, true);
+  const changesById = new Map<string, MemoryImportantChange>();
+  [...importantChanges, ...excludedSources].forEach((change) => changesById.set(change.eventId || change.id, change));
+
+  return {
+    personId,
+    memory: {
+      longTermSummary: textValue(memory.longTermSummary),
+      userSummary: textValue(memory.userSummary),
+      importantChanges: [...changesById.values()],
+      recordCount: numberValue(memory.recordCount),
+      firstRecordDate: textValue(memory.firstRecordDate) || null,
+      lastRecordDate: textValue(memory.lastRecordDate) || null,
+      memoryVersion: numberValue(memory.memoryVersion),
+      updatedAt: textValue(memory.updatedAt) || null,
+      excludedEventIds
+    },
+    turns: historyToTurns(response.history),
+    historyTotal: numberValue(response.historyTotal) || historyToTurns(response.history).length,
+    historyHasMore: Boolean(response.historyHasMore),
+    historyOffset: numberValue(response.historyOffset),
+    canEditSharedMemory: Boolean(response.canEditSharedMemory),
+    canManageSharedMemory: Boolean(response.canManageSharedMemory)
+  };
+}
+
+function memoryFallbackMessage(status: number, value: unknown) {
+  const response = recordValue(value);
+  const message = textValue(response?.message) || textValue(response?.error);
+  if (message) return message;
+  if (status === 401) return "メール確認がまだ完了していないため、長期記憶を使えません。";
+  if (status === 404) return "この手帳とクラウド上の対象者が、まだ結び付いていません。";
+  if (status === 409 || status === 501 || status === 503) return "長期記憶の準備がまだ完了していません。";
+  return "長期記憶を確認できませんでした。クラウド保存を確認してから、もう一度開いてください。";
+}
+
+async function requestDurableMemory(localCaseId: string, historyOffset = 0): Promise<MemoryLoadResult> {
+  const client = getBrowserSupabase();
+  if (!client) {
+    return { mode: "temporary", reason: "クラウド保存の環境設定がないため、長期記憶を準備できません。" };
+  }
+  const sessionData = (await client.auth.getSession()).data;
+  const accessToken = sessionData.session?.access_token;
+  if (!accessToken) {
+    return { mode: "temporary", reason: "メール確認とクラウド保存をすると、この人専用の長期記憶を使えます。" };
+  }
 
   try {
-    return window.localStorage?.getItem(CONSENT_STORAGE_KEY) === "1";
+    const params = new URLSearchParams({ localCaseId, historyOffset: String(historyOffset) });
+    const response = await fetch(`/api/consult/memory?${params.toString()}`, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "X-Oyano-Memory-Consent-Version": CONSULT_MEMORY_CONSENT_VERSION
+      }
+    });
+    const data: unknown = await response.json().catch(() => null);
+    const payload = response.ok ? normalizeMemoryPayload(data) : null;
+    if (payload) return { mode: "durable", payload };
+    return { mode: "temporary", reason: memoryFallbackMessage(response.status, data) };
   } catch {
-    return false;
+    return { mode: "temporary", reason: "通信できないため、長期記憶を確認できません。通信が戻ってから、もう一度開いてください。" };
   }
 }
 
-function writeConsent(value: boolean) {
+function formatMemoryDate(value?: string | null, withTime = false) {
+  if (!value) return "日付なし";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("ja-JP", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    ...(withTime ? { hour: "2-digit", minute: "2-digit" } : {})
+  }).format(date);
+}
+
+async function requestDurableConsent(localCaseId: string): Promise<{
+  active: boolean;
+  revision: number;
+  canManageSharedMemory: boolean;
+  reason?: string;
+}> {
+  const client = getBrowserSupabase();
+  if (!client) return { active: false, revision: 0, canManageSharedMemory: false, reason: "クラウド保存の環境設定がありません。" };
+  const accessToken = (await client.auth.getSession()).data.session?.access_token;
+  if (!accessToken) return { active: false, revision: 0, canManageSharedMemory: false, reason: "メール確認とクラウド保存を先に設定してください。" };
   try {
-    if (value) {
-      window.localStorage?.setItem(CONSENT_STORAGE_KEY, "1");
-    } else {
-      window.localStorage?.removeItem(CONSENT_STORAGE_KEY);
-    }
+    const params = new URLSearchParams({ localCaseId });
+    const response = await fetch(`/api/consult/memory/consent?${params.toString()}`, {
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+    const data: unknown = await response.json().catch(() => null);
+    const row = recordValue(data);
+    const consent = recordValue(row?.consent);
+    if (!response.ok) return { active: false, revision: 0, canManageSharedMemory: false, reason: memoryFallbackMessage(response.status, data) };
+    return {
+      active: Boolean(consent?.active),
+      revision: Math.max(0, Math.floor(numberValue(consent?.revision))),
+      canManageSharedMemory: Boolean(row?.canManageSharedMemory)
+    };
   } catch {
-    // Private browsing rejects writes. The current session still holds the state.
+    return { active: false, revision: 0, canManageSharedMemory: false, reason: "通信できないため、長期記憶の同意状態を確認できません。" };
   }
+}
+
+async function changeDurableConsent(localCaseId: string, action: "accept" | "revoke", revision: number) {
+  const client = getBrowserSupabase();
+  const accessToken = client ? (await client.auth.getSession()).data.session?.access_token : null;
+  if (!accessToken) throw new Error("メール確認とクラウド保存を先に設定してください。");
+  const response = await fetch("/api/consult/memory/consent", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify({
+      localCaseId,
+      action,
+      version: CONSULT_MEMORY_CONSENT_VERSION,
+      acceptedVia: "web",
+      revision
+    })
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const error = new Error(memoryFallbackMessage(response.status, data));
+    (error as Error & { status?: number }).status = response.status;
+    throw error;
+  }
+  const row = recordValue(data);
+  const savedConsent = recordValue(row?.consent);
+  return {
+    active: Boolean(savedConsent?.active),
+    revision: Math.max(0, Math.floor(numberValue(savedConsent?.revision))),
+    canManageSharedMemory: Boolean(row?.canManageSharedMemory)
+  };
 }
 
 function todayInputValue() {
   return japanDateInputValue();
-}
-
-function birthDateToAgeBand(birthDate?: string) {
-  if (!birthDate) return undefined;
-  const year = Number(birthDate.slice(0, 4));
-  if (!Number.isFinite(year) || year < 1900) return undefined;
-  const age = new Date().getFullYear() - year;
-  if (age < 0 || age > 130) return undefined;
-  return `${Math.floor(age / 10) * 10}代`;
-}
-
-function allDiaryEntriesForSync(cases: CaseRecord[]) {
-  return cases.flatMap((caseRecord) => listDiaryEntries(caseRecord.id));
 }
 
 function consultNotebookBaseName(caseRecord: CaseRecord) {
@@ -132,6 +369,19 @@ export function ConsultPanel() {
   const [authChecked, setAuthChecked] = useState(false);
   const [consultAccess, setConsultAccess] = useState<ConsultAccess | null>(null);
   const [openedFromRecord, setOpenedFromRecord] = useState(false);
+  const [memoryMode, setMemoryMode] = useState<MemoryMode>("consent-required");
+  const [memoryReason, setMemoryReason] = useState("");
+  const [memoryPayload, setMemoryPayload] = useState<DurableMemoryPayload | null>(null);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [memoryEditing, setMemoryEditing] = useState(false);
+  const [memoryAction, setMemoryAction] = useState<"idle" | "saving" | "updating" | "deleting">("idle");
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [consentSaving, setConsentSaving] = useState(false);
+  const [consentRevision, setConsentRevision] = useState(0);
+  const [consentCanManageSharedMemory, setConsentCanManageSharedMemory] = useState(false);
+  const [memoryMessage, setMemoryMessage] = useState("");
+  const [deleteIntent, setDeleteIntent] = useState<MemoryDeleteScope | null>(null);
+  const memoryRequestRef = useRef(0);
   const questionRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -150,7 +400,6 @@ export function ConsultPanel() {
       setQuestion(requestedQuestion.slice(0, CONSULT_MAX_QUESTION_LENGTH));
       setOpenedFromRecord(true);
     }
-    setConsent(readConsent());
     setLoaded(true);
 
     const client = getBrowserSupabase();
@@ -179,14 +428,19 @@ export function ConsultPanel() {
     () => cases.find((item) => item.id === activeCaseId),
     [cases, activeCaseId]
   );
+  const durableMemoryEnabled = memoryMode === "durable" && Boolean(memoryPayload?.personId);
   const needsPlus = Boolean(authChecked && consultAccess && !consultAccess.canConsult);
   const submitDisabled = !authChecked
+    || !durableMemoryEnabled
     || !consent
+    || consentSaving
     || !hasSubstance
     || question.trim().length < 4
     || phase === "loading";
   const consultButtonLabel = phase === "loading"
     ? "整理しています…"
+    : memoryMode === "checking"
+      ? "専用AIの記憶を確認しています…"
     : !authChecked
       ? "利用条件を確認しています…"
       : turns.length > 0
@@ -204,9 +458,293 @@ export function ConsultPanel() {
     }));
   }, [activeCase]);
 
-  function toggleConsent(next: boolean) {
-    setConsent(next);
-    writeConsent(next);
+  useEffect(() => {
+    if (!activeCaseId) return;
+    const requestId = memoryRequestRef.current + 1;
+    memoryRequestRef.current = requestId;
+    setMemoryMode("checking");
+    setConsent(false);
+    setMemoryReason("");
+    setConsentRevision(0);
+    setConsentCanManageSharedMemory(false);
+    setMemoryPayload(null);
+    setMemoryDraft("");
+    setMemoryEditing(false);
+    setMemoryMessage("");
+    setDeleteIntent(null);
+    setTurns([]);
+
+    void (async () => {
+      const consentResult = await requestDurableConsent(activeCaseId);
+      if (memoryRequestRef.current !== requestId) return;
+      setConsentRevision(consentResult.revision);
+      setConsentCanManageSharedMemory(consentResult.canManageSharedMemory);
+      if (!consentResult.active) {
+        setConsent(false);
+        setMemoryMode(consentResult.reason ? "temporary" : "consent-required");
+        setMemoryReason(consentResult.reason ?? "");
+        return;
+      }
+      setConsent(true);
+      const result = await requestDurableMemory(activeCaseId);
+      if (memoryRequestRef.current !== requestId) return;
+      if (result.mode === "durable") {
+        setMemoryMode("durable");
+        setMemoryPayload(result.payload);
+        setMemoryDraft(result.payload.memory.userSummary);
+        setTurns(result.payload.turns);
+        setMemoryReason("");
+        return;
+      }
+      setMemoryMode("temporary");
+      setMemoryReason(result.reason);
+      setMemoryPayload(null);
+      setTurns([]);
+    })();
+  }, [activeCaseId]);
+
+  async function refreshDurableMemory(options?: { keepMessage?: boolean }) {
+    if (!activeCaseId) return null;
+    const requestId = memoryRequestRef.current + 1;
+    memoryRequestRef.current = requestId;
+    const result = await requestDurableMemory(activeCaseId);
+    if (memoryRequestRef.current !== requestId) return null;
+    if (result.mode === "durable") {
+      setMemoryMode("durable");
+      setMemoryPayload(result.payload);
+      setMemoryDraft(result.payload.memory.userSummary);
+      setTurns(result.payload.turns);
+      setMemoryReason("");
+      if (!options?.keepMessage) setMemoryMessage("");
+      return result.payload;
+    }
+    if (memoryMode === "durable" && memoryPayload) {
+      setMemoryMessage(`${result.reason} 直前に確認できた長期記憶の表示は維持しています。`);
+      return null;
+    }
+    setMemoryMode("temporary");
+    setMemoryReason(result.reason);
+    setMemoryPayload(null);
+    setTurns([]);
+    return null;
+  }
+
+  async function sendMemoryPatch(body: Record<string, unknown>) {
+    if (!memoryPayload?.personId) throw new Error("専用AIの対象者を確認できませんでした。");
+    const client = getBrowserSupabase();
+    const sessionData = client ? (await client.auth.getSession()).data : null;
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) throw new Error("メール確認をやり直してから、もう一度お試しください。");
+    const response = await fetch("/api/consult/memory", {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+        "X-Oyano-Memory-Consent-Version": CONSULT_MEMORY_CONSENT_VERSION
+      },
+      body: JSON.stringify({
+        personId: memoryPayload.personId,
+        memoryConsentVersion: CONSULT_MEMORY_CONSENT_VERSION,
+        memoryVersion: memoryPayload.memory.memoryVersion,
+        ...body
+      })
+    });
+    const data: unknown = await response.json().catch(() => null);
+    const responseData = recordValue(data);
+    if (response.status === 409 && textValue(responseData?.error) === "memory_conflict") {
+      await refreshDurableMemory({ keepMessage: true });
+      throw new Error("別の端末で記憶が更新されました。最新の内容に更新したので、内容を確認してもう一度お試しください。");
+    }
+    if (!response.ok) throw new Error(memoryFallbackMessage(response.status, data));
+    return data;
+  }
+
+  async function saveMemoryCorrection() {
+    if (!memoryPayload) return;
+    const attemptedSummary = memoryDraft.trim();
+    setMemoryAction("saving");
+    setMemoryMessage("");
+    try {
+      await sendMemoryPatch({ userSummary: attemptedSummary });
+      await refreshDurableMemory({ keepMessage: true });
+      setMemoryEditing(false);
+      setMemoryMessage(attemptedSummary
+        ? "あなたの補足・訂正を専用AIの記憶へ反映しました。"
+        : "あなたが追加した補足・訂正を削除しました。");
+    } catch (error) {
+      setMemoryDraft(attemptedSummary);
+      setMemoryMessage(error instanceof Error ? error.message : "補足・訂正を保存できませんでした。");
+    } finally {
+      setMemoryAction("idle");
+    }
+  }
+
+  async function toggleMemorySource(eventId: string, excluded: boolean) {
+    if (!eventId) return;
+    setMemoryAction("updating");
+    setMemoryMessage("");
+    try {
+      await sendMemoryPatch(excluded
+        ? { includeEventId: eventId, sourceEventId: eventId, excluded: false }
+        : { excludeEventId: eventId, sourceEventId: eventId, excluded: true });
+      await refreshDurableMemory({ keepMessage: true });
+      setMemoryMessage(excluded
+        ? "この記録を専用AIの記憶に戻しました。"
+        : "元の手帳記録は残したまま、専用AIの記憶から外しました。");
+    } catch (error) {
+      setMemoryMessage(error instanceof Error ? error.message : "記憶に使う記録を変更できませんでした。");
+    } finally {
+      setMemoryAction("idle");
+    }
+  }
+
+  async function markDurableTurnSaved(turnId: string) {
+    if (!durableMemoryEnabled) return;
+    try {
+      await sendMemoryPatch({ markSavedTurnId: turnId });
+    } catch {
+      // 手帳本体への保存は完了しているため、相談履歴の表示更新だけで失敗扱いにしない。
+    }
+  }
+
+  async function loadOlderConsultHistory() {
+    if (!activeCaseId || !memoryPayload?.historyHasMore || historyLoading) return;
+    setHistoryLoading(true);
+    setMemoryMessage("");
+    try {
+      const result = await requestDurableMemory(activeCaseId, turns.length);
+      if (result.mode !== "durable") throw new Error(result.reason);
+      const older = result.payload.turns;
+      setTurns((current) => {
+        const byId = new Map([...older, ...current].map((turn) => [turn.id, turn]));
+        return [...byId.values()].sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""));
+      });
+      setMemoryPayload((current) => current ? {
+        ...current,
+        historyTotal: result.payload.historyTotal,
+        historyHasMore: result.payload.historyHasMore,
+        historyOffset: 0,
+        turns: [...older, ...current.turns]
+      } : result.payload);
+    } catch (error) {
+      setMemoryMessage(error instanceof Error ? error.message : "前の相談履歴を読み込めませんでした。");
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  async function confirmMemoryDelete() {
+    if (!deleteIntent || !activeCaseId) return;
+    setMemoryAction("deleting");
+    setMemoryMessage("");
+    try {
+      const client = getBrowserSupabase();
+      const sessionData = client ? (await client.auth.getSession()).data : null;
+      const accessToken = sessionData?.session?.access_token;
+      if (!accessToken) throw new Error("メール確認をやり直してから、もう一度お試しください。");
+      const params = new URLSearchParams({ scope: deleteIntent });
+      if (memoryPayload?.personId) params.set("personId", memoryPayload.personId);
+      else params.set("localCaseId", activeCaseId);
+      const response = await fetch(`/api/consult/memory?${params.toString()}`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}` }
+      });
+      const data: unknown = await response.json().catch(() => null);
+      const responseData = recordValue(data);
+      if (response.status === 500 && textValue(responseData?.error) === "partial_delete") {
+        setTurns([]);
+        setDeleteIntent("history");
+        if (consent) await refreshDurableMemory({ keepMessage: true });
+        const partialMessage = "家族共有のAI記憶は削除済みです。相談履歴だけ残ったため、確認画面を『相談履歴を削除』へ切り替えました。もう一度削除してください。";
+        setMemoryMessage(partialMessage);
+        return;
+      }
+      if (!response.ok) throw new Error(memoryFallbackMessage(response.status, data));
+      const deletedScope = deleteIntent;
+      if (deletedScope === "history" || deletedScope === "all") setTurns([]);
+      setDeleteIntent(null);
+      if (consent) await refreshDurableMemory({ keepMessage: true });
+      const successMessage = deletedScope === "memory"
+        ? "専用AIの要約・変化・補足を削除しました。元の手帳記録は残りますが、長期記憶からは外れました。これから追加する新しい記録だけを覚えます。"
+        : deletedScope === "history"
+          ? "これまでのAI相談履歴を削除しました。手帳記録と専用AIの記憶は残っています。"
+          : "専用AIの記憶とAI相談履歴を削除しました。元の手帳記録は残りますが、長期記憶からは外れました。これから追加する新しい記録だけを覚えます。";
+      setMemoryMessage(successMessage);
+    } catch (error) {
+      setMemoryMessage(error instanceof Error ? error.message : "削除できませんでした。");
+    } finally {
+      setMemoryAction("idle");
+    }
+  }
+
+  async function toggleConsent(next: boolean) {
+    if (!activeCaseId || consentSaving) return;
+    const caseId = activeCaseId;
+    const requestId = memoryRequestRef.current + 1;
+    memoryRequestRef.current = requestId;
+    setConsentSaving(true);
+    setMemoryReason("");
+    if (!next) {
+      // 取消通信中に旧同意のまま相談を送れないよう、先に画面を停止する。
+      setConsent(false);
+    }
+    try {
+      const changed = await changeDurableConsent(caseId, next ? "accept" : "revoke", consentRevision);
+      if (memoryRequestRef.current !== requestId) return;
+      setConsentRevision(changed.revision);
+      setConsentCanManageSharedMemory(changed.canManageSharedMemory);
+      if (!next) {
+        setConsent(false);
+        setMemoryMode("consent-required");
+        setMemoryPayload(null);
+        setMemoryDraft("");
+        setTurns([]);
+        setMemoryReason("この人への長期記憶・AI送信の同意を取り消しました。別の端末にも反映されます。保存済みデータは削除していません。");
+        return;
+      }
+      setConsent(true);
+      setMemoryMode("checking");
+      const result = await requestDurableMemory(caseId);
+      if (memoryRequestRef.current !== requestId) return;
+      if (result.mode !== "durable") {
+        setMemoryMode("temporary");
+        setMemoryReason(result.reason);
+        return;
+      }
+      setMemoryMode("durable");
+      setMemoryPayload(result.payload);
+      setMemoryDraft(result.payload.memory.userSummary);
+      setTurns(result.payload.turns);
+    } catch (error) {
+      if (memoryRequestRef.current !== requestId) return;
+      const current = await requestDurableConsent(caseId);
+      if (memoryRequestRef.current !== requestId) return;
+      setConsent(current.active);
+      setConsentRevision(current.revision);
+      setConsentCanManageSharedMemory(current.canManageSharedMemory);
+      setMemoryReason(error instanceof Error ? error.message : "同意状態を変更できませんでした。");
+      if (!current.active) {
+        setMemoryMode(current.reason ? "temporary" : "consent-required");
+        setMemoryPayload(null);
+        setMemoryDraft("");
+        setTurns([]);
+        return;
+      }
+      setMemoryMode("checking");
+      const result = await requestDurableMemory(caseId);
+      if (memoryRequestRef.current !== requestId) return;
+      if (result.mode === "durable") {
+        setMemoryMode("durable");
+        setMemoryPayload(result.payload);
+        setMemoryDraft(result.payload.memory.userSummary);
+        setTurns(result.payload.turns);
+      } else {
+        setMemoryMode("temporary");
+        setMemoryReason(result.reason);
+      }
+    } finally {
+      setConsentSaving(false);
+    }
   }
 
   function updateTurn(id: string, patch: Partial<ConversationTurn>) {
@@ -214,7 +752,7 @@ export function ConsultPanel() {
   }
 
   function selectCase(caseId: string) {
-    if (phase === "loading") return;
+    if (phase === "loading" || memoryAction !== "idle") return;
     setActiveCaseId(caseId);
     setTurns([]);
     setQuestion("");
@@ -237,21 +775,11 @@ export function ConsultPanel() {
   }
 
   async function submit() {
-    if (!activeCase || question.trim().length < 4) return;
+    if (!activeCase || !durableMemoryEnabled || !memoryPayload?.personId || question.trim().length < 4) return;
 
     const submittedQuestion = question.trim();
     setPhase("loading");
     setErrorMessage("");
-
-    const entries = listDiaryEntries(activeCase.id).slice(0, CONSULT_MAX_ENTRIES).map((entry) => ({
-      date: entry.date,
-      mood: entry.mood,
-      body: entry.body
-    }));
-    const tasks = (activeCase.result?.tasks ?? []).slice(0, 12).map((task) => ({
-      title: task.title,
-      dueDate: task.dueDate
-    }));
 
     try {
       const client = getBrowserSupabase();
@@ -267,49 +795,45 @@ export function ConsultPanel() {
         },
         body: JSON.stringify({
           question: submittedQuestion,
-          person: {
-            relationship: activeCase.personProfile?.relationship,
-            careStatus: activeCase.personProfile?.careStatus,
-            birthDate: birthDateToAgeBand(activeCase.personProfile?.birthDate),
-            hospitalOrFacility: activeCase.personProfile?.hospitalOrFacility,
-            medicationNote: activeCase.personProfile?.medicationNote,
-            familyStructureNote: activeCase.personProfile?.familyStructureNote,
-            carePreference: activeCase.personProfile?.carePreference
-          },
-          entries,
-          tasks,
-          history: turns.map((turn) => consultAnswerToHistoryTurn(turn.question, turn.answer))
+          personId: memoryPayload.personId,
+          memoryConsentVersion: CONSULT_MEMORY_CONSENT_VERSION
         })
       });
+      const data: unknown = await response.json().catch(() => null);
 
-      const data = await response.json() as {
-        answer?: ConsultAnswer;
-        disclaimer?: string;
-        error?: string;
-        message?: string;
-      };
-
-      if (!response.ok || !data.answer) {
-        setErrorMessage(data.message ?? "うまく整理できませんでした。もう一度お試しください。");
+      const responseData = recordValue(data);
+      const answer = normalizeConsultAnswer(responseData?.answer);
+      if (!response.ok || !answer) {
+        setErrorMessage(textValue(responseData?.message) || "うまく整理できませんでした。もう一度お試しください。");
         setPhase("error");
         return;
       }
 
-      const turnId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+      const returnedMemory = normalizeMemoryPayload(data);
+      const returnedMemoryMetadata = recordValue(responseData?.memory);
+      const generatedTurnId = typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
         ? crypto.randomUUID()
         : `${Date.now()}-${turns.length}`;
-      setTurns((current) => [
-        ...current,
-        {
+      const returnedTurns = returnedMemory?.turns ?? [];
+      const turnId = returnedTurns.at(-1)?.id
+        ?? textValue(returnedMemoryMetadata?.persistedTurnId)
+        ?? generatedTurnId;
+      const newTurn: ConversationTurn = {
           id: turnId,
           question: submittedQuestion,
-          answer: data.answer as ConsultAnswer,
-          disclaimer: data.disclaimer ?? "",
+          answer,
+          disclaimer: textValue(responseData?.disclaimer),
           saved: false,
           saveSyncPhase: "idle",
           saveSyncMessage: ""
-        }
-      ]);
+      };
+      if (returnedMemory) {
+        setMemoryPayload(returnedMemory);
+        setMemoryDraft(returnedMemory.memory.userSummary);
+        setTurns(returnedTurns.length > 0 ? returnedTurns : (current) => [...current, newTurn]);
+      } else {
+        setTurns((current) => [...current, newTurn]);
+      }
       setQuestion("");
       setOpenedFromRecord(false);
       const accessResponse = await fetch("/api/consult", {
@@ -320,6 +844,9 @@ export function ConsultPanel() {
       trackFunnel("consult_asked");
       markMonitorActivity("aiConsultCompleted");
       setPhase("done");
+      if (!returnedMemory) {
+        void refreshDurableMemory({ keepMessage: true });
+      }
       window.setTimeout(() => {
         document.getElementById(`consult-turn-${turnId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
       }, 80);
@@ -332,7 +859,7 @@ export function ConsultPanel() {
   async function saveToNotebook(turn: ConversationTurn) {
     if (!activeCase) return;
 
-    addDiaryEntry({
+    const savedEntry = addDiaryEntry({
       caseId: activeCase.id,
       date: todayInputValue(),
       mood: "stable",
@@ -344,7 +871,6 @@ export function ConsultPanel() {
       saveSyncPhase: "saving",
       saveSyncMessage: "クラウドにも保存しています。"
     });
-
     try {
       const client = getBrowserSupabase();
       if (!client) {
@@ -374,7 +900,7 @@ export function ConsultPanel() {
         },
         body: JSON.stringify({
           cases: nextCases,
-          diaryEntries: allDiaryEntriesForSync(nextCases)
+          diaryEntries: [savedEntry]
         })
       });
 
@@ -386,6 +912,7 @@ export function ConsultPanel() {
         return;
       }
 
+      await markDurableTurnSaved(turn.id);
       updateTurn(turn.id, {
         saveSyncPhase: "saved",
         saveSyncMessage: "クラウドにも保存しました。"
@@ -427,7 +954,7 @@ export function ConsultPanel() {
             {cases.map((caseRecord, index) => (
               <button
                 className={caseRecord.id === activeCaseId ? "is-active" : ""}
-                disabled={phase === "loading"}
+                disabled={phase === "loading" || memoryAction !== "idle"}
                 key={caseRecord.id}
                 onClick={() => selectCase(caseRecord.id)}
                 type="button"
@@ -450,7 +977,13 @@ export function ConsultPanel() {
             </div>
           </div>
           <p className="consult-plan-status">
-            {!authChecked
+            {memoryMode === "consent-required"
+              ? "長期記憶への同意が必要"
+              : memoryMode === "checking"
+              ? "長期記憶を確認中"
+              : memoryMode === "temporary"
+                ? "長期記憶の準備が必要"
+            : !authChecked
               ? "利用条件を確認中"
               : consultAccess?.plan === "plus"
                 ? "Family Plus・1日5回／月30回まで"
@@ -460,15 +993,287 @@ export function ConsultPanel() {
           </p>
         </header>
 
+        {memoryMode === "consent-required" ? (
+          <section className="consult-memory-fallback is-consent" aria-label="この人専用AIの長期記憶への同意">
+            <div>
+              <span>最初に確認してください</span>
+              <h2>この人の記録と相談を、次回にも引き継ぎます</h2>
+            </div>
+            <p>{CONSULT_MEMORY_CONSENT_TEXT}</p>
+            <p>
+              相談時は必要な要約と関連記録だけを外部の生成AIへ送ります。氏名・住所・病名など、本人を特定できる情報は記録や相談文に入力しないでください。
+            </p>
+            <label className="consult-consent consult-memory-consent">
+              <input checked={consent} disabled={consentSaving} onChange={(event) => void toggleConsent(event.target.checked)} type="checkbox" />
+              <span>{consentSaving ? "同意状態を保存しています…" : "長期記憶への保存と、相談時のAI送信に同意します。"}</span>
+            </label>
+            {memoryReason ? <p className="consult-error" role="status">{memoryReason}</p> : null}
+            {memoryMessage ? <p className="consult-memory-message" role="status">{memoryMessage}</p> : null}
+            <details className="consult-memory-delete">
+              <summary>同意しないまま、保存済みデータを削除する</summary>
+              <p>同意を取り消した後でも、保存済みの相談履歴やAI記憶は削除できます。元の手帳記録そのものは削除しません。</p>
+              <div className="consult-memory-delete-actions">
+                <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("history")} type="button">自分の相談履歴を削除</button>
+                {consentCanManageSharedMemory ? (
+                  <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("memory")} type="button">家族共有のAI記憶を削除</button>
+                ) : null}
+                {consentCanManageSharedMemory ? (
+                  <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("all")} type="button">家族共有の記憶と自分の相談履歴を削除</button>
+                ) : null}
+              </div>
+              {!consentCanManageSharedMemory ? (
+                <p>家族共有のAI記憶はオーナーまたは管理者だけが削除できます。ここでは自分の相談履歴を削除できます。</p>
+              ) : null}
+              {deleteIntent ? (
+                <div className="consult-memory-delete-confirm" role="alert">
+                  <strong>{deleteIntent === "history"
+                    ? "これまでのAI相談履歴を削除しますか？"
+                    : deleteIntent === "memory"
+                      ? "この人の家族全員の専用AI記憶を削除しますか？"
+                      : "家族全員のAI記憶と、自分の相談履歴を両方削除しますか？"}</strong>
+                  <p>{deleteIntent === "history"
+                    ? "相談履歴だけを削除します。元の手帳記録と家族共有のAI記憶は残ります。"
+                    : "長期要約・重要な変化・家族の補足が家族全員の専用AIから消えます。元の手帳記録そのものは削除されません。"}</p>
+                  <div>
+                    <button disabled={memoryAction !== "idle"} onClick={confirmMemoryDelete} type="button">
+                      {memoryAction === "deleting" ? "削除しています…" : "削除する"}
+                    </button>
+                    <button className="is-secondary" disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent(null)} type="button">やめる</button>
+                  </div>
+                </div>
+              ) : null}
+            </details>
+          </section>
+        ) : memoryMode === "checking" ? (
+          <section className="consult-memory-card is-checking" aria-busy="true" aria-label="専用AIの長期記憶">
+            <div className="consult-memory-head">
+              <div>
+                <span>この人専用の長期記憶</span>
+                <h2>専用AIが覚えていること</h2>
+              </div>
+              <strong>確認中</strong>
+            </div>
+            <p className="consult-memory-loading" role="status">クラウドに保存された記録と、あなた自身のこれまでの相談を読み込んでいます。</p>
+          </section>
+        ) : memoryMode === "temporary" ? (
+          <section className="consult-memory-fallback" aria-label="長期記憶の準備が必要">
+            <div>
+              <span>専用AIを使うための準備</span>
+              <h2>長期記憶の準備が終わるまで、相談は送信しません</h2>
+            </div>
+            <p>{memoryReason}</p>
+            <p>その場限りの回答には戻しません。クラウド保存とメール確認を終えると、この人の全記録と、あなた自身の相談履歴を継続して踏まえる専用AIとして使えます。</p>
+            <Link href="/home#cloud-backup">クラウド保存とメール確認を設定する</Link>
+          </section>
+        ) : memoryPayload ? (
+          <section className="consult-memory-card" aria-label="専用AIが覚えていること">
+            <div className="consult-memory-head">
+              <div>
+                <span>この人専用の長期記憶</span>
+                <h2>専用AIが覚えていること</h2>
+              </div>
+              <strong>長期記憶 有効</strong>
+            </div>
+
+            <p className="consult-memory-purpose">
+              クラウドにあるこの人の手帳記録を継続して読み、長期要約・重要な変化・関連する過去記録・あなた自身のこれまでの相談を踏まえて答えます。
+            </p>
+
+            <div className="consult-memory-legend" aria-label="事実とAI提案の区別">
+              <div>
+                <strong>手帳に書いた事実</strong>
+                <span>あなたや家族が記録した元の内容です</span>
+              </div>
+              <div>
+                <strong>あなた・家族の補足・訂正</strong>
+                <span>AIより優先して覚えさせる内容です</span>
+              </div>
+              <div>
+                <strong>AIからの提案</strong>
+                <span>事実ではなく、次に確認するための案です</span>
+              </div>
+            </div>
+
+            <div className="consult-memory-stats" aria-label="記憶に使っている記録の範囲">
+              <div><strong>{memoryPayload.memory.recordCount}</strong><span>件の手帳記録</span></div>
+              <div>
+                <strong>{memoryPayload.memory.firstRecordDate ? formatMemoryDate(memoryPayload.memory.firstRecordDate) : "まだなし"}</strong>
+                <span>最初の記録</span>
+              </div>
+              <div>
+                <strong>{memoryPayload.memory.lastRecordDate ? formatMemoryDate(memoryPayload.memory.lastRecordDate) : "まだなし"}</strong>
+                <span>最新の記録</span>
+              </div>
+            </div>
+
+            <div className="consult-memory-summary">
+              <div className="consult-memory-section-head">
+                <div>
+                  <span>手帳の元記録から整理</span>
+                  <h3>これまでの状況</h3>
+                </div>
+                <small>元の記録に基づく事実</small>
+              </div>
+              <p>{memoryPayload.memory.longTermSummary || "記録が増えると、ここにこれまでの状況がまとめられます。"}</p>
+            </div>
+
+            <div className="consult-memory-correction">
+              <div className="consult-memory-section-head">
+                <div>
+                  <span>あなた・家族の補足・訂正</span>
+                  <h3>AIに必ず覚えてほしいこと</h3>
+                </div>
+                {!memoryEditing && memoryPayload.canEditSharedMemory ? (
+                  <button disabled={memoryAction !== "idle"} onClick={() => setMemoryEditing(true)} type="button">
+                    {memoryPayload.memory.userSummary ? "訂正する" : "追加する"}
+                  </button>
+                ) : null}
+              </div>
+              {memoryEditing ? (
+                <div className="consult-memory-editor">
+                  <label htmlFor="consult-memory-correction">元の記録と違うことや、AIに優先して覚えてほしいこと</label>
+                  <textarea
+                    id="consult-memory-correction"
+                    maxLength={2000}
+                    onChange={(event) => setMemoryDraft(event.target.value)}
+                    placeholder="例：薬が変わったのは8月ではなく9月です。今は姉が通院に付き添っています。"
+                    rows={4}
+                    value={memoryDraft}
+                  />
+                  <p>{memoryDraft.length} / 2000</p>
+                  <div>
+                    <button disabled={memoryAction !== "idle"} onClick={saveMemoryCorrection} type="button">
+                      {memoryAction === "saving" ? "保存しています…" : "補足・訂正を記憶する"}
+                    </button>
+                    <button
+                      className="is-secondary"
+                      disabled={memoryAction !== "idle"}
+                      onClick={() => {
+                        setMemoryDraft(memoryPayload.memory.userSummary);
+                        setMemoryEditing(false);
+                      }}
+                      type="button"
+                    >
+                      変更せず閉じる
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <p>{memoryPayload.memory.userSummary || "補足・訂正はまだありません。必要な時だけ追加できます。"}</p>
+              )}
+            </div>
+
+            <div className="consult-memory-changes">
+              <div className="consult-memory-section-head">
+                <div>
+                  <span>手帳に書いた事実から抽出</span>
+                  <h3>重要な変化の履歴</h3>
+                </div>
+                <small>{memoryPayload.memory.importantChanges.length}件</small>
+              </div>
+              {memoryPayload.memory.importantChanges.length > 0 ? (
+                <ul>
+                  {memoryPayload.memory.importantChanges.map((change) => (
+                    <li className={change.excluded ? "is-excluded" : ""} key={change.id}>
+                      <div className="consult-memory-change-meta">
+                        <time dateTime={change.date}>{change.date ? formatMemoryDate(change.date) : "日付なし"}</time>
+                        <span>{change.source}</span>
+                        <span>{change.excluded ? "記憶から除外中" : change.status}</span>
+                      </div>
+                      <strong>{change.title}</strong>
+                      {change.detail ? <p>{change.detail}</p> : null}
+                      {change.eventId && memoryPayload.canEditSharedMemory ? (
+                        <button
+                          disabled={memoryAction !== "idle"}
+                          onClick={() => toggleMemorySource(change.eventId as string, change.excluded)}
+                          type="button"
+                        >
+                          {change.excluded ? "この記録を記憶に戻す" : "この記録をAIの記憶から外す"}
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="consult-memory-empty">変化の記録が増えると、日付順にここへ表示されます。</p>
+              )}
+              {memoryPayload.memory.excludedEventIds.filter((eventId) => (
+                !memoryPayload.memory.importantChanges.some((change) => change.eventId === eventId)
+              )).map((eventId, index) => (
+                <div className="consult-memory-excluded" key={eventId}>
+                  <div>
+                    <strong>記憶から外している記録 {index + 1}</strong>
+                    <span>元の手帳記録は削除されていません</span>
+                  </div>
+                  {memoryPayload.canEditSharedMemory ? (
+                    <button disabled={memoryAction !== "idle"} onClick={() => toggleMemorySource(eventId, true)} type="button">
+                      記憶に戻す
+                    </button>
+                  ) : null}
+                </div>
+              ))}
+            </div>
+
+            <p className="consult-memory-updated">
+              {memoryPayload.memory.updatedAt
+                ? `記憶の最終更新：${formatMemoryDate(memoryPayload.memory.updatedAt, true)}`
+                : "記憶は次の相談時にも更新されます。"}
+            </p>
+            {memoryMessage ? <p className="consult-memory-message" role="status">{memoryMessage}</p> : null}
+
+            <details className="consult-memory-delete">
+              <summary>記憶や相談履歴を管理・削除する</summary>
+              <p>消したいものを選び、次の確認画面でもう一度「削除する」を押すまで削除されません。</p>
+              <div className="consult-memory-delete-actions">
+                {memoryPayload.canManageSharedMemory ? (
+                  <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("memory")} type="button">家族共有のAI記憶を削除</button>
+                ) : null}
+                <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("history")} type="button">相談履歴を削除</button>
+                {memoryPayload.canManageSharedMemory ? (
+                  <button disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent("all")} type="button">家族共有の記憶と自分の相談履歴を削除</button>
+                ) : null}
+              </div>
+              {!memoryPayload.canManageSharedMemory ? (
+                <p>この人の家族全員で共有するAI記憶の削除は、家族ボードのオーナーまたは管理者が行います。ここでは自分の相談履歴だけ削除できます。</p>
+              ) : null}
+              {deleteIntent ? (
+                <div className="consult-memory-delete-confirm" role="alert">
+                  <strong>
+                    {deleteIntent === "memory"
+                      ? "この人の家族全員の専用AI記憶を削除しますか？"
+                      : deleteIntent === "history"
+                        ? "これまでのAI相談履歴を削除しますか？"
+                        : "家族全員のAI記憶と、自分の相談履歴を両方削除しますか？"}
+                  </strong>
+                  <p>{deleteIntent !== "history"
+                    ? "この人の手帳を共有する家族全員の専用AIから、長期要約・重要な変化・家族の補足が消えます。元の手帳記録そのものは削除されません。削除後は、これから新しく追加する記録だけを覚えます。"
+                    : "相談履歴だけを削除します。元の手帳記録と専用AIの長期記憶は残ります。"}</p>
+                  <div>
+                    <button disabled={memoryAction !== "idle"} onClick={confirmMemoryDelete} type="button">
+                      {memoryAction === "deleting" ? "削除しています…" : "削除する"}
+                    </button>
+                    <button className="is-secondary" disabled={memoryAction !== "idle"} onClick={() => setDeleteIntent(null)} type="button">やめる</button>
+                  </div>
+                </div>
+              ) : null}
+            </details>
+          </section>
+        ) : null}
+
         <div className="consult-storage-note" role="note">
-          <strong>AIの回答は、自動では保存されません。</strong>
-          <p>
-            この画面を閉じると回答は消えます。残したい回答だけ、回答の下にある「この回答を手帳に残す」を押してください。
-            手帳の「過去の手帳」に「AI相談メモ」として保存されます。
-          </p>
+          <strong>{memoryMode === "checking"
+            ? "相談履歴の保存方法を確認しています。"
+            : durableMemoryEnabled
+              ? "AI相談の質問と回答は、相談履歴へ自動保存されます。"
+              : "専用AIの長期記憶を準備してください。"}</strong>
+          <p>{memoryMode === "checking"
+            ? "確認が終わるまで、そのままお待ちください。"
+            : durableMemoryEnabled
+              ? "次の相談でも会話の経過を踏まえます。日付別の手帳には自動追加しません。手帳にも残したい回答だけ「この回答を手帳に残す」を押してください。"
+              : "長期記憶が確認できるまで、相談内容はAIへ送りません。"}</p>
         </div>
 
-        {openedFromRecord && turns.length === 0 ? (
+        {durableMemoryEnabled && openedFromRecord && turns.length === 0 ? (
           <div className="consult-ready-card" role="status">
             <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
             <div>
@@ -479,7 +1284,7 @@ export function ConsultPanel() {
           </div>
         ) : null}
 
-        {turns.length === 0 ? (
+        {durableMemoryEnabled && turns.length === 0 ? (
           <div className="consult-chat-intro">
             <h2>聞きたいことを1つ書いてください</h2>
             <p>
@@ -505,10 +1310,29 @@ export function ConsultPanel() {
 
         {turns.length > 0 ? (
           <div className="consult-thread" aria-live="polite">
+            {durableMemoryEnabled ? (
+              <div className="consult-history-head">
+                <div>
+                  <span>自動保存された相談履歴</span>
+                  <strong>保存済み相談 {memoryPayload?.historyTotal ?? turns.length}件</strong>
+                </div>
+                <small>あなた自身の全履歴の概要と、今回に関連する過去相談を次の相談でも使います</small>
+              </div>
+            ) : null}
+            {durableMemoryEnabled && memoryPayload?.historyHasMore ? (
+              <button
+                className="consult-history-more"
+                disabled={historyLoading}
+                onClick={loadOlderConsultHistory}
+                type="button"
+              >
+                {historyLoading ? "前の相談を読み込んでいます…" : `さらに前の相談を表示（現在${turns.length}件）`}
+              </button>
+            ) : null}
             {turns.map((turn) => (
               <article className="consult-turn" id={`consult-turn-${turn.id}`} key={turn.id}>
                 <div className="consult-message consult-message-user">
-                  <span>あなた</span>
+                  <span>あなた{turn.createdAt ? `・${formatMemoryDate(turn.createdAt, true)}` : ""}</span>
                   <div className="consult-bubble"><p>{turn.question}</p></div>
                 </div>
                 <div className="consult-message consult-message-assistant">
@@ -598,13 +1422,25 @@ export function ConsultPanel() {
               <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
               <strong>AI相談</strong>
             </div>
-            <p>手帳とこれまでの会話を読んでいます。30秒ほどかかることがあります。</p>
+            <p>{durableMemoryEnabled
+              ? "この人の長期記憶、関連する過去記録、あなた自身のこれまでの相談を読んでいます。30秒ほどかかることがあります。"
+              : "手帳とこの画面の会話を読んでいます。30秒ほどかかることがあります。"}</p>
           </div>
         ) : null}
 
         <div className="consult-composer">
-          <h2>{turns.length > 0 ? "続けて聞きたいことを書いてください" : "相談内容を書く"}</h2>
-          {needsPlus ? (
+          <h2>{durableMemoryEnabled
+            ? turns.length > 0 ? "続けて聞きたいことを書いてください" : "相談内容を書く"
+            : "専用AIの準備をしてください"}</h2>
+          {!durableMemoryEnabled ? (
+            <div className="consult-memory-required">
+              <strong>{memoryMode === "checking" ? "長期記憶を確認しています" : "その場限りの相談は送信しません"}</strong>
+              <p>{memoryMode === "checking"
+                ? "この人の記録と、あなた自身の相談履歴を安全に読み込んでいます。そのままお待ちください。"
+                : "この人の記録を継続して覚えるため、先にクラウド保存とメール確認が必要です。"}</p>
+              {memoryMode === "temporary" ? <Link href="/home#cloud-backup">長期記憶を準備する</Link> : null}
+            </div>
+          ) : needsPlus ? (
             <div className="consult-followup-gate">
               <strong>今日の無料AI相談は利用済みです。</strong>
               <p>明日0時からまた1回使えます。Family Plusなら、今日のうちも会話を続けられます。</p>
@@ -631,9 +1467,9 @@ export function ConsultPanel() {
                 value={question}
               />
               <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
-              {turns.length === 0 ? (
+              {!consent ? (
                 <label className="consult-consent">
-                  <input checked={consent} onChange={(event) => toggleConsent(event.target.checked)} type="checkbox" />
+                  <input checked={consent} disabled={consentSaving} onChange={(event) => void toggleConsent(event.target.checked)} type="checkbox" />
                   <span>手帳の内容をAI相談に送ることに同意します。</span>
                 </label>
               ) : null}
@@ -642,13 +1478,13 @@ export function ConsultPanel() {
               </button>
             </>
           )}
-          {!hasSubstance ? (
+          {durableMemoryEnabled && !hasSubstance ? (
             <p className="consult-hint">
               先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。
               <Link href="/home#today-diary">今日の記録を書く</Link>
             </p>
           ) : null}
-          {!consent && turns.length === 0 && !needsPlus ? <p className="consult-hint">同意すると相談ボタンを押せます。</p> : null}
+          {durableMemoryEnabled && !consent && !needsPlus ? <p className="consult-hint">同意すると相談ボタンを押せます。</p> : null}
           {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
         </div>
       </section>
@@ -656,7 +1492,10 @@ export function ConsultPanel() {
       <details className="consult-disclosure">
         <summary>AIに送る情報を確認する</summary>
         <div className="consult-disclosure-body">
-          <p>相談のたびに必要な内容だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。</p>
+          <p>
+            長期記憶は対象者ごとに家族共有で保存し、相談履歴は相談した利用者本人だけが見られる形で保存します。相談のたびに、質問に必要な要約・関連記録・あなた自身の過去相談だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。
+          </p>
+          <p><strong>氏名は自由記述から確実に自動判定できません。氏名・住所・病名など、本人を特定できる情報は相談文や手帳記録に入力しないでください。</strong></p>
           <div className="consult-disclosure-grid">
             <div>
               <strong>送るもの</strong>
@@ -667,6 +1506,14 @@ export function ConsultPanel() {
               <ul>{CONSULT_WITHHELD_FIELDS.map((item) => <li key={item}>{item}</li>)}</ul>
             </div>
           </div>
+          {consent ? (
+            <div className="consult-consent-withdraw-wrap">
+              <p>同意を取り消すと、新しい相談をAIへ送れなくなります。保存済みの手帳・長期記憶・相談履歴は消えません。</p>
+              <button className="consult-consent-withdraw" disabled={consentSaving} onClick={() => void toggleConsent(false)} type="button">
+                AIへの送信同意を取り消す
+              </button>
+            </div>
+          ) : null}
         </div>
       </details>
     </div>

@@ -14,7 +14,7 @@ export default function ConsultPage() {
         <p className="consult-eyebrow">AI相談チャット</p>
         <h1>この人のことを、続けて相談できます。</h1>
         <p className="consult-lead">
-          この手帳のプロフィール、最近の記録、これまでの会話を読み、同じ相談の続きとして答えます。
+          クラウドに保存した全期間の手帳記録と、あなた自身のこれまでの相談履歴を読み、同じ相談の続きとして答えます。
           診断や法律・税務の結論は出しません。判断が必要なことは、必ず主治医や専門家に確認してください。
         </p>
         <div className="consult-hero-actions">

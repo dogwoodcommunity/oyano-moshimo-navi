@@ -6,6 +6,7 @@ import {
   consultAnswerToDiaryBody,
   consultAnswerToHistoryTurn,
   hasNotebookSubstance,
+  CONSULT_MEMORY_CONSENT_TEXT,
   CONSULT_MAX_ENTRIES,
   CONSULT_MAX_HISTORY,
   CONSULT_MAX_QUESTION_LENGTH,
@@ -15,10 +16,14 @@ import {
 } from "@oyano/shared";
 import {
   fetchConsultAccess,
+  fetchConsultMemory,
+  deleteConsultMemory,
+  patchConsultMemory,
   readConsultConsent,
   requestConsult,
   writeConsultConsent,
-  type ConsultAccess
+  type ConsultAccess,
+  type MobileConsultMemory
 } from "@/lib/consult";
 import { trackFunnel } from "@/lib/funnel";
 import {
@@ -38,9 +43,11 @@ const suggestions = [
   "次の受診で何を聞けばいいですか"
 ];
 
+const IMPORTANT_CHANGES_PAGE_SIZE = 20;
+
 type Phase = "loading" | "ready" | "asking" | "done" | "error";
 
-/** 画面に積み上がる、1回ぶんの相談と回答。前回までを踏まえてAIが続けて答える。 */
+/** 画面に積み上がる、1回ぶんの相談と回答。クラウド側でも対象者ごとの履歴として保存する。 */
 type ConsultTurn = { id: string; question: string; answer: ConsultAnswer; saved: boolean };
 
 function birthDateToAgeBand(birthDate?: string) {
@@ -57,6 +64,14 @@ export default function ConsultScreen() {
   const [person, setPerson] = useState<MobilePerson | null>(null);
   const [entries, setEntries] = useState<MobileTimelineEntry[]>([]);
   const [consent, setConsent] = useState(false);
+  const [consentChanging, setConsentChanging] = useState(false);
+  const [consentRevision, setConsentRevision] = useState(0);
+  const [consentCanManageSharedMemory, setConsentCanManageSharedMemory] = useState(false);
+  const [memory, setMemory] = useState<MobileConsultMemory | null>(null);
+  const [memoryDraft, setMemoryDraft] = useState("");
+  const [memoryBusy, setMemoryBusy] = useState(false);
+  const [visibleImportantChangeCount, setVisibleImportantChangeCount] = useState(IMPORTANT_CHANGES_PAGE_SIZE);
+  const [deleteScope, setDeleteScope] = useState<"memory" | "history" | "all" | null>(null);
   const [question, setQuestion] = useState("");
   const [turns, setTurns] = useState<ConsultTurn[]>([]);
   const [disclaimer, setDisclaimer] = useState("");
@@ -73,7 +88,6 @@ export default function ConsultScreen() {
     let mounted = true;
 
     async function load() {
-      setConsent(await readConsultConsent());
       const [data, consultAccess] = await Promise.all([
         fetchDashboardData(),
         fetchConsultAccess()
@@ -83,6 +97,23 @@ export default function ConsultScreen() {
       const active = data.person ?? data.people[0] ?? null;
       setPerson(active);
       setAccess(consultAccess);
+      if (active) {
+        const consentResult = await readConsultConsent(active.id);
+        const activeConsent = consentResult.ok ? consentResult.data.active : false;
+        if (mounted && consentResult.ok) {
+          setConsent(activeConsent);
+          setConsentRevision(consentResult.data.revision);
+          setConsentCanManageSharedMemory(consentResult.data.canManageSharedMemory);
+        }
+        if (mounted && !consentResult.ok) setMessage(consentResult.message);
+        if (activeConsent) {
+          const memoryResult = await fetchConsultMemory(active.id);
+          if (mounted && memoryResult.ok) {
+            setMemory(memoryResult.data);
+            setMemoryDraft(memoryResult.data.memory.userSummary);
+          }
+        }
+      }
 
       if (active) {
         const timeline = await fetchTimelineEntries(active.id);
@@ -94,6 +125,11 @@ export default function ConsultScreen() {
     void load();
     return () => { mounted = false; };
   }, []);
+
+  useEffect(() => {
+    // 対象者を切り替えた時に、前の人で開いていた表示件数を引き継がない。
+    setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+  }, [person?.id]);
 
   const profile = person?.profile;
   const payloadPerson = {
@@ -109,12 +145,187 @@ export default function ConsultScreen() {
     .slice(0, CONSULT_MAX_ENTRIES)
     .map((entry) => ({ date: entry.date, mood: entry.mood, body: entry.body }));
   const hasSubstance = hasNotebookSubstance({ question: "", person: payloadPerson, entries: diaryEntries });
-  const canAsk = access.canConsult && consent && hasSubstance && question.trim().length >= 4 && phase !== "asking";
+  const canAsk = access.canConsult && consent && !consentChanging && hasSubstance && question.trim().length >= 4 && phase !== "asking";
 
   async function toggleConsent() {
+    if (!person || consentChanging) return;
     const next = !consent;
-    setConsent(next);
-    await writeConsultConsent(next);
+    setConsentChanging(true);
+    if (!next) setConsent(false);
+    const saved = await writeConsultConsent(person.id, next, consentRevision);
+    if (saved.ok) {
+      setConsent(saved.data.active);
+      setConsentRevision(saved.data.revision);
+      setConsentCanManageSharedMemory(saved.data.canManageSharedMemory);
+      if (next) {
+        const memoryResult = await fetchConsultMemory(person.id);
+        if (memoryResult.ok) {
+          setMemory(memoryResult.data);
+          setMemoryDraft(memoryResult.data.memory.userSummary);
+          setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+        } else {
+          setMessage(memoryResult.message);
+        }
+      } else {
+        setMemory(null);
+        setMemoryDraft("");
+        setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+      }
+      setMessage(next
+        ? "この人の長期記憶への同意を保存しました。別の端末にも反映されます。"
+        : "この人の長期記憶への同意を取り消しました。別の端末にも反映されます。");
+    } else {
+      const current = await readConsultConsent(person.id);
+      if (current.ok) {
+        setConsent(current.data.active);
+        setConsentRevision(current.data.revision);
+        setConsentCanManageSharedMemory(current.data.canManageSharedMemory);
+      } else if (!next) {
+        setConsent(true);
+      }
+      setMessage(saved.message);
+    }
+    setConsentChanging(false);
+  }
+
+  async function refreshMemory() {
+    if (!person || !consent) return null;
+    const result = await fetchConsultMemory(person.id);
+    if (result.ok) {
+      setMemory(result.data);
+      setMemoryDraft(result.data.memory.userSummary);
+      setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+      return result.data;
+    }
+    setMessage(result.message);
+    return null;
+  }
+
+  async function saveMemoryCorrection() {
+    if (!person || !memory || !memory.canEditSharedMemory) return;
+    const attemptedSummary = memoryDraft.trim();
+    setMemoryBusy(true);
+    const result = await patchConsultMemory(person.id, memory.memory.memoryVersion, {
+      userSummary: attemptedSummary
+    });
+    if (result.ok) {
+      setMemory(result.data);
+      setMemoryDraft(result.data.memory.userSummary);
+      setMessage("補足・訂正を専用AIの記憶へ反映しました。");
+    } else if (result.code === "memory_conflict") {
+      const latest = await fetchConsultMemory(person.id);
+      if (latest.ok) {
+        setMemory(latest.data);
+        // 入力途中の訂正文は消さず、最新versionへ載せ替えて再実行できるようにする。
+        setMemoryDraft(attemptedSummary);
+      }
+      setMessage("別の端末で記憶が更新されました。最新の内容を読み込みました。補足・訂正を確認して、もう一度保存してください。");
+    } else {
+      setMessage(result.message);
+    }
+    setMemoryBusy(false);
+  }
+
+  async function toggleMemorySource(sourceEventId: string, excluded: boolean) {
+    if (!person || !memory || !memory.canEditSharedMemory) return;
+    setMemoryBusy(true);
+    const result = await patchConsultMemory(person.id, memory.memory.memoryVersion, excluded
+      ? { includeEventId: sourceEventId }
+      : { excludeEventId: sourceEventId });
+    if (result.ok) {
+      setMemory(result.data);
+      setMemoryDraft(result.data.memory.userSummary);
+    } else if (result.code === "memory_conflict") {
+      const latest = await fetchConsultMemory(person.id);
+      if (latest.ok) {
+        setMemory(latest.data);
+        setMemoryDraft(latest.data.memory.userSummary);
+      }
+      setMessage("別の端末で記憶が更新されました。最新の内容を読み込んだので、もう一度操作してください。");
+    } else {
+      setMessage(result.message);
+    }
+    setMemoryBusy(false);
+  }
+
+  async function confirmMemoryDelete() {
+    if (!person || !deleteScope) return;
+    setMemoryBusy(true);
+    const result = await deleteConsultMemory(person.id, deleteScope);
+    if (result.ok) {
+      setMemory(result.data);
+      setMemoryDraft(result.data?.memory.userSummary ?? "");
+      setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+      setMessage(deleteScope === "history"
+        ? "自分の相談履歴を削除しました。"
+        : "家族共有のAI記憶を削除しました。元の手帳記録は残っています。");
+      setDeleteScope(null);
+    } else if (result.code === "partial_delete") {
+      setMemory(null);
+      setMemoryDraft("");
+      setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
+      setDeleteScope("history");
+      setMessage("家族共有のAI記憶は削除済みです。相談履歴だけ残ったため、確認画面を『相談履歴を削除』へ切り替えました。もう一度削除してください。");
+    } else {
+      setMessage(result.message);
+    }
+    setMemoryBusy(false);
+  }
+
+  async function loadOlderHistory() {
+    if (!person || !memory?.historyHasMore || memoryBusy) return;
+    setMemoryBusy(true);
+    const result = await fetchConsultMemory(person.id, memory.history.length);
+    if (result.ok) {
+      const byId = new Map([...result.data.history, ...memory.history].map((turn) => [turn.id, turn]));
+      setMemory({
+        ...result.data,
+        history: [...byId.values()].sort((a, b) => (a.createdAt ?? "").localeCompare(b.createdAt ?? ""))
+      });
+    } else {
+      setMessage(result.message);
+    }
+    setMemoryBusy(false);
+  }
+
+  function renderMemoryDeleteControls(canManageSharedMemory: boolean) {
+    return (
+      <View style={styles.memoryDeleteBox}>
+        <Text style={styles.sectionTitle}>記憶や相談履歴を削除する</Text>
+        <Text style={styles.body}>元の手帳記録そのものは削除しません。削除は次の確認でもう一度押すまで実行されません。</Text>
+        <Pressable disabled={memoryBusy} onPress={() => setDeleteScope("history")} style={styles.memoryDangerButton}>
+          <Text style={styles.memoryDangerText}>自分の相談履歴を削除</Text>
+        </Pressable>
+        {canManageSharedMemory ? (
+          <>
+            <Pressable disabled={memoryBusy} onPress={() => setDeleteScope("memory")} style={styles.memoryDangerButton}>
+              <Text style={styles.memoryDangerText}>家族全員のAI記憶を削除</Text>
+            </Pressable>
+            <Pressable disabled={memoryBusy} onPress={() => setDeleteScope("all")} style={styles.memoryDangerButton}>
+              <Text style={styles.memoryDangerText}>家族共有の記憶と自分の履歴を削除</Text>
+            </Pressable>
+          </>
+        ) : (
+          <Text style={styles.hint}>家族共有のAI記憶は、オーナーまたは管理者だけが削除できます。</Text>
+        )}
+        {deleteScope ? (
+          <View style={styles.memoryDeleteConfirm}>
+            <Text style={styles.checkTitle}>{deleteScope === "history"
+              ? "自分の相談履歴を削除しますか？"
+              : "この人の家族全員の専用AI記憶から削除しますか？"}</Text>
+            <Text style={styles.body}>{deleteScope === "history"
+              ? "手帳記録と家族共有のAI記憶は残ります。"
+              : "元の手帳記録は残りますが、長期要約・重要な変化・家族の補足が家族全員の専用AIから消えます。"}</Text>
+            <Pressable disabled={memoryBusy} onPress={() => void confirmMemoryDelete()} style={styles.memoryDangerPrimary}>
+              <Text style={styles.primaryButtonText}>{memoryBusy ? "削除しています…" : "削除する"}</Text>
+            </Pressable>
+            <Pressable disabled={memoryBusy} onPress={() => setDeleteScope(null)} style={styles.secondaryButton}>
+              <Text style={styles.secondaryButtonText}>やめる</Text>
+            </Pressable>
+          </View>
+        ) : null}
+      </View>
+    );
   }
 
   async function ask() {
@@ -123,13 +334,15 @@ export default function ConsultScreen() {
     setPhase("asking");
     setMessage("");
 
-    // 前回までのやりとりを短くまとめて渡す。これでAIが続きとして答えられる。
+    // いま画面にある分も渡す。サーバーは保存済み履歴と重複させず、対象者ごとの続きとして扱う。
     const history = turns
       .slice(-CONSULT_MAX_HISTORY)
       .map((turn) => consultAnswerToHistoryTurn(turn.question, turn.answer));
 
     const result = await requestConsult({
       question: asked,
+      // 対象者IDを正本にし、サーバーで家族権限を確認してから記録と長期記憶を取得する。
+      personId: person.id,
       person: payloadPerson,
       entries: diaryEntries,
       tasks: [],
@@ -149,6 +362,7 @@ export default function ConsultScreen() {
     setDisclaimer(result.disclaimer);
     setQuestion("");
     setAccess(await fetchConsultAccess());
+    void refreshMemory();
     void trackFunnel("consult_asked");
     setPhase("done");
   }
@@ -194,13 +408,17 @@ export default function ConsultScreen() {
     );
   }
 
+  const importantChanges = memory?.memory.importantChanges ?? [];
+  const visibleImportantChanges = importantChanges.slice(0, visibleImportantChangeCount);
+  const hiddenImportantChangeCount = Math.max(0, importantChanges.length - visibleImportantChanges.length);
+
   return (
     <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" style={styles.screen}>
       <View style={styles.card}>
         <Text style={styles.kicker}>長期相談</Text>
         <Text style={styles.title}>毎回ゼロから説明せずに、相談できます。</Text>
         <Text style={styles.body}>
-          この人のプロフィールと最近の記録を前提に、いま確認するとよいこと、窓口で聞くこと、相談先の候補を整理します。
+          クラウドに保存したこの人の全期間の手帳記録と、あなた自身のこれまでの相談履歴を前提に、いま確認するとよいこと、窓口で聞くこと、相談先の候補を整理します。
           診断や法律・税務の結論は出しません。
         </Text>
         <ConsultAccessNotice access={access} />
@@ -209,7 +427,10 @@ export default function ConsultScreen() {
       <View style={styles.card}>
         <Text style={styles.cardTitle}>送る情報と、送らない情報</Text>
         <Text style={styles.body}>
-          相談のたびに、下の内容だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。
+          {CONSULT_MEMORY_CONSENT_TEXT} 相談のたびに、下の内容だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。
+        </Text>
+        <Text style={styles.body}>
+          氏名・住所・病名など、本人を特定できる情報は相談文や手帳記録に入力しないでください。
         </Text>
         <View style={styles.disclosure}>
           <Text style={styles.disclosureLabel}>送るもの</Text>
@@ -223,15 +444,154 @@ export default function ConsultScreen() {
             <Text key={item} style={styles.disclosureItem}>・{item}</Text>
           ))}
         </View>
-        <Pressable onPress={toggleConsent} style={styles.consent}>
+        <Pressable disabled={consentChanging} onPress={toggleConsent} style={styles.consent}>
           <MaterialCommunityIcons
             color={consent ? colors.green : colors.line}
             name={consent ? "checkbox-marked" : "checkbox-blank-outline"}
             size={26}
           />
-          <Text style={styles.consentText}>上の内容を送ることに同意します。（いつでも外せます）</Text>
+          <Text style={styles.consentText}>{consentChanging
+            ? "同意状態を保存しています…"
+            : "長期記憶への保存と、相談時のAI送信に同意します。（別端末にも反映されます）"}</Text>
         </Pressable>
+        <Text style={styles.hint}>
+          同意はこの人とあなたの組み合わせで保存され、別の端末にも反映されます。
+        </Text>
       </View>
+
+      {!consent ? (
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>同意しないまま、保存済みデータを削除できます</Text>
+          <Text style={styles.body}>同意を取り消した後でも、以前の相談履歴やAI記憶はここから削除できます。</Text>
+          {renderMemoryDeleteControls(consentCanManageSharedMemory)}
+          {message ? <Text style={styles.hint}>{message}</Text> : null}
+        </View>
+      ) : null}
+
+      {consent ? (
+        <View style={styles.card}>
+          <Text style={styles.kicker}>この人専用の長期記憶</Text>
+          <Text style={styles.cardTitle}>専用AIが覚えていること</Text>
+          {!memory ? (
+            <>
+              <Text style={styles.body}>クラウドに保存した手帳と相談履歴を読み込みます。</Text>
+              <Pressable disabled={memoryBusy} onPress={() => void refreshMemory()} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>{memoryBusy ? "読み込んでいます…" : "記憶と相談履歴を読み込む"}</Text>
+              </Pressable>
+            </>
+          ) : (
+            <>
+              <View style={styles.memoryStats}>
+                <View style={styles.memoryStat}>
+                  <Text style={styles.memoryStatValue}>{memory.memory.recordCount}</Text>
+                  <Text style={styles.memoryStatLabel}>手帳記録</Text>
+                </View>
+                <View style={styles.memoryStat}>
+                  <Text style={styles.memoryStatValue}>{memory.historyTotal}</Text>
+                  <Text style={styles.memoryStatLabel}>保存済み相談</Text>
+                </View>
+              </View>
+
+              <View style={styles.memoryFactBox}>
+                <Text style={styles.disclosureLabel}>手帳の元記録から整理した事実</Text>
+                <Text style={styles.answerBody}>{memory.memory.longTermSummary || "手帳の記録はまだありません。"}</Text>
+              </View>
+
+              <Text style={styles.sectionTitle}>重要な変化の履歴</Text>
+              {memory.memory.importantChanges.length === 0 ? (
+                <Text style={styles.body}>変化あり・急ぎの記録はまだありません。</Text>
+              ) : visibleImportantChanges.map((change) => (
+                <View key={change.sourceEventId} style={styles.memoryChange}>
+                  <Text style={styles.memoryChangeMeta}>{change.date ?? "日付なし"}・{change.mood === "urgent" ? "急ぎ" : "変化あり"}</Text>
+                  <Text style={styles.answerBody}>{change.summary}</Text>
+                  {memory.canEditSharedMemory ? (
+                    <Pressable
+                      disabled={memoryBusy}
+                      onPress={() => void toggleMemorySource(change.sourceEventId, false)}
+                      style={styles.memorySmallButton}
+                    >
+                      <Text style={styles.memorySmallButtonText}>この記録をAIの記憶から外す</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+              {hiddenImportantChangeCount > 0 ? (
+                <Pressable
+                  disabled={memoryBusy}
+                  onPress={() => setVisibleImportantChangeCount((current) => (
+                    Math.min(current + IMPORTANT_CHANGES_PAGE_SIZE, importantChanges.length)
+                  ))}
+                  style={styles.secondaryButton}
+                >
+                  <Text style={styles.secondaryButtonText}>
+                    さらに表示（残り{hiddenImportantChangeCount}件）
+                  </Text>
+                </Pressable>
+              ) : null}
+              {memory.excludedSources.length > 0 ? (
+                <>
+                  <Text style={styles.sectionTitle}>AIの記憶から外している記録</Text>
+                  {memory.excludedSources.map((source) => (
+                    <View key={source.sourceEventId} style={styles.memoryChange}>
+                      <Text style={styles.memoryChangeMeta}>{source.date ?? "日付なし"}・元の手帳記録は残っています</Text>
+                      <Text style={styles.answerBody}>{source.body}</Text>
+                      {memory.canEditSharedMemory ? (
+                        <Pressable
+                          disabled={memoryBusy}
+                          onPress={() => void toggleMemorySource(source.sourceEventId, true)}
+                          style={styles.memorySmallButton}
+                        >
+                          <Text style={styles.memorySmallButtonText}>この記録をAIの記憶へ戻す</Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  ))}
+                </>
+              ) : null}
+
+              <Text style={styles.sectionTitle}>あなた・家族の補足・訂正</Text>
+              {memory.canEditSharedMemory ? (
+                <>
+                  <TextInput
+                    maxLength={2000}
+                    multiline
+                    onChangeText={setMemoryDraft}
+                    placeholder="元の記録と違うことや、AIに優先して覚えてほしいこと"
+                    placeholderTextColor={colors.muted}
+                    style={styles.memoryInput}
+                    value={memoryDraft}
+                  />
+                  <Pressable disabled={memoryBusy} onPress={() => void saveMemoryCorrection()} style={styles.secondaryButton}>
+                    <Text style={styles.secondaryButtonText}>{memoryBusy ? "保存しています…" : "補足・訂正を記憶する"}</Text>
+                  </Pressable>
+                </>
+              ) : (
+                <Text style={styles.body}>{memory.memory.userSummary || "補足・訂正はありません。閲覧専用メンバーは変更できません。"}</Text>
+              )}
+
+              <Text style={styles.sectionTitle}>自動保存された相談履歴</Text>
+              <Text style={styles.body}>手帳の事実とは分け、相談したあなた本人だけが見られる形で保存しています。あなた自身の全履歴の概要と、今回に関連する過去相談を次の回答に使います。</Text>
+              {memory.history.length === 0 ? (
+                <Text style={styles.body}>相談履歴はまだありません。</Text>
+              ) : memory.history.map((turn) => (
+                <View key={turn.id} style={styles.memoryHistoryTurn}>
+                  <Text style={styles.memoryChangeMeta}>{turn.createdAt?.slice(0, 10) ?? "日付なし"}</Text>
+                  <Text style={styles.turnQuestionText}>{turn.question}</Text>
+                  <Text style={styles.body}>AIの整理: {turn.answer.situation}</Text>
+                </View>
+              ))}
+              {memory.historyHasMore ? (
+                <Pressable disabled={memoryBusy} onPress={() => void loadOlderHistory()} style={styles.secondaryButton}>
+                  <Text style={styles.secondaryButtonText}>{memoryBusy ? "読み込んでいます…" : "さらに前の相談を表示"}</Text>
+                </Pressable>
+              ) : null}
+
+              {renderMemoryDeleteControls(memory.canManageSharedMemory)}
+              {message ? <Text style={styles.hint}>{message}</Text> : null}
+            </>
+          )}
+        </View>
+      ) : null}
 
       {turns.map((turn, index) => (
         <AnswerCard
@@ -251,7 +611,7 @@ export default function ConsultScreen() {
         </Text>
         {turns.length > 0 ? (
           <Text style={styles.body}>
-            前回までのやりとりを覚えています。「その後こうなった」「次はどうすれば」と、続けて聞けます。
+            クラウド側では、この人の全期間の手帳記録と、あなた自身の過去相談を保存し、全履歴の概要・直近の相談・今回に関連する古い相談を踏まえます。「その後こうなった」「次はどうすれば」と、続けて聞けます。
           </Text>
         ) : (
           <View style={styles.suggestions}>
@@ -455,6 +815,22 @@ const styles = StyleSheet.create({
   disclosureItem: { color: colors.muted, fontSize: 12.5, lineHeight: 20 },
   consent: { alignItems: "flex-start", flexDirection: "row", gap: 10, paddingVertical: 4 },
   consentText: { color: colors.ink, flex: 1, fontSize: 13.5, fontWeight: "700", lineHeight: 22 },
+  memoryStats: { flexDirection: "row", gap: 10 },
+  memoryStat: { alignItems: "center", backgroundColor: "#eef6f1", borderRadius: radius.control, flex: 1, gap: 2, padding: 12 },
+  memoryStatValue: { color: colors.greenDark, fontSize: 20, fontWeight: "900" },
+  memoryStatLabel: { color: colors.muted, fontSize: 12, fontWeight: "700" },
+  memoryFactBox: { backgroundColor: "#f0f7f3", borderColor: "#cfe1d5", borderRadius: radius.control, borderWidth: 1, gap: 7, padding: 14 },
+  memoryChange: { backgroundColor: colors.surfaceSoft, borderRadius: radius.control, gap: 6, padding: 13 },
+  memoryChangeMeta: { color: colors.blue, fontSize: 11.5, fontWeight: "900" },
+  memorySmallButton: { alignSelf: "flex-start", borderColor: colors.blue, borderRadius: 999, borderWidth: 1, marginTop: 3, paddingHorizontal: 12, paddingVertical: 8 },
+  memorySmallButtonText: { color: colors.blue, fontSize: 12, fontWeight: "800" },
+  memoryInput: { backgroundColor: colors.surface, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1.5, color: colors.ink, fontSize: 14, lineHeight: 23, minHeight: 96, padding: 13, textAlignVertical: "top" },
+  memoryHistoryTurn: { borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, gap: 5, padding: 13 },
+  memoryDeleteBox: { borderTopColor: colors.line, borderTopWidth: 1, gap: 9, marginTop: 6, paddingTop: 13 },
+  memoryDangerButton: { alignItems: "center", borderColor: colors.rose, borderRadius: 999, borderWidth: 1, paddingVertical: 11 },
+  memoryDangerText: { color: colors.rose, fontSize: 13, fontWeight: "900", textAlign: "center" },
+  memoryDeleteConfirm: { backgroundColor: "#fff1ec", borderColor: "#e9c6b8", borderRadius: radius.control, borderWidth: 1, gap: 8, marginTop: 4, padding: 13 },
+  memoryDangerPrimary: { alignItems: "center", backgroundColor: colors.rose, borderRadius: radius.control, paddingVertical: 13 },
   accessNotice: { backgroundColor: "#eef8ef", borderColor: "#cfe6d4", borderRadius: radius.control, borderWidth: 1, gap: 4, padding: 13 },
   accessNoticeMuted: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, gap: 4, padding: 13 },
   accessTitle: { color: colors.greenDark, fontSize: 14, fontWeight: "900" },
