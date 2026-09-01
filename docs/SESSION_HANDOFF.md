@@ -10301,6 +10301,8 @@ Vercel production反映:
   実行していない。
 - 空質問の `/api/consult` は400。Anthropic呼出しと相談履歴保存は発生していない。
 - AI memoryはperson IDなしで400、架空person ID・未ログインで401 `login_required`。
+- 認証済みの手帳/AI書き込みsmokeと、本番で意図的に409 `memory_conflict` を起こす再現は行っていない。
+  新guardの競合分岐は、fake Anthropicを使うroute-level testとGitHub CIで確認済みである。
 - `smoke-notebook-sync.mjs` はtokenなしGET 401のread-only確認だけで成功した。
 - `smoke-web.mjs` は公開画面、法務画面、monitor画面、PWA、health、未認証管理/API guardを完走した。
   ただしこのscriptの無効Stripe checkout POSTは、token検証より先に連打防止RPCを通るため、
