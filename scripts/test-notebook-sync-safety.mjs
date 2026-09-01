@@ -82,6 +82,8 @@ for (const prerequisite of [
 ]) {
   assert.ok(migration.includes(prerequisite), `migration must add legacy prerequisite ${prerequisite}`);
 }
+assert.match(migration, /create index if not exists idx_people_profile_updated_at[\s\S]*on public\.people\(profile_updated_at\)/);
+assert.match(migration, /create index if not exists idx_timeline_events_person_date[\s\S]*on public\.timeline_events\(person_id, event_date desc, created_at desc\)/);
 
 function sqlFunctionBlock(functionName) {
   const start = migration.indexOf(`create or replace function public.${functionName}`);

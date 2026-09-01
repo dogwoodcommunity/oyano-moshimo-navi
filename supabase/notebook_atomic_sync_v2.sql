@@ -57,6 +57,15 @@ alter table public.timeline_events
   add column if not exists attachments jsonb not null default '[]'::jsonb,
   add column if not exists metadata jsonb not null default '{}'::jsonb;
 
+-- Existing production may have the notebook columns without the read-path
+-- indexes. Create them before records accumulate; both definitions match the
+-- cloud restore and durable-memory ordering used by the Web API.
+create index if not exists idx_people_profile_updated_at
+  on public.people(profile_updated_at);
+
+create index if not exists idx_timeline_events_person_date
+  on public.timeline_events(person_id, event_date desc, created_at desc);
+
 alter table public.people
   add column if not exists cloud_revision bigint not null default 1,
   add column if not exists cloud_hash text;
