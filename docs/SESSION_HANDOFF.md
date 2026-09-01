@@ -10265,3 +10265,54 @@ GitHub反映:
   本番deploymentとproduction aliasは変更していない。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 271 — AI記憶の送信前guardとcron認証を本番反映
+
+ユーザーから、追記270の安全修正をVercel productionへ反映する明示承認を得た。今回の対象は
+`/api/consult` のAnthropic送信直前のmemory version / reset再確認と、共通cron認証の未設定時
+fail-closed化だけである。本番SupabaseのSQL・schema・RLSは変更せず、実AI送信、正しいcron tokenでの
+実行、モニターの日記・回答・途中経過の編集や削除は行っていない。
+
+公開前確認:
+
+- deploy元HEAD / origin/mainは `6744ed2c7fac905f3306882a6cd600f7112b1c66` で一致し、tracked差分なし。
+- 対象Vercel projectは `oyano-moshimo-navi`、project IDは
+  `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H`、accountは `dogwoodcommunity`。
+- 実装commit `8d1a64a` のGitHub Actions CI run `33491423488` と、最終HEADのrun
+  `33491624472` はどちらも成功済み。Web/Mobile typecheck、モニター、cron、手帳sync、AI記憶、
+  破棄専用PostgreSQL RLS、Web buildを含む。
+- 直前のproduction deploymentは `dpl_3VA94uxX7aKFTShrutdKcVdoeNUJ` だった。
+
+Vercel production反映:
+
+- `npx vercel --prod --yes` を実行し、compile・typecheck・静的ページ162/162生成に成功した。
+- deployment id: `dpl_4Ky82Cy38Ycw4wixr6Lh3pHamiWZ`
+- immutable URL:
+  `https://oyano-moshimo-navi-2d2nh4itl-dogwoodcommunity1.vercel.app`
+- production alias: `https://oyano-moshimo-navi.vercel.app`
+- inspector:
+  `https://vercel.com/dogwoodcommunity1/oyano-moshimo-navi/4Ky82Cy38Ycw4wixr6Lh3pHamiWZ`
+- deploy後のalias inspectで、新deploymentが `READY` / `production` としてalias先になったことを確認した。
+
+公開後確認:
+
+- `/api/health` は200 / `ok=true` / version `0.3.0`、`/home` は200。
+- 未認証の匿名診断削除cronと通知cronは401 `Invalid cron token`。正しいtokenは使わず、処理を
+  実行していない。
+- 空質問の `/api/consult` は400。Anthropic呼出しと相談履歴保存は発生していない。
+- AI memoryはperson IDなしで400、架空person ID・未ログインで401 `login_required`。
+- `smoke-notebook-sync.mjs` はtokenなしGET 401のread-only確認だけで成功した。
+- `smoke-web.mjs` は公開画面、法務画面、monitor画面、PWA、health、未認証管理/API guardを完走した。
+  ただしこのscriptの無効Stripe checkout POSTは、token検証より先に連打防止RPCを通るため、
+  `public_api_rate_limits` の `stripe:checkout:<IP・User-Agentのhash>` カウンターを1リクエスト分
+  upsertした。制限windowは600秒で、window経過後の次回アクセス時にcountが1へresetされる。
+  row自体の自動削除は現SQLにない。送信bodyはsmoke用の架空case IDと `smoke@example.com` で、
+  checkout tokenなしの400でStripe設定・case取得より前に停止したため、決済・支援依頼・case・
+  モニター・AI・audit logへの書き込みはない。以後このfull smokeは繰り返していない。
+
+本番Supabaseのブラウザーsessionは期限切れのままなので、deploy後にモニター件数を再queryしていない。
+最後に確認済みの値は `monitor_progress_synced=10`、`monitor_feedback_submitted=5`、管理画面集計は
+11 session / 回答5 / 回答期間中の未回答2 / まだ回答日前4である。これは今回のdeploy後の再確認値ではなく、
+追記270までの最新確認値として扱う。次は残り回答を回収し、全回答確定後に手帳UIを再設計する。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
