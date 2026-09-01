@@ -10039,3 +10039,59 @@ ChromeのSupabase自動翻訳をユーザー本人が停止し、英語の原文
 次は、この互換修正をpushしたうえで同じ本番migrationを再実行する。成功後に列、件数、RPC、index、
 triggerを確認し、`ai_consult_memory.sql` と `verify_compact.sql` が成功した場合だけVercel本番Webを
 deployする。未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 266 — 手帳・AI長期記憶の本番DB反映成功、匿名保持期限の承認待ち
+
+追記265のpgcrypto互換修正を `14bd440` (`fix: resolve pgcrypto in Supabase migrations`) として
+origin/mainへpushした後、本番Supabase project `ypnuxyfirlvbsqujocuy` へ次を反映した。
+
+本番DBへ成功したSQL:
+
+1. `notebook_atomic_sync_v2.sql`
+   - 初回成功時SHA-256: `f78b293f6e604c0bebe01cbd4358e796db6d52932ee01d7d8e5203bd24419caa`
+   - 手帳の対象者、確認リスト、日記を1 transactionで同期するRPC、revision/hash、安定ID、receipt、
+     viewer除外RLS、hash/version trigger、重複防止indexを追加した。
+2. `ai_consult_memory.sql`
+   - SHA-256: `bf4f364c9bae13ce3329b58fe8ba072d019e5b42198449487a50ed49ca7f9c0c`
+   - 対象者別長期記憶、本人別相談thread/turn、同意・撤回、閲覧専用RLSとservice role更新権限を追加した。
+3. `consult_trial.sql`
+   - SHA-256: `1ae9f58ce91537a98f68c1c043fa478247f5a8aa9de383f790064a10e77e8a2f`
+   - 旧本番に不足していた無料家族のJSTカレンダー日1日1回相談用列とindexを追加した。
+4. `public_api_rate_limits.sql`
+   - SHA-256: `490b92643fb83c0425eaa7021b14743e5420efe9bb6f60cef51a156a31b16244`
+   - Vercelの複数instanceで共有するAI費用・公開API連打上限table、RLS、service-only RPCを追加した。
+
+読込性能の補強:
+
+- 古い本番には、全期間の手帳復元とAI記憶の並び順に合う
+  `idx_timeline_events_person_date` と、従来hardeningの `idx_people_profile_updated_at` がなかった。
+- 2 indexを原子的migrationへ含める修正を `f1aace4` (`perf: add notebook read path indexes`) としてpushし、
+  PostgreSQL 16の現行schema・7列欠落旧schemaでmigration/regressionを再確認した。
+- 本番へSHA-256 `1195ff02ed170a6c98049a2264464adcf256d8431bc866e3ad43f50c702d957e` の
+  最新migrationを再実行し、両indexを追加した。再実行は冪等で成功した。
+
+本番検証結果:
+
+- 手帳・AI専用の主要67 targetはすべてtrue。RPC、列、constraint、unique partial index、trigger、
+  authenticated/anon/service role権限、AI4テーブルのRLSを個別にも確認した。
+- 無料相談列/index、共通rate-limit table/RLS/RPC/service-only grantはすべてtrue。
+- AI記憶4テーブルとrate-limit tableは作成直後0件で、既存データを自動コピー・変更していない。
+- 既存件数は反映前後とも `people=4`、`tasks=8`、`timeline_events=0`、`audit_logs=44`、
+  `monitor_progress_synced=10`、`monitor_feedback_submitted=5`。モニター記録・回答は消えていない。
+- `verify_compact.sql` 133項目は117成功、16未適用。残りは旧本番の通知メール2列、Mobile初回登録RPC、
+  匿名診断保持期限RPC、寝かせている地域スポンサー12項目で、手帳・AIのschema targetではない。
+  地域スポンサー全体を検査数だけのために追加することはscope外として行っていない。
+
+現在の安全停止理由:
+
+- `purge_stale_anonymous_cases` が旧本番に無く、日次匿名診断保持期限cronは現状500になる。ただし同routeの
+  モニター回答保持期限処理は独立して実行される。修正用 `anonymous_case_retention.sql` は、適用直後には
+  削除しないが、次の日次cronから「ログイン・家族・対象者に紐づかないdraft/result_readyの匿名診断」で
+  30日超かつ有償支援依頼やapp引継ぎのないものを最大100件ずつ削除できるようにする。
+- これは手帳・AI追加とは異なり、将来の実データ削除を有効化するため、以前説明した「既存データを
+  削除しない」承認の範囲を広げず、ユーザーの明示承認待ちで停止した。
+- Vercel production Webはまだdeployしていない。現在の旧Webは新しいDB列・tableと後方互換で動作中。
+  承認後は保持期限SQLと権限だけを確認し、Vercel本番deploy、公開alias・health・未認証fail-closed・
+  手帳/AI導線のsmokeを行う。実モニター記録をテスト用に編集・削除しない。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
