@@ -10095,3 +10095,55 @@ origin/mainへpushした後、本番Supabase project `ypnuxyfirlvbsqujocuy` へ�
   手帳/AI導線のsmokeを行う。実モニター記録をテスト用に編集・削除しない。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 267 — 匿名保持期限は承認済み、Chrome操作接続の復旧待ち
+
+ユーザーから、追記266で説明した30日超の匿名診断保持期限を有効化し、Vercel本番公開まで進める
+明示承認を得た。削除対象はログイン利用者、家族、対象者に紐づかず、app引継ぎ・有償支援依頼のない
+`draft` / `result_ready` の匿名診断だけで、モニターの日記・回答・途中経過は対象外である。
+
+公開前ローカル確認（HEAD / origin/mainとも `50c49d2`）:
+
+- Web・Mobile TypeScript: 成功
+- `test:notebook-sync-safety` / `test:notebook-sync-runtime`: 成功
+- `test:consult-memory`: 成功
+- `test:monitor-timeline`: 8/8成功
+- `test:monitor-retention`: 6/6成功
+- `doctor:local`: 成功
+- Web production build: 成功。静的ページ162/162。Node 20のSupabase将来非対応warningだけで現buildは成功。
+- `git diff --check`: 成功。tracked差分なし、mainとorigin/main一致。
+- `anonymous_case_retention.sql` のSHA-256は
+  `07e87f7fc5f91efa706529dc6037ac991080755591668a326f23b9c51d54d2f6`。
+
+現在の停止理由:
+
+- Supabaseへログイン済みのChromeは起動中で、ChatGPT Chrome拡張はDefaultプロフィールにinstall・enable済み、
+  native host manifestも正常。しかしタブ一覧取得が2回timeoutし、操作接続だけが応答しなくなった。
+- アプリ内ブラウザーは操作可能だがSupabase/GitHubとも未ログイン。認証情報を要求・転記せず停止した。
+- この追記時点で `anonymous_case_retention.sql` は未適用、Vercel production Webも未deploy。
+  追記266までに反映した手帳・AI長期記憶・無料枠・共通rate limitは本番DBに残り、旧Webと後方互換。
+- 次はユーザー承認のうえDefaultプロフィールの新しいChrome windowを1枚開き、拡張接続を再試行する。
+  接続後は削除対象件数をread-onlyで確認してから保持期限functionを追加し、権限・既存モニター件数を
+  再確認する。続いてVercel本番deploy、公開alias、health、未認証fail-closed、手帳/AI導線を確認し、
+  最終結果を次の追記へ残す。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 268 — Chrome再接続失敗、Codex内ブラウザーでSupabaseログイン待ち
+
+ユーザー承認後、Defaultプロフィールの新しいChrome windowを1枚だけ開き、2秒以上待って
+ChatGPT拡張の操作接続を再試行した。しかしタブ取得が再びtimeoutした。拡張、native host、Chrome起動の
+診断は正常だったため、規定どおり同じ接続の再試行や別のMac操作手段による迂回は行っていない。
+
+代替確認:
+
+- `supabase` CLIは未導入で、既存の `scripts/run-sql.mjs --check` は
+  `SUPABASE_ACCESS_TOKEN が設定されていません` と安全に停止した。tokenを要求・表示・保存していない。
+- Codex内ブラウザーで本番project `ypnuxyfirlvbsqujocuy` のSQL Editor URLを開き、Supabaseの
+  `Continue with GitHub` を押してGitHubログイン画面まで進め、ユーザー操作用に前面表示した。
+- ユーザーがGitHub認証を完了したら、同じタブから削除候補件数のread-only確認、
+  `anonymous_case_retention.sql` の適用、function/grantと既存モニター件数の再確認を続ける。
+- この追記時点でも保持期限SQLは未適用、Vercel production Webは未deploy。モニターの日記・回答・
+  途中経過は変更・削除していない。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
