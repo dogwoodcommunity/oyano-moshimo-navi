@@ -10256,4 +10256,12 @@ caseへの外部キー/cascadeがないことを確認した。モニター途�
 手帳UI再設計、(4)課金開始前に特商法・プライバシーの未確定事業者情報を正式化、(5)匿名診断のcase IDだけで
 上書きできる導線へ所有tokenとtransactional RPCを追加、である。
 
+GitHub反映:
+
+- 実装commit `8d1a64a` (`fix: harden AI memory and cron boundaries`) をorigin/mainへpushした。
+- GitHub Actions CI run `33491423488` は1分34秒で成功。Web/Mobile typecheck、モニター、cron認証、
+  手帳sync、AI記憶core/route、破棄専用PostgreSQL RLS、Web build、smokeがすべてgreen。
+- 同commitの `Deploy to Vercel` workflowは成功表示だが、従来どおり環境secret未設定時のskipであり、
+  本番deploymentとproduction aliasは変更していない。
+
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
