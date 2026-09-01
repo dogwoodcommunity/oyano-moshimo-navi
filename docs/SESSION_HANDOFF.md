@@ -10318,3 +10318,25 @@ Vercel production反映:
 追記270までの最新確認値として扱う。次は残り回答を回収し、全回答確定後に手帳UIを再設計する。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 272 — 本番の最終回答回収数を再確認（5件のまま）
+
+ユーザーがCodex内ブラウザーでGitHub / Supabaseへ再ログインした後、本番project
+`ypnuxyfirlvbsqujocuy` のSQL Editorで件数だけをread-only queryした。実行したのは
+`audit_logs` の `monitor_progress_synced` / `monitor_feedback_submitted` を集計するSELECT 1回だけで、
+INSERT・UPDATE・DELETE、回答本文や画像の取得、保存済みqueryの作成は行っていない。
+
+2026-09-01の再確認値:
+
+- 途中経過共有: `monitor_progress_synced=10`
+- 最終回答: `monitor_feedback_submitted=5`
+- 最新の途中経過共有: `2026-09-01 02:42:49.779+00`（11:42:49 JST）
+- 最新の最終回答: `2026-09-01 02:27:22.587+00`（11:27:22 JST）
+
+追記270・271時点の5件から新しい最終回答は増えていない。ユーザーが依頼した11人を分母にすると
+回収済み5件・未回収6件、回収率の目安は45.5%である。ただし途中経過10は匿名session rowの件数であり、
+参加者10人を意味しない。別ブラウザー、履歴削除、やり直し、途中共有への不同意があるため、参加者本人との
+照合は最終回答に本人が入力したCrowdWorks名を募集台帳と突合する必要がある。
+
+この確認でモニターの日記・回答・途中経過を編集・削除していない。未追跡の `review_exports/` は引き続き
+参照・変更・追加・commit対象外。
