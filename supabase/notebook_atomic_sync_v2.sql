@@ -1,9 +1,12 @@
 -- Atomic, service-only notebook synchronization.
 --
--- Apply after schema.sql and person_notebook_hardening.sql. The API must first
--- verify the bearer token with Supabase Auth, then call sync_notebook_v2 with
--- that verified user's id/email. The function itself is deliberately callable
--- only with the service-role JWT.
+-- Apply after the original base tables and production family RLS exist. This
+-- file adds the minimum person-notebook and regional person columns required by
+-- the sync, so an older production database does not need to rerun the broader
+-- person_notebook_hardening.sql or regional_sponsor_data.sql migrations. The API
+-- must first verify the bearer token with Supabase Auth, then call
+-- sync_notebook_v2 with that verified user's id/email. The function itself is
+-- deliberately callable only with the service-role JWT.
 --
 -- Normalized p_cases item:
 -- {
@@ -39,6 +42,20 @@ set local lock_timeout = '10s';
 set local statement_timeout = '5min';
 
 create extension if not exists pgcrypto;
+
+-- Old production projects predate the PWA notebook and regional person fields.
+-- Add only the columns this atomic migration needs, inside the same transaction
+-- and before any hash/backfill statement reads them.
+alter table public.people
+  add column if not exists profile jsonb not null default '{}'::jsonb,
+  add column if not exists profile_updated_at timestamptz,
+  add column if not exists prefecture text,
+  add column if not exists city text;
+
+alter table public.timeline_events
+  add column if not exists mood text,
+  add column if not exists attachments jsonb not null default '[]'::jsonb,
+  add column if not exists metadata jsonb not null default '{}'::jsonb;
 
 alter table public.people
   add column if not exists cloud_revision bigint not null default 1,

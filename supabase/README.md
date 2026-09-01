@@ -3,7 +3,7 @@
 SQL Editorで以下の順に実行する。
 
 既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。
-既存DBへ対象者ごとの長期AI記憶と安全な手帳同期を追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、短時間のメンテナンス枠で `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`verify_compact.sql` の順に実行する。先にDB移行を完了し、`verify_compact.sql` がすべて `ok=true` になってから対応するWebをデプロイする。`notebook_atomic_sync_v2.sql` は既存IDを補完し、重複を検出した場合は削除せず全体をロールバックする。`ai_consult_memory.sql` は新テーブルのgrant/revokeとRLSを含み、既存の手帳記録を変更・削除しない。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
+既存DBへ対象者ごとの長期AI記憶と安全な手帳同期を追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、短時間のメンテナンス枠で `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`verify_compact.sql` の順に実行する。先にDB移行を完了し、`verify_compact.sql` がすべて `ok=true` になってから対応するWebをデプロイする。`notebook_atomic_sync_v2.sql` は古いDBに不足する手帳用・都道府県用の最小列も同じトランザクションで追加し、既存IDを補完する。重複を検出した場合は削除せず、列追加を含む全体をロールバックする。この手順では `person_notebook_hardening.sql` や `regional_sponsor_data.sql` 全体を先に実行しない。`ai_consult_memory.sql` は新テーブルのgrant/revokeとRLSを含み、既存の手帳記録を変更・削除しない。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
 
 1. `schema.sql`
 2. `task_template_seed.sql`

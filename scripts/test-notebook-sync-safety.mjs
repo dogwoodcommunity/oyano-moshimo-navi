@@ -63,6 +63,25 @@ for (const key of [
 
 assert.match(migration, /begin;/i);
 assert.match(migration, /commit;/i);
+const peoplePrerequisites = migration.indexOf("add column if not exists profile jsonb");
+const peopleCloudColumns = migration.indexOf(
+  "alter table public.people\n  add column if not exists cloud_revision bigint"
+);
+const timelinePrerequisites = migration.indexOf("add column if not exists mood text");
+const timelineCloudColumns = migration.indexOf(
+  "alter table public.timeline_events\n  add column if not exists cloud_revision bigint"
+);
+assert.ok(peoplePrerequisites >= 0 && peoplePrerequisites < peopleCloudColumns);
+assert.ok(timelinePrerequisites >= 0 && timelinePrerequisites < timelineCloudColumns);
+for (const prerequisite of [
+  "profile_updated_at timestamptz",
+  "prefecture text",
+  "city text",
+  "attachments jsonb not null default '[]'::jsonb",
+  "metadata jsonb not null default '{}'::jsonb"
+]) {
+  assert.ok(migration.includes(prerequisite), `migration must add legacy prerequisite ${prerequisite}`);
+}
 assert.match(migration, /create or replace function public\.sync_notebook_v2/);
 assert.match(migration, /security definer[\s\S]*set search_path = public, pg_temp/);
 assert.match(migration, /notebook_sync_service_role_required/);
