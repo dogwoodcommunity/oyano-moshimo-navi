@@ -9920,3 +9920,42 @@ Anthropic利用量だけが利用量に応じて増える。現在進行中の�
 - `git diff --check`、変更SQLを含むsecret scanに成功。独立最終レビューでも未解決P0/P1なし。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 263 — 本番反映承認済み、Supabaseログイン待ちで安全停止
+
+ユーザーから本番SupabaseとVercelへの反映について明示承認を得た。対象、目的、短時間のDB書き込み
+待ち、既存記録を削除しないこと、新規固定費なし、Supabase保存量とAnthropic利用量だけが増え得る
+ことは承認前に説明済み。
+
+反映前確認:
+
+- checkoutは `main`、開始HEADは `96a0f1e`、tracked差分なし。origin/mainとの一致を確認した。
+- Vercel CLIは `dogwoodcommunity1` で認証済み。対象projectは `oyano-moshimo-navi`、production aliasは
+  `https://oyano-moshimo-navi.vercel.app`。確認時のproductionは2026-08-30作成の旧deploymentで、
+  長期AI記憶・原子的同期の最新commitはまだ本番公開されていない。
+- GitHub Actionsの `Deploy to Vercel` は成功表示だが、`VERCEL_TOKEN` / `VERCEL_ORG_ID` /
+  `VERCEL_PROJECT_ID` が未設定のため実deployをskipしていた。CI自体は成功。
+- Vercel projectのproduction環境変数名としてSupabase、Anthropic、管理用設定が存在することだけを
+  確認し、秘密値は表示・取得していない。CLI linkが自動作成した一時OIDC `.env.local` は内容を読まず
+  直ちに削除した。ignoredの `.vercel/project.json` だけをローカルproject紐付けとして残した。
+
+停止理由と現在状態:
+
+- ローカルSupabase CLIにはaccess tokenがなく、Supabase管理画面もin-app browserとChromeでは未ログイン。
+  SafariはmacOSの「“パスワード”はロックされています」画面で、Touch IDまたは本人パスワードが必要。
+- 認証情報、パスワード、token、環境変数をユーザーへ要求・保存・転記せず、安全停止した。Chromeには
+  `https://supabase.com/dashboard/sign-in?returnTo=%2Forganizations` を再開用に残した。
+- `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`verify_compact.sql` は本番未実行。
+  Vercel production deployも未実行。既存モニター記録、回答、本番DB、本番Webは変更していない。
+
+再開手順:
+
+1. ユーザー本人がChromeのSupabase画面でログインし、完了したと伝える。認証情報はCodexへ渡さない。
+2. 対象projectが親のもしもナビ本番であることを管理画面上で再確認する。
+3. `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`verify_compact.sql` の順に実行し、検証結果を
+   保存する。失敗時はWebをdeployせず停止する。
+4. DB検証が全件成功した後だけ `oyano-moshimo-navi` をVercel productionへdeployし、production alias、
+   health、手帳、クラウド同期、AI長期記憶のfail-closed挙動を確認する。
+5. 結果を次の追記へ記録しcommit・pushする。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
