@@ -9853,3 +9853,70 @@ DBと本番反映状態:
 - 独立レビューで未解決P0/P1なし。本番migrationと実Anthropic/Supabase E2Eだけを本番反映後の確認に残す。
 
 未追跡の `review_exports/` は参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 262 — 手帳同期を本人・家族固定かつ原子的に補強
+
+追記261の独立レビューで、長期記憶そのものとは別に、Web手帳の旧同期処理には、ログイン切替時の
+ローカル手帳取り違え、複数家族所属時の曖昧な同期、通信中に追記した記録の保存済み誤判定、途中失敗
+時の部分反映など、既存モニター記録を守るうえで先に解消すべき問題が見つかった。これらを
+`77c6e5c` (`fix: make notebook sync identity-safe and atomic`) で修正した。
+さらに最終レビューで、同じ利用者が複数家族に所属し、各家族に同じ `localCaseId` が存在する場合、
+AI記憶の初回対象者解決が別家族を選び得ることを検出した。`f6c1f3c`
+(`fix: bind AI memory to exact family`) で、AI記憶の読込、同意、相談、訂正、除外、削除を、
+クラウド対象者UUID、または認証本人に固定した家族UUIDと `localCaseId` の組だけで解決するよう修正した。
+家族UUIDなしの `localCaseId` 単独要求はfail-closedで拒否する。
+
+同期対象と端末データの保護:
+
+- 端末のクラウド紐付けを、認証ユーザーUUIDと家族UUIDの完全一致で保存する。ログイン直後は必ず
+  サーバーの本人・家族・クラウド手帳を先に確認し、未紐付けのローカル手帳を自動送信しない。
+- 複数家族に所属する場合は利用者に家族を選ばせる。別アカウントまたは別家族の紐付けが残っている
+  場合は同期を止め、本人確認なしに上書きしない。
+- 日記は500件ずつ全件を送受信し、総件数、重複排除、ページ進行を検査する。途中で通信や端末保存が
+  失敗した場合は部分データで端末を置き換えない。
+- 送信中に利用者が編集・追記した記録は、送信開始時のsnapshotと現在値を比較して未同期のまま残す。
+  再試行payloadは古い送信内容ではなく、現在の端末手帳から作り直す。
+- profile、task、diaryへサーバーrevision・内容hash・端末安定IDを持たせ、同じrevisionから双方が
+  変更された場合は409で止める。競合時にどちらかを黙って勝たせない。
+
+DBの原子性・旧Mobile互換・権限:
+
+- 既存DB向け `notebook_atomic_sync_v2.sql` を追加した。端末安定IDとrevision/hashを後付けし、
+  `sync_notebook_v2` RPCが対象者、確認リスト、日記、同期receiptを1 transactionで保存する。
+  request IDの再送は同じ結果を返し、途中失敗は全体をrollbackする。
+- 旧Mobileが直接書いた平坦なプロフィールをPWA形式へ正規化しつつ、PWA専用項目は保持する。旧
+  `profile.localTasks` とDB taskを統合して、過去の確認リストが部分migrationで見えなくならないようにした。
+- owner/admin/memberは確認リストと日記を更新できる。memberは対象者の基本プロフィールを変更不可、
+  viewerは全手帳を閲覧専用とした。画面の無効化だけでなく、RPCと直接書き込み用RLSでも同じ制約を
+  強制する。サーバーがprofile保存を拒否した場合、端末側も保存済み扱いにしない。
+- migrationは既存の対象者、日記、確認リストを削除しない。欠けている安定ID、revision、hashを
+  backfillするだけで、重複があれば全migrationをrollbackする。index作成とbackfill中に短時間の
+  書き込みlockが発生し得るため、本番適用はモニター操作の少ない時間に行う。
+
+本番反映順と現在の状態:
+
+1. Supabaseで `notebook_atomic_sync_v2.sql` を実行する。
+2. 続けて `ai_consult_memory.sql` を実行する。
+3. `verify_compact.sql` を実行し、追加したテーブル、列、index、trigger、RPC、RLSがすべてtrueで
+   あることを確認する。
+4. 対応するWebをVercelへデプロイし、本人、member、viewer、複数家族、競合、再送、長期AI相談を
+   実環境で確認する。
+
+この追記時点では上記の本番SQLとWebデプロイは未実施。実行前に対象、目的、短時間の書き込み影響、
+費用を説明し、ユーザーの明示承認を得る。新しい固定サービス料金はなく、Supabaseの保存量と相談時の
+Anthropic利用量だけが利用量に応じて増える。現在進行中のモニター記録、本番回答、本番設定には一切
+触れておらず、消去・置換もしていない。
+
+確認結果:
+
+- Web/Mobile TypeScript、`test:notebook-sync-runtime`、`test:notebook-sync-safety`、
+  `test:consult-memory`、モニター関連test、`doctor:local`、Web production buildに成功。
+- 複数家族に同じ `localCaseId` があるfixtureで、指定した家族の対象者だけを解決し、家族指定なし、
+  権限外家族、曖昧な削除導線を拒否することを確認した。
+- PostgreSQL 16の破棄可能な隔離DBで、migrationの2回連続適用、旧Mobile/PWA混在、端末安定ID、
+  owner/member/viewer、直接書き込みRLS、冪等再送、競合・重複時の全rollbackを確認した。
+- 390×844のブラウザでクラウド保存説明、AI相談導線、長期記憶が使えない時に相談を送らない
+  fail-closed表示を確認した。実Anthropic送信と本番状態変更は行っていない。
+- `git diff --check`、変更SQLを含むsecret scanに成功。独立最終レビューでも未解決P0/P1なし。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
