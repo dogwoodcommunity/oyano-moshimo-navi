@@ -10147,3 +10147,47 @@ ChatGPT拡張の操作接続を再試行した。しかしタブ取得が再びt
   途中経過は変更・削除していない。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 269 — 匿名保持期限とAI長期記憶Webを本番反映、公開smoke成功
+
+ユーザーがCodex内ブラウザーでGitHub / Supabaseへログインし、本番project
+`ypnuxyfirlvbsqujocuy` のSQL Editorであることを画面上で再確認した。
+
+匿名診断保持期限:
+
+- 適用前のread-only確認は `cases_total=43`、30日超かつ未ログイン・未引継ぎ・有償支援なしの
+  削除候補 `26`、`monitor_progress_synced=10`、`monitor_feedback_submitted=5`。
+- SHA-256
+  `07e87f7fc5f91efa706529dc6037ac991080755591668a326f23b9c51d54d2f6` と一致する
+  `supabase/anonymous_case_retention.sql` を実行した。
+- 1回目はSQL Editorが直前のread-only queryを完全消去せず連結し、`create` 直前のsyntax errorで停止した。
+  PostgreSQLは構文解析時点で拒否しており書き込みなし。入力全体を選択・消去して54行のSQLだけを入れ直し、
+  `Success. No rows returned` を確認した。
+- 適用後はfunctionあり、`service_role` execute=true、`authenticated` / `anon` execute=false。
+  件数は `43 / 26 / 10 / 5` のまま不変で、適用操作では匿名診断もモニター情報も削除していない。
+- 日次cronは `30 3 * * *`（03:30 UTC / 12:30 JST）。次回以降、条件に合う匿名診断だけを
+  1回最大100件削除できる。ログイン利用者・家族・対象者、app引継ぎ、有償支援中、モニター情報は対象外。
+
+Vercel production:
+
+- deploy元HEAD / origin/mainは `5620a85`。対象projectは `oyano-moshimo-navi`。
+- 最初のCLI呼出しはsandboxのDNS制限でVercelへ到達する前に停止。本番変更なし。network許可後に同じ
+  `npx vercel --prod --yes` を再実行した。
+- deployment id: `dpl_3VA94uxX7aKFTShrutdKcVdoeNUJ`
+- immutable URL: `https://oyano-moshimo-navi-ijju4b84f-dogwoodcommunity1.vercel.app`
+- production alias: `https://oyano-moshimo-navi.vercel.app`
+- Vercel buildはcompile・typecheck・162/162 static generationに成功し、READY / production / alias済み。
+
+公開smoke:
+
+- `/api/health` 200 / `ok=true` / version `0.3.0`、`/home` 200。
+- 未認証 `/api/notebook/sync`、AI memory、AI consent、匿名削除cronはすべて401。
+- 空質問の `/api/consult` は課金なしで400。Anthropicへの正常質問は送っていない。
+- `smoke:notebook-sync` はtokenなしread-only modeで401を確認して成功。書き込みなし。
+- `smoke-web.mjs` は初回、11画面成功後に一時socket切断。単独再実行で全公開画面、monitor開始/報告、
+  手帳、相談、PWA、法務、管理画面、health、認証guardを最後まで成功した。
+- 実本番 `/consult` をブラウザーで開き、「全期間の手帳記録と本人の過去相談を継続して読む」、
+  「長期記憶を確認できるまで相談を送信しない」、「その場限りの回答には戻さない」の表示を確認した。
+- 実AI送信、cron実行、モニター記録の編集・削除、認証済みの書き込みsmokeは行っていない。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
