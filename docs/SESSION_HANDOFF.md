@@ -10360,3 +10360,29 @@ Editor URLにはquery IDが付いたため、Supabase UI側のautosave draftと�
 拒否された。単一行のread-only SELECTへ入れ直して7 / 7を確認した。いずれもINSERT・UPDATE・DELETE、
 回答本文・氏名一覧・画像の取得、Saveボタン操作は行っておらず、モニターの日記・回答・途中経過を
 編集・削除していない。未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-02 追記 274 — 未回答4セッション中3件は回答画面表示済み、1件は9月3日0時から
+
+ユーザーから残り4人に回答画面が出ているか確認依頼があり、本番 `audit_logs` の回答本文・氏名を
+取得せず、`monitor_progress_synced` の `reportDueAt` と `monitor_feedback_submitted` の紐付けだけを
+read-only SELECTで集計した。管理APIと同様にmonitor session IDを優先し、取れない場合は開始日時で
+紐付けた。
+
+確認結果:
+
+- 最終回答7件、途中経過10 session
+- 途中経過と紐づく最終回答6件、途中経過rowなしで最終回答だけ届いたもの1件
+- 途中経過上の未回答は4 session
+- 4 sessionのうち回答開始日時を迎えているもの3件
+- まだ回答開始日前のもの1件、回答開始予定は
+  `2026-09-02 15:00:00+00`（2026-09-03 00:00 JST）
+- 回答開始日時を取得できない未回答sessionは0件
+
+したがって「残り4人全員にすでに回答画面が出ている」とは言えず、追跡できる未回答4 sessionでは
+3件が現在表示可能、1件は9月3日0:00から表示可能になる。途中経過は匿名で名前を収集していないため、
+この4 sessionを募集台帳の残り4名へ個別には紐付けられない。
+
+最初の集計SELECTは `target_id` のuuidと回答側session IDのtextを直接比較して型errorとなり、
+PostgreSQLの実行前に拒否された。`target_id::text` へ修正後に上記を確認した。INSERT・UPDATE・DELETE、
+回答本文・氏名一覧・画像の取得、Saveボタン操作は行っておらず、モニターデータは変更していない。
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
