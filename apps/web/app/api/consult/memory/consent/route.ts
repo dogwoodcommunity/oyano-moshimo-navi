@@ -33,7 +33,8 @@ function handleError(error: unknown) {
 function identifierFromUrl(request: NextRequest) {
   return {
     personId: request.nextUrl.searchParams.get("personId") ?? undefined,
-    localCaseId: request.nextUrl.searchParams.get("localCaseId") ?? undefined
+    localCaseId: request.nextUrl.searchParams.get("localCaseId") ?? undefined,
+    familyId: request.nextUrl.searchParams.get("familyId") ?? undefined
   };
 }
 
@@ -68,7 +69,8 @@ export async function POST(request: NextRequest) {
     }
     const authorized = await authorizeConsultPerson(request, {
       personId: typeof body.personId === "string" ? body.personId : undefined,
-      localCaseId: typeof body.localCaseId === "string" ? body.localCaseId : undefined
+      localCaseId: typeof body.localCaseId === "string" ? body.localCaseId : undefined,
+      familyId: typeof body.familyId === "string" ? body.familyId : undefined
     });
     const acceptedVia = body.acceptedVia === "web" || body.acceptedVia === "mobile"
       ? body.acceptedVia

@@ -12,6 +12,8 @@ function read(relativePath) {
 const route = read("apps/web/app/api/notebook/sync/route.ts");
 const home = read("apps/web/app/home/page.tsx");
 const memoryBook = read("apps/web/app/memory-book/[caseId]/page.tsx");
+const consultPanel = read("apps/web/components/ConsultPanel.tsx");
+const consultMemory = read("apps/web/lib/consultMemory.ts");
 const store = read("apps/web/lib/store.ts");
 const migration = read("supabase/notebook_atomic_sync_v2.sql");
 
@@ -34,6 +36,17 @@ assert.match(home, /cloudIdentityStatus !== "ready"/);
 assert.match(home, /different-account/);
 assert.match(home, /cloudAuthGenerationRef/);
 assert.doesNotMatch(home, /if \(shouldRestoreFromCloud \|\| payload\.cases\.length === 0\)[\s\S]{0,240}syncNotebookToCloud/);
+
+// localCaseId is unique only inside one family. Durable AI may use a global
+// personId, or the exact auth-bound familyId + localCaseId pair, never a scan
+// across every family the same user belongs to.
+assert.match(consultPanel, /binding\.authUserId !== authUserId \|\| !binding\.familyId/);
+assert.match(consultPanel, /return \{ localCaseId: caseRecord\.id, familyId: binding\.familyId \}/);
+assert.match(consultPanel, /const identifier: DurablePersonIdentifier \| null = memoryPayload\?\.personId[\s\S]{0,300}appendDurableIdentifier\(params, identifier\)/);
+assert.doesNotMatch(consultPanel, /else params\.set\("localCaseId", activeCaseId\)/);
+assert.match(consultMemory, /if \(!personId && !requestedFamilyId\)/);
+assert.match(consultMemory, /\.eq\("family_id", requestedFamilyId\)/);
+assert.doesNotMatch(consultMemory, /\.in\("family_id", familyIds\)[\s\S]{0,300}\.find\(/);
 
 // Client timestamps are display data only. Every write goes through the one
 // service-only transaction and carries opaque server revisions/hashes.

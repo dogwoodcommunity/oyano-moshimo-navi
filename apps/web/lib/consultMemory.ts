@@ -66,7 +66,7 @@ export class ConsultMemoryConsentConflictError extends Error {
 
 export class ConsultMemoryAccessError extends Error {
   constructor(
-    readonly code: "login_required" | "person_not_found" | "forbidden" | "invalid_request",
+    readonly code: "login_required" | "person_not_found" | "person_ambiguous" | "family_required" | "forbidden" | "invalid_request",
     message: string,
     readonly status: number
   ) {
@@ -501,12 +501,20 @@ export async function setConsultMemoryConsent(
 /** personId/localCaseIdを解決し、本人が属する家族のメンバーであることを必ずサーバーで確認する。 */
 export async function authorizeConsultPerson(
   request: NextRequest,
-  identifier: { personId?: string; localCaseId?: string }
+  identifier: { personId?: string; localCaseId?: string; familyId?: string }
 ): Promise<AuthorizedConsultPerson> {
   const personId = asString(identifier.personId, 80);
   const localCaseId = asString(identifier.localCaseId, 120);
+  const requestedFamilyId = asString(identifier.familyId, 80);
   if (!personId && !localCaseId) {
     throw new ConsultMemoryAccessError("invalid_request", "対象者を確認できませんでした。", 400);
+  }
+  if (!personId && !requestedFamilyId) {
+    throw new ConsultMemoryAccessError(
+      "family_required",
+      "この手帳の家族を確認できませんでした。家族ボードでクラウド保存を確認してください。",
+      400
+    );
   }
   const token = readBearerToken(request);
   if (!token) {
@@ -531,24 +539,40 @@ export async function authorizeConsultPerson(
   if (familyIds.length === 0) {
     throw new ConsultMemoryAccessError("forbidden", "この手帳を見る家族権限がありません。", 403);
   }
+  if (requestedFamilyId && !familyIds.includes(requestedFamilyId)) {
+    throw new ConsultMemoryAccessError("forbidden", "この手帳を見る家族権限がありません。", 403);
+  }
 
   let personRow: JsonRecord | undefined;
   if (personId) {
+    const personFamilyIds = requestedFamilyId ? [requestedFamilyId] : familyIds;
     const { data, error } = await supabase
       .from("people")
       .select("*")
       .eq("id", personId)
-      .in("family_id", familyIds)
+      .in("family_id", personFamilyIds)
       .maybeSingle();
     if (error) throw error;
     personRow = data ? asRecord(data) : undefined;
   } else {
-    // localCaseIdはJSON内の移行IDなので、ログイン中の家族に限定してから一致を探す。
-    const { data, error } = await supabase.from("people").select("*").in("family_id", familyIds);
+    // localCaseIdは家族内だけで一意な移行ID。同じ利用者が複数家族に所属しても
+    // 別家族の同名IDを拾わないよう、端末が固定したfamilyIdを必須条件にする。
+    const { data, error } = await supabase
+      .from("people")
+      .select("*")
+      .eq("family_id", requestedFamilyId);
     if (error) throw error;
-    personRow = (data ?? []).map(asRecord).find((row) =>
+    const matchedPeople = (data ?? []).map(asRecord).filter((row) =>
       asString(asRecord(row.profile).localCaseId, 120) === localCaseId
       || asString(row.id, 120) === localCaseId);
+    if (matchedPeople.length > 1) {
+      throw new ConsultMemoryAccessError(
+        "person_ambiguous",
+        "同じ識別子の手帳が複数あるため対象者を決められません。クラウド保存を開き直してください。",
+        409
+      );
+    }
+    personRow = matchedPeople[0];
   }
   if (!personRow) {
     throw new ConsultMemoryAccessError("person_not_found", "対象者のクラウド手帳が見つかりませんでした。", 404);

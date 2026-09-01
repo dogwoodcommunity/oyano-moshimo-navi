@@ -25,7 +25,8 @@ function jsonError(error: string, message: string, status: number) {
 function identifierFromUrl(request: NextRequest) {
   return {
     personId: request.nextUrl.searchParams.get("personId") ?? undefined,
-    localCaseId: request.nextUrl.searchParams.get("localCaseId") ?? undefined
+    localCaseId: request.nextUrl.searchParams.get("localCaseId") ?? undefined,
+    familyId: request.nextUrl.searchParams.get("familyId") ?? undefined
   };
 }
 
@@ -122,7 +123,8 @@ export async function PATCH(request: NextRequest) {
     if (!body) return jsonError("invalid_request", "変更内容を読み取れませんでした。", 400);
     const authorized = await authorizeConsultPerson(request, {
       personId: typeof body.personId === "string" ? body.personId : undefined,
-      localCaseId: typeof body.localCaseId === "string" ? body.localCaseId : undefined
+      localCaseId: typeof body.localCaseId === "string" ? body.localCaseId : undefined,
+      familyId: typeof body.familyId === "string" ? body.familyId : undefined
     });
     await recordConsultMemoryConsent(
       authorized,

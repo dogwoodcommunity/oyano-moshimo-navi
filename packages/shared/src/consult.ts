@@ -63,9 +63,10 @@ export type ConsultMemoryContext = {
 
 export type ConsultRequest = {
   question: string;
-  /** ログイン済みクラウド手帳では personId または localCaseId のどちらかを送る。 */
+  /** ログイン済みクラウド手帳では personId、または familyId と localCaseId の組を送る。 */
   personId?: string;
   localCaseId?: string;
+  familyId?: string;
   /** 長期記憶へ保存する同意。durable modeでは現行versionとの完全一致が必要。 */
   memoryConsentVersion?: string;
   person?: ConsultPerson;

@@ -19,6 +19,7 @@ const compiled = ts.transpileModule(source, {
 }).outputText;
 
 const moduleRecord = { exports: {} };
+let mockServerSupabase = null;
 const mockRequire = (specifier) => {
   if (specifier === "@oyano/shared") {
     return {
@@ -31,7 +32,7 @@ const mockRequire = (specifier) => {
     return { redactSensitive: (value) => value };
   }
   if (specifier === "@/lib/serverSupabase") {
-    return { getServerSupabase: () => null };
+    return { getServerSupabase: () => mockServerSupabase };
   }
   throw new Error(`Unexpected runtime import in consultMemory.ts: ${specifier}`);
 };
@@ -40,8 +41,10 @@ const load = new Function("exports", "require", "module", "__filename", "__dirna
 load(moduleRecord.exports, mockRequire, moduleRecord, sourcePath, path.dirname(sourcePath));
 
 const {
+  ConsultMemoryAccessError,
   ConsultMemoryConflictError,
   ConsultMemoryConsentConflictError,
+  authorizeConsultPerson,
   assertConsultMemorySnapshot,
   buildImportantChanges,
   buildConsultationOverview,
@@ -55,6 +58,79 @@ const {
   setConsultMemoryConsent,
   sortSourceRecords
 } = moduleRecord.exports;
+
+function mockConsultSupabase({ memberships, people }) {
+  const tables = { family_members: memberships, people };
+  return {
+    auth: {
+      async getUser(token) {
+        assert.equal(token, "test-token");
+        return { data: { user: { id: "user-1" } }, error: null };
+      }
+    },
+    from(table) {
+      const rows = tables[table];
+      if (!rows) throw new Error(`Unexpected table in authorization test: ${table}`);
+      const filters = [];
+      const query = {
+        select() { return query; },
+        eq(column, value) {
+          filters.push((row) => row[column] === value);
+          return query;
+        },
+        in(column, values) {
+          filters.push((row) => values.includes(row[column]));
+          return query;
+        },
+        async maybeSingle() {
+          const matched = rows.filter((row) => filters.every((filter) => filter(row)));
+          return { data: matched.length === 1 ? matched[0] : null, error: null };
+        },
+        then(resolve, reject) {
+          const matched = rows.filter((row) => filters.every((filter) => filter(row)));
+          return Promise.resolve({ data: matched, error: null }).then(resolve, reject);
+        }
+      };
+      return query;
+    }
+  };
+}
+
+const authorizationRequest = {
+  headers: {
+    get(name) {
+      return name.toLowerCase() === "authorization" ? "Bearer test-token" : null;
+    }
+  }
+};
+
+mockServerSupabase = mockConsultSupabase({
+  memberships: [
+    { user_id: "user-1", family_id: "family-a", role: "owner" },
+    { user_id: "user-1", family_id: "family-b", role: "member" }
+  ],
+  people: [
+    { id: "person-a", family_id: "family-a", profile: { localCaseId: "same-local-case" } },
+    { id: "person-b", family_id: "family-b", profile: { localCaseId: "same-local-case" } }
+  ]
+});
+
+await assert.rejects(
+  () => authorizeConsultPerson(authorizationRequest, { localCaseId: "same-local-case" }),
+  (error) => error instanceof ConsultMemoryAccessError && error.code === "family_required"
+);
+const familyBoundPerson = await authorizeConsultPerson(authorizationRequest, {
+  familyId: "family-b",
+  localCaseId: "same-local-case"
+});
+assert.equal(familyBoundPerson.personId, "person-b");
+assert.equal(familyBoundPerson.familyId, "family-b");
+assert.equal(familyBoundPerson.memberRole, "member");
+await assert.rejects(
+  () => authorizeConsultPerson(authorizationRequest, { familyId: "family-c", localCaseId: "same-local-case" }),
+  (error) => error instanceof ConsultMemoryAccessError && error.code === "forbidden"
+);
+mockServerSupabase = null;
 
 const records = Array.from({ length: 14 }, (_, index) => {
   const day = index + 1;

@@ -400,7 +400,8 @@ export async function POST(request: NextRequest) {
     try {
       durableAuthorization = await authorizeConsultPerson(request, {
         personId: payload.personId,
-        localCaseId: payload.localCaseId
+        localCaseId: payload.localCaseId,
+        familyId: payload.familyId
       });
       await recordConsultMemoryConsent(
         durableAuthorization,

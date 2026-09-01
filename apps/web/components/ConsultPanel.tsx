@@ -22,6 +22,7 @@ import {
   addDiaryEntry,
   listDiaryEntries,
   listLocalCases,
+  readNotebookCloudBinding,
   type CaseRecord
 } from "@/lib/store";
 
@@ -81,6 +82,9 @@ type MemoryLoadResult =
   | { mode: "durable"; payload: DurableMemoryPayload }
   | { mode: "temporary"; reason: string };
 type MemoryDeleteScope = "memory" | "history" | "all";
+type DurablePersonIdentifier =
+  | { personId: string }
+  | { localCaseId: string; familyId: string };
 type ConsultAccess = {
   signedIn: boolean;
   plan: "free" | "plus";
@@ -226,19 +230,42 @@ function memoryFallbackMessage(status: number, value: unknown) {
   return "長期記憶を確認できませんでした。クラウド保存を確認してから、もう一度開いてください。";
 }
 
-async function requestDurableMemory(localCaseId: string, historyOffset = 0): Promise<MemoryLoadResult> {
+function durablePersonIdentifier(caseRecord: CaseRecord, authUserId: string): DurablePersonIdentifier | null {
+  const personId = textValue(caseRecord.cloudPersonId);
+  if (personId) return { personId };
+  const binding = readNotebookCloudBinding();
+  if (!binding || binding.authUserId !== authUserId || !binding.familyId) return null;
+  return { localCaseId: caseRecord.id, familyId: binding.familyId };
+}
+
+function appendDurableIdentifier(params: URLSearchParams, identifier: DurablePersonIdentifier) {
+  if ("personId" in identifier) {
+    params.set("personId", identifier.personId);
+  } else {
+    params.set("localCaseId", identifier.localCaseId);
+    params.set("familyId", identifier.familyId);
+  }
+}
+
+async function requestDurableMemory(caseRecord: CaseRecord, historyOffset = 0): Promise<MemoryLoadResult> {
   const client = getBrowserSupabase();
   if (!client) {
     return { mode: "temporary", reason: "クラウド保存の環境設定がないため、長期記憶を準備できません。" };
   }
   const sessionData = (await client.auth.getSession()).data;
   const accessToken = sessionData.session?.access_token;
+  const authUserId = sessionData.session?.user.id;
   if (!accessToken) {
     return { mode: "temporary", reason: "メール確認とクラウド保存をすると、この人専用の長期記憶を使えます。" };
   }
+  const identifier = authUserId ? durablePersonIdentifier(caseRecord, authUserId) : null;
+  if (!identifier) {
+    return { mode: "temporary", reason: "この手帳を使う家族を確認できません。家族ボードでクラウド保存を確認してください。" };
+  }
 
   try {
-    const params = new URLSearchParams({ localCaseId, historyOffset: String(historyOffset) });
+    const params = new URLSearchParams({ historyOffset: String(historyOffset) });
+    appendDurableIdentifier(params, identifier);
     const response = await fetch(`/api/consult/memory?${params.toString()}`, {
       headers: {
         Authorization: `Bearer ${accessToken}`,
@@ -266,7 +293,7 @@ function formatMemoryDate(value?: string | null, withTime = false) {
   }).format(date);
 }
 
-async function requestDurableConsent(localCaseId: string): Promise<{
+async function requestDurableConsent(caseRecord: CaseRecord): Promise<{
   active: boolean;
   revision: number;
   canManageSharedMemory: boolean;
@@ -274,10 +301,14 @@ async function requestDurableConsent(localCaseId: string): Promise<{
 }> {
   const client = getBrowserSupabase();
   if (!client) return { active: false, revision: 0, canManageSharedMemory: false, reason: "クラウド保存の環境設定がありません。" };
-  const accessToken = (await client.auth.getSession()).data.session?.access_token;
+  const session = (await client.auth.getSession()).data.session;
+  const accessToken = session?.access_token;
   if (!accessToken) return { active: false, revision: 0, canManageSharedMemory: false, reason: "メール確認とクラウド保存を先に設定してください。" };
+  const identifier = durablePersonIdentifier(caseRecord, session.user.id);
+  if (!identifier) return { active: false, revision: 0, canManageSharedMemory: false, reason: "この手帳を使う家族を確認できません。家族ボードでクラウド保存を確認してください。" };
   try {
-    const params = new URLSearchParams({ localCaseId });
+    const params = new URLSearchParams();
+    appendDurableIdentifier(params, identifier);
     const response = await fetch(`/api/consult/memory/consent?${params.toString()}`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
@@ -295,15 +326,18 @@ async function requestDurableConsent(localCaseId: string): Promise<{
   }
 }
 
-async function changeDurableConsent(localCaseId: string, action: "accept" | "revoke", revision: number) {
+async function changeDurableConsent(caseRecord: CaseRecord, action: "accept" | "revoke", revision: number) {
   const client = getBrowserSupabase();
-  const accessToken = client ? (await client.auth.getSession()).data.session?.access_token : null;
+  const session = client ? (await client.auth.getSession()).data.session : null;
+  const accessToken = session?.access_token;
   if (!accessToken) throw new Error("メール確認とクラウド保存を先に設定してください。");
+  const identifier = durablePersonIdentifier(caseRecord, session.user.id);
+  if (!identifier) throw new Error("この手帳を使う家族を確認できません。家族ボードでクラウド保存を確認してください。");
   const response = await fetch("/api/consult/memory/consent", {
     method: "POST",
     headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      localCaseId,
+      ...identifier,
       action,
       version: CONSULT_MEMORY_CONSENT_VERSION,
       acceptedVia: "web",
@@ -459,7 +493,7 @@ export function ConsultPanel() {
   }, [activeCase]);
 
   useEffect(() => {
-    if (!activeCaseId) return;
+    if (!activeCase) return;
     const requestId = memoryRequestRef.current + 1;
     memoryRequestRef.current = requestId;
     setMemoryMode("checking");
@@ -475,7 +509,7 @@ export function ConsultPanel() {
     setTurns([]);
 
     void (async () => {
-      const consentResult = await requestDurableConsent(activeCaseId);
+      const consentResult = await requestDurableConsent(activeCase);
       if (memoryRequestRef.current !== requestId) return;
       setConsentRevision(consentResult.revision);
       setConsentCanManageSharedMemory(consentResult.canManageSharedMemory);
@@ -486,7 +520,7 @@ export function ConsultPanel() {
         return;
       }
       setConsent(true);
-      const result = await requestDurableMemory(activeCaseId);
+      const result = await requestDurableMemory(activeCase);
       if (memoryRequestRef.current !== requestId) return;
       if (result.mode === "durable") {
         setMemoryMode("durable");
@@ -501,13 +535,13 @@ export function ConsultPanel() {
       setMemoryPayload(null);
       setTurns([]);
     })();
-  }, [activeCaseId]);
+  }, [activeCase]);
 
   async function refreshDurableMemory(options?: { keepMessage?: boolean }) {
-    if (!activeCaseId) return null;
+    if (!activeCase) return null;
     const requestId = memoryRequestRef.current + 1;
     memoryRequestRef.current = requestId;
-    const result = await requestDurableMemory(activeCaseId);
+    const result = await requestDurableMemory(activeCase);
     if (memoryRequestRef.current !== requestId) return null;
     if (result.mode === "durable") {
       setMemoryMode("durable");
@@ -608,11 +642,11 @@ export function ConsultPanel() {
   }
 
   async function loadOlderConsultHistory() {
-    if (!activeCaseId || !memoryPayload?.historyHasMore || historyLoading) return;
+    if (!activeCase || !memoryPayload?.historyHasMore || historyLoading) return;
     setHistoryLoading(true);
     setMemoryMessage("");
     try {
-      const result = await requestDurableMemory(activeCaseId, turns.length);
+      const result = await requestDurableMemory(activeCase, turns.length);
       if (result.mode !== "durable") throw new Error(result.reason);
       const older = result.payload.turns;
       setTurns((current) => {
@@ -634,17 +668,20 @@ export function ConsultPanel() {
   }
 
   async function confirmMemoryDelete() {
-    if (!deleteIntent || !activeCaseId) return;
+    if (!deleteIntent || !activeCase) return;
     setMemoryAction("deleting");
     setMemoryMessage("");
     try {
       const client = getBrowserSupabase();
-      const sessionData = client ? (await client.auth.getSession()).data : null;
-      const accessToken = sessionData?.session?.access_token;
-      if (!accessToken) throw new Error("メール確認をやり直してから、もう一度お試しください。");
+      const session = client ? (await client.auth.getSession()).data.session : null;
+      const accessToken = session?.access_token;
+      if (!session || !accessToken) throw new Error("メール確認をやり直してから、もう一度お試しください。");
+      const identifier: DurablePersonIdentifier | null = memoryPayload?.personId
+        ? { personId: memoryPayload.personId }
+        : durablePersonIdentifier(activeCase, session.user.id);
+      if (!identifier) throw new Error("この手帳を使う家族を確認できません。家族ボードでクラウド保存を確認してください。");
       const params = new URLSearchParams({ scope: deleteIntent });
-      if (memoryPayload?.personId) params.set("personId", memoryPayload.personId);
-      else params.set("localCaseId", activeCaseId);
+      appendDurableIdentifier(params, identifier);
       const response = await fetch(`/api/consult/memory?${params.toString()}`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${accessToken}` }
@@ -678,8 +715,8 @@ export function ConsultPanel() {
   }
 
   async function toggleConsent(next: boolean) {
-    if (!activeCaseId || consentSaving) return;
-    const caseId = activeCaseId;
+    if (!activeCase || consentSaving) return;
+    const caseRecord = activeCase;
     const requestId = memoryRequestRef.current + 1;
     memoryRequestRef.current = requestId;
     setConsentSaving(true);
@@ -689,7 +726,7 @@ export function ConsultPanel() {
       setConsent(false);
     }
     try {
-      const changed = await changeDurableConsent(caseId, next ? "accept" : "revoke", consentRevision);
+      const changed = await changeDurableConsent(caseRecord, next ? "accept" : "revoke", consentRevision);
       if (memoryRequestRef.current !== requestId) return;
       setConsentRevision(changed.revision);
       setConsentCanManageSharedMemory(changed.canManageSharedMemory);
@@ -704,7 +741,7 @@ export function ConsultPanel() {
       }
       setConsent(true);
       setMemoryMode("checking");
-      const result = await requestDurableMemory(caseId);
+      const result = await requestDurableMemory(caseRecord);
       if (memoryRequestRef.current !== requestId) return;
       if (result.mode !== "durable") {
         setMemoryMode("temporary");
@@ -717,7 +754,7 @@ export function ConsultPanel() {
       setTurns(result.payload.turns);
     } catch (error) {
       if (memoryRequestRef.current !== requestId) return;
-      const current = await requestDurableConsent(caseId);
+      const current = await requestDurableConsent(caseRecord);
       if (memoryRequestRef.current !== requestId) return;
       setConsent(current.active);
       setConsentRevision(current.revision);
@@ -731,7 +768,7 @@ export function ConsultPanel() {
         return;
       }
       setMemoryMode("checking");
-      const result = await requestDurableMemory(caseId);
+      const result = await requestDurableMemory(caseRecord);
       if (memoryRequestRef.current !== requestId) return;
       if (result.mode === "durable") {
         setMemoryMode("durable");
@@ -882,16 +919,24 @@ export function ConsultPanel() {
       }
 
       const { data: sessionData } = await client.auth.getSession();
-      const accessToken = sessionData.session?.access_token;
-      if (!accessToken) {
+      const session = sessionData.session;
+      if (!session?.access_token) {
         updateTurn(turn.id, {
           saveSyncPhase: "local-only",
           saveSyncMessage: "この端末の手帳に残しました。家族ボードでメール確認をすると、クラウドにも保存できます。"
         });
         return;
       }
+      const accessToken = session.access_token;
+      const binding = readNotebookCloudBinding();
+      if (!binding || binding.authUserId !== session.user.id || !binding.familyId) {
+        updateTurn(turn.id, {
+          saveSyncPhase: "local-only",
+          saveSyncMessage: "この端末の手帳に残しました。家族ボードで使う家族を確認すると、クラウドにも保存できます。"
+        });
+        return;
+      }
 
-      const nextCases = listLocalCases();
       const response = await fetch("/api/notebook/sync", {
         method: "POST",
         headers: {
@@ -899,7 +944,11 @@ export function ConsultPanel() {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          cases: nextCases,
+          familyId: binding.familyId,
+          requestId: typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+            ? crypto.randomUUID()
+            : `consult-save-${Date.now()}`,
+          cases: [activeCase],
           diaryEntries: [savedEntry]
         })
       });
