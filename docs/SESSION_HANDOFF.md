@@ -9959,3 +9959,51 @@ Anthropic利用量だけが利用量に応じて増える。現在進行中の�
 5. 結果を次の追記へ記録しcommit・pushする。
 
 未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
+
+## 2026-09-01 追記 264 — 本番スキーマ差分を安全補完、Chrome翻訳停止待ち
+
+ユーザー本人のSupabaseログイン後、対象が本番project `ypnuxyfirlvbsqujocuy`
+（production Webが参照する `https://ypnuxyfirlvbsqujocuy.supabase.co` と一致）であることを管理画面上で
+再確認した。Webデプロイ前にread-only SQLで本番スキーマと件数を調べたところ、本番は古いスキーマで、
+`people.profile` / `profile_updated_at` / `prefecture` / `city` と、`timeline_events.mood` /
+`attachments` / `metadata` が未作成だった。この状態では追記263の手順どおり
+`notebook_atomic_sync_v2.sql` をそのまま実行できないため、推測で投入せず停止した。
+
+本番変更前の控え:
+
+- `people=4`、`tasks=8`、`timeline_events=0`、`audit_logs=44`
+- `monitor_progress_synced=10`、`monitor_feedback_submitted=5`
+- `profiles`、`families`、`family_members`、`person_status_events`、`is_family_member(uuid)`、
+  `anon` / `authenticated` / `service_role`、主要RLSの存在を確認した。
+- family member roleは既存5行すべて `owner`。people/task/timelineの外部キー対象IDにNULLはなかった。
+- AI記憶4テーブルは未作成で、部分適用状態ではなかった。
+
+互換修正:
+
+- `78c4947` (`fix: support legacy production notebook schema`) で、上記7列を
+  `notebook_atomic_sync_v2.sql` の明示transaction内、hash/backfillより前に
+  `ADD COLUMN IF NOT EXISTS` するよう修正した。
+- 広範囲の `production_pending_hardening.sql` / `person_notebook_hardening.sql` /
+  `regional_sponsor_data.sql` 全体は再実行せず、今回必要な最小列だけを追加する契約にした。
+- PostgreSQL 16で現行スキーマ、7列が欠けた旧本番相当スキーマ、migration再適用の全ケースを確認し、
+  regression、`test-notebook-sync-safety`、`test-notebook-sync-runtime`、`git diff --check` が成功した。
+  commitはorigin/mainへpush済み。
+
+現在の停止理由:
+
+- Supabase SQL Editorで確定SQLを入力し、管理画面の「クエリを実行する」確認まで進んだが、Chromeの
+  自動翻訳がReact DOMを書き換え、確認ボタン押下直後にSupabase画面が `removeChild` エラーで停止した。
+- 開き直してread-only検証を行い、`people.profile` が依然存在しないことを確認した。したがって
+  `notebook_atomic_sync_v2.sql` は本番へ未適用で、既存件数・モニター回答・進捗は変更されていない。
+- `ai_consult_memory.sql` / `verify_compact.sql` も未実行、Vercel production deployも未実行。
+
+再開手順:
+
+1. ChromeのSupabaseタブで、アドレスバー右側の「翻訳」アイコンから「原文を表示」へ戻す。
+   可能ならSupabaseを「このサイトは翻訳しない」にする。認証情報の再入力は不要。
+2. 原文表示後、`notebook_atomic_sync_v2.sql` を実行し、列・RPC・index、変更前後の件数を確認する。
+3. `ai_consult_memory.sql`、`verify_compact.sql` を実行し、全検査が成功してからWebだけをVercel productionへ
+   deployする。失敗時はWebをdeployしない。
+4. 実行結果、production deployment URL、公開alias、E2E結果を次の追記へ残しcommit・pushする。
+
+未追跡の `review_exports/` は引き続き参照・変更・追加・commit対象外。
