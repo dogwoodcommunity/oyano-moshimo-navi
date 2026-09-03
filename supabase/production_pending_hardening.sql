@@ -385,7 +385,8 @@ begin
 end;
 $$;
 
-revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text) from public;
+revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text)
+  from public, anon, authenticated;
 grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text) to service_role;
 
 -- 2. Sensitive information consent is recorded per diagnosis.

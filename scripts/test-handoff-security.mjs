@@ -325,10 +325,44 @@ for (const relativePath of [
   assert.doesNotMatch(sql, /on conflict \(family_id, user_id\) do update set/);
   assert.match(sql, /v_case\.status is distinct from 'result_ready'/);
   assert.match(sql, /and status = 'result_ready'/);
+  assert.match(
+    sql,
+    /revoke all on function public\.consume_case_handoff\(uuid, text, uuid, text, text\)\s+from public, anon, authenticated;/,
+    `${relativePath} must remove direct client-role execution`
+  );
   assert.ok(
     sql.indexOf("raise exception 'case_already_converted'") < sql.indexOf("insert into profiles"),
     `${relativePath} must reject linked cases before any user/profile mutation`
   );
 }
+
+const anonymousRpcSql = fs.readFileSync(
+  path.join(repoRoot, "supabase/anonymous_diagnosis_rpc.sql"),
+  "utf8"
+);
+assert.match(
+  anonymousRpcSql,
+  /revoke all on function public\.submit_anonymous_case_diagnosis\([\s\S]*?\) from public, anon, authenticated;/,
+  "anonymous diagnosis RPC must remove direct client-role execution"
+);
+
+const apiGrantsSql = fs.readFileSync(path.join(repoRoot, "supabase/api_grants.sql"), "utf8");
+assert.match(
+  apiGrantsSql,
+  /revoke all on function public\.consume_case_handoff\(uuid, text, uuid, text, text\)\s+from public, anon, authenticated;/,
+  "fresh-install grants must keep handoff consume server-only"
+);
+assert.match(
+  apiGrantsSql,
+  /revoke all on function public\.submit_anonymous_case_diagnosis\([\s\S]*?\) from public, anon, authenticated;/,
+  "fresh-install grants must keep anonymous diagnosis server-only"
+);
+
+const verifyCompactSql = fs.readFileSync(
+  path.join(repoRoot, "supabase/verify_compact.sql"),
+  "utf8"
+);
+assert.match(verifyCompactSql, /anonymous_diagnosis_rpc_service_only/);
+assert.match(verifyCompactSql, /handoff_consume_rpc_service_only/);
 
 console.log("Anonymous diagnosis and handoff route regression: ok");

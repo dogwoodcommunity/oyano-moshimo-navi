@@ -48,3 +48,20 @@ alter default privileges in schema public
 
 alter default privileges in schema public
   grant execute on functions to service_role;
+
+-- SECURITY DEFINER RPCs below are server-only. Keep these explicit revokes after
+-- the broad authenticated function grant above so fresh installs cannot expose
+-- either RPC through PostgREST.
+revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text)
+  from public, anon, authenticated;
+grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text)
+  to service_role;
+
+revoke all on function public.submit_anonymous_case_diagnosis(
+  uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
+  text, text, jsonb, jsonb, jsonb, text
+) from public, anon, authenticated;
+grant execute on function public.submit_anonymous_case_diagnosis(
+  uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
+  text, text, jsonb, jsonb, jsonb, text
+) to service_role;

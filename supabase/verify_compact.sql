@@ -126,6 +126,10 @@ with checks as (
     has_function_privilege('service_role', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
+  union all select 'security_check', 'handoff_consume_rpc_service_only',
+    has_function_privilege('service_role', 'public.consume_case_handoff(uuid,text,uuid,text,text)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.consume_case_handoff(uuid,text,uuid,text,text)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.consume_case_handoff(uuid,text,uuid,text,text)', 'EXECUTE')
   union all select 'security_check', 'notebook_sync_receipts_service_only',
     has_table_privilege('service_role', 'public.notebook_sync_receipts', 'SELECT')
     and has_table_privilege('service_role', 'public.notebook_sync_receipts', 'INSERT')

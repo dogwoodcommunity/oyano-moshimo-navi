@@ -10746,3 +10746,41 @@ productionにはまだ反映していない。
 - GitHub上のソース修正は完了したが、公開版は旧DB・旧Webのままなので引き続き **NO-GO**。本番反映は
   ユーザーの明示承認後に `handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` →
   `verify_compact.sql` → Web production deploy の順で実施する。
+
+## 2026-09-03 追記 281 — 本番反映承認後のpreflightとRPC権限hardening
+
+ユーザーから「本番反映して」と明示承認を受けた。本番Supabase project
+`ypnuxyfirlvbsqujocuy`（Dashboard表示 `main / Production`）で、本文・氏名・画像を取得しない集計SELECTだけを
+実行した。ここまで本番DBへの書き込みとVercel deployは行っていない。
+
+本番preflight:
+
+- `cases.anonymous_token` と `case_results.app_handoff_consumed_at` は存在。
+- `consume_case_handoff` は存在し、`service_role=true`、`public/anon/authenticated=false`。
+- 新しい `submit_anonymous_case_diagnosis` は未投入。
+- 保護対象の前値は `monitor_progress_synced=10`、`monitor_feedback_submitted=11`、回答内の画像参照合計14。
+- 参考の件数は `cases=17`、`case_results=17`、`families=5`、`people=4`、`tasks=8`。
+
+本番投入前の独立監査で、`api_grants.sql` の全function向けauthenticated grantと
+`CREATE OR REPLACE FUNCTION` のACL保持により、環境や再適用順によってserver-only RPCがclient roleへ
+再公開され得る不足を発見した。本番投入を止めて次を追加修正した。
+
+- `handoff_consume_rpc.sql`、`anonymous_diagnosis_rpc.sql`、一括hardening内の該当定義で
+  `public, anon, authenticated` を明示REVOKEし、`service_role` だけへEXECUTEを付与。
+- 新規DBで後から権限が再開かないよう、`api_grants.sql` の広いgrantより後にも両RPCの明示REVOKE/GRANTを追加。
+- `verify_compact.sql` に `handoff_consume_rpc_service_only` を追加。
+- PostgreSQL回帰で旧client grantを意図的に注入し、各RPCの再適用後と `api_grants.sql` 適用後の両方で
+  server-onlyを確認するようにした。
+
+ローカル確認:
+
+- `pnpm run test:handoff-security`: 成功。
+- `pnpm run test:handoff-security:sql`: 破棄専用PostgreSQL 16で成功。
+- `bash -n scripts/test-handoff-ownership-sql.sh`: 成功。
+- `git diff --check`: 成功。
+
+次は、このACL修正をcommit/pushしてGitHub CI成功を確認した場合だけ、本番へ更新済み
+`handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` → `verify_compact.sql` を実行する。
+既存本番には `production_pending_hardening.sql` と `api_grants.sql` の全体を再実行しない。その後だけrepo rootから
+Vercel production deployし、無書き込みsmokeと上記件数の不変を確認する。未追跡の `review_exports/` と
+機密review文書2件は変更・追加・commit対象外。

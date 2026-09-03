@@ -186,7 +186,7 @@ $$;
 revoke all on function public.submit_anonymous_case_diagnosis(
   uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
   text, text, jsonb, jsonb, jsonb, text
-) from public;
+) from public, anon, authenticated;
 grant execute on function public.submit_anonymous_case_diagnosis(
   uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
   text, text, jsonb, jsonb, jsonb, text

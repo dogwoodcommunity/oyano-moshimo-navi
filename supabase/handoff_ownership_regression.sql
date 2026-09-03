@@ -582,6 +582,26 @@ begin
   ) then
     raise exception 'service_role cannot execute anonymous diagnosis RPC';
   end if;
+
+  if has_function_privilege(
+    'anon',
+    'public.consume_case_handoff(uuid,text,uuid,text,text)',
+    'EXECUTE'
+  ) or has_function_privilege(
+    'authenticated',
+    'public.consume_case_handoff(uuid,text,uuid,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'client roles unexpectedly execute handoff consume RPC';
+  end if;
+
+  if not has_function_privilege(
+    'service_role',
+    'public.consume_case_handoff(uuid,text,uuid,text,text)',
+    'EXECUTE'
+  ) then
+    raise exception 'service_role cannot execute handoff consume RPC';
+  end if;
 end;
 $privileges$;
 
