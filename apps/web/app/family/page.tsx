@@ -12,15 +12,23 @@ export default function FamilyPage() {
     <main className="container family-page">
       <section className="family-hero">
         <p className="family-eyebrow">家族共有</p>
-        <h1>一人で抱えないために、同じ手帳を見てもらう。</h1>
+        <h1>家族1人を無料で招待できます。</h1>
         <p className="family-lead">
-          病院に聞く人、支払いを見る人、写真を残す人。役割を分けるには、まず同じ記録を見ている必要があります。
-          招待された人は追加課金なしで、共有された手帳の確認・記録・写真更新に参加できます。
-          招待やプラン変更は、手帳を作った人が管理します。
+          あなたが作った手帳を、家族と一緒に見て更新できます。
+          招待された人に料金はかかりません。
         </p>
         <div className="family-hero-actions">
           <Link className="secondary" href="/home">手帳へ戻る</Link>
         </div>
+      </section>
+
+      <section className="family-how" aria-label="家族を招待する手順">
+        <h2>招待は3つの手順です</h2>
+        <ol>
+          <li><span>1</span><div><strong>クラウド保存を始める</strong><small>メール確認をして、同じ手帳を安全に共有できるようにします。</small></div></li>
+          <li><span>2</span><div><strong>招待リンクを作る</strong><small>招待する家族のメールアドレスを入力します。</small></div></li>
+          <li><span>3</span><div><strong>LINEやメールで送る</strong><small>リンクを作っただけでは相手に届きません。最後に自分で送信します。</small></div></li>
+        </ol>
       </section>
 
       <FamilyShare />

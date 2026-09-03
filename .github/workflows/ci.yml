@@ -48,6 +48,9 @@ jobs:
       - name: Test notebook sync runtime
         run: pnpm run test:notebook-sync-runtime
 
+      - name: Test free-first redesign
+        run: pnpm run test:free-first-redesign
+
       - name: Test consult memory
         run: pnpm run test:consult-memory
 

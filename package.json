@@ -27,6 +27,7 @@
     "test:cron-auth": "node scripts/test-cron-auth.mjs",
     "test:notebook-sync-safety": "node scripts/test-notebook-sync-safety.mjs",
     "test:notebook-sync-runtime": "node scripts/test-notebook-sync-runtime.mjs",
+    "test:free-first-redesign": "node scripts/test-free-first-redesign.mjs",
     "smoke:notebook-sync": "node scripts/smoke-notebook-sync.mjs",
     "smoke:production-consent": "node scripts/smoke-production-consent.mjs",
     "test:consult-memory": "node scripts/test-consult-memory.mjs && node scripts/test-consult-route.mjs",

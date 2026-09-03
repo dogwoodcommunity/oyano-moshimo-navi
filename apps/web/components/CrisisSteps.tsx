@@ -5,13 +5,13 @@ import Link from "next/link";
 import type { CrisisScenario } from "@oyano/shared";
 import { trackFunnel } from "@/lib/funnel";
 import { japanDateInputValue } from "@/lib/date";
-import { addDiaryEntry, listLocalCases, type CaseRecord } from "@/lib/store";
+import { addDiaryEntryWithStatus, listLocalCases, type CaseRecord } from "@/lib/store";
 
 const PROGRESS_STORAGE_KEY = "oyano_crisis_progress_v01";
 
 type ProgressMap = Record<string, string[]>;
 
-type SaveState = "idle" | "saved" | "no-case";
+type SaveState = "idle" | "saved" | "no-case" | "error";
 
 function getLocalStorage(): Storage | null {
   if (typeof window === "undefined" || !window.localStorage) return null;
@@ -106,13 +106,17 @@ export function CrisisSteps({ scenario }: { scenario: CrisisScenario }) {
       remaining.forEach((step) => lines.push(`・${step.title}`));
     }
 
-    addDiaryEntry({
+    const { persisted } = addDiaryEntryWithStatus({
       caseId: activeCase.id,
       date: todayInputValue(),
       mood: "urgent",
       body: lines.join("\n").trim(),
       attachments: []
     });
+    if (!persisted) {
+      setSaveState("error");
+      return;
+    }
     trackFunnel("crisis_saved");
     setSaveState("saved");
   }
@@ -177,6 +181,9 @@ export function CrisisSteps({ scenario }: { scenario: CrisisScenario }) {
         ) : null}
         {saveState === "no-case" ? (
           <p className="crisis-save-note" role="status">まだ手帳がありません。先に1人分の手帳を作ってください。</p>
+        ) : null}
+        {saveState === "error" ? (
+          <p className="crisis-save-note" role="alert">まだ保存できていません。端末の空き容量やクラウド保存を確認して、もう一度お試しください。</p>
         ) : null}
       </div>
     </div>

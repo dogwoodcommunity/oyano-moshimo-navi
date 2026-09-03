@@ -7,10 +7,11 @@ import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { PREFECTURES } from "@/lib/prefectures";
+import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
 import {
   addCaseTask,
-  addDiaryEntry,
+  addDiaryEntryWithStatus,
   applyNotebookCloudRevisions,
   canAdoptNotebookCloudIdentity,
   consumeNotebookStorageWarning,
@@ -27,7 +28,7 @@ import {
   replaceLocalNotebook,
   resetLocalNotebookData,
   updateDiaryEntry,
-  updateCaseProfile,
+  updateCaseProfileWithStatus,
   writeNotebookCloudBinding,
   writeCanManageFamilyBilling,
   writePlan,
@@ -68,8 +69,7 @@ type CloudStatus = "idle" | "checking" | "sending" | "sent" | "syncing" | "synce
 type CloudAutoStatus = "idle" | "saving" | "saved" | "error";
 type CloudIdentityStatus = "checking" | "ready" | "needs-confirmation" | "different-account" | "family-selection" | "blocked";
 type CloudFamilyOption = { id: string; name: string; role: "owner" | "admin" | "member" | "viewer" };
-type NotebookTab = "overview" | "record" | "profile" | "tasks" | "media";
-type HandbookStepState = "done" | "now" | "next";
+type NotebookTab = "overview" | "record" | "history" | "profile" | "tasks" | "media";
 type ConsultDraft = {
   caseId: string;
   entryId?: string;
@@ -97,18 +97,12 @@ type DiaryCalendarCell = {
 };
 
 const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
-  { id: "overview", label: "今日", note: "まず見る" },
-  { id: "record", label: "記録", note: "書く・見返す" },
-  { id: "profile", label: "基本情報", note: "プロフィール" },
+  { id: "record", label: "今日", note: "記録する" },
+  { id: "history", label: "履歴", note: "見返す" },
+  { id: "profile", label: "情報", note: "書類・連絡先" },
   { id: "tasks", label: "確認", note: "やること" },
-  { id: "media", label: "写真", note: "アルバム" }
+  { id: "media", label: "写真", note: "保管する" }
 ];
-
-const handbookStepLabels: Record<HandbookStepState, string> = {
-  done: "入力あり",
-  now: "次におすすめ",
-  next: "あとで"
-};
 
 function blankDiaryForm(): DiaryFormState {
   return {
@@ -166,29 +160,6 @@ const journeyCopy = {
     body: "本人の希望、会わせたい人、避けたい対応などを、断定ではなく家族の確認メモとして残します。"
   }
 } as const;
-
-const continuationFeatures = [
-  {
-    label: "共有",
-    title: "家族にも同じ手帳を見せる",
-    body: "病院へ聞く人、支払いを見る人、写真を残す人を分けて、同じ状況を見ながら進められます。"
-  },
-  {
-    label: "複数",
-    title: "2人目以降も切り替えて管理する",
-    body: "父、母、義母、親戚など、1人ずつ状態が違っても手帳を分けて残せます。"
-  },
-  {
-    label: "相談",
-    title: "AI相談チャットで次の一歩を聞く",
-    body: "毎回ゼロから説明せず、この人のプロフィールと日々の記録を前提に、次に聞くことを整理します。"
-  },
-  {
-    label: "月次",
-    title: "家族会議用にまとめる",
-    body: "1か月の変化、写真、未確認リストをまとめて、家族や支援者に説明しやすくします。"
-  }
-];
 
 const relationshipLabels = {
   mother: "母",
@@ -726,6 +697,7 @@ function DiaryCalendar({
               ].filter(Boolean).join(" ")}
               key={cell.key}
               type="button"
+              disabled={cell.count === 0}
               onClick={() => onSelectDate(cell.date)}
             >
               <span>{cell.day}</span>
@@ -741,10 +713,10 @@ function DiaryCalendar({
           {selectedDate
             ? selectedEntries.length > 0
               ? `${formatLongDate(selectedDate)}の記録を表示しています（${selectedEntries.length}件）`
-              : `${formatLongDate(selectedDate)}には記録がありません。件数が付いた日を選ぶと記録が表示されます。`
-            : "日付を押すと、その日の記録だけを見返せます。"}
+              : `${formatLongDate(selectedDate)}には記録がありません。数字が付いた日を選んでください。`
+            : "数字が付いた日を押すと、その日の記録へ移動します。"}
         </p>
-        {selectedDate ? <button type="button" onClick={onClearDate}>全日付の記録を表示</button> : null}
+        {selectedDate ? <button type="button" onClick={onClearDate}>すべての記録に戻る</button> : null}
       </div>
     </div>
   );
@@ -1195,6 +1167,7 @@ export default function FamilyBoardPage() {
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
   const [profileSavedCaseId, setProfileSavedCaseId] = useState<string | null>(null);
   const [profileLocationErrorCaseId, setProfileLocationErrorCaseId] = useState<string | null>(null);
+  const [profileStorageError, setProfileStorageError] = useState<{ caseId: string; message: string } | null>(null);
   const [profileEditorOpen, setProfileEditorOpen] = useState(false);
   const [prefecturePromptDrafts, setPrefecturePromptDrafts] = useState<Record<string, PrefecturePromptDraft>>({});
   const [taskForms, setTaskForms] = useState<Record<string, TaskEditForm>>({});
@@ -1237,6 +1210,7 @@ export default function FamilyBoardPage() {
   const cloudAuthGenerationRef = useRef(0);
   const skipInitialCloudRestoreRef = useRef(false);
   const cloudBackupRef = useRef<HTMLDetailsElement | null>(null);
+  const initialNotebookHashHandledRef = useRef(false);
 
   useEffect(() => () => {
     if (cloudSyncRetryTimerRef.current !== null) {
@@ -1388,6 +1362,14 @@ export default function FamilyBoardPage() {
     setActiveNotebookTab("record");
   }, [activeCase?.id]);
 
+  useEffect(() => {
+    if (!loaded || !activeCase || initialNotebookHashHandledRef.current || typeof window === "undefined") return;
+    const hash = window.location.hash;
+    if (!tabForHash(hash)) return;
+    initialNotebookHashHandledRef.current = true;
+    openNotebookSection(hash);
+  }, [loaded, activeCase?.id]);
+
   const activeEntries = activeCase ? diaryEntries[activeCase.id] ?? [] : [];
   const activeTasks = activeCase?.result?.tasks ?? [];
   const nextTask = activeTasks[0];
@@ -1425,12 +1407,11 @@ export default function FamilyBoardPage() {
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
   const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
   const visibleSupportActions = isSharedFamilyMember ? supportActions.filter((action) => action.href !== "/plans") : supportActions;
-  const activeCaseIndex = activeCase ? cases.findIndex((caseRecord) => caseRecord.id === activeCase.id) : -1;
-  const activeCaseOrdinal = activeCaseIndex >= 0 ? `${activeCaseIndex + 1}人目` : "この人";
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
   const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
   const unassignedTaskCount = openTasks.filter((task) => !task.assignee?.trim()).length;
   const latestEntry = activeEntries[0];
+  const todayEntry = activeEntries.find((entry) => entry.date === todayInputValue());
   const savedDiaryEntry = diarySavedId ? activeEntries.find((entry) => entry.id === diarySavedId) : undefined;
   const daysFromLatestEntry = daysSince(latestEntry?.date);
   const latestEntrySummary = latestEntry
@@ -1448,88 +1429,43 @@ export default function FamilyBoardPage() {
     : openTasks[0]
       ? `${openTasks[0].title}（${dueText(openTasks[0])}）`
       : "いま未完了の確認リストはありません";
-  const profileNextCopy = activeMissingProfileItems[0]
-    ? `${activeMissingProfileItems[0]}を足すと、相談や共有がしやすくなります`
-    : "基本情報はそろっています。変化があれば更新できます";
-  const handbookSteps = activeCase ? [
-    {
-      key: "profile",
-      title: "本人プロフィール",
-      body: profileNextCopy,
-      href: "#profile-edit-fields",
-      action: "編集する",
-      value: `${activeProfileCompletion.percent}%`,
-      state: activeProfileCompletion.percent >= 85 ? "done" : "now"
-    },
-    {
-      key: "record",
-      title: "日々の記録",
-      body: activeEntries.length > 0
-        ? `${activeEntries.length}件の記録があります。過去の変化を見返せます。`
-        : "今日の体調・発言・病院連絡を1行だけ残します。",
-      href: activeEntries.length > 0 ? "#diary-history" : "#today-diary",
-      action: activeEntries.length > 0 ? "見返す" : "書く",
-      value: `${activeEntries.length}件`,
-      state: activeEntries.length > 0 ? "done" : "now"
-    },
-    {
-      key: "tasks",
-      title: "確認リスト",
-      body: nextTaskCopy,
-      href: "#task-checklist",
-      action: "確認する",
-      value: `${openTasks.length}件`,
-      state: openTasks.length > 0 ? (unassignedTaskCount > 0 ? "now" : "done") : "next"
-    },
-    {
-      key: "media",
-      title: "写真",
-      body: attachments.length > 0
-        ? "写真が日記にまとまっています。"
-        : "部屋・書類・施設からの紙は、まず写真で日記に添付できます。",
-      href: "#media-library",
-      action: attachments.length > 0 ? "見る" : "使い方",
-      value: `${attachments.length}件`,
-      state: attachments.length > 0 ? "done" : "next"
-    }
-  ] satisfies {
-    key: string;
-    title: string;
-    body: string;
-    href: string;
-    action: string;
-    value: string;
-    state: HandbookStepState;
-  }[] : [];
-  const handbookDoneCount = handbookSteps.filter((step) => step.state === "done").length;
-  const handbookReadinessPercent = handbookSteps.length > 0 ? Math.round((handbookDoneCount / handbookSteps.length) * 100) : 0;
-  const handbookReadinessCopy = handbookDoneCount >= 3
-    ? "共有や相談に使える手帳に近づいています。変化があった日だけ追記すれば大丈夫です。"
-    : "まずは本人情報・今日の記録・確認リストをそろえると、この人の手帳として使いやすくなります。";
-  const handbookReadinessNote = isSharedFamilyMember
-    ? "あなたは共有メンバーとして、この人の記録・確認リスト・写真を一緒に更新できます。追加課金の手続きは不要です。"
-    : activeCaseIndex <= 0
-      ? "1人目は無料でここまで育てられます。家族に共有したい、2人目も管理したい、記録を前提に相談したいと思った時だけPlusで広げます。"
-      : "2人目以降も、プロフィール・記録・確認リスト・写真がそろうほど家族で使いやすくなります。支払いは家族手帳の作成者がまとめて管理します。";
 
   function tabForHash(hash: string): NotebookTab | undefined {
-    if (hash === "#today-diary" || hash === "#diary-history") return "record";
-    if (hash === "#person-profile" || hash === "#profile-edit-fields") return "profile";
+    if (hash === "#today-diary") return "record";
+    if (hash === "#diary-history") return "history";
+    if (hash === "#person-profile" || hash === "#profile-edit-fields" || hash === "#document-location-note") return "profile";
     if (hash === "#task-checklist") return "tasks";
     if (hash === "#media-library") return "media";
     return undefined;
   }
 
+  function hashForNotebookTab(tab: NotebookTab) {
+    if (tab === "history") return "#diary-history";
+    if (tab === "profile") return "#person-profile";
+    if (tab === "tasks") return "#task-checklist";
+    if (tab === "media") return "#media-library";
+    return "#today-diary";
+  }
+
   function openNotebookSection(hash: string) {
     const tab = tabForHash(hash);
     if (tab) setActiveNotebookTab(tab);
-    if (hash === "#diary-history") markMonitorActivity("diaryHistoryOpened");
+    if (hash === "#diary-history") {
+      markMonitorActivity("diaryHistoryOpened");
+      trackFunnel("history_viewed");
+    }
     if (tab === "tasks") markMonitorActivity("checklistOpened");
-    if (hash === "#person-profile" || hash === "#profile-edit-fields") setProfileEditorOpen(true);
+    if (hash === "#person-profile" || hash === "#profile-edit-fields" || hash === "#document-location-note") setProfileEditorOpen(true);
 
     window.setTimeout(() => {
-      document.querySelector(hash)?.scrollIntoView({ block: "start", behavior: "smooth" });
-    }, 0);
+      window.requestAnimationFrame(() => {
+        const target = document.querySelector(hash);
+        target?.scrollIntoView({ block: "center", behavior: "smooth" });
+        if (hash === "#document-location-note") {
+          (target as HTMLTextAreaElement | null)?.focus({ preventScroll: true });
+        }
+      });
+    }, 80);
   }
 
   function openConsultDraft(draft: ConsultDraft) {
@@ -1557,7 +1493,8 @@ export default function FamilyBoardPage() {
   }
 
   function notebookTabNote(tab: NotebookTab) {
-    if (tab === "record") return `${activeEntries.length}件`;
+    if (tab === "record") return todayEntry ? "保存済み" : "未記録";
+    if (tab === "history") return `${activeEntries.length}件`;
     if (tab === "profile") return `${activeProfileCompletion.percent}%`;
     if (tab === "tasks") return `${activeTasks.filter((task) => (task.progress ?? "todo") !== "done").length}件`;
     if (tab === "media") return `${attachments.length}件`;
@@ -1594,6 +1531,7 @@ export default function FamilyBoardPage() {
   function updateProfileForm(caseId: string, patch: Partial<PersonProfile>) {
     setProfileSavedCaseId(null);
     setProfileLocationErrorCaseId(null);
+    setProfileStorageError(null);
     setProfileForms((current) => ({
       ...current,
       [caseId]: {
@@ -1604,6 +1542,7 @@ export default function FamilyBoardPage() {
   }
 
   function updatePrefecturePromptDraft(caseId: string, patch: Partial<PrefecturePromptDraft>) {
+    setProfileStorageError(null);
     setPrefecturePromptDrafts((current) => ({
       ...current,
       [caseId]: {
@@ -1634,8 +1573,17 @@ export default function FamilyBoardPage() {
       parentPrefecture: draft.parentPrefecture.trim(),
       parentCity: draft.parentCity.trim()
     };
-    const updated = updateCaseProfile(caseId, nextProfile);
+    const { record: updated, persisted } = updateCaseProfileWithStatus(caseId, nextProfile);
     if (!updated) return;
+    const storageWarning = consumeNotebookStorageWarning();
+    if (!persisted) {
+      setProfileSavedCaseId(null);
+      setProfileStorageError({
+        caseId,
+        message: storageWarning ?? "この基本情報はまだ保存できていません。端末の空き容量を確認して、もう一度お試しください。"
+      });
+      return;
+    }
 
     setCases((current) => [updated, ...current.filter((item) => item.id !== caseId)]);
     setProfileForms((current) => ({
@@ -1643,6 +1591,7 @@ export default function FamilyBoardPage() {
       [caseId]: profileSeed(updated)
     }));
     setProfileSavedCaseId(caseId);
+    setProfileStorageError(null);
   }
 
   function saveProfile(caseId: string) {
@@ -1658,8 +1607,18 @@ export default function FamilyBoardPage() {
       return;
     }
 
-    const updated = updateCaseProfile(caseId, profile);
+    const previousDocumentNote = cases.find((item) => item.id === caseId)?.personProfile?.documentLocationNote?.trim() ?? "";
+    const { record: updated, persisted } = updateCaseProfileWithStatus(caseId, profile);
     if (!updated) return;
+    const storageWarning = consumeNotebookStorageWarning();
+    if (!persisted) {
+      setProfileSavedCaseId(null);
+      setProfileStorageError({
+        caseId,
+        message: storageWarning ?? "この基本情報はまだ保存できていません。端末の空き容量を確認して、もう一度お試しください。"
+      });
+      return;
+    }
 
     setCases((current) => [updated, ...current.filter((item) => item.id !== caseId)]);
     setProfileForms((current) => ({
@@ -1668,7 +1627,11 @@ export default function FamilyBoardPage() {
     }));
     setProfileSavedCaseId(caseId);
     setProfileLocationErrorCaseId(null);
-    if (profile.documentLocationNote?.trim()) markMonitorActivity("documentMemoSaved");
+    setProfileStorageError(null);
+    if (profile.documentLocationNote?.trim()) {
+      markMonitorActivity("documentMemoSaved");
+      if (profile.documentLocationNote.trim() !== previousDocumentNote) trackFunnel("document_memo_saved");
+    }
   }
 
   function openTaskEditor(caseId: string, taskIndex: number, task: TaskWithDue) {
@@ -1892,15 +1855,24 @@ export default function FamilyBoardPage() {
     }
     setDiaryValidationCaseId(null);
     const entryDate = form.date || todayInputValue();
-    const entry = addDiaryEntry({
+    const { entry, persisted } = addDiaryEntryWithStatus({
       caseId,
       date: entryDate,
       mood: form.mood,
       body: form.body.trim() || "写真を追加しました。",
       attachments: form.files
     });
-    markMonitorActivity("dailyRecordSaved");
     const storageWarning = consumeNotebookStorageWarning();
+    if (!persisted) {
+      setDiarySavedId(null);
+      setRecordStorageTone("warning");
+      setRecordStorageMessage(storageWarning ?? "この記録はまだ保存できていません。写真を減らすか、クラウド保存を設定してからもう一度お試しください。");
+      window.requestAnimationFrame(() => {
+        document.getElementById(`diary-${caseId}`)?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+      return;
+    }
+    markMonitorActivity("dailyRecordSaved");
     setDiaryEntries((current) => ({
       ...current,
       [caseId]: [entry, ...(current[caseId] ?? [])]
@@ -1916,13 +1888,8 @@ export default function FamilyBoardPage() {
     setTaskAddedEntryId(null);
     setDiarySavedId(entry.id);
     setDiaryUpdatedId(null);
-    if (storageWarning) {
-      setRecordStorageTone("warning");
-      setRecordStorageMessage(storageWarning);
-    } else {
-      setRecordStorageTone("info");
-      setRecordStorageMessage(`${formatLongDate(entry.date)}の記録を保存しました。カレンダーからあとで見返せます。AI相談にも今すぐ反映されています。メール確認済みの手帳はクラウドにも自動保存します。`);
-    }
+    setRecordStorageTone("info");
+    setRecordStorageMessage(`${formatLongDate(entry.date)}の記録をこの端末に保存しました。過去の記録とAI相談に反映されています。`);
     window.setTimeout(() => {
       document.querySelector("#diary-save-complete")?.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 80);
@@ -1949,12 +1916,19 @@ export default function FamilyBoardPage() {
     }, 80);
   }
 
-  function openDiaryEditorAndScroll(entry: DiaryEntry) {
+  function showDiaryEntry(entry: DiaryEntry) {
+    setActiveNotebookTab("history");
     setSelectedDiaryDate(entry.date);
     setDiaryCalendarMonth(monthInputValue(entry.date));
     setRecordFilter("all");
-    openDiaryEditor(entry);
+    markMonitorActivity("diaryHistoryOpened");
+    trackFunnel("history_viewed");
     scrollToDiaryEntry(entry.id);
+  }
+
+  function openDiaryEditorAndScroll(entry: DiaryEntry) {
+    showDiaryEntry(entry);
+    openDiaryEditor(entry);
   }
 
   function closeDiaryEditor(entry: DiaryEntry) {
@@ -2761,8 +2735,14 @@ export default function FamilyBoardPage() {
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <div>
                   <p className="nb-eyebrow">この人の手帳</p>
-                  <h1>今日あったことを、まず1行残します。</h1>
-                  <p>体調、発言、病院・介護先からの連絡、家族に頼んだこと。短くても大丈夫です。</p>
+                  <h1>{notebookTitle(activePersonName)}</h1>
+                  <p className={`record-first-storage ${cloudUserEmail && cloudIdentityStatus === "ready" ? "is-cloud" : "is-device"}`}>
+                    {cloudUserEmail && cloudIdentityStatus === "ready"
+                      ? lastCloudSyncedAt
+                        ? `クラウドにも保存済み · ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
+                        : "この端末とクラウドに保存"
+                      : "今はこの端末に保存"}
+                  </p>
                 </div>
               </div>
               <button
@@ -2770,133 +2750,56 @@ export default function FamilyBoardPage() {
                 type="button"
                 onClick={() => openNotebookSection("#today-diary")}
               >
-                <span>まずここ</span>
-                <strong>今日の記録を書く</strong>
-                <small>書くと、次に確認することが整理されます</small>
+                <span>{todayEntry ? "今日の記録は保存済みです" : "今日はまだ記録がありません"}</span>
+                <strong>{todayEntry ? "今日の記録をもう1件追加" : "今日の様子を記録する"}</strong>
+                <small>体調や連絡を1行から残せます</small>
               </button>
+              <div className="record-first-quick-grid" aria-label="よく使う機能">
+                <button type="button" onClick={openConsultFromDigest}>
+                  <strong>AIに相談</strong>
+                  <small>毎日1回無料</small>
+                </button>
+                <Link href="/family">
+                  <strong>家族と使う</strong>
+                  <small>家族1人まで無料</small>
+                </Link>
+                <button type="button" onClick={() => openNotebookSection("#diary-history")}>
+                  <strong>過去の記録</strong>
+                  <small>{activeEntries.length > 0 ? `${activeEntries.length}件を見返す` : "まだ記録なし"}</small>
+                </button>
+                <button type="button" onClick={() => openNotebookSection("#document-location-note")}>
+                  <strong>書類・鍵の場所</strong>
+                  <small>{activeProfile?.documentLocationNote?.trim() ? "登録済み・確認する" : "保管場所を登録"}</small>
+                </button>
+              </div>
               <div className={`record-first-latest ${latestEntry ? "has-entry" : "is-empty"}`}>
                 <span>{latestEntryLabel}</span>
                 <strong>{latestEntrySummary}</strong>
                 <button
                   type="button"
-                  onClick={() => openNotebookSection(latestEntry ? "#diary-history" : "#today-diary")}
+                  onClick={() => latestEntry ? showDiaryEntry(latestEntry) : openNotebookSection("#today-diary")}
                 >
-                  {latestEntry ? "記録を見る" : "1行だけ書く"}
+                  {latestEntry ? "この記録を開く" : "1行だけ書く"}
                 </button>
               </div>
-              {latestEntry && notebookInsight ? (
-                <div className="record-first-next">
-                  <span>記録から見える次の一歩</span>
-                  <strong>{notebookInsight.primaryAction.title}</strong>
-                  <p>{notebookInsight.primaryAction.body}</p>
-                  <a
-                    href={notebookInsight.primaryAction.href}
-                    onClick={(event) => {
-                      if (!notebookInsight.primaryAction.href.startsWith("#")) return;
-                      event.preventDefault();
-                      openNotebookSection(notebookInsight.primaryAction.href);
-                    }}
-                  >
-                    {notebookInsight.primaryAction.label}
-                  </a>
-                </div>
-              ) : null}
-              <details className="record-first-drawer">
-                <summary>プロフィール・確認リスト・写真を開く</summary>
-                <div className="record-first-menu" aria-label="必要な時だけ開く操作">
-                  <a
-                    href="#person-profile"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#person-profile");
-                    }}
-                  >
-                    <strong>この人の情報を整える</strong>
-                    <small>呼び名、関係、病院、薬、連絡先</small>
-                  </a>
-                  <a
-                    href="#task-checklist"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#task-checklist");
-                    }}
-                  >
-                    <strong>確認リストを見る</strong>
-                    <small>{nextTaskCopy}</small>
-                  </a>
-                  <a
-                    href="#media-library"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#media-library");
-                    }}
-                  >
-                    <strong>写真・資料を見る</strong>
-                    <small>{attachments.length > 0 ? `${attachments.length}件あります` : "日記に添付した写真がここにまとまります"}</small>
-                  </a>
-                  <a
-                    href="#diary-history"
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection("#diary-history");
-                    }}
-                  >
-                    <strong>過去の記録を見る</strong>
-                    <small>{activeEntries.length > 0 ? `${activeEntries.length}件の記録` : "まだ記録はありません"}</small>
-                  </a>
-                  {isSharedFamilyMember ? null : (
-                    <Link href="/plans">
-                      <strong>別の人の手帳を追加する</strong>
-                      <small>2人目以降はFamily Plusで管理します</small>
-                    </Link>
-                  )}
-                </div>
-              </details>
             </article>
-            <article className="nb-card handbook-readiness-panel" aria-label={`${activePersonName}の手帳の育ち具合`}>
-              <div className="handbook-readiness-head">
-                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                <div>
-                  <span>{activeCaseOrdinal}の手帳</span>
-                  <strong>この人の情報が育つほど、共有と相談が役に立ちます。</strong>
-                  <p>{handbookReadinessCopy}</p>
-                </div>
-              </div>
-              <div className="handbook-readiness-score">
-                <div>
-                  <span>手帳の育ち具合</span>
-                  <strong>{handbookReadinessPercent}%</strong>
-                </div>
-                <div className="handbook-readiness-track" aria-hidden="true">
-                  <span style={{ width: `${handbookReadinessPercent}%` }} />
-                </div>
-                <small>{handbookDoneCount}/{handbookSteps.length}項目が使える状態です</small>
-              </div>
-              <div className="handbook-step-list">
-                {handbookSteps.map((step) => (
-                  <a
-                    className={`handbook-step is-${step.state} is-${step.key}`}
-                    href={step.href}
-                    key={step.key}
-                    onClick={(event) => {
-                      event.preventDefault();
-                      openNotebookSection(step.href);
-                    }}
-                  >
-                    <span className="handbook-step-mark" aria-hidden="true" />
-                    <div>
-                      <small>{handbookStepLabels[step.state]} · {step.value}</small>
-                      <strong>{step.title}</strong>
-                      <p>{step.body}</p>
-                    </div>
-                    <em>{step.action}</em>
-                  </a>
-                ))}
-              </div>
-              <p className="handbook-readiness-note">
-                {handbookReadinessNote}
-              </p>
-            </article>
+            <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`} role="tablist">
+              {notebookTabs.map((tab) => (
+                <button
+                  aria-controls={hashForNotebookTab(tab.id).slice(1)}
+                  aria-selected={activeNotebookTab === tab.id}
+                  className={activeNotebookTab === tab.id ? "is-active" : ""}
+                  id={`notebook-tab-${tab.id}`}
+                  key={tab.id}
+                  role="tab"
+                  type="button"
+                  onClick={() => openNotebookSection(hashForNotebookTab(tab.id))}
+                >
+                  <strong>{tab.label}</strong>
+                  <small>{notebookTabNote(tab.id)}</small>
+                </button>
+              ))}
+            </nav>
             {shouldPromptParentPrefecture && activeCase ? (
               <article className="nb-card parent-prefecture-prompt" aria-label="親御さんの居住地入力">
                 <div>
@@ -2943,6 +2846,7 @@ export default function FamilyBoardPage() {
                   >
                     保存する
                   </button>
+                  {profileStorageError?.caseId === activeCase.id ? <span role="alert">{profileStorageError.message}</span> : null}
                 </div>
               </article>
             ) : null}
@@ -3059,23 +2963,6 @@ export default function FamilyBoardPage() {
                 <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
               </article>
             </details>
-            <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`}>
-              {notebookTabs.map((tab) => (
-                <button
-                  className={activeNotebookTab === tab.id ? "is-active" : ""}
-                  key={tab.id}
-                  type="button"
-                  onClick={() => {
-                    setActiveNotebookTab(tab.id);
-                    if (tab.id === "profile") setProfileEditorOpen(true);
-                    if (tab.id === "tasks") markMonitorActivity("checklistOpened");
-                  }}
-                >
-                  <strong>{tab.label}</strong>
-                  <small>{notebookTabNote(tab.id)}</small>
-                </button>
-              ))}
-            </nav>
           </section>
 
           <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="今日見るところ">
@@ -3298,7 +3185,7 @@ export default function FamilyBoardPage() {
             </details>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary">
+          <section aria-labelledby="notebook-tab-record" className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="today-diary" role="tabpanel">
             <div className="nb-section-head">
               <strong>日付を選んで記録を書く</strong>
               <span className="rule" aria-hidden="true" />
@@ -3419,8 +3306,8 @@ export default function FamilyBoardPage() {
                   <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                   <div>
                     <span>保存しました</span>
-                    <strong>{formatLongDate(savedDiaryEntry.date)}の記録を手帳に残しました。</strong>
-                    <p>この下の過去の手帳にも反映されています。続けて相談・編集・見返しができます。</p>
+                    <strong>{formatLongDate(savedDiaryEntry.date)}の記録をこの端末に保存しました。</strong>
+                    <p>{cloudUserEmail && cloudIdentityStatus === "ready" ? "クラウドにも自動保存します。" : "過去の記録からいつでも見返せます。"}</p>
                   </div>
                 </div>
                 <div className="diary-save-complete-body">
@@ -3431,14 +3318,14 @@ export default function FamilyBoardPage() {
                   <button className="is-primary" type="button" onClick={() => openConsultFromEntry(savedDiaryEntry)}>
                     この記録でAI相談する
                   </button>
-                  <button type="button" onClick={() => openNotebookSection("#diary-history")}>
-                    保存された記録を見る
+                  <button type="button" onClick={() => showDiaryEntry(savedDiaryEntry)}>
+                    この記録を見返す
                   </button>
                   <button type="button" onClick={() => openDiaryEditorAndScroll(savedDiaryEntry)}>
                     この記録を編集する
                   </button>
                 </div>
-                <small>AI相談は1日1回無料です。同じ日に続けて相談したい時はFamily Plus（月980円・年9,800円）で使えます。</small>
+                <small>AI相談は毎日1回無料です。この記録をもとに、次に確認することを整理できます。</small>
               </article>
             ) : null}
           </section>
@@ -3537,9 +3424,9 @@ export default function FamilyBoardPage() {
             </section>
           ) : null}
 
-          <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} id="diary-history">
+          <section aria-labelledby="notebook-tab-history" className={`nb-section ${activeNotebookTab === "history" ? "" : "is-hidden-tab"}`} id="diary-history" role="tabpanel">
             <div className="nb-section-head">
-              <strong>過去の手帳</strong>
+              <strong>過去の記録</strong>
               <span className="rule" aria-hidden="true" />
               <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
             </div>
@@ -3553,6 +3440,11 @@ export default function FamilyBoardPage() {
                   onSelectDate={(date) => {
                     setSelectedDiaryDate(date);
                     setRecordFilter("all");
+                    window.setTimeout(() => {
+                      window.requestAnimationFrame(() => {
+                        document.querySelector("#diary-history-records")?.scrollIntoView({ block: "start", behavior: "smooth" });
+                      });
+                    }, 80);
                   }}
                   onClearDate={() => setSelectedDiaryDate(null)}
                 />
@@ -3677,16 +3569,18 @@ export default function FamilyBoardPage() {
                                     「{diaryTaskTitle(entry)}」を、あとで確認することに追加しました。
                                   </small>
                                 ) : null}
-                                <div className="entry-advice">
-                                  <strong>ナビからの寄り添い</strong>
-                                  <em>{diaryCompanionComment(entry)}</em>
-                                  <p>この記録を読むと、次はここだけ見ておくと安心です。</p>
-                                  <ul>
-                                    {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
-                                  </ul>
-                                </div>
+                                <details className="entry-advice">
+                                  <summary>ナビからのヒントを見る</summary>
+                                  <div className="entry-advice-body">
+                                    <em>{diaryCompanionComment(entry)}</em>
+                                    <p>この記録を読むと、次はここだけ見ておくと安心です。</p>
+                                    <ul>
+                                      {diaryAdvice(entry).map((item) => <li key={item}>{item}</li>)}
+                                    </ul>
+                                  </div>
+                                </details>
                                 <div className="diary-entry-tools">
-                                  <span>この記録の操作</span>
+                                  <span>この記録をどうしますか？</span>
                                   <div className="diary-entry-actions">
                                     <button
                                       aria-label="記録内容を編集する"
@@ -3694,7 +3588,7 @@ export default function FamilyBoardPage() {
                                       type="button"
                                       onClick={() => openDiaryEditor(entry)}
                                     >
-                                      <strong>{editingDiaryId === entry.id ? "編集中" : "編集"}</strong>
+                                      <strong>{editingDiaryId === entry.id ? "編集中" : "内容を編集"}</strong>
                                     </button>
                                     <button
                                       aria-label="この記録から確認することを作り、確認リストに追加する"
@@ -3702,7 +3596,7 @@ export default function FamilyBoardPage() {
                                       type="button"
                                       onClick={() => addDiaryTask(activeCase.id, entry)}
                                     >
-                                      <strong>確認リストに追加</strong>
+                                      <strong>あとで確認に追加</strong>
                                     </button>
                                     <button
                                       aria-label="この記録をもとにAIに相談する"
@@ -3742,7 +3636,7 @@ export default function FamilyBoardPage() {
                   ) : (
                     <p className="diary-empty">
                       {selectedDiaryDate
-                        ? `${formatLongDate(selectedDiaryDate)}には表示できる記録がありません。別の日を選ぶか、「全日付の記録を表示」を押してください。`
+                        ? `${formatLongDate(selectedDiaryDate)}には表示できる記録がありません。別の日を選ぶか、「すべての記録に戻る」を押してください。`
                         : "この絞り込みに合う記録はありません。"}
                     </p>
                   )}
@@ -3771,7 +3665,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "profile" ? "" : "is-hidden-tab"}`} id="person-profile">
+          <section aria-labelledby="notebook-tab-profile" className={`nb-section ${activeNotebookTab === "profile" ? "" : "is-hidden-tab"}`} id="person-profile" role="tabpanel">
             <div className="nb-section-head">
               <strong>プロフィール</strong>
               <span className="rule" aria-hidden="true" />
@@ -3957,13 +3851,15 @@ export default function FamilyBoardPage() {
                         onChange={(event) => updateProfileForm(activeCase.id, { medicationNote: event.target.value })}
                       />
                     </label>
-                    <label className="profile-wide-field">
-                      <span>書類・鍵などの保管メモ</span>
+                    <label className="profile-wide-field" htmlFor="document-location-note">
+                      <span>大事な書類や鍵は、どこにありますか？</span>
                       <textarea
-                        placeholder="暗証番号やパスワードは書かず、存在と保管場所だけを残します。"
+                        id="document-location-note"
+                        placeholder="例: 保険の書類は寝室の白い棚、予備の鍵は玄関の引き出し"
                         value={activeProfile.documentLocationNote ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { documentLocationNote: event.target.value })}
                       />
+                      <small>中身・暗証番号・パスワードは書かず、保管場所だけ残してください。</small>
                     </label>
                     <label className="profile-wide-field">
                       <span>ケアで大事にしたいこと</span>
@@ -3990,6 +3886,8 @@ export default function FamilyBoardPage() {
                   </button>
                   {profileLocationErrorCaseId === activeCase.id ? (
                     <span role="alert">都道府県と市区町村の両方を入力してください。</span>
+                  ) : profileStorageError?.caseId === activeCase.id ? (
+                    <span role="alert">{profileStorageError.message}</span>
                   ) : profileSavedCaseId === activeCase.id ? (
                     <span>保存しました</span>
                   ) : (
@@ -4000,7 +3898,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "tasks" ? "" : "is-hidden-tab"}`} id="task-checklist">
+          <section aria-labelledby="notebook-tab-tasks" className={`nb-section ${activeNotebookTab === "tasks" ? "" : "is-hidden-tab"}`} id="task-checklist" role="tabpanel">
             <div className="nb-section-head">
               <strong>確認リスト</strong>
               <span className="rule" aria-hidden="true" />
@@ -4257,7 +4155,7 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "media" ? "" : "is-hidden-tab"}`} id="media-library">
+          <section aria-labelledby="notebook-tab-media" className={`nb-section ${activeNotebookTab === "media" ? "" : "is-hidden-tab"}`} id="media-library" role="tabpanel">
             <div className="nb-section-head">
               <strong>写真</strong>
               <span className="rule" aria-hidden="true" />
@@ -4284,35 +4182,6 @@ export default function FamilyBoardPage() {
             </article>
           </section>
 
-          {isSharedFamilyMember ? null : (
-            <>
-              <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="この手帳を家族で続ける">
-                <article className="nb-card companion-panel">
-                  <MascotNote
-                    label="続けるなら"
-                    title="1人目の手帳が育つほど、家族共有と相談の価値が出ます。"
-                    body="まず無料で1人分を使い、家族2人までは一緒に見られる設計にします。2人目以降の対象者、容量、月まとめ、長期相談をPlusで広げます。"
-                  />
-                  <div className="companion-feature-grid">
-                    {continuationFeatures.map((feature) => (
-                      <div className="companion-feature" key={feature.title}>
-                        <span>{feature.label}</span>
-                        <strong>{feature.title}</strong>
-                        <p>{feature.body}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <Link className="companion-plan-link" href="/plans">
-                    Plusでできることを見る
-                  </Link>
-                </article>
-              </section>
-
-              <p className={`nb-plus-note ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`}>
-                2人目以降の手帳、容量、月まとめ、長期相談は <Link href="/plans">Plus</Link> で。
-              </p>
-            </>
-          )}
         </div>
       ) : null}
     </main>

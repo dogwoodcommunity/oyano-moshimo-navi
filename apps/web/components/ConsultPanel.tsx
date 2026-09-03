@@ -19,7 +19,7 @@ import { japanDateInputValue } from "@/lib/date";
 import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
 import {
-  addDiaryEntry,
+  addDiaryEntryWithStatus,
   listDiaryEntries,
   listLocalCases,
   readNotebookCloudBinding,
@@ -896,13 +896,21 @@ export function ConsultPanel() {
   async function saveToNotebook(turn: ConversationTurn) {
     if (!activeCase) return;
 
-    const savedEntry = addDiaryEntry({
+    const { entry: savedEntry, persisted } = addDiaryEntryWithStatus({
       caseId: activeCase.id,
       date: todayInputValue(),
       mood: "stable",
       body: consultAnswerToDiaryBody(turn.question, turn.answer),
       attachments: []
     });
+    if (!persisted) {
+      updateTurn(turn.id, {
+        saved: false,
+        saveSyncPhase: "error",
+        saveSyncMessage: "この回答はまだ手帳に保存できていません。端末の空き容量やクラウド保存を確認して、もう一度お試しください。"
+      });
+      return;
+    }
     updateTurn(turn.id, {
       saved: true,
       saveSyncPhase: "saving",
@@ -1492,9 +1500,9 @@ export function ConsultPanel() {
           ) : needsPlus ? (
             <div className="consult-followup-gate">
               <strong>今日の無料AI相談は利用済みです。</strong>
-              <p>明日0時からまた1回使えます。Family Plusなら、今日のうちも会話を続けられます。</p>
-              <Link className="consult-submit consult-submit-link" href="/plans#plus">
-                Plusでこの相談を続ける
+              <p>明日0時から、また無料で1回相談できます。今日の回答と相談履歴は、この画面で見返せます。</p>
+              <Link className="consult-submit consult-submit-link is-secondary" href="/home">
+                手帳に戻る
               </Link>
             </div>
           ) : (

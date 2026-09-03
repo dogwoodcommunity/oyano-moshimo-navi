@@ -92,6 +92,30 @@ export function AdminFunnel() {
             この一番右が数%なら、危機モードは良い無料ツールであって事業ではありません。20%を超えるなら、そこに賭けてよい数字です。
           </p>
 
+          <h3 style={{ marginTop: 22 }}>無料ユーザーが価値に到達した操作</h3>
+          <div className="admin-stat-grid" style={{ marginTop: 12 }}>
+            <article className="admin-stat">
+              <strong>{summary.eventTotals.history_viewed ?? 0}</strong>
+              <span>過去の記録を見た</span>
+              <small>操作回数</small>
+            </article>
+            <article className="admin-stat">
+              <strong>{summary.eventTotals.document_memo_saved ?? 0}</strong>
+              <span>書類・鍵の場所を保存</span>
+              <small>操作回数</small>
+            </article>
+            <article className="admin-stat">
+              <strong>{summary.eventTotals.family_invite_created ?? 0}</strong>
+              <span>招待リンクを作成</span>
+              <small>操作回数</small>
+            </article>
+            <article className="admin-stat">
+              <strong>{summary.eventTotals.family_invite_shared ?? 0}</strong>
+              <span>共有画面で送信</span>
+              <small>操作回数</small>
+            </article>
+          </div>
+
           <div className="meta-row" style={{ marginTop: 12 }}>
             {Object.entries(summary.eventTotals).map(([event, total]) => (
               <span className="meta-chip" key={event}>{event}: {total}</span>

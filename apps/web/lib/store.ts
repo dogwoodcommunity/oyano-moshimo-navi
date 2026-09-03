@@ -685,7 +685,12 @@ export function resetLocalNotebookData() {
   }
 }
 
-export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
+export type DiaryEntryWriteResult = {
+  entry: DiaryEntry;
+  persisted: boolean;
+};
+
+export function addDiaryEntryWithStatus(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntryWriteResult {
   const now = new Date().toISOString();
   const entry: DiaryEntry = {
     ...input,
@@ -693,9 +698,15 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
     createdAt: now,
     updatedAt: now
   };
-  writeDiaryEntries([entry, ...readDiaryEntries()]);
-  trackFunnel("record_written");
-  return entry;
+  const existingEntries = readDiaryEntries();
+  const persisted = writeDiaryEntries([entry, ...existingEntries]);
+  if (!persisted) memoryDiaryEntries = existingEntries;
+  if (persisted) trackFunnel("record_written");
+  return { entry, persisted };
+}
+
+export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): DiaryEntry {
+  return addDiaryEntryWithStatus(input).entry;
 }
 
 export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry, "id" | "caseId" | "createdAt">>): DiaryEntry | undefined {
@@ -718,10 +729,15 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
   return updated;
 }
 
-export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>): CaseRecord | undefined {
+export type CaseProfileWriteResult = {
+  record?: CaseRecord;
+  persisted: boolean;
+};
+
+export function updateCaseProfileWithStatus(caseId: string, patch: Partial<PersonProfile>): CaseProfileWriteResult {
   const cases = readCases();
   const existing = cases.find((item) => item.id === caseId);
-  if (!existing) return undefined;
+  if (!existing) return { persisted: false };
 
   const now = new Date().toISOString();
   const record: CaseRecord = {
@@ -734,8 +750,13 @@ export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>)
     }
   };
 
-  writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
-  return record;
+  const persisted = writeCases([record, ...cases.filter((item) => item.id !== caseId)]);
+  if (!persisted) memoryCases = cases;
+  return { record, persisted };
+}
+
+export function updateCaseProfile(caseId: string, patch: Partial<PersonProfile>): CaseRecord | undefined {
+  return updateCaseProfileWithStatus(caseId, patch).record;
 }
 
 function normalizeTaskProgress(value: unknown): TaskProgress {

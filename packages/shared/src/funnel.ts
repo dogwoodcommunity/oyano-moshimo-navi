@@ -2,14 +2,18 @@
  * 測るのは1つの数字だけ。
  *   危機モードを開いた人のうち、対象者を登録し、7日以内に2件目の記録を書いた割合。
  *
- * イベントはこの5つに絞る。増やすほど、何を見ればよいか分からなくなる。
+ * 無料利用の中核行動と、家族共有までの入口だけを記録する。
  */
 export const FUNNEL_EVENTS = [
   "crisis_opened",
   "crisis_saved",
   "person_created",
   "record_written",
-  "consult_asked"
+  "consult_asked",
+  "history_viewed",
+  "document_memo_saved",
+  "family_invite_created",
+  "family_invite_shared"
 ] as const;
 
 export type FunnelEvent = (typeof FUNNEL_EVENTS)[number];

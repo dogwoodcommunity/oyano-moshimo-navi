@@ -7,6 +7,7 @@ import {
   getBrowserSupabase,
   sendMagicLink
 } from "@/lib/browserSupabase";
+import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
 
 type FamilySummary = {
@@ -119,6 +120,7 @@ export function FamilyShare() {
       }
 
       setInvite(data);
+      trackFunnel("family_invite_created");
       setInviteEmail("");
       setInviteRelationship("");
       await loadSummary(accessToken);
@@ -137,6 +139,27 @@ export function FamilyShare() {
     } catch {
       setCopied(false);
       setMessage("自動コピーができませんでした。リンクを長押しして選択してください。");
+    }
+  }
+
+  async function shareInviteUrl() {
+    if (!invite) return;
+    setMessage("");
+    if (typeof navigator.share !== "function") {
+      await copyInviteUrl();
+      return;
+    }
+    try {
+      await navigator.share({
+        title: "親のもしもナビの家族招待",
+        text: "同じ手帳を一緒に見るための招待リンクです。",
+        url: invite.url
+      });
+      trackFunnel("family_invite_shared");
+      setMessage("共有画面を開きました。相手へ送信できたか確認してください。");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "AbortError") return;
+      setMessage("共有画面を開けませんでした。リンクをコピーして送ってください。");
     }
   }
 
@@ -281,17 +304,20 @@ export function FamilyShare() {
           </button>
           {isFull ? (
             <p className="family-note">
-              無料の枠が埋まっています。さらに家族を招待する場合は、手帳を作った人の <Link href="/plans">Family Plus</Link> で広げられます。
+              無料で一緒に見られる人数の上限です。参加中・招待中の家族を確認してから、必要な人へ送り直してください。
             </p>
           ) : null}
           {message ? <p className="family-error" role="status">{message}</p> : null}
 
           {invite ? (
             <div className="family-invite-result" role="status">
-              <strong>{invite.invitedEmail} 宛の招待ができました</strong>
-              <p>このリンクを本人に送ってください。{invite.expiresInDays}日で切れます。招待したアドレスでログインした人だけが参加できます。</p>
+              <strong>招待リンクを作りました。まだ相手には届いていません。</strong>
+              <p>{invite.invitedEmail} の方へ、下のボタンから送ってください。リンクは{invite.expiresInDays}日で切れ、招待したアドレスでログインした人だけが参加できます。</p>
               <code>{invite.url}</code>
-              <button onClick={copyInviteUrl} type="button">
+              <button className="family-share-send" onClick={() => void shareInviteUrl()} type="button">
+                LINEやメールで送る
+              </button>
+              <button className="family-share-copy" onClick={copyInviteUrl} type="button">
                 {copied ? "コピーしました" : "リンクをコピーする"}
               </button>
             </div>

@@ -20,16 +20,20 @@ const compiledStore = ts.transpileModule(storeSource, {
 
 function memoryStorage({ failNotebookWrites = false } = {}) {
   const values = new Map();
+  let shouldFailNotebookWrites = failNotebookWrites;
   return {
     getItem(key) {
       return values.has(key) ? values.get(key) : null;
     },
     setItem(key, value) {
-      if (failNotebookWrites && key.startsWith("oyano_")) throw new DOMException("quota", "QuotaExceededError");
+      if (shouldFailNotebookWrites && key.startsWith("oyano_")) throw new DOMException("quota", "QuotaExceededError");
       values.set(key, String(value));
     },
     removeItem(key) {
       values.delete(key);
+    },
+    setFailNotebookWrites(value) {
+      shouldFailNotebookWrites = Boolean(value);
     }
   };
 }
@@ -151,6 +155,31 @@ function sampleCase(overrides = {}) {
   const store = loadStore(memoryStorage({ failNotebookWrites: true }));
   const restored = store.overwriteLocalNotebook({ cases: [sampleCase()], diaryEntries: [] });
   assert.equal(restored.persisted, false, "quota failures must be reported, never shown as a durable restore");
+}
+
+{
+  const store = loadStore(memoryStorage({ failNotebookWrites: true }));
+  const result = store.addDiaryEntryWithStatus({
+    caseId: "case-a",
+    date: "2026-09-01",
+    mood: "stable",
+    body: "まだ保存できない記録",
+    attachments: []
+  });
+  assert.equal(result.persisted, false, "diary save must expose storage failure to the UI");
+  assert.equal(store.listDiaryEntries("case-a").length, 0, "failed diary writes must not remain as false saved entries");
+  assert.match(store.consumeNotebookStorageWarning() ?? "", /保存容量/, "failed diary writes must retain a visible warning");
+}
+
+{
+  const storage = memoryStorage();
+  const store = loadStore(storage);
+  store.overwriteLocalNotebook({ cases: [sampleCase()], diaryEntries: [] });
+  storage.setFailNotebookWrites(true);
+  const result = store.updateCaseProfileWithStatus("case-a", { documentLocationNote: "白い棚" });
+  assert.equal(result.persisted, false, "profile save must expose storage failure to the UI");
+  assert.equal(store.getLocalCase("case-a")?.personProfile?.documentLocationNote, undefined, "failed profile writes must not remain as false saved data");
+  assert.match(store.consumeNotebookStorageWarning() ?? "", /保存容量/, "failed profile writes must retain a visible warning");
 }
 
 {

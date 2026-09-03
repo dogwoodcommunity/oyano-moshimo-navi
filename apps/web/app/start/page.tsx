@@ -196,7 +196,7 @@ export default function StartPage() {
     setChoosingStatus(status);
     try {
       const record = await createCase(status, compactProfile(profileDraft, status));
-      router.push(`/home?created=${record.id}#person-profile`);
+      router.push(`/home?created=${record.id}`);
     } catch (error) {
       // 上限に当たったときは、失敗ではなく案内として見せる。
       // 押した人は何も間違えていないので、原因と次の一手だけを出す。
@@ -227,7 +227,7 @@ export default function StartPage() {
             <small>はじめての手帳登録</small>
           </span>
         </div>
-        <p className="toc-kicker">ここから始めます</p>
+        <p className="toc-kicker">無料・カード登録不要</p>
         <h1>まず、管理する人の情報を入れます。</h1>
         <p>父母、義父母、祖父母、親戚など、誰でも大丈夫です。名前や関係を入れてから、今の状況を1つ選ぶと、その人専用の手帳ができます。</p>
         <div className="toc-first-step" aria-label="最初にすること">
