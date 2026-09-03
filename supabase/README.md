@@ -2,7 +2,7 @@
 
 SQL Editorで以下の順に実行する。
 
-既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。
+既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。`production_pending_hardening.sql` だけでは新しい匿名診断RPCは作成されない。匿名診断・アプリ引き継ぎの権限境界を更新する場合は、Webをデプロイする前に、`production_pending_hardening.sql`（未適用の場合）、更新済み `handoff_consume_rpc.sql`、`anonymous_diagnosis_rpc.sql` の3ファイルをこの順で実行し、`verify_compact.sql` で両関数を確認する。`production_pending_hardening.sql` を過去に適用済みの場合も、今回更新した後ろ2ファイルは必ず再実行する。先に `handoff_consume_rpc.sql` を入れることで、Web更新までの間も変換済みcaseから別アカウントをowner追加する経路を閉じる。
 既存DBへ対象者ごとの長期AI記憶と安全な手帳同期を追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、短時間のメンテナンス枠で `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`verify_compact.sql` の順に実行する。先にDB移行を完了し、`verify_compact.sql` がすべて `ok=true` になってから対応するWebをデプロイする。`notebook_atomic_sync_v2.sql` は古いDBに不足する手帳用・都道府県用の最小列も同じトランザクションで追加し、既存IDを補完する。重複を検出した場合は削除せず、列追加を含む全体をロールバックする。この手順では `person_notebook_hardening.sql` や `regional_sponsor_data.sql` 全体を先に実行しない。`ai_consult_memory.sql` は新テーブルのgrant/revokeとRLSを含み、既存の手帳記録を変更・削除しない。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
 
 1. `schema.sql`
@@ -14,22 +14,23 @@ SQL Editorで以下の順に実行する。
 7. `notification_email_delivery.sql`
 8. `handoff_security_hardening.sql`
 9. `handoff_consume_rpc.sql`
-10. `create_initial_family_person.sql`
-11. `sensitive_info_consent_hardening.sql`
-12. `product_seed.sql`
-13. `indexes.sql`
-14. `api_grants.sql`
-15. `production_rls.sql`
-16. `notebook_atomic_sync_v2.sql`
-17. `ai_consult_memory.sql`
-18. `family_invite_rpc.sql`
-19. `admin_auth_hardening.sql`
-20. `family_owner_succession.sql`
-21. `account_deletion_pipeline.sql`
-22. `public_api_rate_limits.sql`
-23. `anonymous_case_retention.sql`
-24. `storage_setup.sql`
-25. `regional_sponsor_data.sql`
+10. `anonymous_diagnosis_rpc.sql`
+11. `create_initial_family_person.sql`
+12. `sensitive_info_consent_hardening.sql`
+13. `product_seed.sql`
+14. `indexes.sql`
+15. `api_grants.sql`
+16. `production_rls.sql`
+17. `notebook_atomic_sync_v2.sql`
+18. `ai_consult_memory.sql`
+19. `family_invite_rpc.sql`
+20. `admin_auth_hardening.sql`
+21. `family_owner_succession.sql`
+22. `account_deletion_pipeline.sql`
+23. `public_api_rate_limits.sql`
+24. `anonymous_case_retention.sql`
+25. `storage_setup.sql`
+26. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -44,14 +45,16 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-26. `verify_setup.sql`
-27. `verify_compact.sql`
+27. `verify_setup.sql`
+28. `verify_compact.sql`
 
-`notebook_atomic_sync_v2_regression.sql` と `ai_consult_memory_regression.sql` は破棄可能な
+`notebook_atomic_sync_v2_regression.sql`、`ai_consult_memory_regression.sql`、
+`handoff_ownership_regression.sql` は破棄可能な
 ローカルPostgreSQL専用で、本番SQL Editorでは実行しない。AI記憶の回帰SQLは `schema.sql`、
 `api_grants.sql`、`production_rls.sql`、`ai_consult_memory.sql` を適用したテストDBで実行する。
 Dockerを使える環境ではrepository rootで `pnpm run test:consult-memory:sql` を実行すると、専用の
 PostgreSQL 16 containerを作成し、migrationを2回適用して回帰SQLを実行後、containerを自動削除する。
+匿名診断と引き継ぎの権限回帰は `pnpm run test:handoff-security:sql` で同様に破棄専用containerへ実行する。
 
 ## 重要
 

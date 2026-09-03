@@ -2,19 +2,43 @@
 
 import Link from "next/link";
 import { useEffect } from "react";
+import {
+  isMonitorCampaignSubmissionOpen,
+  MONITOR_CAMPAIGN_CLOSED_MESSAGE
+} from "@/lib/monitorCampaign";
 import { grantMonitorProgressConsent, scheduleMonitorProgressSync } from "@/lib/monitorSession";
 import styles from "./monitor.module.css";
 
 export function MonitorStart() {
+  const campaignOpen = isMonitorCampaignSubmissionOpen();
+
   useEffect(() => {
-    scheduleMonitorProgressSync();
-  }, []);
+    if (campaignOpen) scheduleMonitorProgressSync();
+  }, [campaignOpen]);
 
   function restart() {
     const approved = window.confirm(
       "このブラウザに残っている親のもしもナビのテストデータを消して、最初からやり直します。よろしいですか？"
     );
     if (approved) window.location.href = "/start?reset=1&monitor=1";
+  }
+
+  if (!campaignOpen) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.wrap}>
+          <section className={styles.completeCard} role="status">
+            <p className={styles.eyebrow}>受付終了</p>
+            <h1>このモニターテストの受付は終了しました。</h1>
+            <p>{MONITOR_CAMPAIGN_CLOSED_MESSAGE}</p>
+            <p className={styles.closedHelp}>新しくテストを始めたり、回答や画像を追加送信したりすることはできません。</p>
+            <div className={styles.actions} style={{ marginTop: 24 }}>
+              <Link className={styles.secondary} href="/home">親のもしもナビへ戻る</Link>
+            </div>
+          </section>
+        </div>
+      </main>
+    );
   }
 
   return (

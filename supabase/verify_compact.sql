@@ -104,6 +104,7 @@ with checks as (
   union all select 'function_exists', 'claim_due_scheduled_notifications', to_regproc('public.claim_due_scheduled_notifications') is not null
   union all select 'function_exists', 'reset_stale_sending_notifications', to_regproc('public.reset_stale_sending_notifications') is not null
   union all select 'function_exists', 'ensure_monthly_checkin_notifications', to_regproc('public.ensure_monthly_checkin_notifications') is not null
+  union all select 'function_exists', 'submit_anonymous_case_diagnosis', to_regproc('public.submit_anonymous_case_diagnosis') is not null
   union all select 'function_exists', 'consume_case_handoff', to_regproc('public.consume_case_handoff') is not null
   union all select 'function_exists', 'create_initial_family_person', to_regproc('public.create_initial_family_person') is not null
   union all select 'function_exists', 'create_family_invite', to_regproc('public.create_family_invite') is not null
@@ -121,6 +122,10 @@ with checks as (
     has_function_privilege('service_role', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
+  union all select 'security_check', 'anonymous_diagnosis_rpc_service_only',
+    has_function_privilege('service_role', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)', 'EXECUTE')
   union all select 'security_check', 'notebook_sync_receipts_service_only',
     has_table_privilege('service_role', 'public.notebook_sync_receipts', 'SELECT')
     and has_table_privilege('service_role', 'public.notebook_sync_receipts', 'INSERT')

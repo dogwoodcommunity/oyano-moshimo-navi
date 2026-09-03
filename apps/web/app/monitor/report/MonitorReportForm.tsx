@@ -3,6 +3,10 @@
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useEffect, useState } from "react";
 import {
+  MONITOR_CAMPAIGN_CLOSED_MESSAGE,
+  resolveMonitorCampaignEntryState
+} from "@/lib/monitorCampaign";
+import {
   markMonitorReportSubmitted,
   monitorPeriodStatus,
   monitorProgress,
@@ -31,6 +35,7 @@ type ReportGate =
   | { status: "not-started" }
   | { status: "active"; dayNumber: number; daysRemaining: number; reportDueAt: Date; periodStatus: string }
   | { status: "due" }
+  | { status: "closed" }
   | { status: "submitted" };
 
 export function MonitorReportForm() {
@@ -44,19 +49,27 @@ export function MonitorReportForm() {
 
   useEffect(() => {
     const previewRequested = new URLSearchParams(window.location.search).get("preview") === "1";
-    if (previewRequested) {
+    const session = readMonitorSession();
+    const entryState = resolveMonitorCampaignEntryState({
+      previewRequested,
+      reportSubmitted: Boolean(session?.reportSubmittedAt)
+    });
+
+    if (entryState === "preview") {
       setPreview(true);
       setGate({ status: "due" });
       return;
     }
-
-    const session = readMonitorSession();
-    if (!session) {
-      setGate({ status: "not-started" });
+    if (entryState === "submitted") {
+      setGate({ status: "submitted" });
       return;
     }
-    if (session.reportSubmittedAt) {
-      setGate({ status: "submitted" });
+    if (entryState === "closed") {
+      setGate({ status: "closed" });
+      return;
+    }
+    if (!session) {
+      setGate({ status: "not-started" });
       return;
     }
     const progress = monitorProgress(session);
@@ -206,6 +219,24 @@ export function MonitorReportForm() {
           <section className={styles.completeCard}>
             <p className={styles.eyebrow}>確認中</p>
             <h1>7日間の進み具合を確認しています。</h1>
+          </section>
+        </div>
+      </main>
+    );
+  }
+
+  if (gate.status === "closed") {
+    return (
+      <main className={styles.page}>
+        <div className={styles.wrap}>
+          <section className={styles.completeCard} role="status">
+            <p className={styles.eyebrow}>受付終了</p>
+            <h1>このモニターの回答受付は終了しました。</h1>
+            <p>{MONITOR_CAMPAIGN_CLOSED_MESSAGE}</p>
+            <p className={styles.closedHelp}>新しい回答やスクリーンショットの追加送信はできません。</p>
+            <div className={styles.actions} style={{ marginTop: 24 }}>
+              <Link className={styles.secondary} href="/home">家族の手帳へ戻る</Link>
+            </div>
           </section>
         </div>
       </main>

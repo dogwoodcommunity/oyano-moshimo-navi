@@ -20,13 +20,12 @@ async function read(path, init) {
 
 const monitor = await read("/monitor");
 if (monitor.response.ok
-  && monitor.text.includes("7日間のテストを始める")
-  && monitor.text.includes("名前を含まない端末識別番号")
-  && monitor.text.includes("内容に同意して")
-  && !monitor.text.includes("最終日の結果を報告する")) {
-  ok("開始時に最終報告ボタンを表示しない", monitor.response.status);
+  && monitor.text.includes("このモニターテストの受付は終了しました")
+  && monitor.text.includes("すでに受け付けた回答と画像は保存されています")
+  && !monitor.text.includes("内容に同意して7日間のテストを始める")) {
+  ok("終了したモニターを新しく開始させない", monitor.response.status);
 } else {
-  fail("開始時に最終報告ボタンを表示しない", monitor.response.status);
+  fail("終了したモニターを新しく開始させない", monitor.response.status);
 }
 
 const report = await read("/monitor/report");
@@ -63,10 +62,10 @@ const invalidFeedback = await read("/api/monitor-feedback", {
   headers: { "Content-Type": "application/json" },
   body: "{}"
 });
-if (invalidFeedback.response.status === 400) {
-  ok("未入力の最終報告を拒否", invalidFeedback.response.status);
+if (invalidFeedback.response.status === 410) {
+  ok("終了したモニターの最終報告を拒否", invalidFeedback.response.status);
 } else {
-  fail("未入力の最終報告を拒否", invalidFeedback.response.status);
+  fail("終了したモニターの最終報告を拒否", invalidFeedback.response.status);
 }
 
 const invalidProgress = await read("/api/monitor-progress", {
@@ -74,10 +73,10 @@ const invalidProgress = await read("/api/monitor-progress", {
   headers: { "Content-Type": "application/json" },
   body: "{}"
 });
-if (invalidProgress.response.status === 400) {
-  ok("不正な名前なし途中経過を拒否", invalidProgress.response.status);
+if (invalidProgress.response.status === 410) {
+  ok("終了したモニターの途中経過を拒否", invalidProgress.response.status);
 } else {
-  fail("不正な名前なし途中経過を拒否", invalidProgress.response.status);
+  fail("終了したモニターの途中経過を拒否", invalidProgress.response.status);
 }
 
 const progressStartedAt = new Date();
@@ -116,10 +115,10 @@ try {
 } catch {
   // The assertion below reports the status without echoing response contents.
 }
-if (validProgress.response.ok && validProgressBody.validated === true && validProgressBody.stored === false) {
-  ok("名前なし途中経過を保存せず検証", validProgress.response.status);
+if (validProgress.response.status === 410 && validProgressBody.code === "monitor_campaign_closed") {
+  ok("終了後はvalidate-onlyでも途中経過を受け付けない", validProgress.response.status);
 } else {
-  fail("名前なし途中経過を保存せず検証", validProgress.response.status);
+  fail("終了後はvalidate-onlyでも途中経過を受け付けない", validProgress.response.status);
 }
 
 const wrongCampaignProgress = await read("/api/monitor-progress", {
@@ -148,10 +147,10 @@ const wrongCampaignProgress = await read("/api/monitor-progress", {
     }
   })
 });
-if (wrongCampaignProgress.response.status === 400) {
-  ok("別モニター募集の途中経過を混在させない", wrongCampaignProgress.response.status);
+if (wrongCampaignProgress.response.status === 410) {
+  ok("終了した受付ではcampaign指定にかかわらず途中経過を拒否", wrongCampaignProgress.response.status);
 } else {
-  fail("別モニター募集の途中経過を混在させない", wrongCampaignProgress.response.status);
+  fail("終了した受付ではcampaign指定にかかわらず途中経過を拒否", wrongCampaignProgress.response.status);
 }
 
 const unsignedMonitorAdmin = await read("/api/admin/monitor-feedback");
@@ -173,10 +172,10 @@ const invalidScreenshot = await read("/api/monitor-feedback/screenshot", {
   method: "POST",
   body: new FormData()
 });
-if (invalidScreenshot.response.status === 400) {
-  ok("画像なしの添付を拒否", invalidScreenshot.response.status);
+if (invalidScreenshot.response.status === 410) {
+  ok("終了したモニターの画像添付を拒否", invalidScreenshot.response.status);
 } else {
-  fail("画像なしの添付を拒否", invalidScreenshot.response.status);
+  fail("終了したモニターの画像添付を拒否", invalidScreenshot.response.status);
 }
 
 const unsignedSync = await read("/api/notebook/sync");

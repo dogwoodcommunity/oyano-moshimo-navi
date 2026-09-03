@@ -1,5 +1,6 @@
 const baseUrl = (process.argv[2] ?? process.env.WEB_BASE_URL ?? "https://oyano-moshimo-navi.vercel.app").replace(/\/$/, "");
 const caseId = crypto.randomUUID();
+const caseToken = `anon_${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
 
 const answers = {
   selectedStatus: "hospitalized",
@@ -23,7 +24,10 @@ function fail(message) {
 
 const response = await fetch(`${baseUrl}/api/cases/${caseId}/diagnosis`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "X-Case-Anonymous-Token": caseToken
+  },
   body: JSON.stringify(answers)
 });
 

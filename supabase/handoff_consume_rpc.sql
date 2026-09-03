@@ -1,4 +1,5 @@
--- Atomically consume a Web-to-app handoff token and create/reuse family data.
+-- Atomically consume a Web-to-app handoff token and create family data.
+-- A completed consume may be replayed read-only by an existing family member.
 -- Run after schema.sql and notification_delivery_hardening.sql.
 
 create or replace function public.consume_case_handoff(
@@ -36,11 +37,19 @@ begin
     raise exception 'not_authenticated';
   end if;
 
+  select * into v_case
+  from cases
+  where id = p_case_id
+  for update;
+
+  if not found then
+    raise exception 'case_not_found';
+  end if;
+
   select * into v_result
   from case_results
   where case_id = p_case_id
     and app_handoff_token = p_token
-    and app_handoff_consumed_at is null
     and created_at > now() - interval '24 hours'
   order by created_at desc
   limit 1
@@ -50,13 +59,49 @@ begin
     raise exception 'invalid_or_consumed_handoff_token';
   end if;
 
-  select * into v_case
-  from cases
-  where id = p_case_id
-  for update;
+  -- A retry after the first consume committed may only return the same linked
+  -- case to a user who is already a member. It never inserts or promotes a
+  -- membership, and a fresh/unconsumed token can never enter this path.
+  if v_case.status = 'converted'
+     and v_case.family_id is not null
+     and v_case.person_id is not null then
+    if v_result.app_handoff_consumed_at is not null
+       and exists (
+         select 1
+         from family_members
+         where family_id = v_case.family_id
+           and user_id = p_user_id
+       ) then
+      select count(*) into v_existing_task_count
+      from tasks
+      where person_id = v_case.person_id;
 
-  if not found then
-    raise exception 'case_not_found';
+      return jsonb_build_object(
+        'familyId', v_case.family_id,
+        'personId', v_case.person_id,
+        'tasksCreated', v_existing_task_count,
+        'reusedExistingCase', true,
+        'idempotentReplay', true
+      );
+    end if;
+
+    raise exception 'case_already_converted';
+  end if;
+
+  -- A first handoff only converts a still-anonymous, completed diagnosis.
+  if v_case.user_id is not null
+     or v_case.family_id is not null
+     or v_case.person_id is not null
+     or v_case.status = 'converted' then
+    raise exception 'case_already_converted';
+  end if;
+
+  if v_case.status is distinct from 'result_ready' then
+    raise exception 'case_not_ready';
+  end if;
+
+  if v_result.app_handoff_consumed_at is not null then
+    raise exception 'invalid_or_consumed_handoff_token';
   end if;
 
   insert into profiles (id, email, display_name, updated_at)
@@ -70,29 +115,6 @@ begin
     email = coalesce(excluded.email, profiles.email),
     display_name = coalesce(excluded.display_name, profiles.display_name),
     updated_at = now();
-
-  if v_case.family_id is not null and v_case.person_id is not null then
-    insert into family_members (family_id, user_id, role, relationship)
-    values (v_case.family_id, p_user_id, 'owner', '家族代表')
-    on conflict (family_id, user_id) do update set
-      role = excluded.role,
-      relationship = excluded.relationship;
-
-    select count(*) into v_existing_task_count
-    from tasks
-    where person_id = v_case.person_id;
-
-    update case_results
-    set app_handoff_consumed_at = now()
-    where id = v_result.id;
-
-    return jsonb_build_object(
-      'familyId', v_case.family_id,
-      'personId', v_case.person_id,
-      'tasksCreated', v_existing_task_count,
-      'reusedExistingCase', true
-    );
-  end if;
 
   v_family_name := coalesce(
     nullif(v_case.answers ->> 'familyStructure', '') || 'の家族',
@@ -266,17 +288,31 @@ begin
     person_id = v_person_id,
     status = 'converted',
     updated_at = now()
-  where id = p_case_id;
+  where id = p_case_id
+    and user_id is null
+    and family_id is null
+    and person_id is null
+    and status = 'result_ready';
+
+  if not found then
+    raise exception 'case_state_conflict';
+  end if;
 
   update case_results
   set app_handoff_consumed_at = now()
-  where id = v_result.id;
+  where id = v_result.id
+    and app_handoff_consumed_at is null;
+
+  if not found then
+    raise exception 'invalid_or_consumed_handoff_token';
+  end if;
 
   return jsonb_build_object(
     'familyId', v_family_id,
     'personId', v_person_id,
     'tasksCreated', v_tasks_created,
-    'reusedExistingCase', false
+    'reusedExistingCase', false,
+    'idempotentReplay', false
   );
 end;
 $$;

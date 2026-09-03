@@ -1,5 +1,10 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import {
+  isMonitorCampaignSubmissionOpen,
+  MONITOR_CAMPAIGN_CLOSED_CODE,
+  MONITOR_CAMPAIGN_CLOSED_MESSAGE
+} from "@/lib/monitorCampaign";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
@@ -12,6 +17,13 @@ const TYPES: Record<string, string> = {
 };
 
 export async function POST(request: Request) {
+  if (!isMonitorCampaignSubmissionOpen()) {
+    return NextResponse.json({
+      code: MONITOR_CAMPAIGN_CLOSED_CODE,
+      message: MONITOR_CAMPAIGN_CLOSED_MESSAGE
+    }, { status: 410 });
+  }
+
   const limited = await checkPublicRateLimit(request, {
     keyPrefix: "monitor-feedback-screenshot",
     limit: 12,

@@ -26,6 +26,7 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const caseId = crypto.randomUUID();
+const caseToken = `anon_${crypto.randomUUID().replaceAll("-", "")}${crypto.randomUUID().replaceAll("-", "")}`;
 const email = `smoke+${caseId.slice(0, 8)}@example.com`;
 
 const answers = {
@@ -50,7 +51,10 @@ function fail(message) {
 
 const diagnosisResponse = await fetch(`${baseUrl}/api/cases/${caseId}/diagnosis`, {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: {
+    "Content-Type": "application/json",
+    "X-Case-Anonymous-Token": caseToken
+  },
   body: JSON.stringify(answers)
 });
 

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import type { ParentStatus } from "@oyano/shared";
+import { createAnonymousCaseToken } from "@/lib/caseOwnership";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
   }
 
   const id = crypto.randomUUID();
+  const caseToken = createAnonymousCaseToken();
   const record = {
     id,
     selectedStatus,
@@ -30,7 +32,7 @@ export async function POST(request: Request) {
 
   const supabase = getServerSupabase();
   if (!supabase) {
-    return NextResponse.json({ record, persisted: false });
+    return NextResponse.json({ record, caseToken, persisted: false });
   }
 
   const { error } = await supabase.from("cases").insert({
@@ -38,12 +40,12 @@ export async function POST(request: Request) {
     selected_status: selectedStatus,
     answers: record.answers,
     status: "draft",
-    anonymous_token: `anon_${id}`
+    anonymous_token: caseToken
   });
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ record, persisted: true });
+  return NextResponse.json({ record, caseToken, persisted: true });
 }

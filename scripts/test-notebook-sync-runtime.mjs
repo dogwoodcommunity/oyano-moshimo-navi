@@ -57,6 +57,9 @@ function loadStore(storage = memoryStorage()) {
   const requireStub = (specifier) => {
     if (specifier === "@/lib/funnel") return { trackFunnel() {} };
     if (specifier === "@/lib/date") return { japanDateInputValue: () => "2026-09-01" };
+    if (specifier === "@/lib/caseOwnership") {
+      return { ANONYMOUS_CASE_TOKEN_PATTERN: /^anon_[a-f0-9]{64}$/i };
+    }
     if (specifier === "@oyano/shared") {
       return {
         buildDiagnosisResult: () => ({ summary: "", tasks: [] }),
@@ -169,6 +172,54 @@ function sampleCase(overrides = {}) {
   assert.equal(result.persisted, false, "diary save must expose storage failure to the UI");
   assert.equal(store.listDiaryEntries("case-a").length, 0, "failed diary writes must not remain as false saved entries");
   assert.match(store.consumeNotebookStorageWarning() ?? "", /保存容量/, "failed diary writes must retain a visible warning");
+}
+
+{
+  const storage = memoryStorage();
+  const store = loadStore(storage);
+  store.overwriteLocalNotebook({
+    cases: [sampleCase()],
+    diaryEntries: [{
+      id: "diary-edit-failure",
+      caseId: "case-a",
+      date: "2026-09-01",
+      mood: "stable",
+      body: "保存済みの記録",
+      attachments: [],
+      createdAt: "2026-09-01T01:00:00.000Z",
+      updatedAt: "2026-09-01T01:00:00.000Z"
+    }]
+  });
+  storage.setFailNotebookWrites(true);
+  const result = store.updateDiaryEntry("diary-edit-failure", { body: "保存できない変更" });
+  assert.equal(result?.persisted, false, "diary edits must expose storage failure to the UI");
+  assert.equal(
+    store.listDiaryEntries("case-a")[0]?.body,
+    "保存済みの記録",
+    "failed diary edits must roll back the in-memory change instead of looking saved"
+  );
+  assert.match(store.consumeNotebookStorageWarning() ?? "", /保存容量/, "failed diary edits must retain a visible warning");
+}
+
+{
+  const store = loadStore();
+  store.overwriteLocalNotebook({
+    cases: [sampleCase()],
+    diaryEntries: [{
+      id: "diary-edit-success",
+      caseId: "case-a",
+      date: "2026-09-01",
+      mood: "stable",
+      body: "変更前",
+      attachments: [],
+      createdAt: "2026-09-01T01:00:00.000Z",
+      updatedAt: "2026-09-01T01:00:00.000Z"
+    }]
+  });
+  const result = store.updateDiaryEntry("diary-edit-success", { body: "変更後", mood: "changed" });
+  assert.equal(result?.persisted, true, "successful diary edits must report durable storage");
+  assert.equal(result?.entry.body, "変更後");
+  assert.equal(store.listDiaryEntries("case-a")[0]?.mood, "changed");
 }
 
 {

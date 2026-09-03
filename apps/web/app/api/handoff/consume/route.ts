@@ -44,7 +44,11 @@ export async function POST(request: Request) {
 
   if (error) {
     const message = error.message ?? "Failed to consume handoff token";
-    const status = /invalid_or_consumed_handoff_token|case_not_found/.test(message) ? 404 : 500;
+    const status = /invalid_or_consumed_handoff_token|case_not_found/.test(message)
+      ? 404
+      : /case_already_converted|case_not_ready|case_state_conflict/.test(message)
+        ? 409
+        : 500;
     return NextResponse.json({ error: message }, { status });
   }
 

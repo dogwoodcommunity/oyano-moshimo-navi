@@ -9,6 +9,7 @@ import {
   type ParentStatus,
   type TargetRelationship
 } from "@oyano/shared";
+import { createAnonymousCaseToken } from "@/lib/caseOwnership";
 import { createLocalId, submitDiagnosis } from "@/lib/store";
 
 const concernOptions = ["期限がある手続き", "家族の役割分担", "実家の片付け", "相続・名義変更", "相談先探し", "お金・保険の把握"];
@@ -40,6 +41,7 @@ export function DiagnosisForm() {
   const router = useRouter();
   const params = useSearchParams();
   const [fallbackCaseId] = useState(() => createLocalId("case"));
+  const [caseToken] = useState(() => createAnonymousCaseToken());
   const caseId = params.get("caseId") ?? fallbackCaseId;
   const initialStatus = (params.get("status") ?? "preparing") as ParentStatus;
   const [selectedStatus, setSelectedStatus] = useState<ParentStatus>(initialStatus);
@@ -71,7 +73,7 @@ export function DiagnosisForm() {
       consentTextVersion: SENSITIVE_INFO_CONSENT_VERSION
     };
     try {
-      const record = await submitDiagnosis(caseId, answers);
+      const record = await submitDiagnosis(caseId, answers, caseToken);
       router.push(`/result/${record.id}`);
     } catch {
       setSubmitError("整理結果を作れませんでした。通信状況を確認して、もう一度押してください。");

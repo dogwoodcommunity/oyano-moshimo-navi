@@ -45,6 +45,7 @@ assert.ok(family.includes("LINEやメールで送る"), "invite result must prov
 assert.ok(consult.includes("明日0時から、また無料で1回相談できます"), "daily free limit must explain the next free use");
 assert.ok(!consult.includes("Plusでこの相談を続ける"), "daily consultation flow must not push an upgrade");
 assert.ok(!home.includes("Family Plus（月980円・年9,800円）"), "record save flow must not show price promotion");
+assert.ok(!home.includes('title: "家族共有と長期相談を検討する"'), "daily notebook support actions must not include an upgrade card");
 
 assert.match(plans, /name: "無料"[\s\S]*?featured: true/, "free plan must be the featured plan");
 assert.match(plans, /name: "Family Plus"[\s\S]*?featured: false/, "Plus must be visually secondary");

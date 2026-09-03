@@ -881,13 +881,6 @@ function buildSupportActions(
     });
   }
 
-  actions.push({
-    title: "家族共有と長期相談を検討する",
-    body: "2人目の管理、家族招待、この人の記録を踏まえたAI相談はPlusで広げます。",
-    href: "/plans",
-    label: "Plus"
-  });
-
   return actions.slice(0, 4);
 }
 
@@ -1960,13 +1953,19 @@ export default function FamilyBoardPage() {
     const form = diaryEditForms[entryId];
     if (!form || !form.body.trim()) return;
 
-    const updated = updateDiaryEntry(entryId, {
+    const updateResult = updateDiaryEntry(entryId, {
       date: form.date,
       mood: form.mood,
       body: form.body.trim()
     });
-    if (!updated) return;
+    if (!updateResult) return;
     const storageWarning = consumeNotebookStorageWarning();
+    if (!updateResult.persisted) {
+      setRecordStorageTone("warning");
+      setRecordStorageMessage(storageWarning ?? "記録の変更をこの端末に保存できませんでした。入力内容を残しているので、空き容量やブラウザの設定を確認してもう一度お試しください。");
+      return;
+    }
+    const updated = updateResult.entry;
 
     setDiaryEntries((current) => ({
       ...current,

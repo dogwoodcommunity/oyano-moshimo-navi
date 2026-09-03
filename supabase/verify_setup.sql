@@ -197,6 +197,7 @@ with required_functions(name) as (
     ('claim_due_scheduled_notifications'),
     ('reset_stale_sending_notifications'),
     ('ensure_monthly_checkin_notifications'),
+    ('submit_anonymous_case_diagnosis'),
     ('consume_case_handoff'),
     ('create_initial_family_person'),
     ('create_family_invite'),

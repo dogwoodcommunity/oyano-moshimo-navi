@@ -2,6 +2,7 @@
 
 import { trackFunnel } from "@/lib/funnel";
 import { japanDateInputValue } from "@/lib/date";
+import { ANONYMOUS_CASE_TOKEN_PATTERN } from "@/lib/caseOwnership";
 import {
   buildDiagnosisResult,
   canCreateNotebook,
@@ -709,7 +710,7 @@ export function addDiaryEntry(input: Omit<DiaryEntry, "id" | "createdAt">): Diar
   return addDiaryEntryWithStatus(input).entry;
 }
 
-export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry, "id" | "caseId" | "createdAt">>): DiaryEntry | undefined {
+export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry, "id" | "caseId" | "createdAt">>): DiaryEntryWriteResult | undefined {
   const entries = readDiaryEntries();
   const existing = entries.find((item) => item.id === entryId);
   if (!existing) return undefined;
@@ -725,8 +726,9 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
     updatedAt: now
   };
 
-  writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
-  return updated;
+  const persisted = writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
+  if (!persisted) memoryDiaryEntries = entries;
+  return { entry: updated, persisted };
 }
 
 export type CaseProfileWriteResult = {
@@ -911,24 +913,6 @@ export function diaryCompanionComment(entry: Pick<DiaryEntry, "body" | "mood">):
   return "今日の記録を残せています。大きな変化がない日も、あとから見ると大切な流れになります。無理に詳しく書かなくても、一言ずつで十分です。";
 }
 
-async function postJson<T>(path: string, body: unknown): Promise<T | null> {
-  try {
-    const response = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    return await response.json() as T;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * いまのプラン。サーバーから返ってきた値を控えてある。
  * 一度もクラウドに触っていない人は分からないので free として扱う。
@@ -1071,40 +1055,35 @@ export async function createCase(selectedStatus: ParentStatus, initialProfile: P
   return record;
 }
 
-export async function submitDiagnosis(caseId: string, answers: DiagnosisAnswers): Promise<CaseRecord> {
-  const apiResult = await postJson<{ record: CaseRecord }>(`/api/cases/${caseId}/diagnosis`, answers);
-  if (apiResult?.record) {
-    const cases = readCases();
-    writeCases([apiResult.record, ...cases.filter((item) => item.id !== caseId)]);
-    return apiResult.record;
+export async function submitDiagnosis(
+  caseId: string,
+  answers: DiagnosisAnswers,
+  caseToken: string
+): Promise<CaseRecord> {
+  if (!ANONYMOUS_CASE_TOKEN_PATTERN.test(caseToken)) {
+    throw new Error("A valid case ownership token is required");
   }
 
-  const result = buildDiagnosisResult(answers);
-  const handoffToken = createHandoffToken(caseId);
+  const response = await fetch(`/api/cases/${caseId}/diagnosis`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Case-Anonymous-Token": caseToken
+    },
+    body: JSON.stringify(answers)
+  });
+  if (!response.ok) {
+    throw new Error(`Diagnosis submission failed with status ${response.status}`);
+  }
+
+  const apiResult = await response.json() as { record?: CaseRecord };
+  if (!apiResult.record) {
+    throw new Error("Diagnosis response did not include a record");
+  }
+
   const cases = readCases();
-  const existing = cases.find((item) => item.id === caseId);
-  const now = new Date().toISOString();
-  const record: CaseRecord = {
-    ...(existing ?? {
-      id: caseId,
-      selectedStatus: answers.selectedStatus,
-      createdAt: now,
-      supportPackStatus: "none" as const
-    }),
-    selectedStatus: answers.selectedStatus,
-    answers,
-    contactName: answers.contactName,
-    contactEmail: answers.contactEmail,
-    status: "result_ready",
-    result,
-    handoffToken,
-    updatedAt: now
-  };
-
-  const next = [record, ...cases.filter((item) => item.id !== caseId)];
-  writeCases(next);
-
-  return record;
+  writeCases([apiResult.record, ...cases.filter((item) => item.id !== caseId)]);
+  return apiResult.record;
 }
 
 export function createLocalDemoCase(): CaseRecord {

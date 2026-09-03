@@ -63,6 +63,10 @@
 ## 回答管理と検収
 
 - 回答一覧: `https://oyano-moshimo-navi.vercel.app/admin/monitor-feedback`
+- `crowdworks-2026-08` は全11回答の回収後に受付終了した。途中経過、最終回答、画像アップロードの各APIは、
+  時刻や環境変数ではなくソース管理されたcampaign状態でHTTP 410を返し、既存回答と画像の管理閲覧は維持する。
+- 次のcampaignでは状態を単純に開き直さない。参加者ごとにサーバー発行・失効可能・用途限定のtokenを用意し、
+  campaign IDとtokenを照合してから途中経過、最終回答、画像アップロードを許可する。
 - 名前を含まない途中経過は `audit_logs.action = monitor_progress_synced` に保存し、同じ端末内session IDの行を更新する。
 - 回答は `audit_logs.action = monitor_feedback_submitted` に保存する。
 - スクショはSupabase Storageの非公開領域に保存し、管理画面だけが期限付きURLを発行する。

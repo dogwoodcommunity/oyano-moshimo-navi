@@ -10659,3 +10659,73 @@ GitHub反映:
 - `Deploy to Vercel` run `33761022203` はcheckだけ成功し、deploy jobはskipped。本番deploymentと
   production aliasは変更していない。
 - 外部送信用に作った `/tmp` の隔離directoryとZIPは、結果記録後に削除した。
+
+## 2026-09-03 追記 279 — Claude指摘のP0/P1を修正、production反映前のため公開版は引き続きNO-GO
+
+ユーザーの「直して」という指示を受け、追記278で確定した認可P0と3件のP1を修正した。今回の範囲は
+ローカル実装、破棄専用DBを含む回帰test、独立review、GitHubへの退避までであり、本番DBとVercel
+productionにはまだ反映していない。
+
+匿名診断・アプリ引き継ぎの認可修正:
+
+- 匿名caseの所有証明を予測可能な値から32-byte乱数のtokenへ変更した。診断APIはcase IDだけでは更新せず、
+  所有tokenをheaderで確認する。
+- 診断、同意記録、診断結果、初回handoff tokenの保存を新しい
+  `submit_anonymous_case_diagnosis` RPCの1トランザクションへまとめた。新規caseと、APIで先に作った
+  `draft`＋正しいtokenは通し、別token、内容を変えた再送、変換済みcaseは拒否する。応答消失時の同一内容再送は
+  元のhandoff tokenを返し、重複rowを作らない。
+- `consume_case_handoff` は `result_ready` の未変換caseだけを初回変換できる。既存familyへ新しい利用者を
+  ownerとして追加・昇格する従来分岐を削除した。
+- 初回変換がcommitした後にHTTP応答だけ失われた場合は、同じtokenを持つ既存family memberだけが
+  書き込みなしで結果を再取得できる。部外者、未消費の後付けtoken、既存viewerの昇格、`closed` / `draft` case、
+  消費済みtokenによる別利用者の再送は拒否する。
+- DB内部の予期しない診断エラーはクライアントへ詳細を返さない。状態競合は409、無効な所有証明は404へ分けた。
+- `supabase/verify_setup.sql`、`verify_compact.sql`、`README.md`、production checklist、local doctor、
+  本番確認用smoke scriptを新しい所有tokenとRPCへ合わせた。本番適用順は、更新済み
+  `handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` → `verify_compact.sql` → Web deployで固定する。
+  Webを先に出すと新RPCがなく診断が500になるため、この順序を崩さない。
+
+終了済みモニターの保護:
+
+- `crowdworks-2026-08` をsource-controlledな `closed` にした。途中経過、最終回答、画像uploadの3 POSTは、
+  request body、画像byte、rate limit、DB、Storageへ触れる前に共通code付きHTTP 410を返す。
+- 保存済みの最終回答11件・画像14件、管理者GET、6か月保持処理は変更しない。次回campaignを単純に再開せず、
+  サーバー発行・失効可能・用途限定の参加者tokenを先に用意する方針を `FAMILY_TEST_PROTOCOL.md` に残した。
+- `/monitor` は新規開始・resetを出さず受付終了を表示する。回答済み端末は従来の送信完了表示を維持し、
+  未送信端末は受付終了を表示する。確認用 `?preview=1` は送信不可のまま残した。
+- 過去に配った `/start?reset=1&monitor=1` を再度開いても、受付終了判定をlocalStorage削除より先に行い、
+  `/monitor` へ戻す。終了後の古いURLで現在の手帳を消さない回帰testを追加した。
+
+無料中心UXの修正:
+
+- 日常の「ナビからの次の一歩」からPlus案内を外した。料金画面など、必要時に本人が確認する導線は維持する。
+- 過去記録の編集はlocalStorageへの書き込み成否を返すようにした。失敗時はメモリー上の仮変更もrollbackし、
+  編集欄と入力内容を残して警告する。成功表示、編集終了、一覧更新、scrollは行わない。
+
+回帰testとレビュー:
+
+- `test:handoff-security`: 成功。所有token生成、診断route/RPC呼び出し、エラー境界、handoff状態競合を確認。
+- `test:handoff-security:sql`: 破棄専用PostgreSQL 16で成功。migrationの2回適用、新規/draft診断、同一再送、
+  遅い失敗の全rollback、初回変換、同一memberのread-only再送、部外者・viewer昇格・fresh token・closed case拒否、
+  RPCのservice-role限定を実動確認した。最初のsandbox内実行はDocker socket権限で開始前に失敗し、許可された
+  外側実行で同じtestを再実行して成功した。
+- `test:monitor-submission-gate`: 成功。3 POSTの副作用前410、管理GET維持、受付終了画面、古いreset URLの
+  削除前guardを確認した。
+- monitor timeline/retention、cron auth、notebook sync safety/runtime、memory-book export、free-first redesign、
+  AI相談memory core/route、破棄専用PostgreSQL RLS、Web/Mobile typecheck、local doctor: すべて成功。
+- Web production build: 成功、静的ページ162/162。Node 20のSupabase将来非対応warningだけ。
+- 更新後のproduction buildをローカル起動し、`smoke:web` と `smoke:monitor` は成功。最初のmonitor smokeは
+  旧「開始画面」文言を期待して1項目だけ失敗したため、終了済みcampaignの期待値へ直し、再build・再実行で
+  全対象成功した。
+- 認可修正の独立reviewは、途中で安全な応答消失再送と `result_ready` 限定を追加した後、P0/P1残存なし。
+- `git diff --check`: 成功。
+
+安全境界と残作業:
+
+- 本番DB/schema/RPC変更、Vercel production deploy、実在caseを使う攻撃再現、実AI送信、実招待、決済、
+  cron実行、保存済みモニター回答・日記・途中経過・画像の編集や削除は行っていない。
+- このcommitをGitHubへpushしても、productionは旧DB/旧Webのままなので **NO-GOを維持**する。次はユーザーの
+  明示承認後、上記順序で2 RPCを本番DBへ適用・検証し、その後だけWebをproduction deployする。
+- 機密詳細を含むローカル未追跡 `docs/CLAUDE_FULL_REVIEW_REQUEST_2026-09-03.md` と
+  `docs/CLAUDE_FULL_REVIEW_RESULT_2026-09-03.md` はcommitしない。production修正後に再現情報を安全化して扱う。
+- 未追跡の `review_exports/` は参照・変更・追加・commit対象外。

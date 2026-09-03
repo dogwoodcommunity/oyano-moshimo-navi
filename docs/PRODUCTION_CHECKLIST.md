@@ -23,6 +23,7 @@
 - [ ] 個別実行する場合のみ `supabase/person_notebook_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
+- [ ] Web更新前に `supabase/anonymous_diagnosis_rpc.sql` を実行
 - [ ] アプリ単体開始用 `supabase/create_initial_family_person.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
@@ -97,6 +98,7 @@
 - [x] Web診断で要配慮情報の理解・最小限入力への同意を必須化
 - [x] 実家写真のアップロードURL発行を認証・家族権限チェック付きに変更
 - [ ] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認
+- [ ] 更新済み `handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` の順に適用し、変換済みcaseの再診断・owner追加拒否を確認
 - [x] アプリ内に外部Web決済CTAがない
 - [x] 公開APIにレート制限を追加
 - [ ] 本番DBで `public_api_rate_limits.sql` を投入し、DB側レート制限を有効化

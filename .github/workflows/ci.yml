@@ -39,6 +39,9 @@ jobs:
       - name: Test monitor retention
         run: pnpm run test:monitor-retention
 
+      - name: Test monitor submission gate
+        run: pnpm run test:monitor-submission-gate
+
       - name: Test cron authentication
         run: pnpm run test:cron-auth
 
@@ -53,6 +56,12 @@ jobs:
 
       - name: Test free-first redesign
         run: pnpm run test:free-first-redesign
+
+      - name: Test anonymous diagnosis and handoff route security
+        run: pnpm run test:handoff-security
+
+      - name: Test anonymous diagnosis and handoff PostgreSQL security
+        run: pnpm run test:handoff-security:sql
 
       - name: Test consult memory
         run: pnpm run test:consult-memory

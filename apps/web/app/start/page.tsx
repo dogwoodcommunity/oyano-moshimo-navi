@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ParentStatus } from "@oyano/shared";
 import { PREFECTURES } from "@/lib/prefectures";
+import { isMonitorCampaignSubmissionOpen } from "@/lib/monitorCampaign";
 import { readMonitorSession, startMonitorSession } from "@/lib/monitorSession";
 import { createCase, notebookQuota, NotebookLimitError, resetLocalNotebookData, type PersonProfile } from "@/lib/store";
 
@@ -107,6 +108,10 @@ export default function StartPage() {
     const params = new URLSearchParams(window.location.search);
     const isReset = params.get("reset") === "1";
     const isMonitor = params.get("monitor") === "1";
+    if (isMonitor && !isMonitorCampaignSubmissionOpen()) {
+      router.replace("/monitor");
+      return;
+    }
     const monitorStartedAtForLocalTest = process.env.NODE_ENV === "development"
       ? params.get("monitorStartedAt")
       : null;
