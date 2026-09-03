@@ -22,8 +22,10 @@
 - [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/person_notebook_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
-- [ ] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
-- [ ] Web更新前に `supabase/anonymous_diagnosis_rpc.sql` を実行
+- [x] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
+  - 2026-09-03確認: security hotfix版を本番へ再適用し、`service_role=true`、`public/anon/authenticated=false` を確認。
+- [x] Web更新前に `supabase/anonymous_diagnosis_rpc.sql` を実行
+  - 2026-09-03確認: 本番へ新規適用し、両handoff RPCの存在・service-onlyと全security check trueを確認。
 - [ ] アプリ単体開始用 `supabase/create_initial_family_person.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
@@ -49,6 +51,8 @@
 
 - [x] GitHub repoをimport
 - [x] `vercel.json` の設定でbuildできることを確認
+- [x] 2026-09-03 security hotfixをVercel productionへ反映
+  - deployment `dpl_Ee9pXkdFrSD5RtyFVUXgGj6pe5ac`、公開alias `https://oyano-moshimo-navi.vercel.app`、READYを確認。
 - [x] 環境変数を設定
 - [x] `/admin/env` で設定漏れを確認
 - [x] `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` を実行

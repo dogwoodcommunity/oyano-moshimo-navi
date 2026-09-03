@@ -10804,3 +10804,57 @@ dynamic SQLでREVOKE/GRANTするDO blockへ変更した。RPCが存在する通�
 - `git diff --check`: 成功。
 
 次はこの2ファイルとhandoffをcommit/pushして、新しいGitHub CIが全項目成功した場合だけ本番DB適用へ進む。
+
+## 2026-09-03 追記 283 — Claude review security hotfixを本番DB・Vercelへ反映完了
+
+partial schema互換修正commit `6213c977768368767d5dbcb3b464636ffd213bec`
+(`fix: keep grants compatible with partial schemas`) を `origin/main` へpushし、GitHub Actions CI run
+`33765778079` は全項目成功した。Web/Mobile typecheck、monitor gate、手帳同期、memory book、free-first、
+handoff route/破棄専用PostgreSQL security、AI相談memory route/破棄専用PostgreSQL RLS、Web build、Web smokeが
+green。Deploy workflow `33765778447` はcheckだけ成功し、deploy jobはskippedだったため、下記の手動CLIで
+検証済みHEADを本番へ反映した。
+
+本番Supabase `ypnuxyfirlvbsqujocuy` への適用:
+
+1. 更新済み `supabase/handoff_consume_rpc.sql` を実行: `Success. No rows returned`。
+2. 直後のread-only確認で、関数存在、`result_ready` 必須、旧owner upsert不在、
+   `service_role=true`、`public/anon/authenticated=false` を確認。
+3. `supabase/anonymous_diagnosis_rpc.sql` を実行: `Success. No rows returned`。
+4. `supabase/verify_compact.sql` を実行し136項目を取得。今回対象の両RPC存在・両RPC service-onlyはtrue、
+   `security_check` のfalseは0件。
+
+`verify_compact.sql` 全体では15件のfalseが残る。内容は、未導入の通知email/push列、
+`create_initial_family_person`、および未導入の地域スポンサーtable/view/index/RLSで、今回のhotfix以前から
+`PRODUCTION_CHECKLIST.md` 上で未完了の将来機能。今回の認可修正・モニター保護・手帳保存とは別範囲であり、
+広い一括migrationを追加投入せず現状を記録した。
+
+本番Vercel:
+
+- repo root、tracked差分なし、HEAD=origin/main=`6213c97`、Vercel user `dogwoodcommunity`、project
+  `oyano-moshimo-navi` を確認して `npx vercel --prod --yes` を実行。
+- deployment ID: `dpl_Ee9pXkdFrSD5RtyFVUXgGj6pe5ac`。
+- immutable URL: `https://oyano-moshimo-navi-dokqp1nn9-dogwoodcommunity1.vercel.app`。
+- production alias: `https://oyano-moshimo-navi.vercel.app`。
+- `npx vercel inspect` で target=`production`、status=`Ready`、aliasが新deploymentを指すことを確認。
+
+本番の無書き込みsmoke:
+
+- `/api/health`: 200、`ok=true`。
+- `node scripts/smoke-monitor-journey.mjs https://oyano-moshimo-navi.vercel.app`: 全項目成功。
+  `/monitor`受付終了、新規開始なし、最終回答・途中経過・validate-only・画像POSTが副作用前410、
+  admin/手帳同期の未認証401を確認。実AIは実行していない。
+- `smoke-notebook-sync.mjs` は最初のsandbox内実行だけDNS `ENOTFOUND`。ネットワーク許可された外側で同じ
+  read-only testを再実行し、tokenなしGETが401で成功。`--write` は使用していない。
+- `/home`、`/monitor`、`/monitor/report`、`/legal/tokushoho`: すべて200。
+
+データ非破壊確認:
+
+- DB適用前、DB適用後、Web deployとmonitor smoke後の3回で、
+  `monitor_progress_synced=10`、`monitor_feedback_submitted=11`、回答内画像参照合計14、
+  `cases=17`、`case_results=17`、`families=5`、`people=4`、`tasks=8` がすべて不変。
+- モニター回答本文・氏名・画像実体、日記本文、相談本文は取得していない。
+- 実診断、実handoff、実招待、実AI送信、実同期write、決済、cron、削除は実行していない。
+- 未追跡の `review_exports/` と機密review文書2件は参照・変更・追加・commit対象外。
+
+Claude reviewで特定した認可P0、終了済みモニター受付、日記保存の偽成功、日常Plus導線のhotfixは
+公開版へ反映済み。`docs/PRODUCTION_CHECKLIST.md` に両RPCと今回のproduction deploymentを記録した。
