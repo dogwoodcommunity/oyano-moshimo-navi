@@ -51,17 +51,18 @@ alter default privileges in schema public
 
 -- SECURITY DEFINER RPCs below are server-only. Keep these explicit revokes after
 -- the broad authenticated function grant above so fresh installs cannot expose
--- either RPC through PostgREST.
-revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text)
-  from public, anon, authenticated;
-grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text)
-  to service_role;
+-- either RPC through PostgREST. The existence checks keep this shared grant file
+-- compatible with partial schemas that have not installed the RPCs yet.
+do $server_only_rpc_acl$
+begin
+  if to_regprocedure('public.consume_case_handoff(uuid,text,uuid,text,text)') is not null then
+    execute 'revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text) from public, anon, authenticated';
+    execute 'grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text) to service_role';
+  end if;
 
-revoke all on function public.submit_anonymous_case_diagnosis(
-  uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
-  text, text, jsonb, jsonb, jsonb, text
-) from public, anon, authenticated;
-grant execute on function public.submit_anonymous_case_diagnosis(
-  uuid, text, text, jsonb, text, text, boolean, text, text, text, text,
-  text, text, jsonb, jsonb, jsonb, text
-) to service_role;
+  if to_regprocedure('public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)') is not null then
+    execute 'revoke all on function public.submit_anonymous_case_diagnosis(uuid, text, text, jsonb, text, text, boolean, text, text, text, text, text, text, jsonb, jsonb, jsonb, text) from public, anon, authenticated';
+    execute 'grant execute on function public.submit_anonymous_case_diagnosis(uuid, text, text, jsonb, text, text, boolean, text, text, text, text, text, text, jsonb, jsonb, jsonb, text) to service_role';
+  end if;
+end;
+$server_only_rpc_acl$;

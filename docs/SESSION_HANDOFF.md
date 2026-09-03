@@ -10784,3 +10784,23 @@ productionにはまだ反映していない。
 既存本番には `production_pending_hardening.sql` と `api_grants.sql` の全体を再実行しない。その後だけrepo rootから
 Vercel production deployし、無書き込みsmokeと上記件数の不変を確認する。未追跡の `review_exports/` と
 機密review文書2件は変更・追加・commit対象外。
+
+## 2026-09-03 追記 282 — partial schema互換を直し、CI再実行待ち
+
+ACL hardening commit `7d8990a` を `origin/main` へpushした。GitHub Actions CI run `33765380614` では、
+新しいhandoff route/PostgreSQL securityを含む手前の全testは成功したが、後続の
+`test:consult-memory:sql` が失敗し、Web build前で停止した。本番DBとVercelにはまだ反映していない。
+
+原因は、AI記憶だけを構築する部分schema testがhandoff RPC未作成の状態で `api_grants.sql` を実行した際、
+存在しないRPCへの直接REVOKEで停止したこと。`api_grants.sql` を、各RPCが `to_regprocedure` で存在する場合だけ
+dynamic SQLでREVOKE/GRANTするDO blockへ変更した。RPCが存在する通常・新規構築ではserver-onlyを維持し、
+部分構築では安全にskipする。静的回帰もこの条件を確認するように更新した。
+
+修正後のローカル確認:
+
+- `pnpm run test:handoff-security`: 成功。
+- `pnpm run test:handoff-security:sql`: 破棄専用PostgreSQL 16で成功。
+- `pnpm run test:consult-memory:sql`: 破棄専用PostgreSQL 16で成功。
+- `git diff --check`: 成功。
+
+次はこの2ファイルとhandoffをcommit/pushして、新しいGitHub CIが全項目成功した場合だけ本番DB適用へ進む。

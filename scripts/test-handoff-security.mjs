@@ -349,13 +349,13 @@ assert.match(
 const apiGrantsSql = fs.readFileSync(path.join(repoRoot, "supabase/api_grants.sql"), "utf8");
 assert.match(
   apiGrantsSql,
-  /revoke all on function public\.consume_case_handoff\(uuid, text, uuid, text, text\)\s+from public, anon, authenticated;/,
-  "fresh-install grants must keep handoff consume server-only"
+  /if to_regprocedure\('public\.consume_case_handoff\(uuid,text,uuid,text,text\)'\) is not null then[\s\S]*?execute 'revoke all on function public\.consume_case_handoff\(uuid, text, uuid, text, text\) from public, anon, authenticated';/,
+  "fresh-install grants must conditionally keep handoff consume server-only"
 );
 assert.match(
   apiGrantsSql,
-  /revoke all on function public\.submit_anonymous_case_diagnosis\([\s\S]*?\) from public, anon, authenticated;/,
-  "fresh-install grants must keep anonymous diagnosis server-only"
+  /if to_regprocedure\('public\.submit_anonymous_case_diagnosis\(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text\)'\) is not null then[\s\S]*?execute 'revoke all on function public\.submit_anonymous_case_diagnosis\([\s\S]*?\) from public, anon, authenticated';/,
+  "fresh-install grants must conditionally keep anonymous diagnosis server-only"
 );
 
 const verifyCompactSql = fs.readFileSync(
