@@ -10729,3 +10729,20 @@ productionにはまだ反映していない。
 - 機密詳細を含むローカル未追跡 `docs/CLAUDE_FULL_REVIEW_REQUEST_2026-09-03.md` と
   `docs/CLAUDE_FULL_REVIEW_RESULT_2026-09-03.md` はcommitしない。production修正後に再現情報を安全化して扱う。
 - 未追跡の `review_exports/` は参照・変更・追加・commit対象外。
+
+## 2026-09-03 追記 280 — security修正commitのGitHub CI完走を確認
+
+追記279の修正をcommit `3ea929f9cc36435b7f66b1db910ef29ffb9f596e`
+(`fix: secure handoff and close monitor campaign`) として `origin/main` へpushした。
+
+- GitHub Actions CI run `33764075659` は成功。Web/Mobile typecheck、モニターtimeline/retention/受付終了gate、
+  cron認証、手帳同期safety/runtime、memory-book export、free-first、匿名診断・handoffのroute/破棄専用
+  PostgreSQL security、AI相談memoryのroute/破棄専用PostgreSQL RLS、Web production build、Web smokeが
+  すべてgreen。
+- `Deploy to Vercel` run `33764075334` はcheck jobだけ成功し、deploy jobはskipped。Vercel productionと
+  production aliasは変更していない。
+- 保存済みモニター最終回答11件・画像14件、日記、途中経過には触れていない。未追跡の `review_exports/` と
+  機密review文書2件も引き続きcommit対象外。
+- GitHub上のソース修正は完了したが、公開版は旧DB・旧Webのままなので引き続き **NO-GO**。本番反映は
+  ユーザーの明示承認後に `handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` →
+  `verify_compact.sql` → Web production deploy の順で実施する。
