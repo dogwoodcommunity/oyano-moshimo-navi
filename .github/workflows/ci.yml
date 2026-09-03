@@ -48,6 +48,9 @@ jobs:
       - name: Test notebook sync runtime
         run: pnpm run test:notebook-sync-runtime
 
+      - name: Test memory book export safety
+        run: pnpm run test:memory-book-export
+
       - name: Test free-first redesign
         run: pnpm run test:free-first-redesign
 

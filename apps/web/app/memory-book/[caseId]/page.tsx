@@ -4,11 +4,20 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/browserSupabase";
+import { entryIdsInDateRange, waitForPrintableImage, withDeadline } from "@/lib/memoryBookExport";
 import { getLocalCase, listDiaryEntries, type CaseRecord, type DiaryEntry } from "@/lib/store";
 
-const MAX_MEMORY_BOOK_PHOTOS = 60;
+const MAX_MEMORY_BOOK_PHOTOS = 12;
 const NOTEBOOK_CLOUD_PAGE_SIZE = 500;
 const NOTEBOOK_CLOUD_RESTORE_LIMIT = 20_000;
+const CLOUD_PHOTO_LOAD_TIMEOUT_MS = 12_000;
+
+type PrintIntent = "pdf" | "paper";
+
+type ExpandedPhoto = {
+  alt: string;
+  src: string;
+};
 
 function formatBookDate(dateString?: string) {
   if (!dateString) return "日付なし";
@@ -51,8 +60,13 @@ export default function MemoryBookPage() {
   const [selectedEntryIds, setSelectedEntryIds] = useState<Set<string>>(new Set());
   const [includePhotos, setIncludePhotos] = useState(true);
   const [photoLoadState, setPhotoLoadState] = useState<"idle" | "loading" | "ready">("idle");
+  const [photoLoadMessage, setPhotoLoadMessage] = useState("");
   const [printPreparing, setPrintPreparing] = useState(false);
+  const [preparedPrintIntent, setPreparedPrintIntent] = useState<PrintIntent | null>(null);
   const [printError, setPrintError] = useState("");
+  const [dateRangeStart, setDateRangeStart] = useState("");
+  const [dateRangeEnd, setDateRangeEnd] = useState("");
+  const [expandedPhoto, setExpandedPhoto] = useState<ExpandedPhoto | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -62,10 +76,14 @@ export default function MemoryBookPage() {
       : [];
     setCaseRecord(nextCase);
     setEntries(nextEntries);
-    setSelectedEntryIds(new Set(nextEntries.filter((entry) => !isConsultMemo(entry)).map((entry) => entry.id)));
+    const defaultEntries = nextEntries.filter((entry) => !isConsultMemo(entry));
+    setSelectedEntryIds(new Set(defaultEntries.map((entry) => entry.id)));
+    setDateRangeStart(defaultEntries[0]?.date ?? nextEntries[0]?.date ?? "");
+    setDateRangeEnd(defaultEntries[defaultEntries.length - 1]?.date ?? nextEntries[nextEntries.length - 1]?.date ?? "");
     setIncludePhotos(nextEntries.reduce((count, entry) => (
       count + entry.attachments.filter((attachment) => attachment.type.startsWith("image/")).length
     ), 0) <= MAX_MEMORY_BOOK_PHOTOS);
+    setPhotoLoadMessage("");
     setLoaded(true);
     const needsCloudPhotoUrls = nextEntries.some((entry) => entry.attachments.some((attachment) => (
       attachment.type.startsWith("image/") && Boolean(attachment.storagePath) && !attachment.previewUrl
@@ -78,60 +96,71 @@ export default function MemoryBookPage() {
     }
 
     setPhotoLoadState("loading");
+    const controller = new AbortController();
     void (async () => {
       try {
-        const client = getBrowserSupabase();
-        const sessionData = client ? (await client.auth.getSession()).data : null;
-        const accessToken = sessionData?.session?.access_token;
-        if (!accessToken) return;
-        let diaryOffset = 0;
-        let expectedDiaryEntriesTotal: number | null = null;
-        const remoteEntriesById = new Map<string, DiaryEntry>();
-        while (true) {
-          const response = await fetch(
-            `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_PAGE_SIZE}`,
-            {
-              cache: "no-store",
-              credentials: "same-origin",
-              headers: { Authorization: `Bearer ${accessToken}` }
-            }
-          );
-          if (!response.ok) return;
-          const result = await response.json() as {
-            diaryEntries?: DiaryEntry[];
-            diaryEntriesTotal?: number;
-            diaryEntriesHasMore?: boolean;
-          };
-          if (cancelled || !result?.diaryEntries) return;
-          if ((result.diaryEntriesTotal ?? 0) > NOTEBOOK_CLOUD_RESTORE_LIMIT) return;
-          const diaryEntriesTotal = result.diaryEntriesTotal ?? diaryOffset + result.diaryEntries.length;
-          if (expectedDiaryEntriesTotal === null) expectedDiaryEntriesTotal = diaryEntriesTotal;
-          else if (diaryEntriesTotal !== expectedDiaryEntriesTotal) return;
-          result.diaryEntries.forEach((entry) => remoteEntriesById.set(entry.id, entry));
-          if (!result.diaryEntriesHasMore) break;
-          if (result.diaryEntries.length === 0) return;
-          diaryOffset += result.diaryEntries.length;
-        }
-        if (remoteEntriesById.size !== (expectedDiaryEntriesTotal ?? 0)) return;
-        const remoteById = remoteEntriesById;
-        setEntries((current) => current.map((entry) => {
-          const remoteEntry = remoteById.get(entry.id);
-          if (!remoteEntry) return entry;
-          return {
-            ...entry,
-            attachments: entry.attachments.map((attachment) => {
-              const remoteAttachment = remoteEntry.attachments.find((candidate) => (
-                candidate.id === attachment.id
-                || (attachment.storagePath && candidate.storagePath === attachment.storagePath)
-              ));
-              return remoteAttachment?.previewUrl
-                ? { ...attachment, previewUrl: remoteAttachment.previewUrl }
-                : attachment;
-            })
-          };
-        }));
-      } catch {
+        await withDeadline((async () => {
+          const client = getBrowserSupabase();
+          const sessionData = client ? (await client.auth.getSession()).data : null;
+          if (cancelled || controller.signal.aborted) return;
+          const accessToken = sessionData?.session?.access_token;
+          if (!accessToken) throw new Error("cloud_session_missing");
+          let diaryOffset = 0;
+          let expectedDiaryEntriesTotal: number | null = null;
+          const remoteEntriesById = new Map<string, DiaryEntry>();
+          while (true) {
+            const response = await fetch(
+              `/api/notebook/sync?diaryOffset=${diaryOffset}&diaryLimit=${NOTEBOOK_CLOUD_PAGE_SIZE}`,
+              {
+                cache: "no-store",
+                credentials: "same-origin",
+                signal: controller.signal,
+                headers: { Authorization: `Bearer ${accessToken}` }
+              }
+            );
+            if (!response.ok) throw new Error("cloud_photo_fetch_failed");
+            const result = await response.json() as {
+              diaryEntries?: DiaryEntry[];
+              diaryEntriesTotal?: number;
+              diaryEntriesHasMore?: boolean;
+            };
+            if (cancelled || controller.signal.aborted || !result?.diaryEntries) return;
+            if ((result.diaryEntriesTotal ?? 0) > NOTEBOOK_CLOUD_RESTORE_LIMIT) throw new Error("cloud_photo_limit_exceeded");
+            const diaryEntriesTotal = result.diaryEntriesTotal ?? diaryOffset + result.diaryEntries.length;
+            if (expectedDiaryEntriesTotal === null) expectedDiaryEntriesTotal = diaryEntriesTotal;
+            else if (diaryEntriesTotal !== expectedDiaryEntriesTotal) throw new Error("cloud_photo_snapshot_changed");
+            result.diaryEntries.forEach((entry) => remoteEntriesById.set(entry.id, entry));
+            if (!result.diaryEntriesHasMore) break;
+            if (result.diaryEntries.length === 0) throw new Error("cloud_photo_page_empty");
+            diaryOffset += result.diaryEntries.length;
+          }
+          if (cancelled || controller.signal.aborted) return;
+          if (remoteEntriesById.size !== (expectedDiaryEntriesTotal ?? 0)) throw new Error("cloud_photo_restore_incomplete");
+          const remoteById = remoteEntriesById;
+          setEntries((current) => current.map((entry) => {
+            const remoteEntry = remoteById.get(entry.id);
+            if (!remoteEntry) return entry;
+            return {
+              ...entry,
+              attachments: entry.attachments.map((attachment) => {
+                const remoteAttachment = remoteEntry.attachments.find((candidate) => (
+                  candidate.id === attachment.id
+                  || (attachment.storagePath && candidate.storagePath === attachment.storagePath)
+                ));
+                return remoteAttachment?.previewUrl
+                  ? { ...attachment, previewUrl: remoteAttachment.previewUrl }
+                  : attachment;
+              })
+            };
+          }));
+        })(), CLOUD_PHOTO_LOAD_TIMEOUT_MS, () => controller.abort());
+      } catch (error) {
         // 端末内の本文だけでも手帳は作れるため、写真取得失敗では画面全体を止めない。
+        if (!cancelled) {
+          setPhotoLoadMessage(error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")
+            ? "写真の確認に時間がかかっています。写真を外せば、本文だけ先にPDF保存・印刷できます。"
+            : "写真を確認できませんでした。写真を外せば、本文だけ先にPDF保存・印刷できます。");
+        }
       } finally {
         if (!cancelled) setPhotoLoadState("ready");
       }
@@ -139,6 +168,7 @@ export default function MemoryBookPage() {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, [params.caseId]);
 
@@ -187,6 +217,30 @@ export default function MemoryBookPage() {
     if (photosOverLimit) setIncludePhotos(false);
   }, [photosOverLimit]);
 
+  useEffect(() => {
+    if (!preparedPrintIntent) return;
+    const frame = window.requestAnimationFrame(() => {
+      const readyPanel = document.getElementById("memory-book-print-ready");
+      readyPanel?.scrollIntoView({ behavior: "smooth", block: "center" });
+      readyPanel?.querySelector<HTMLButtonElement>("button")?.focus();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [preparedPrintIntent]);
+
+  useEffect(() => {
+    if (!expandedPhoto) return undefined;
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setExpandedPhoto(null);
+    };
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [expandedPhoto]);
+
   function toggleEntry(entryId: string) {
     setSelectedEntryIds((current) => {
       const next = new Set(current);
@@ -195,49 +249,72 @@ export default function MemoryBookPage() {
       return next;
     });
     setPrintError("");
+    setPreparedPrintIntent(null);
   }
 
-  async function openPrintDialog() {
+  function applyDateRange() {
+    if (!dateRangeStart || !dateRangeEnd) {
+      setPrintError("PDFに入れる期間の開始日と終了日を選んでください。");
+      return;
+    }
+    if (dateRangeStart > dateRangeEnd) {
+      setPrintError("開始日は終了日より前の日付を選んでください。");
+      return;
+    }
+    const ids = entryIdsInDateRange(
+      entries.filter((entry) => !isConsultMemo(entry)),
+      dateRangeStart,
+      dateRangeEnd
+    );
+    if (ids.length === 0) {
+      setPrintError("選んだ期間には、まとめられる毎日の記録がありません。");
+      return;
+    }
+    setSelectedEntryIds(new Set(ids));
+    setPreparedPrintIntent(null);
+    setPrintError("");
+  }
+
+  function selectAllDailyEntries() {
+    const dailyEntries = entries.filter((entry) => !isConsultMemo(entry));
+    setSelectedEntryIds(new Set(dailyEntries.map((entry) => entry.id)));
+    setDateRangeStart(dailyEntries[0]?.date ?? "");
+    setDateRangeEnd(dailyEntries[dailyEntries.length - 1]?.date ?? "");
+    setPreparedPrintIntent(null);
+    setPrintError("");
+  }
+
+  async function preparePrint(intent: PrintIntent) {
     if (selectedEntries.length === 0) {
       setPrintError("PDFに入れる記録を1件以上選んでください。");
       return;
     }
-    setPrintError("");
-    if (includePhotos) {
-      setPrintPreparing(true);
-      const images = Array.from(document.querySelectorAll<HTMLImageElement>(
-        ".memory-book-entry.is-included .memory-book-photos img"
-      ));
-      const imageResults = await Promise.all(images.map(async (image) => {
-        if (!image.complete) {
-          await new Promise<void>((resolve) => {
-            let timer = 0;
-            const finish = () => {
-              image.removeEventListener("load", finish);
-              image.removeEventListener("error", finish);
-              window.clearTimeout(timer);
-              resolve();
-            };
-            timer = window.setTimeout(finish, 8000);
-            image.addEventListener("load", finish, { once: true });
-            image.addEventListener("error", finish, { once: true });
-          });
-        }
-        if (image.naturalWidth === 0) return false;
-        try {
-          await image.decode();
-        } catch {
-          // decode非対応でも、表示済みなら印刷できる。
-        }
-        return image.naturalWidth > 0;
-      }));
-      setPrintPreparing(false);
-      const failedPhotoCount = imageResults.filter((loadedImage) => !loadedImage).length;
-      if (failedPhotoCount > 0) {
-        setPrintError(`${failedPhotoCount}枚の写真を読み込めませんでした。写真を外して保存するか、通信を確認してもう一度お試しください。`);
-        return;
-      }
+    if (includePhotos && photoLoadState === "loading") {
+      setPrintError("写真を確認しています。待たずに進む場合は「写真もPDFに入れる」を外してください。");
+      return;
     }
+    setPreparedPrintIntent(null);
+    setPrintError("");
+    setPrintPreparing(true);
+    try {
+      if (includePhotos) {
+        const images = Array.from(document.querySelectorAll<HTMLImageElement>(
+          ".memory-book-entry.is-included .memory-book-photos img"
+        ));
+        const imageResults = await Promise.allSettled(images.map((image) => waitForPrintableImage(image)));
+        const failedPhotoCount = imageResults.filter((result) => result.status !== "fulfilled" || !result.value).length;
+        if (failedPhotoCount > 0) {
+          setPrintError(`${failedPhotoCount}枚の写真を読み込めませんでした。写真を外して保存するか、通信を確認してもう一度お試しください。`);
+          return;
+        }
+      }
+      setPreparedPrintIntent(intent);
+    } finally {
+      setPrintPreparing(false);
+    }
+  }
+
+  function openPreparedPrintDialog() {
     window.print();
   }
 
@@ -279,12 +356,50 @@ export default function MemoryBookPage() {
               <div><span>記録期間</span><strong>{periodLabel}</strong></div>
               <div><span>表示できる写真</span><strong>{includePhotos ? `${availablePhotoCount}枚` : "入れない"}</strong></div>
             </div>
+            <div className="memory-book-date-range" aria-labelledby="memory-book-date-range-heading">
+              <div>
+                <strong id="memory-book-date-range-heading">まとめる期間を選ぶ</strong>
+                <small>開始日と終了日を選ぶと、その期間の毎日の記録だけをまとめます。</small>
+              </div>
+              <label>
+                <span>開始日</span>
+                <input
+                  type="date"
+                  value={dateRangeStart}
+                  disabled={printPreparing}
+                  onChange={(event) => {
+                    setDateRangeStart(event.target.value);
+                    setPreparedPrintIntent(null);
+                  }}
+                />
+              </label>
+              <label>
+                <span>終了日</span>
+                <input
+                  type="date"
+                  value={dateRangeEnd}
+                  disabled={printPreparing}
+                  onChange={(event) => {
+                    setDateRangeEnd(event.target.value);
+                    setPreparedPrintIntent(null);
+                  }}
+                />
+              </label>
+              <div className="memory-book-date-actions">
+                <button type="button" onClick={applyDateRange} disabled={printPreparing}>この期間を選ぶ</button>
+                <button type="button" onClick={selectAllDailyEntries} disabled={printPreparing}>すべての毎日記録を選ぶ</button>
+              </div>
+            </div>
             <label className="memory-book-photo-choice">
               <input
                 type="checkbox"
                 checked={includePhotos}
-                disabled={photosOverLimit}
-                onChange={(event) => setIncludePhotos(event.target.checked)}
+                disabled={photosOverLimit || printPreparing}
+                onChange={(event) => {
+                  setIncludePhotos(event.target.checked);
+                  setPreparedPrintIntent(null);
+                  setPrintError("");
+                }}
               />
               <span>
                 <strong>写真もPDFに入れる</strong>
@@ -295,7 +410,9 @@ export default function MemoryBookPage() {
                 </small>
               </span>
             </label>
-            {photosOverLimit ? (
+            {photoLoadMessage ? (
+              <p className="memory-book-photo-status is-warning" role="status">{photoLoadMessage}</p>
+            ) : photosOverLimit ? (
               <p className="memory-book-photo-status is-warning" role="status">
                 選んだ記録に写真が{selectedImageAttachmentCount}枚あります。スマホが止まらないよう、写真は外しています。写真も入れる場合は、記録を分けて{MAX_MEMORY_BOOK_PHOTOS}枚以下にしてください。
               </p>
@@ -310,12 +427,30 @@ export default function MemoryBookPage() {
               毎日の記録は最初からすべて選んでいます。AI相談メモは最初は外しています。載せたい内容だけ、下の「この記録を入れる」で選んでください。
             </p>
             <p className="memory-book-paper-note">紙の本は届きません。PDFデータを端末へ保存する機能です。</p>
-            <div className="button-row memory-book-button-row">
-              <button className="button" type="button" onClick={openPrintDialog} disabled={photoLoadState === "loading" || printPreparing}>
-                {printPreparing ? "写真を準備しています…" : "PDF保存・印刷へ進む"}
-              </button>
-              <Link className="secondary" href="/home#diary-history">手帳へ戻る</Link>
+            <div className="memory-book-export-actions" id="memory-book-export-actions">
+              <strong>保存方法を選んでください</strong>
+              <p>どちらも端末の印刷画面を使います。PDFは保存先を、紙はプリンターを選びます。</p>
+              <div className="button-row memory-book-button-row">
+                <button className="button" type="button" onClick={() => preparePrint("pdf")} disabled={(includePhotos && photoLoadState === "loading") || printPreparing}>
+                  {printPreparing ? "写真を準備しています…" : "PDF保存の準備をする"}
+                </button>
+                <button className="secondary" type="button" onClick={() => preparePrint("paper")} disabled={(includePhotos && photoLoadState === "loading") || printPreparing}>
+                  紙に印刷する準備をする
+                </button>
+              </div>
             </div>
+            {preparedPrintIntent ? (
+              <div className="memory-book-print-ready" id="memory-book-print-ready" role="status" tabIndex={-1}>
+                <strong>{preparedPrintIntent === "pdf" ? "PDF保存の準備ができました。" : "紙に印刷する準備ができました。"}</strong>
+                <p>{preparedPrintIntent === "pdf"
+                  ? "次の画面で「PDFとして保存」または「ファイルに保存」を選んでください。"
+                  : "次の画面で使うプリンターを選んでください。"}</p>
+                <button className="button" type="button" onClick={openPreparedPrintDialog}>
+                  {preparedPrintIntent === "pdf" ? "PDF保存画面を開く" : "印刷画面を開く"}
+                </button>
+              </div>
+            ) : null}
+            <Link className="secondary memory-book-back-link" href="/home#diary-history">手帳へ戻る</Link>
             {printError ? <p className="memory-book-error" role="alert">{printError}</p> : null}
             <details className="memory-book-save-help">
               <summary>スマホでPDFを保存する方法</summary>
@@ -382,7 +517,7 @@ export default function MemoryBookPage() {
               return (
                 <article className={`memory-book-entry ${included ? "is-included" : "is-excluded"}`} key={entry.id}>
                   <label className="memory-book-entry-choice">
-                    <input type="checkbox" checked={included} onChange={() => toggleEntry(entry.id)} />
+                    <input type="checkbox" checked={included} disabled={printPreparing} onChange={() => toggleEntry(entry.id)} />
                     <span>{included ? "この記録を入れる" : "PDFには入れません"}</span>
                   </label>
                   <div className="memory-book-entry-head">
@@ -394,7 +529,17 @@ export default function MemoryBookPage() {
                     <div className="memory-book-photos">
                       {photos.map((photo, index) => (
                         <figure key={photo.id}>
-                          <img src={photo.previewUrl} alt={`${formatBookDate(entry.date)}の記録写真${index + 1}`} />
+                          <button
+                            className="memory-book-photo-open"
+                            type="button"
+                            onClick={() => setExpandedPhoto({
+                              src: photo.previewUrl!,
+                              alt: `${formatBookDate(entry.date)}の記録写真${index + 1}`
+                            })}
+                          >
+                            <img src={photo.previewUrl} alt={`${formatBookDate(entry.date)}の記録写真${index + 1}`} />
+                            <span>写真を大きく見る</span>
+                          </button>
                           <figcaption>{`記録写真${index + 1}`}</figcaption>
                         </figure>
                       ))}
@@ -408,9 +553,7 @@ export default function MemoryBookPage() {
           <div className="memory-book-bottom-actions">
             <strong>選んだ{selectedEntries.length}件をPDFにまとめます。</strong>
             <p>紙の本は届きません。PDFデータを端末へ保存する機能です。</p>
-            <button className="button" type="button" onClick={openPrintDialog} disabled={photoLoadState === "loading" || printPreparing}>
-              {printPreparing ? "写真を準備しています…" : "PDF保存・印刷へ進む"}
-            </button>
+            <a className="button" href="#memory-book-export-actions">PDF保存・印刷の設定へ戻る</a>
             {printError ? <p className="memory-book-error" role="alert">{printError}</p> : null}
           </div>
 
@@ -421,6 +564,14 @@ export default function MemoryBookPage() {
             <small>親のもしもナビで作成</small>
           </article>
         </section>
+      ) : null}
+      {expandedPhoto ? (
+        <div className="memory-book-photo-modal" role="dialog" aria-modal="true" aria-label="記録写真を大きく表示" onClick={() => setExpandedPhoto(null)}>
+          <div onClick={(event) => event.stopPropagation()}>
+            <button type="button" onClick={() => setExpandedPhoto(null)}>写真を閉じる</button>
+            <img src={expandedPhoto.src} alt={expandedPhoto.alt} />
+          </div>
+        </div>
       ) : null}
     </main>
   );

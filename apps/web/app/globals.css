@@ -12262,6 +12262,9 @@ textarea {
     linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(248, 252, 248, 0.92)),
     radial-gradient(circle at 100% 0%, rgba(47, 110, 130, 0.12), transparent 38%);
   border-color: rgba(15, 95, 65, 0.2);
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .cloud-backup-disclosure {
@@ -12272,6 +12275,8 @@ textarea {
   display: grid;
   gap: 10px;
   margin-top: 12px;
+  max-width: 100%;
+  min-width: 0;
   padding: 8px;
   scroll-margin-top: 110px;
 }
@@ -12318,6 +12323,8 @@ textarea {
   grid-column: 2;
   grid-row: 2;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cloud-backup-disclosure summary::after {
@@ -12362,6 +12369,13 @@ textarea {
   margin-bottom: 1rem;
 }
 
+.cloud-backup-head > div,
+.cloud-linked-box,
+.cloud-form,
+.cloud-form label {
+  min-width: 0;
+}
+
 .cloud-backup-icon {
   align-items: center;
   background: #f6fbf8;
@@ -12393,6 +12407,7 @@ textarea {
   font-weight: 750;
   line-height: 1.75;
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .cloud-trust-list {
@@ -12415,6 +12430,7 @@ textarea {
   font-weight: 900;
   line-height: 1.55;
   min-height: 42px;
+  overflow-wrap: anywhere;
   padding: 0.62rem 0.75rem;
 }
 
@@ -12461,7 +12477,9 @@ textarea {
   gap: 8px;
   justify-self: start;
   margin-top: 0.55rem;
+  max-width: 100%;
   min-height: 32px;
+  min-width: 0;
   padding: 5px 10px;
 }
 
@@ -12480,6 +12498,8 @@ textarea {
   font-style: normal;
   font-weight: 900;
   line-height: 1.4;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cloud-auto-line.is-saving span {
@@ -12528,12 +12548,15 @@ textarea {
   background: #fff;
   border: 1px solid rgba(36, 66, 78, 0.18);
   border-radius: 14px;
+  box-sizing: border-box;
   color: var(--ink);
   font: inherit;
   font-size: 18px;
   font-weight: 800;
   min-height: 48px;
+  min-width: 0;
   padding: 0 0.95rem;
+  width: 100%;
 }
 
 .cloud-form button,
@@ -12546,12 +12569,15 @@ textarea {
   font-weight: 900;
   min-height: 48px;
   padding: 0 1rem;
+  white-space: normal;
 }
 
 .cloud-form button {
   align-self: end;
   background: linear-gradient(180deg, #16754e, #0b563b);
   color: #fff;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .cloud-form button:disabled,
@@ -12565,6 +12591,7 @@ textarea {
   border: 1px dashed rgba(36, 66, 78, 0.18);
   border-radius: 14px;
   margin: 0.25rem 0 0.8rem !important;
+  overflow-wrap: anywhere;
   padding: 0.8rem 0.9rem;
 }
 
@@ -15994,6 +16021,81 @@ textarea {
   line-height: 1.5;
 }
 
+.memory-book-date-range {
+  align-items: end;
+  background: #f7f2e8;
+  border: 1px solid rgba(134, 101, 50, 0.24);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) minmax(145px, 0.55fr) minmax(145px, 0.55fr);
+  padding: 14px;
+}
+
+.memory-book-date-range > div:first-child {
+  align-self: center;
+  display: grid;
+  gap: 3px;
+}
+
+.memory-book-date-range > div:first-child strong {
+  color: var(--ink);
+  font-size: 17px;
+}
+
+.memory-book-date-range small {
+  color: var(--ink-sub);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.memory-book-date-range label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.memory-book-date-range label span {
+  color: #4d5e55;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.memory-book-date-range input {
+  background: #fff;
+  border: 1px solid rgba(44, 65, 73, 0.28);
+  border-radius: 10px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 750;
+  min-height: 46px;
+  min-width: 0;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.memory-book-date-actions {
+  display: grid;
+  gap: 8px;
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.memory-book-date-actions button {
+  background: #fff;
+  border: 1px solid rgba(23, 107, 74, 0.3);
+  border-radius: 999px;
+  color: #176b4a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 15px;
+  font-weight: 900;
+  min-height: 44px;
+  padding: 9px 13px;
+}
+
 .memory-book-photo-choice {
   align-items: center;
   background: #fffdf8;
@@ -16045,7 +16147,56 @@ textarea {
 }
 
 .memory-book-button-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   margin: 0;
+  width: 100%;
+}
+
+.memory-book-export-actions {
+  background: #eef6f1;
+  border: 1px solid rgba(23, 107, 74, 0.24);
+  border-radius: 14px;
+  display: grid;
+  gap: 9px;
+  padding: 15px;
+}
+
+.memory-book-export-actions > strong {
+  color: #164f38;
+  font-size: 18px;
+}
+
+.memory-book-export-actions > p,
+.memory-book-print-ready p {
+  color: var(--ink-sub);
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.65;
+  margin: 0;
+}
+
+.memory-book-print-ready {
+  background: #e6f4eb;
+  border: 2px solid #176b4a;
+  border-radius: 14px;
+  display: grid;
+  gap: 9px;
+  outline: 0;
+  padding: 15px;
+}
+
+.memory-book-print-ready > strong {
+  color: #124a34;
+  font-size: 18px;
+}
+
+.memory-book-print-ready .button {
+  justify-self: start;
+}
+
+.memory-book-back-link {
+  justify-self: start;
 }
 
 .memory-book-paper-note {
@@ -16331,6 +16482,19 @@ textarea {
   margin: 0;
 }
 
+.memory-book-photo-open {
+  background: transparent;
+  border: 0;
+  color: #176b4a;
+  cursor: zoom-in;
+  display: grid;
+  font: inherit;
+  gap: 6px;
+  padding: 0;
+  text-align: left;
+  width: 100%;
+}
+
 .memory-book-photos img {
   background: #f5f5f2;
   border: 1px solid #e0e3df;
@@ -16339,6 +16503,13 @@ textarea {
   height: 230px;
   object-fit: contain;
   width: 100%;
+}
+
+.memory-book-photo-open span {
+  font-size: 14px;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 .memory-book-photos figcaption {
@@ -16412,6 +16583,47 @@ textarea {
   font-weight: 800;
 }
 
+.memory-book-photo-modal {
+  align-items: center;
+  background: rgba(18, 31, 25, 0.86);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 18px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.memory-book-photo-modal > div {
+  display: grid;
+  gap: 10px;
+  max-height: 94vh;
+  max-width: 980px;
+  width: 100%;
+}
+
+.memory-book-photo-modal button {
+  background: #fff;
+  border: 0;
+  border-radius: 999px;
+  color: #164f38;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 900;
+  justify-self: end;
+  min-height: 44px;
+  padding: 9px 16px;
+}
+
+.memory-book-photo-modal img {
+  background: #fff;
+  border-radius: 12px;
+  display: block;
+  max-height: calc(94vh - 58px);
+  object-fit: contain;
+  width: 100%;
+}
+
 @media (max-width: 700px) {
   .memory-book-offer {
     align-items: start;
@@ -16426,6 +16638,12 @@ textarea {
 
   .memory-book-summary,
   .memory-book-intro dl {
+    grid-template-columns: 1fr;
+  }
+
+  .memory-book-date-range,
+  .memory-book-date-actions,
+  .memory-book-button-row {
     grid-template-columns: 1fr;
   }
 
@@ -16447,6 +16665,12 @@ textarea {
   .memory-book-photos img {
     height: auto;
     max-height: 360px;
+  }
+
+  .memory-book-print-ready .button,
+  .memory-book-back-link {
+    justify-self: stretch;
+    width: 100%;
   }
 }
 
@@ -16665,6 +16889,17 @@ textarea {
 
   .memory-book-entry-choice,
   .memory-book-entry.is-excluded {
+    display: none !important;
+  }
+
+  .memory-book-photo-open {
+    border: 0;
+    color: inherit;
+    cursor: default;
+  }
+
+  .memory-book-photo-open span,
+  .memory-book-photo-modal {
     display: none !important;
   }
 

@@ -34,6 +34,9 @@ assert.doesNotMatch(start, /created=\$\{record\.id\}#person-profile/, "new noteb
 assert.doesNotMatch(styles, /\.notebook-tab-bar\s*\{\s*display:\s*none;/, "notebook navigation must stay visible");
 assert.ok(styles.includes(".record-first-quick-grid"), "mobile quick actions must be styled");
 assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.notebook-tab-bar\s*\{\s*position:\s*static;/, "mobile notebook tabs must not overlap the stacked global header");
+assert.match(styles, /\.cloud-backup-card p\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/, "cloud backup explanation must wrap instead of overflowing narrow screens");
+assert.match(styles, /\.cloud-auto-line\s*\{[\s\S]*?max-width:\s*100%;[\s\S]*?min-width:\s*0;/, "cloud sync status must stay inside the card on narrow screens");
+assert.match(styles, /\.cloud-form input\s*\{[\s\S]*?min-width:\s*0;[\s\S]*?width:\s*100%;/, "cloud email input must shrink within the mobile card");
 
 assert.ok(familyPage.includes("招待は3つの手順です"), "family steps must be visible before sign-in");
 assert.ok(family.includes("まだ相手には届いていません"), "creating an invite must not be described as sending it");
