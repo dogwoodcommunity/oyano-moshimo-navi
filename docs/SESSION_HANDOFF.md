@@ -11013,3 +11013,29 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、利用者向け問い合わせ先。
+
+## 2026-09-04 追記 289 — 利用者向け問い合わせ先を確定
+
+ユーザー確認により、利用規約、プライバシーポリシー、将来の特商法表示で公開する問い合わせ先を
+`info@bee-ch.co.jp` と確定した。現在の `legalContactHref` のメール判定に合致し、公開画面では
+`mailto:info@bee-ch.co.jp` としてメール作成画面を開く。押しただけで自動送信はしない。
+
+- `apps/web/.env.example` の `LEGAL_CONTACT` に確定値を設定した。
+- `docs/COMMERCIAL_RELEASE_INPUTS.md`、`docs/ENVIRONMENT_MATRIX.md`、
+  `docs/PRODUCTION_CHECKLIST.md`、`docs/COMMERCIAL_OPERATIONS_RUNBOOK.md` を更新した。
+- `scripts/test-commercial-release-gates.mjs` に、環境設定例と入力票から確定窓口が消えない
+  回帰検査を追加した。
+- `NOTIFICATION_EMAIL_REPLY_TO` は通知メール専用の別設定であり、今回の回答から同じ値だと推測せず
+  未設定のまま残した。公開メールへの迷惑メール対策と担当シフトも運用上の残課題。
+
+検証は `pnpm run test:commercial-release-gates`、`pnpm --filter web run typecheck`、
+`git diff --check` がすべて成功。
+
+本番・データの境界:
+
+- Vercel本番環境の `LEGAL_CONTACT` はまだ変更しておらず、実際の受信・返信テスト、
+  本番法務ページでの表示・クリック確認も未実施。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、問い合わせ受付時間と一次返信目標。
