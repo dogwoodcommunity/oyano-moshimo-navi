@@ -11103,3 +11103,37 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、プライバシーポリシーの施行日。
+
+## 2026-09-04 追記 292 — プライバシーポリシーの施行日も正式公開日と同日に確定
+
+ユーザー確認により、プライバシーポリシーの施行日も `正式公開日と同日` にする方針を確定した。
+正式公開日はまだ決まっていないため、`LEGAL_PRIVACY_EFFECTIVE_DATE` は空欄のまま保ち、
+公開日が決まった時点で同じ日本時間の実日付を `YYYY年M月D日` 形式で入力する。
+
+- `.env.example` と `DEPLOYMENT.md` は、利用規約とプライバシーポリシーの各設定欄へ
+  正式公開日と同じ実日付を個別に入力する説明へ更新した。
+- `COMMERCIAL_RELEASE_INPUTS.md`、`ENVIRONMENT_MATRIX.md`、正式版チェックリスト、
+  運用runbookへ方針と公開直前の入力・表示確認条件を同期した。
+- 初回施行日は同日にするが、将来は別々に改定できるよう
+  `LEGAL_TERMS_EFFECTIVE_DATE` と `LEGAL_PRIVACY_EFFECTIVE_DATE` は別変数のまま維持した。
+- 正式版ゲート回帰に、プライバシー日付欄を実日付確定まで空欄で保つこと、
+  方針文言をenv値へ入れないこと、確定方針を入力票へ保持することを追加した。
+- 独立した読み取り専用監査でもP0指摘なし。正式公開日はVercel deploy日、プレビュー公開日、
+  モニター開始日、有料販売開始日から推測せず、運営が正式公開日として決めた日本時間の日付を使う。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm --filter web run typecheck`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- Vercel本番環境変数と本番法務ページは変更していない。正式公開日が未確定のため、
+  2つの施行日envは未設定でStage AはNO-GOを継続する。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、アカウント削除担当と代行者。

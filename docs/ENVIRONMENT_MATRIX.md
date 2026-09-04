@@ -36,7 +36,7 @@
 | `LEGAL_CONTACT` | 無料正式公開時 | no | 確定値は `info@bee-ch.co.jp`。利用者が実際に連絡できる問い合わせメールまたはフォームURL |
 | `LEGAL_CONTACT_RESPONSE_TARGET` | 無料正式公開時 | no | 確定値は `メール受付：24時間／原則3営業日以内に返信`。法務ページに表示する受付・返信目安 |
 | `LEGAL_TERMS_EFFECTIVE_DATE` | 無料正式公開時 | no | 正式公開日と同じ日本時間の実日付を `YYYY年M月D日` で入力。方針文言や仮日付は不可 |
-| `LEGAL_PRIVACY_EFFECTIVE_DATE` | 無料正式公開時 | no | プライバシーポリシーの施行日。例: `2026年10月1日` |
+| `LEGAL_PRIVACY_EFFECTIVE_DATE` | 無料正式公開時 | no | 正式公開日と同じ日本時間の実日付を `YYYY年M月D日` で入力。方針文言や仮日付は不可 |
 | `LEGAL_PRICE_DESCRIPTION` | 有料提供時 | no | 税込価格、自動更新周期など実際の販売価格説明 |
 | `LEGAL_SERVICE_DELIVERY` | 有料提供時 | no | 決済後に機能・役務を提供する時期 |
 | `LEGAL_CANCELLATION_POLICY` | 有料提供時 | no | 解約方法、次回更新停止、返金条件 |

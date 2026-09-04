@@ -67,6 +67,9 @@ assert.ok(releaseInputs.includes("| 問い合わせ受付時間・一次返信�
 assert.ok(envExample.includes("LEGAL_TERMS_EFFECTIVE_DATE=\n"), "the terms effective date must remain empty until the actual public release date is known");
 assert.doesNotMatch(envExample, /LEGAL_TERMS_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the effective-date env value");
 assert.ok(releaseInputs.includes("| 利用規約の施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed terms effective-date policy");
+assert.ok(envExample.includes("LEGAL_PRIVACY_EFFECTIVE_DATE=\n"), "the privacy effective date must remain empty until the actual public release date is known");
+assert.doesNotMatch(envExample, /LEGAL_PRIVACY_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the privacy effective-date env value");
+assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed privacy effective-date policy");
 
 assert.ok(plans.includes("<PlusUpgrade salesReady={salesReady} />"), "the plans page must pass server-side sale readiness to the client");
 assert.ok(plans.includes('plan.name === "Family Plus" && !salesReady'), "closed Plus sales must not render an actionable plan link");
