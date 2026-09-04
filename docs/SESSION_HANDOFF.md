@@ -11071,3 +11071,35 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、利用規約の施行日。
+
+## 2026-09-04 追記 291 — 利用規約の施行日を正式公開日と同日にする方針を確定
+
+ユーザー確認により、利用規約の施行日は `正式公開日と同日` にする方針を確定した。
+正式公開日はまだ決まっていないため、`LEGAL_TERMS_EFFECTIVE_DATE` は空欄のまま保ち、
+公開日が決まった時点で同じ日本時間の実日付を `YYYY年M月D日` 形式で入力する。
+
+- `.env.example`、`COMMERCIAL_RELEASE_INPUTS.md`、`ENVIRONMENT_MATRIX.md`、`DEPLOYMENT.md`、
+  正式版チェックリスト、運用runbookへ方針と公開直前の入力条件を同期した。
+- `commercialReadiness.ts` と管理者env確認を強化し、存在しない日付、仮日付、
+  `正式公開日と同日` のような方針文言では公開準備完了にならないようにした。
+- 同じ検証を将来入力する `LEGAL_PRIVACY_EFFECTIVE_DATE` にも適用したが、
+  プライバシーポリシーの施行日そのものは今回の回答から推測せず、未確定のまま残した。
+- 正式版ゲート回帰に、利用規約の日付欄を空欄で保つこと、方針を入力票に保持すること、
+  実日付検証が公開ゲートと管理者env確認の双方に使われることを追加した。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm --filter web run typecheck`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- Vercel本番環境変数と本番法務ページは変更していない。正式公開日が未確定のため、
+  `LEGAL_TERMS_EFFECTIVE_DATE` は未設定でStage AはNO-GOを継続する。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、プライバシーポリシーの施行日。

@@ -52,6 +52,26 @@ function enabled(key: string) {
   return value(key).toLowerCase() === "true";
 }
 
+export function isValidLegalEffectiveDate(input: string) {
+  const match = /^(20\d{2})年([1-9]|1[0-2])月([1-9]|[12]\d|3[01])日$/.exec(input.trim());
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}
+
+function freeWebLegalValueReady(key: (typeof freeWebLegalEnvKeys)[number]) {
+  const current = value(key);
+  if (key === "LEGAL_TERMS_EFFECTIVE_DATE" || key === "LEGAL_PRIVACY_EFFECTIVE_DATE") {
+    return isValidLegalEffectiveDate(current);
+  }
+  return Boolean(current);
+}
+
 export function legalContactHref(contact: string) {
   const normalized = contact.trim();
   if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
@@ -86,7 +106,7 @@ export function missingLegalDisclosureKeys() {
 }
 
 export function getPublicOperatorDisclosure(): PublicOperatorDisclosure | null {
-  if (freeWebLegalEnvKeys.some((key) => !value(key))) return null;
+  if (freeWebLegalEnvKeys.some((key) => !freeWebLegalValueReady(key))) return null;
   return {
     operatorName: value("LEGAL_BUSINESS_NAME"),
     responsiblePerson: value("LEGAL_RESPONSIBLE_PERSON"),
@@ -98,7 +118,7 @@ export function getPublicOperatorDisclosure(): PublicOperatorDisclosure | null {
 }
 
 export function missingFreeWebLegalKeys() {
-  return freeWebLegalEnvKeys.filter((key) => !value(key));
+  return freeWebLegalEnvKeys.filter((key) => !freeWebLegalValueReady(key));
 }
 
 export function plusSalesReady() {

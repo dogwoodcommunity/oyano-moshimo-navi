@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { verifyAdminRequest } from "@/lib/adminAuth";
+import { isValidLegalEffectiveDate } from "@/lib/commercialReadiness";
 
 const requiredEnv = [
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -33,6 +34,14 @@ const requiredEnv = [
   "NEXT_PUBLIC_WEB_BASE_URL"
 ];
 
+function isConfigured(key: string) {
+  const current = process.env[key]?.trim() ?? "";
+  if (key === "LEGAL_TERMS_EFFECTIVE_DATE" || key === "LEGAL_PRIVACY_EFFECTIVE_DATE") {
+    return isValidLegalEffectiveDate(current);
+  }
+  return Boolean(current);
+}
+
 export async function GET(request: Request) {
   const auth = await verifyAdminRequest(request);
   if (!auth.ok) return auth.response;
@@ -41,7 +50,7 @@ export async function GET(request: Request) {
     checkedAt: new Date().toISOString(),
     env: requiredEnv.map((key) => ({
       key,
-      configured: Boolean(process.env[key]?.trim())
+      configured: isConfigured(key)
     }))
   });
 }

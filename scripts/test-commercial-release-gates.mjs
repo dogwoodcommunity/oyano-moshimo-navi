@@ -53,7 +53,8 @@ for (const key of saleSwitches) {
   assert.ok(adminEnv.includes(`"${key}"`), `admin env check must report ${key}`);
 }
 
-assert.ok(adminEnv.includes("Boolean(process.env[key]?.trim())"), "admin env readiness must reject whitespace-only values");
+assert.ok(adminEnv.includes("configured: isConfigured(key)"), "admin env readiness must use the validated configuration check");
+assert.ok(adminEnv.includes("isValidLegalEffectiveDate(current)"), "admin env readiness must reject invalid legal effective dates");
 
 assert.ok(envExample.includes("LEGAL_BUSINESS_NAME=株式会社BEECH"), "the release configuration example must retain the confirmed operator name");
 assert.ok(releaseInputs.includes("| サービス運営者の正式名称 | **株式会社BEECH** |"), "the release input ledger must retain the confirmed operator name");
@@ -63,6 +64,9 @@ assert.ok(envExample.includes("LEGAL_CONTACT=info@bee-ch.co.jp"), "the release c
 assert.ok(releaseInputs.includes("| 利用者向け問い合わせ先 | **info@bee-ch.co.jp** |"), "the release input ledger must retain the confirmed public contact");
 assert.ok(envExample.includes("LEGAL_CONTACT_RESPONSE_TARGET=メール受付：24時間／原則3営業日以内に返信"), "the release configuration example must retain the confirmed response target");
 assert.ok(releaseInputs.includes("| 問い合わせ受付時間・一次返信目標 | **メール受付：24時間／原則3営業日以内に返信** |"), "the release input ledger must retain the confirmed response target");
+assert.ok(envExample.includes("LEGAL_TERMS_EFFECTIVE_DATE=\n"), "the terms effective date must remain empty until the actual public release date is known");
+assert.doesNotMatch(envExample, /LEGAL_TERMS_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the effective-date env value");
+assert.ok(releaseInputs.includes("| 利用規約の施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed terms effective-date policy");
 
 assert.ok(plans.includes("<PlusUpgrade salesReady={salesReady} />"), "the plans page must pass server-side sale readiness to the client");
 assert.ok(plans.includes('plan.name === "Family Plus" && !salesReady'), "closed Plus sales must not render an actionable plan link");
@@ -83,6 +87,7 @@ assert.doesNotMatch(tokushoho, /\[正式名称を要確定\]|\[代表者また�
 assert.ok(tokushoho.includes("有料サービスは受付準備中です"), "the legal page must clearly disclose when sales are closed");
 assert.ok(tokushoho.includes("disclosure.cancellationPolicy"), "open sales must publish cancellation and refund terms");
 assert.ok(readiness.includes("getPublicOperatorDisclosure()"), "paid sales must also require the free Web legal identity and effective dates");
+assert.ok(readiness.includes("isValidLegalEffectiveDate(current)"), "public legal readiness must require real effective dates instead of non-empty placeholders");
 assert.ok(readiness.includes("legalContactHref"), "published contact destinations must reject unsafe URL schemes");
 assert.ok(privacy.includes("operator.privacyEffectiveDate"), "privacy policy must publish its configured effective date");
 assert.ok(terms.includes("operator.termsEffectiveDate"), "terms must publish their configured effective date");
