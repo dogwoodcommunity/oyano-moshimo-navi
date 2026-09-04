@@ -54,6 +54,8 @@ for (const key of saleSwitches) {
 
 assert.ok(envExample.includes("LEGAL_BUSINESS_NAME=株式会社BEECH"), "the release configuration example must retain the confirmed operator name");
 assert.ok(releaseInputs.includes("| サービス運営者の正式名称 | **株式会社BEECH** |"), "the release input ledger must retain the confirmed operator name");
+assert.ok(envExample.includes("LEGAL_RESPONSIBLE_PERSON=代表取締役 池田哲也"), "the release configuration example must retain the confirmed responsible person");
+assert.ok(releaseInputs.includes("| 個人情報管理責任者の氏名または役職 | **代表取締役 池田哲也** |"), "the release input ledger must retain the confirmed responsible person");
 
 assert.ok(plans.includes("<PlusUpgrade salesReady={salesReady} />"), "the plans page must pass server-side sale readiness to the client");
 assert.ok(plans.includes('plan.name === "Family Plus" && !salesReady'), "closed Plus sales must not render an actionable plan link");

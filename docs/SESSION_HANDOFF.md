@@ -10989,3 +10989,27 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、個人情報管理・運営の責任者名または役職。
+
+## 2026-09-04 追記 288 — 正式責任者を代表取締役 池田哲也に確定
+
+ユーザー確認により、利用規約の運営責任者、プライバシーポリシーの個人情報管理責任者、
+将来の特商法表示の運営責任者を、いずれも `代表取締役 池田哲也` と確定した。
+
+- `apps/web/.env.example` の `LEGAL_RESPONSIBLE_PERSON` に確定値を設定した。
+- `docs/COMMERCIAL_RELEASE_INPUTS.md` の無料Web正式版と有料受付の入力票、
+  `docs/ENVIRONMENT_MATRIX.md`、`docs/PRODUCTION_CHECKLIST.md` を更新した。
+- `scripts/test-commercial-release-gates.mjs` に、環境設定例と入力票から確定責任者が消えない
+  回帰検査を追加した。
+- アカウント削除担当、障害対応担当、問い合わせ担当などの実務役割は、この回答から推測せず
+  未確定のまま残した。公開前の登記情報等との最終照合も残る。
+
+検証は `pnpm run test:commercial-release-gates`、`pnpm --filter web run typecheck`、
+`git diff --check` がすべて成功。
+
+本番・データの境界:
+
+- Vercel本番環境の `LEGAL_RESPONSIBLE_PERSON` はまだ変更しておらず、本番法務ページも未更新。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、決済には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、利用者向け問い合わせ先。
