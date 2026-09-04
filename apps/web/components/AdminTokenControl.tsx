@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ADMIN_BEARER_TOKEN_STORAGE_KEY,
   ADMIN_STATIC_TOKEN_STORAGE_KEY,
+  adminBearerHeaders,
   adminHeaders
 } from "@/lib/adminClientAuth";
 import {
@@ -17,16 +18,127 @@ type AuthState = "checking" | "authenticated" | "signed-out" | "denied";
 type AuthStatus = {
   authenticated?: boolean;
   email?: string | null;
-  method?: "supabase_app_admin" | "static_token";
+  method?: "supabase_app_admin" | "supabase_account_delete_executor" | "static_token";
+  aal?: "aal1" | "aal2";
 };
 
-export function AdminTokenControl() {
+type AdminTokenControlProps = {
+  authEndpoint?: string;
+  enableMfaStepUp?: boolean;
+  redirectPath?: string;
+  roleLabel?: string;
+  showEmergencyToken?: boolean;
+};
+
+type TotpFactor = {
+  id: string;
+  label: string;
+};
+
+export function AdminTokenControl({
+  authEndpoint = "/api/admin/auth-status",
+  enableMfaStepUp = false,
+  redirectPath = "/admin/monitor-feedback",
+  roleLabel = "管理者",
+  showEmergencyToken = true
+}: AdminTokenControlProps = {}) {
+  const verifyRequestId = useRef(0);
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [authStatus, setAuthStatus] = useState<AuthStatus>({});
   const [email, setEmail] = useState("");
   const [staticToken, setStaticToken] = useState("");
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [totpFactors, setTotpFactors] = useState<TotpFactor[] | null>(null);
+  const [selectedFactorId, setSelectedFactorId] = useState("");
+  const [mfaCode, setMfaCode] = useState("");
+  const [mfaMessage, setMfaMessage] = useState("");
+  const [verifyingMfa, setVerifyingMfa] = useState(false);
+
+  const loadVerifiedTotpFactors = useCallback(async (requestId: number) => {
+    const client = getBrowserSupabase();
+    if (!client) {
+      if (requestId !== verifyRequestId.current) return;
+      setTotpFactors([]);
+      setMfaMessage("多要素認証の設定を確認できませんでした。");
+      return;
+    }
+
+    const { data, error } = await client.auth.mfa.listFactors();
+    if (requestId !== verifyRequestId.current) return;
+    if (error || !data) {
+      setTotpFactors([]);
+      setMfaMessage("登録済みの多要素認証を確認できませんでした。");
+      return;
+    }
+
+    const factors = data.totp
+      .filter((factor) => factor.status === "verified")
+      .map((factor, index) => ({
+        id: factor.id,
+        label: factor.friendly_name?.trim() || `認証アプリ ${index + 1}`
+      }));
+    setTotpFactors(factors);
+    setSelectedFactorId((current) => (
+      factors.some((factor) => factor.id === current) ? current : factors[0]?.id ?? ""
+    ));
+    setMfaMessage("");
+  }, []);
+
+  const verifyStoredAccess = useCallback(async () => {
+    const requestId = ++verifyRequestId.current;
+    const requestHeaders = showEmergencyToken ? adminHeaders() : adminBearerHeaders();
+    const hasStoredAccess = Object.keys(requestHeaders).length > 0;
+    if (!hasStoredAccess) {
+      setAuthStatus({});
+      setTotpFactors(null);
+      setSelectedFactorId("");
+      setMfaCode("");
+      setMfaMessage("");
+      setAuthState("signed-out");
+      window.dispatchEvent(new Event("admin-auth-changed"));
+      return;
+    }
+
+    try {
+      const response = await fetch(authEndpoint, { headers: requestHeaders });
+      if (requestId !== verifyRequestId.current) return;
+      if (!response.ok) {
+        setAuthStatus({});
+        setTotpFactors(null);
+        setSelectedFactorId("");
+        setMfaCode("");
+        setMfaMessage("");
+        setAuthState("denied");
+        window.dispatchEvent(new Event("admin-auth-changed"));
+        return;
+      }
+      const body = await response.json() as AuthStatus;
+      if (requestId !== verifyRequestId.current) return;
+      setAuthStatus(body);
+      setAuthState("authenticated");
+      if (enableMfaStepUp && body.aal === "aal1") {
+        setTotpFactors(null);
+        await loadVerifiedTotpFactors(requestId);
+      } else {
+        setTotpFactors(null);
+        setSelectedFactorId("");
+        setMfaCode("");
+        setMfaMessage("");
+      }
+      if (requestId !== verifyRequestId.current) return;
+      window.dispatchEvent(new Event("admin-auth-changed"));
+    } catch {
+      if (requestId !== verifyRequestId.current) return;
+      setAuthStatus({});
+      setTotpFactors(null);
+      setSelectedFactorId("");
+      setMfaCode("");
+      setMfaMessage("");
+      setAuthState("denied");
+      window.dispatchEvent(new Event("admin-auth-changed"));
+    }
+  }, [authEndpoint, enableMfaStepUp, loadVerifiedTotpFactors, showEmergencyToken]);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,48 +154,47 @@ export function AdminTokenControl() {
           authResult.session.access_token
         );
       }
-      setStaticToken(window.localStorage.getItem(ADMIN_STATIC_TOKEN_STORAGE_KEY) ?? "");
+      if (showEmergencyToken) {
+        setStaticToken(window.localStorage.getItem(ADMIN_STATIC_TOKEN_STORAGE_KEY) ?? "");
+      }
       await verifyStoredAccess();
     }
 
-    async function verifyStoredAccess() {
-      const hasStoredAccess = Object.keys(adminHeaders()).length > 0;
-      if (!hasStoredAccess) {
+    void initialize();
+    const client = getBrowserSupabase();
+    const authListener = enableMfaStepUp ? client?.auth.onAuthStateChange((event, session) => {
+      if (event === "TOKEN_REFRESHED" && session?.access_token) {
+        window.localStorage.setItem(ADMIN_BEARER_TOKEN_STORAGE_KEY, session.access_token);
+        void verifyStoredAccess();
+      } else if (event === "SIGNED_OUT") {
+        verifyRequestId.current += 1;
+        window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
+        setAuthStatus({});
+        setTotpFactors(null);
+        setSelectedFactorId("");
+        setMfaCode("");
+        setMfaMessage("");
         setAuthState("signed-out");
-        return;
-      }
-
-      try {
-        const response = await fetch("/api/admin/auth-status", { headers: adminHeaders() });
-        if (!response.ok) {
-          setAuthState("denied");
-          return;
-        }
-        const body = await response.json() as AuthStatus;
-        setAuthStatus(body);
-        setAuthState("authenticated");
         window.dispatchEvent(new Event("admin-auth-changed"));
-      } catch {
-        setAuthState("denied");
       }
-    }
-
-    initialize();
+    }) : undefined;
     return () => {
       cancelled = true;
+      verifyRequestId.current += 1;
+      authListener?.data.subscription.unsubscribe();
     };
-  }, []);
+  }, [enableMfaStepUp, showEmergencyToken, verifyStoredAccess]);
 
   async function sendLink() {
     const nextEmail = email.trim();
     if (!nextEmail) {
-      setMessage("管理者として登録したメールアドレスを入力してください。");
+      setMessage(`${roleLabel}として登録したメールアドレスを入力してください。`);
       return;
     }
 
     setSending(true);
     setMessage("");
-    const result = await sendAdminMagicLink(nextEmail);
+    const result = await sendAdminMagicLink(nextEmail, redirectPath);
     setSending(false);
     setMessage(result.ok
       ? "確認メールを送りました。メール内のリンクを開くと管理画面へ戻ります。"
@@ -91,14 +202,54 @@ export function AdminTokenControl() {
   }
 
   async function signOut() {
+    verifyRequestId.current += 1;
     await getBrowserSupabase()?.auth.signOut();
     window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
-    window.localStorage.removeItem(ADMIN_STATIC_TOKEN_STORAGE_KEY);
+    if (showEmergencyToken) {
+      window.localStorage.removeItem(ADMIN_STATIC_TOKEN_STORAGE_KEY);
+    }
     setStaticToken("");
     setAuthStatus({});
+    setTotpFactors(null);
+    setSelectedFactorId("");
+    setMfaCode("");
+    setMfaMessage("");
     setAuthState("signed-out");
-    setMessage("管理画面からログアウトしました。");
+    setMessage(`${roleLabel}画面からログアウトしました。`);
     window.dispatchEvent(new Event("admin-auth-changed"));
+  }
+
+  async function verifyMfaCode() {
+    const code = mfaCode.trim();
+    if (!/^\d{6}$/.test(code) || !selectedFactorId) {
+      setMfaMessage("認証アプリに表示された6桁のコードを入力してください。");
+      return;
+    }
+
+    const client = getBrowserSupabase();
+    if (!client) {
+      setMfaMessage("多要素認証の設定を確認できませんでした。");
+      return;
+    }
+
+    const requestId = ++verifyRequestId.current;
+    setVerifyingMfa(true);
+    setMfaMessage("");
+    const { data, error } = await client.auth.mfa.challengeAndVerify({
+      factorId: selectedFactorId,
+      code
+    });
+    if (requestId !== verifyRequestId.current) return;
+    setVerifyingMfa(false);
+    if (error || !data?.access_token) {
+      setMfaMessage("確認コードを検証できませんでした。新しいコードでやり直してください。");
+      return;
+    }
+
+    window.localStorage.setItem(ADMIN_BEARER_TOKEN_STORAGE_KEY, data.access_token);
+    setMfaCode("");
+    setMessage("多要素認証を確認しました。");
+    await verifyStoredAccess();
   }
 
   async function saveEmergencyToken() {
@@ -111,7 +262,9 @@ export function AdminTokenControl() {
     window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
     window.localStorage.setItem(ADMIN_STATIC_TOKEN_STORAGE_KEY, nextToken);
     setAuthState("checking");
-    const response = await fetch("/api/admin/auth-status", { headers: adminHeaders() });
+    const requestId = ++verifyRequestId.current;
+    const response = await fetch(authEndpoint, { headers: adminHeaders() });
+    if (requestId !== verifyRequestId.current) return;
     if (!response.ok) {
       setAuthState("denied");
       setMessage("管理キーを確認できませんでした。");
@@ -119,6 +272,7 @@ export function AdminTokenControl() {
     }
 
     const body = await response.json() as AuthStatus;
+    if (requestId !== verifyRequestId.current) return;
     setAuthStatus(body);
     setAuthState("authenticated");
     setMessage("緊急用管理キーで認証しました。");
@@ -128,7 +282,7 @@ export function AdminTokenControl() {
   if (authState === "checking") {
     return (
       <section className="admin-auth-card is-checking" aria-live="polite">
-        <strong>管理者認証を確認しています</strong>
+        <strong>{roleLabel}認証を確認しています</strong>
       </section>
     );
   }
@@ -137,13 +291,67 @@ export function AdminTokenControl() {
     return (
       <section className="admin-auth-card is-authenticated" aria-live="polite">
         <div>
-          <p className="admin-section-label">管理者認証</p>
+          <p className="admin-section-label">{roleLabel}認証</p>
           <h2>確認済みです</h2>
           <p>
-            {authStatus.email ?? "緊急用管理キー"}で管理データを表示しています。
+            {authStatus.email ?? "緊急用管理キー"}で{roleLabel}用データを表示しています。
           </p>
+          {enableMfaStepUp && authStatus.aal === "aal2" ? (
+            <p className="admin-auth-message">多要素認証（AAL2）を確認済みです。</p>
+          ) : null}
+          {enableMfaStepUp && authStatus.aal === "aal1" ? (
+            <div className="admin-auth-form">
+              <p>完全削除を実行するには、登録済みの認証アプリで追加確認してください。削除前確認はこのまま利用できます。</p>
+              {totpFactors === null ? <p>登録済みの認証アプリを確認しています。</p> : null}
+              {totpFactors?.length === 0 ? (
+                <p className="admin-auth-warning">
+                  verified のTOTP要素が登録されていません。MFA登録は別の管理手順で事前に完了してください。
+                </p>
+              ) : null}
+              {totpFactors && totpFactors.length > 0 ? (
+                <>
+                  {totpFactors.length > 1 ? (
+                    <label>
+                      認証アプリ
+                      <select
+                        className="input"
+                        onChange={(event) => setSelectedFactorId(event.target.value)}
+                        value={selectedFactorId}
+                      >
+                        {totpFactors.map((factor) => (
+                          <option key={factor.id} value={factor.id}>{factor.label}</option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : <p>{totpFactors[0].label}</p>}
+                  <label htmlFor="admin-mfa-code">6桁の確認コード</label>
+                  <input
+                    id="admin-mfa-code"
+                    className="input"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    maxLength={6}
+                    onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, "").slice(0, 6))}
+                    pattern="[0-9]{6}"
+                    type="text"
+                    value={mfaCode}
+                  />
+                  <button
+                    className="secondary"
+                    disabled={verifyingMfa || mfaCode.length !== 6}
+                    onClick={() => void verifyMfaCode()}
+                    type="button"
+                  >
+                    {verifyingMfa ? "確認しています" : "多要素認証を確認する"}
+                  </button>
+                </>
+              ) : null}
+              {mfaMessage ? <p className="admin-auth-message">{mfaMessage}</p> : null}
+            </div>
+          ) : null}
+          {message ? <p className="admin-auth-message">{message}</p> : null}
         </div>
-        <button className="admin-text-button" type="button" onClick={signOut}>ログアウト</button>
+        <button className="admin-text-button" disabled={verifyingMfa} type="button" onClick={signOut}>ログアウト</button>
       </section>
     );
   }
@@ -152,19 +360,19 @@ export function AdminTokenControl() {
     <section className="admin-auth-card" aria-live="polite">
       <div className="admin-auth-intro">
         <p className="admin-section-label">最初に1回だけ</p>
-        <h2>管理者メールを確認します</h2>
+        <h2>{roleLabel}メールを確認します</h2>
         <p>
-          運営メンバーとして登録済みのメールアドレスへ確認メールを送ります。
+          {roleLabel}として登録済みのメールアドレスへ確認メールを送ります。
           メール内のリンクを開くと、回答や利用状況が表示されます。
         </p>
       </div>
       {authState === "denied" && (
         <p className="admin-auth-warning">
-          現在のログインでは管理権限を確認できませんでした。登録済みの管理者メールで確認してください。
+          現在のログインでは{roleLabel}権限を確認できませんでした。登録済みのメールで確認してください。
         </p>
       )}
       <div className="admin-auth-form">
-        <label htmlFor="admin-email">管理者メールアドレス</label>
+        <label htmlFor="admin-email">{roleLabel}メールアドレス</label>
         <input
           id="admin-email"
           className="input"
@@ -179,22 +387,24 @@ export function AdminTokenControl() {
         </button>
       </div>
       {message && <p className="admin-auth-message">{message}</p>}
-      <details className="admin-emergency-access">
-        <summary>メールで入れない場合</summary>
-        <div>
-          <p>システム担当者から緊急用管理キーを受け取った場合だけ使用します。</p>
-          <label htmlFor="admin-emergency-token">緊急用管理キー</label>
-          <input
-            id="admin-emergency-token"
-            className="input"
-            type="password"
-            autoComplete="off"
-            value={staticToken}
-            onChange={(event) => setStaticToken(event.target.value)}
-          />
-          <button className="secondary" type="button" onClick={saveEmergencyToken}>管理キーを確認する</button>
-        </div>
-      </details>
+      {showEmergencyToken ? (
+        <details className="admin-emergency-access">
+          <summary>メールで入れない場合</summary>
+          <div>
+            <p>システム担当者から緊急用管理キーを受け取った場合だけ使用します。</p>
+            <label htmlFor="admin-emergency-token">緊急用管理キー</label>
+            <input
+              id="admin-emergency-token"
+              className="input"
+              type="password"
+              autoComplete="off"
+              value={staticToken}
+              onChange={(event) => setStaticToken(event.target.value)}
+            />
+            <button className="secondary" type="button" onClick={saveEmergencyToken}>管理キーを確認する</button>
+          </div>
+        </details>
+      ) : null}
     </section>
   );
 }

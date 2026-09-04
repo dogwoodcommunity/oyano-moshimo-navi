@@ -63,6 +63,9 @@ jobs:
       - name: Test web account deletion
         run: pnpm run test:web-account-deletion
 
+      - name: Test least-privilege account deletion operator
+        run: pnpm run test:account-delete-executor
+
       - name: Test verified account erasure PostgreSQL pipeline
         run: pnpm run test:account-erasure:sql
 

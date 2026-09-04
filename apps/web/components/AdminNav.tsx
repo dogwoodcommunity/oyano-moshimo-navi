@@ -12,18 +12,22 @@ const items = [
   { href: "/admin/env", label: "本番設定" }
 ];
 
+const deleteRequestItem = { href: "/admin/delete-requests", label: "削除依頼" };
+
 export function AdminNav() {
   const pathname = usePathname();
+  const deletionOnly = pathname.startsWith(deleteRequestItem.href);
+  const visibleItems = deletionOnly ? [deleteRequestItem] : items;
 
   return (
     <header className="admin-site-header">
       <div className="admin-site-header-inner">
-        <Link className="admin-site-brand" href="/admin">
+        <Link className="admin-site-brand" href={deletionOnly ? deleteRequestItem.href : "/admin"}>
           <span aria-hidden="true">運営</span>
           <strong>親のもしもナビ 管理画面</strong>
         </Link>
         <nav className="admin-site-nav" aria-label="管理画面のメニュー">
-          {items.map((item) => {
+          {visibleItems.map((item) => {
             const active = item.href === "/admin"
               ? pathname === item.href
               : pathname.startsWith(item.href);

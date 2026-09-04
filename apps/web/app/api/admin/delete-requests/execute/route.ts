@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/adminAuth";
+import { verifyAccountDeleteOperatorRequest } from "@/lib/adminAuth";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type JsonObject = Record<string, unknown>;
@@ -208,14 +208,19 @@ async function removeAndVerifyStorage(
 }
 
 export async function POST(request: Request) {
-  const auth = await verifyAdminRequest(request);
+  const auth = await verifyAccountDeleteOperatorRequest(request);
   if (!auth.ok) return auth.response;
-  // Emergency/static keys may view existing admin pages, but irreversible
-  // erasure always requires a currently authenticated app_admin account.
-  if (auth.admin.method !== "supabase_app_admin" || !auth.admin.userId) {
+
+  // This defensive gate preserves the Bearer-only deletion boundary if the
+  // scoped verifier gains another method in the future. Static keys never
+  // reach this route through verifyAccountDeleteOperatorRequest.
+  if (
+    auth.admin.method !== "supabase_app_admin"
+    && auth.admin.method !== "supabase_account_delete_executor"
+  ) {
     return jsonError(
-      "app_admin_bearer_required",
-      "完全削除は、登録済み管理者メールで再ログインして実行してください。緊急用管理キーでは実行できません。",
+      "account_delete_operator_bearer_required",
+      "完全削除は、登録済みの管理者または削除担当者として再ログインして実行してください。",
       403
     );
   }
@@ -234,6 +239,13 @@ export async function POST(request: Request) {
   }
 
   if (action === "execute") {
+    if (auth.admin.aal !== "aal2") {
+      return jsonError(
+        "account_erasure_aal2_required",
+        "完全削除には、多要素認証を完了したログイン（AAL2）が必要です。",
+        403
+      );
+    }
     if (process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED !== "true") {
       return jsonError(
         "account_erasure_execution_disabled",
@@ -277,7 +289,10 @@ export async function POST(request: Request) {
     }
     return NextResponse.json({
       checked: true,
-      executionEnabled: process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true",
+      executionEnabled:
+        process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true" && auth.admin.aal === "aal2",
+      requiresAal2: auth.admin.aal !== "aal2",
+      assuranceLevel: auth.admin.aal,
       authState,
       result: prepared
     });

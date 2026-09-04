@@ -42,12 +42,15 @@ run_sql supabase/account_erasure_regression_bootstrap.sql
 run_sql supabase/schema.sql
 run_sql supabase/api_grants.sql
 run_sql supabase/production_rls.sql
+run_sql supabase/account_delete_executor_schema_regression.sql
 run_sql supabase/notebook_atomic_sync_v2.sql
 run_sql supabase/ai_consult_memory.sql
 run_sql supabase/notebook_diary_delete.sql
 run_sql supabase/consult_daily_claim.sql
 run_sql supabase/notebook_person_delete.sql
 run_sql supabase/admin_auth_hardening.sql
+run_sql supabase/account_delete_executor_role.sql
+run_sql supabase/account_delete_executor_role.sql
 run_sql supabase/account_deletion_pipeline.sql
 run_sql supabase/account_deletion_pipeline.sql
 # A later broad bootstrap must not reopen the operator-only pipeline.

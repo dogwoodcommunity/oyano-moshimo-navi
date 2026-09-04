@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { verifyAdminRequest } from "@/lib/adminAuth";
+import { verifyAccountDeleteOperatorRequest } from "@/lib/adminAuth";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 export type AdminDeleteRequestRow = {
@@ -46,19 +46,59 @@ type PatchBody = {
 };
 
 const allowedStatuses = new Set<AdminDeleteRequestRow["status"]>([
-  "requested",
   "reviewing",
-  "completed",
   "needs_followup"
 ]);
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const noStoreHeaders = { "Cache-Control": "no-store" };
+
+function statusUpdateError(result: string) {
+  if (result === "operator_forbidden") {
+    return NextResponse.json(
+      { error: result, message: "削除担当者の権限を確認できませんでした。" },
+      { status: 403 }
+    );
+  }
+  if (result === "request_not_found") {
+    return NextResponse.json(
+      { error: result, message: "削除依頼を確認できませんでした。" },
+      { status: 404 }
+    );
+  }
+  if (result === "verified_account_erasure_required" || result === "account_erasure_in_progress") {
+    return NextResponse.json(
+      { error: result, message: "完全削除の処理中または完了済みのため、状態だけを変更できません。" },
+      { status: 409 }
+    );
+  }
+  if (result === "note_too_long") {
+    return NextResponse.json(
+      { error: result, message: "処理メモは2000文字以内で入力してください。" },
+      { status: 422 }
+    );
+  }
+  if (result === "invalid_request" || result === "invalid_status") {
+    return NextResponse.json(
+      { error: result, message: "削除依頼IDと状態を正しく指定してください。" },
+      { status: 400 }
+    );
+  }
+  return NextResponse.json(
+    { error: "account_delete_status_update_failed", message: "削除依頼の状態を更新できませんでした。" },
+    { status: 500 }
+  );
+}
 
 export async function GET(request: Request) {
-  const auth = await verifyAdminRequest(request);
+  const auth = await verifyAccountDeleteOperatorRequest(request);
   if (!auth.ok) return auth.response;
 
   const supabase = getServerSupabase();
   if (!supabase) {
-    return NextResponse.json({ deleteRequests: [], source: "not_configured" });
+    return NextResponse.json(
+      { deleteRequests: [], source: "not_configured" },
+      { headers: noStoreHeaders }
+    );
   }
 
   const { data, error } = await supabase
@@ -120,11 +160,14 @@ export async function GET(request: Request) {
     };
   });
 
-  return NextResponse.json({ deleteRequests, source: "supabase" });
+  return NextResponse.json(
+    { deleteRequests, source: "supabase" },
+    { headers: noStoreHeaders }
+  );
 }
 
 export async function PATCH(request: Request) {
-  const auth = await verifyAdminRequest(request);
+  const auth = await verifyAccountDeleteOperatorRequest(request);
   if (!auth.ok) return auth.response;
 
   const supabase = getServerSupabase();
@@ -133,70 +176,32 @@ export async function PATCH(request: Request) {
   }
 
   const body = await request.json().catch(() => ({})) as PatchBody;
-  if (!body.id || !body.status || !allowedStatuses.has(body.status)) {
+  if (!body.id || !uuidPattern.test(body.id) || !body.status || !allowedStatuses.has(body.status)) {
     return NextResponse.json({ error: "id and valid status are required" }, { status: 400 });
   }
 
-  // A free-text note is not proof that Auth, database rows, and Storage
-  // objects were actually removed. Completion is reserved for the verified
-  // erasure pipeline so this status-only endpoint cannot create a false
-  // deletion receipt.
-  if (body.status === "completed") {
+  const note = body.note?.trim() || null;
+  if (note && note.length > 2000) {
     return NextResponse.json(
-      {
-        error: "verified_account_erasure_required",
-        message: "実データ・認証・写真の削除確認が完了するまで、削除依頼を完了にはできません。"
-      },
-      { status: 409 }
+      { error: "note_too_long", message: "処理メモは2000文字以内で入力してください。" },
+      { status: 422 }
     );
   }
-
-  const note = body.note?.trim() || null;
-
-  const { data: existing, error: readError } = await supabase
-    .from("account_delete_requests")
-    .select("id, status")
-    .eq("id", body.id)
-    .single();
-
-  if (readError) {
-    return NextResponse.json({ error: readError.message }, { status: 500 });
-  }
-
-  const now = new Date().toISOString();
-  const handledAt = null;
-
-  const { error } = await supabase
-    .from("account_delete_requests")
-    .update({
-      status: body.status,
-      last_status_changed_at: now,
-      handled_at: handledAt,
-      handled_note: note,
-      handled_by: auth.admin.userId ?? null,
-      handled_by_email: auth.admin.email ?? null,
-      handled_by_method: auth.admin.method
-    })
-    .eq("id", body.id);
-
+  const { data, error } = await supabase.rpc("update_account_delete_request_status_v1", {
+    p_request_id: body.id,
+    p_status: body.status,
+    p_note: note,
+    p_operator_user_id: auth.admin.userId
+  });
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  await supabase.from("audit_logs").insert({
-    actor_user_id: auth.admin.userId ?? null,
-    action: "account_delete_status_updated",
-    target_type: "account_delete_request",
-    target_id: body.id,
-    metadata: {
-      previous_status: existing.status,
-      status: body.status,
-      handled_note: note,
-      handled_by_user_id: auth.admin.userId ?? null,
-      handled_by_email: auth.admin.email ?? null,
-      handled_by_method: auth.admin.method
-    }
-  });
+  const result = data && typeof data === "object" && !Array.isArray(data)
+    ? data as Record<string, unknown>
+    : {};
+  const resultCode = typeof result.result === "string" ? result.result : "invalid_rpc_response";
+  if (resultCode !== "updated") return statusUpdateError(resultCode);
 
-  return NextResponse.json({ updated: true });
+  return NextResponse.json({ updated: true, result });
 }

@@ -22,6 +22,33 @@ create table if not exists app_admins (
   unique(user_id)
 );
 
+begin;
+
+create table if not exists account_delete_executors (
+  user_id uuid primary key references profiles(id) on delete cascade,
+  created_by uuid references profiles(id) on delete set null,
+  note text,
+  active boolean not null default false,
+  activated_at timestamptz,
+  revoked_at timestamptz,
+  created_at timestamptz not null default now(),
+  constraint account_delete_executors_activation_state check (
+    (not active and activated_at is null and revoked_at is null)
+    or (active and activated_at is not null and revoked_at is null)
+    or (
+      not active
+      and activated_at is not null
+      and revoked_at is not null
+      and revoked_at >= activated_at
+    )
+  )
+);
+
+alter table account_delete_executors enable row level security;
+alter table account_delete_executors force row level security;
+
+commit;
+
 create table if not exists families (
   id uuid primary key default uuid_generate_v4(),
   name text not null,

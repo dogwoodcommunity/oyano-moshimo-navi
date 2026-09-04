@@ -5,6 +5,7 @@ with required_tables(name) as (
   values
     ('cases'),
     ('app_admins'),
+    ('account_delete_executors'),
     ('case_photos'),
     ('case_results'),
     ('families'),
@@ -59,6 +60,7 @@ where n.nspname = 'public'
   and c.relname in (
     'profiles',
     'app_admins',
+    'account_delete_executors',
     'families',
     'family_members',
     'family_invites',
@@ -97,6 +99,64 @@ where n.nspname = 'public'
     'subscriptions'
   )
 order by c.relname;
+
+select
+  'security_check' as check_type,
+  'account_delete_executor_forced_rls' as target,
+  exists (
+    select 1
+    from pg_class relation
+    where relation.oid = to_regclass('public.account_delete_executors')
+      and relation.relrowsecurity
+      and relation.relforcerowsecurity
+  ) as ok
+union all
+select
+  'security_check',
+  'account_delete_executor_activation_state',
+  exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'account_delete_executors'
+      and column_name = 'active'
+      and data_type = 'boolean'
+      and is_nullable = 'NO'
+      and column_default in ('false', 'false::boolean')
+  )
+  and exists (
+    select 1
+    from pg_constraint
+    where conrelid = to_regclass('public.account_delete_executors')
+      and conname = 'account_delete_executors_activation_state'
+      and contype = 'c'
+  )
+union all
+select
+  'security_check',
+  'account_delete_executor_acl',
+  has_table_privilege('service_role', 'public.account_delete_executors', 'SELECT')
+  and not has_table_privilege('service_role', 'public.account_delete_executors', 'INSERT,UPDATE,DELETE')
+  and not has_table_privilege('authenticated', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
+  and not has_table_privilege('anon', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
+  and not has_function_privilege('service_role', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and has_function_privilege('service_role', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('authenticated', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+  and not has_function_privilege('anon', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE');
 
 with policy_tables(name) as (
   values
@@ -162,7 +222,11 @@ with required_columns(table_name, column_name) as (
     ('cases', 'sensitive_info_consent_version'),
     ('cases', 'sensitive_info_consented_at'),
     ('scheduled_notifications', 'push_sent_at'),
-    ('scheduled_notifications', 'email_sent_at')
+    ('scheduled_notifications', 'email_sent_at'),
+    ('account_delete_executors', 'active'),
+    ('account_delete_executors', 'activated_at'),
+    ('account_delete_executors', 'revoked_at'),
+    ('account_erasure_jobs', 'operator_method')
 )
 select
   'column_exists' as check_type,
@@ -210,6 +274,8 @@ with required_functions(name) as (
     ('leave_family'),
     ('cancel_family_invite'),
     ('get_family_management_summary'),
+    ('account_erasure_operator_method'),
+    ('update_account_delete_request_status_v1'),
     ('guard_erased_profile_recreation'),
     ('guard_erased_notebook_storage_write'),
     ('guard_erased_notebook_attachment_reference'),

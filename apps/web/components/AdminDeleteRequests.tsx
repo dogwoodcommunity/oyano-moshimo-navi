@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AdminDeleteRequestRow } from "@/app/api/admin/delete-requests/route";
-import { adminHeaders } from "@/lib/adminClientAuth";
+import { adminBearerHeaders } from "@/lib/adminClientAuth";
 
 export function AdminDeleteRequests() {
+  const loadRequestId = useRef(0);
   const [deleteRequests, setDeleteRequests] = useState<AdminDeleteRequestRow[] | null>(null);
   const [error, setError] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
@@ -18,15 +19,19 @@ export function AdminDeleteRequests() {
   }>>({});
 
   function loadDeleteRequests() {
-    fetch("/api/admin/delete-requests", { headers: adminHeaders() })
+    const requestId = ++loadRequestId.current;
+    fetch("/api/admin/delete-requests", { headers: adminBearerHeaders() })
       .then((response) => {
-        if (!response.ok) throw new Error(response.status === 401 ? "Admin tokenを設定してください。" : "削除依頼を取得できませんでした。");
+        if (!response.ok) throw new Error(response.status === 401 || response.status === 403 ? "削除担当者としてログインしてください。" : "削除依頼を取得できませんでした。");
         return response.json();
       })
       .then((body: { deleteRequests?: AdminDeleteRequestRow[] }) => {
+        if (requestId !== loadRequestId.current) return;
+        setError("");
         setDeleteRequests(body.deleteRequests ?? []);
       })
       .catch((err: Error) => {
+        if (requestId !== loadRequestId.current) return;
         setError(err.message);
         setDeleteRequests([]);
       });
@@ -34,6 +39,24 @@ export function AdminDeleteRequests() {
 
   useEffect(() => {
     loadDeleteRequests();
+    const reloadAfterAuthChange = () => {
+      // Authentication changes invalidate PII, preflight decisions, and exact
+      // confirmations from the previous operator/session immediately.
+      loadRequestId.current += 1;
+      setDeleteRequests(null);
+      setError("");
+      setNotes({});
+      setErasureUserIds({});
+      setErasurePhrases({});
+      setErasureChecks({});
+      setUpdatingId(null);
+      loadDeleteRequests();
+    };
+    window.addEventListener("admin-auth-changed", reloadAfterAuthChange);
+    return () => {
+      loadRequestId.current += 1;
+      window.removeEventListener("admin-auth-changed", reloadAfterAuthChange);
+    };
   }, []);
 
   const rows = deleteRequests ?? [];
@@ -46,7 +69,7 @@ export function AdminDeleteRequests() {
     const response = await fetch("/api/admin/delete-requests", {
       method: "PATCH",
       headers: {
-        ...adminHeaders(),
+        ...adminBearerHeaders(),
         "Content-Type": "application/json"
       },
       body: JSON.stringify({ id, note, status })
@@ -54,7 +77,7 @@ export function AdminDeleteRequests() {
     setUpdatingId(null);
 
     if (!response.ok) {
-      setError(response.status === 401 ? "Admin tokenを設定してください。" : "削除依頼の状態を更新できませんでした。");
+      setError(response.status === 401 || response.status === 403 ? "削除担当者としてログインしてください。" : "削除依頼の状態を更新できませんでした。");
       return;
     }
 
@@ -73,7 +96,7 @@ export function AdminDeleteRequests() {
     const response = await fetch("/api/admin/delete-requests/execute", {
       method: "POST",
       headers: {
-        ...adminHeaders(),
+        ...adminBearerHeaders(),
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
@@ -86,6 +109,8 @@ export function AdminDeleteRequests() {
     const body = await response.json().catch(() => ({})) as {
       completed?: boolean;
       executionEnabled?: boolean;
+      requiresAal2?: boolean;
+      assuranceLevel?: "aal1" | "aal2";
       authState?: string;
       message?: string;
       result?: { result?: string; ownedFamilyCount?: number; storageObjectCount?: number };
@@ -107,12 +132,17 @@ export function AdminDeleteRequests() {
       const detail = ready
         ? `削除前確認OK：単独利用の家族${body.result?.ownedFamilyCount ?? 0}件、写真${body.result?.storageObjectCount ?? 0}件、Auth=${body.authState ?? "未確認"}`
         : "すでに検証済みで完了しています。";
+      const executionBlocker = body.requiresAal2
+        ? "／完全削除には多要素認証（AAL2）が必要です。"
+        : executionEnabled
+          ? ""
+          : "／実行スイッチはOFFです。";
       setErasureChecks((current) => ({
         ...current,
         [item.id]: {
           ready,
           executionEnabled,
-          message: executionEnabled ? detail : `${detail}／実行スイッチはOFFです。`
+          message: `${detail}${executionBlocker}`
         }
       }));
       return;

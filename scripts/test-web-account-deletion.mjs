@@ -42,7 +42,10 @@ assert.ok(
   "admin listing must recover the target UUID from an in-progress job after profile cascade"
 );
 assert.ok(!adminClient.includes('updateStatus(item.id, "completed")'), "admin UI must not offer an unverified completion button");
-assert.match(executeRoute, /auth\.admin\.method !== "supabase_app_admin"/, "irreversible erasure must reject static admin tokens");
+assert.match(executeRoute, /verifyAccountDeleteOperatorRequest/, "irreversible erasure must use the scoped delete-operator verifier");
+assert.match(executeRoute, /auth\.admin\.method !== "supabase_app_admin"/, "irreversible erasure must allow authenticated app admins");
+assert.match(executeRoute, /auth\.admin\.method !== "supabase_account_delete_executor"/, "irreversible erasure must allow authenticated delete-only operators");
+assert.doesNotMatch(executeRoute, /verifyAdminRequest/, "irreversible erasure must not use the generic or static-token verifier");
 assert.match(executeRoute, /ACCOUNT_ERASURE_EXECUTION_ENABLED !== "true"/, "irreversible erasure must default to a disabled server-side flag");
 assert.ok(executeRoute.includes('confirmation !== `完全削除 ${requestId}`'), "operator must confirm the exact deletion request");
 assert.ok(executeRoute.includes("targetUserId !== item.userId") === false, "server route must not trust a client-side row comparison");

@@ -11485,3 +11485,59 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次の1項目は、現行の全Admin API共通権限を付けずに済むよう、削除専用roleを実装するかの判断。
+
+## 2026-09-04 追記 302 — アカウント削除専用roleを実装
+
+ユーザーの「つくって」を受け、全Admin APIを操作できる `app_admin` を池田知也へ付与せずに済むよう、
+アカウント削除対応だけに限定した認証・認可・監査をソース上へ実装した。
+実装commitは `a42f4b9 feat: add account deletion operator role`。
+
+- `account_delete_executors` を追加した。初期値は `active=false` で、実在利用者や担当者を自動登録する
+  seedは入れていない。有効化・失効状態のDB制約、FORCE RLS、API role向けACL拒否を設定した。
+- 削除依頼の一覧、状態更新、事前確認、完全削除、専用の認証状態確認だけが
+  `verifyAccountDeleteOperatorRequest` を使う。通常のAdmin APIは従来の `verifyAdminRequest` のままで、
+  削除専用担当者からケース、モニター回答、AI利用状況、環境確認等へ権限が広がらない。
+- 削除専用画面は個別Supabase AuthのBearer tokenだけを受け付ける。共有の緊急Admin tokenは受け付けず、
+  Magic Linkログイン、認証済みTOTPによるMFA、ログアウト、token更新を扱う。
+- 一覧・状態更新・削除前確認はAAL1で可能とし、不可逆な完全削除はAAL2を必須にした。
+  UIにTOTPの新規登録・復旧機能は持たせず、事前に確認済みfactorがある運用だけを許可する。
+- 認証変更時は削除対象、メモ、事前確認結果、完全一致確認文、画面上の依頼情報を消去し、
+  古い通信応答がログアウト後やMFA後に個人情報・古い権限表示を復元しない世代ガードを追加した。
+- 状態変更はservice_role専用 `update_account_delete_request_status_v1` へ集約し、権限再確認、
+  対象行更新、担当者method/email、監査ログを同一トランザクションで記録する。
+- 削除用4 RPCも実行直前に担当権限を再確認し、処理途中の権限失効へfail closedする。
+  最後の `app_admin` と最後の有効な削除専用実行者は削除対象にできず、blocked状態を永続記録する。
+  一方、唯一の削除専用実行者であっても緊急失効自体は妨げない。
+- 対象者削除後の残存検査へ、削除専用roleの `user_id` と `created_by` を追加した。
+  既存 `app_admin` の互換経路は残したが、静的Admin tokenによる完全削除は許可しない。
+- fresh schema、既存DBへの初回migration、migration再実行、権限剥奪、原子的監査、
+  最終担当者保護、残存検査をPostgreSQL 16の回帰へ追加した。
+- 運用runbook、認可方針、正式版入力票、環境表、正式版チェックリスト、Supabase投入順を同期した。
+
+検証:
+
+- `pnpm run test:account-delete-executor`: 成功。削除専用3 routeと通常Admin 10 routeの分離を確認。
+- `pnpm run test:web-account-deletion`: 成功。
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run typecheck`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ167/167生成。
+  既知のSupabase Node 20将来廃止warningのみ。
+- `pnpm run test:account-erasure:sql`: PostgreSQL 16で最終成功。
+  `Verified account erasure PostgreSQL regression: ok`。
+- 独立したWeb認可レビューとSQL安全レビューを実施し、最終残存指摘なし。
+- staged差分だけを対象にGitleaksを実行し、検出0件。
+- `git diff --cached --check` と最終SQL差分check: 成功。
+
+GitHub・本番の境界:
+
+- `main` pushでVercel本番deployが自動起動する構成のため、本番反映の承認とDB migrationより先に
+  Webだけが公開されないよう、作業branch `codex/account-delete-executor-role` へpushする。
+- この時点で `main`、Vercel本番、Supabase本番DB/Auth/Storage、env、MFA、実担当者role、
+  `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` は変更していない。
+- モニター回答、日記、写真、AI相談、削除依頼、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしていない。
+
+正式運用前の次項目は、本番適用を別承認したうえで、SQLの順序投入、池田知也の個別Supabase Auth、
+確認済みTOTP、正確なuser IDに対する有効role行、別確認者、単独テストアカウントでの
+Auth・DB・Storage完走を確認すること。すべて揃うまで完全削除スイッチはOFFを維持する。

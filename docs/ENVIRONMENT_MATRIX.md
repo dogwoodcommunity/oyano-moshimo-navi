@@ -8,7 +8,7 @@
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | yes | yes | Supabase anon key |
 | `SUPABASE_SERVICE_ROLE_KEY` | yes | no | Next.js APIからDB/Storageへ安全に書き込む |
 | `ADMIN_ACCESS_TOKEN` | yes | no | Admin API簡易保護 |
-| `ACCOUNT_ERASURE_EXECUTION_ENABLED` | 削除運用開始時 | no | Auth・DB・Storageの完全削除を許可する最終スイッチ。通常は `false`。登録済みapp_adminのBearer認証だけが実行可能 |
+| `ACCOUNT_ERASURE_EXECUTION_ENABLED` | 削除運用開始時 | no | Auth・DB・Storageの完全削除を許可する最終スイッチ。通常は `false`。登録済みapp_adminまたは有効な削除専用実行者のBearer認証に加え、実削除時はAAL2が必要 |
 | `COMMERCIAL_SUPPORT_PACK_SALES_ENABLED` | 有料提供時 | no | `true` の場合だけ発動サポートパック受付を開く最終スイッチ。通常は `false` |
 | `COMMERCIAL_PLUS_SALES_ENABLED` | Plus提供時 | no | `true` の場合だけPlus受付を開く最終スイッチ。通常は `false` |
 | `STRIPE_SECRET_KEY` | support pack時 | no | Stripe Checkout作成 |
@@ -76,7 +76,7 @@ https://<web-domain>
 ## 注意
 
 - `SUPABASE_SERVICE_ROLE_KEY` は絶対に `NEXT_PUBLIC_` / `EXPO_PUBLIC_` にしない。
-- `ACCOUNT_ERASURE_EXECUTION_ENABLED` は `account_deletion_pipeline.sql` の適用、破棄DB回帰試験、管理者の削除手順確認がすべて終わるまで `false` のままにする。緊急用管理キーでは完全削除できない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` は `account_delete_executor_role.sql` と `account_deletion_pipeline.sql` の適用、破棄DB回帰試験、個別実行者のTOTP/AAL2、別確認者、削除手順確認がすべて終わるまで `false` のままにする。緊急用管理キーでは削除依頼の閲覧・状態変更・事前確認・実削除のいずれもできない。
 - `STRIPE_SECRET_KEY` と `STRIPE_WEBHOOK_SECRET` はWebサーバーだけに置く。
 - 特商法用の `LEGAL_*` とStripeの必須設定がすべて揃い、対象の `COMMERCIAL_*_SALES_ENABLED=true` を明示するまでは、有料申込ボタンとCheckout APIを開かない。
 - `ANTHROPIC_API_KEY` もWebサーバーだけに置く。未設定の場合、長期相談は503を返し、手帳の他の機能は通常どおり動く。
