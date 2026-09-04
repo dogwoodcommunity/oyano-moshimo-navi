@@ -11589,3 +11589,25 @@ Supabase本番 `ypnuxyfirlvbsqujocuy` へ適用し、PR #3をmainへ通常マー
   参照・変更・stage・commitしていない。
 
 次の1項目は、池田知也本人だけが受信できるSupabase Auth用の個別メールアドレスを確認すること。
+
+## 2026-09-04 追記 304 — 削除実行者の個別Auth招待を送信直前まで準備
+
+ユーザーから `システム責任者 池田知也` 本人用の個別メールアドレスを受領した。
+個人連絡先そのものはGit・引継ぎへ記録せず、Supabase本番で一致するAuth状態だけを確認した。
+
+- 読み取り専用トランザクションで、該当する `auth.users`、確認済みメール、`profiles`、
+  MFA factor、verified MFA、`account_delete_executors`、有効executorがすべて0件であることを確認した。
+- Supabase Authenticationの `Send invitation` 画面へ個別メールを入力し、最終の
+  `Invite user` 実行直前で停止した。外部メール送信とアカウント作成はまだ行っていない。
+- 既存の削除担当画面は、既存AuthへのMagic Linkログインと、登録済みTOTP factorの
+  `challengeAndVerify` だけを提供する。新規TOTP enrollment・復旧画面はなく、role未登録者は
+  auth-statusが403になるため、現状の画面だけでは「招待受諾→TOTP登録→role有効化」を完走できない。
+- 安全な順序は、個別招待を本人が受諾、メール確認済みAuthとUUIDを二者照合、profile確認、
+  本人セッションでTOTPを登録・検証、その後だけ削除専用roleを有効化すること。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFF、executor登録0件、削除依頼・削除ジョブ0件を維持した。
+  既存利用者データ、Auth、Storage、日記、モニター回答には変更を加えていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の操作は、ユーザーの実行時確認後にSupabaseから個別招待メールを1通送信すること。
+並行して、本人だけがTOTPを登録・確認できる安全な初回設定導線を実装・検証する必要がある。
