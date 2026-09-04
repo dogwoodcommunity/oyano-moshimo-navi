@@ -72,8 +72,9 @@ assert.ok(releaseInputs.includes("| 利用規約の施行日 | **正式公開日
 assert.ok(envExample.includes("LEGAL_PRIVACY_EFFECTIVE_DATE=\n"), "the privacy effective date must remain empty until the actual public release date is known");
 assert.doesNotMatch(envExample, /LEGAL_PRIVACY_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the privacy effective-date env value");
 assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed privacy effective-date policy");
-assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：要確定** |"), "the release input ledger must retain the confirmed account-deletion owner without inventing a delegate");
+assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
+assert.ok(operationsRunbook.includes("| **池田知也**（役職・連絡手段は要指定。指定後は制限付き運用台帳に記録） |"), "the operations runbook must retain the confirmed delegate without inventing role or contact details");
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
 

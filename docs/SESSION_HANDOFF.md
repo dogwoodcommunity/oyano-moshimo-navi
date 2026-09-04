@@ -11169,3 +11169,36 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、アカウント削除対応の代行者。
+
+## 2026-09-04 追記 294 — アカウント削除対応の代行者名を確定
+
+ユーザー確認により、アカウント削除対応の代行者名を `池田知也` と確定した。
+代行者の役職・責任範囲・内部連絡手段・app_admin登録・別確認者は、
+今回の回答から推測せず未確定のまま残した。
+
+- `COMMERCIAL_RELEASE_INPUTS.md` に主担当 `代表取締役 池田哲也` と代行者 `池田知也` を併記した。
+- `COMMERCIAL_OPERATIONS_RUNBOOK.md` の代行者欄へ氏名だけを記録し、役職・連絡手段は
+  確定後に制限付き運用台帳へ記録する条件を維持した。
+- 正式版チェックリストは代行者名の確定だけを完了にし、内部連絡手段、責任範囲、
+  Supabase Auth／`app_admins` 登録、削除ごとの別確認者・二者確認手順を未完了で分離した。
+- 公開計画と正式版ゲート回帰を更新し、両名の確定値と未確定の権限境界が消えないようにした。
+- `LEGAL_RESPONSIBLE_PERSON`、法務ページ、環境変数、SQL、アプリコードは変更していない。
+  代行者名の指名だけではAdmin権限や二人目の承認者資格を付与しない。
+- 独立した読み取り専用監査でP0指摘なし。主担当または代行者本人のアカウントを削除する場合も、
+  対象本人以外の登録済み実行者と別確認者が必要。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- Supabase Authの管理者登録、`app_admins`、`ACCOUNT_ERASURE_EXECUTION_ENABLED`、本番migration、
+  Vercel環境変数、本番deploymentは変更していない。削除実行スイッチは初期OFFのまま。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、削除依頼、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、障害対応の主責任者。
