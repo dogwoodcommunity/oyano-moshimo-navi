@@ -26,6 +26,7 @@
 | 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |
 | リリース担当 | **要指定** | **要指定** |
 | Supabase・個人情報削除担当 | **代表取締役 池田哲也**（メール依頼：`info@bee-ch.co.jp`。アプリ内依頼：`/admin/delete-requests`。両名への通知方針は確定、実際の権限・通知設定・2経路の試験は要確認） | **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施。受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認） |
+| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・MFA・`app_admins` 登録は未実施） | **代替実行者：要指定** |
 | 問い合わせ一次受付 | **要指定** | **要指定** |
 | セキュリティ・法務連絡先 | **要指定** | **要指定** |
 
@@ -33,7 +34,7 @@
 
 ただし、`LEGAL_CONTACT` と `LEGAL_CONTACT_RESPONSE_TARGET` の本番設定、両名の共有受信権限、双方通知のメールルール、DBキューの監視・通知方法、外部からの実受信・返信、公開画面の表示は未確認である。共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う。共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない。通知メール用の `NOTIFICATION_EMAIL_REPLY_TO` は別用途のため未確定のままとする。[環境変数マトリクス](ENVIRONMENT_MATRIX.md)と公開画面を照合する。
 
-削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。実行者は本人確認済みSupabase Authユーザーとして別途 `app_admins.user_id` へ登録し、削除対象本人とは別の確認者を立てる。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、実行app_admin、別確認者、本番での完走試験が未確認の間は、削除実行の正式運用を開始しない。
+削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の実行予定者は `システム責任者 池田知也` と確定したが、これは指名方針だけであり、Supabase Auth、MFA、`app_admins`、Vercel・Supabase等の本番権限を付与するものではない。現行の `app_admin` は削除専用ではなく全Admin API共通権限のため、全Admin範囲を明示承認するか削除専用roleを実装・検証するまで、池田知也を `app_admins` へ登録しない。登録前に本人確認済みの個別Supabase Auth、正確なuser ID、MFAを確認し、実行者とは別の確認者を立てる。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、実行権限、別確認者、本番での完走試験が未確認の間は、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持して削除実行の正式運用を開始しない。
 
 障害対応の主責任者・代行者の氏名と役職、代行者の責任範囲「主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施」は確定した。これは全般的な運用責任者の指名や、Vercel・Supabase・GitHub・Resend・DNS等の実行権限付与を意味しない。両名の内部連絡手段、アラート通知先とエスカレーション経路、平日・夜間・休日の当番体制、各サービスの権限とMFA・緊急時アクセス回復方法が未確定の間は、障害対応の正式運用を開始しない。秘密情報、個人電話番号、MFA、復旧コードはGitへ記録せず、制限付き運用台帳または承認済みのパスワード管理基盤で管理する。
 
@@ -287,7 +288,8 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - 端末localStorageの削除は同画面の別の2段階操作であり、クラウド依頼だけでは端末データは消えない。
 - 管理者は `/admin/delete-requests` で `reviewing` / `needs_followup` を更新できる。
 - 管理画面のstatus PATCHは `completed` を拒否する。完了は `account_deletion_pipeline.sql` の検証済み処理だけで記録する。
-- `/api/admin/delete-requests/execute` は、登録済み `app_admin` のSupabase Bearer認証だけを受け付ける。静的な緊急用管理キーでは完全削除できない。
+- `/api/admin/delete-requests/execute` は、登録済み `app_admin` のSupabase Bearer認証だけを受け付ける。静的な緊急用管理キーでは完全削除できない。現行の `app_admin` はこのAPIだけの権限ではなく、全Admin APIに共通する管理者権限である。
+- 実行予定者は `システム責任者 池田知也` とする方針だけを確定した。個別Supabase Auth、user ID、MFA、`app_admins` 登録、本番権限は未確認・未付与である。
 - 削除前確認は実行スイッチOFFでも行える。実削除は `ACCOUNT_ERASURE_EXECUTION_ENABLED=true`、完全なrequest ID・user ID、確認文 `完全削除 <REQUEST_ID>` が揃った時だけ開始する。
 - 実行APIは、DB削除RPC、Supabase Auth userのhard delete、許可された `home-photos` objectの削除と不在確認、最終化RPCの順に進む。途中失敗では `completed` にせず、同じ依頼を再実行できる。
 - これはリポジトリ上の実装境界であり、本番migration・環境変数・deployment・実アカウント完走を確認するまで「削除運用開始済み」と扱わない。
@@ -296,7 +298,10 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 
 - [ ] `supabase/notebook_diary_delete.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_deletion_pipeline.sql` が本番へ正しい順で適用済み。
 - [ ] migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持した。
-- [ ] 操作者は `app_admins` に登録され、削除対象本人とは別人。
+- [ ] 実行予定者 `システム責任者 池田知也` の本人確認済み個別Supabase Auth、MFA、正確なuser IDを制限付き運用台帳で確認した。
+- [ ] 現行 `app_admin` の全Admin API共通権限を明示承認するか、削除専用roleを実装・検証した。
+- [ ] 上記確認後に実行者を `app_admins` へ登録し、削除対象本人とは別人であることを確認した。
+- [ ] 実行者とは別の確認者を指名し、削除ごとの二者確認手順を記録した。
 - [ ] 最後のapp adminを削除しない。
 - [ ] familyに他メンバーがいるownerは、Webの家族管理で所有権移管を完了した。
 - [ ] 最新backup、削除後に古いbackupを復元する場合の再削除手順、障害連絡先を確認した。

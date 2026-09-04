@@ -11441,3 +11441,47 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、削除実行に使う登録済みapp_adminの担当者。
+
+## 2026-09-04 追記 301 — アカウント完全削除の実行予定者を確定
+
+ユーザー確認により、アカウント完全削除の実行予定者を
+`システム責任者 池田知也` と確定した。
+
+- 今回確定したのは担当者の指名方針だけであり、Supabase Authユーザー、MFA、
+  `app_admins` 行、Vercel・Supabase等の本番閲覧・操作権限は作成・付与していない。
+- 独立した読み取り専用安全監査でP0指摘はなかった。一方、現行の `app_admin` は
+  削除専用ではなく、ケース、モニター回答、AI利用状況、環境確認等を含む全Admin APIに
+  共通する管理者権限であるP1境界を確認した。
+- そのため、池田知也を実際に `app_admins` へ登録するのは、全Admin APIの閲覧・操作範囲を
+  明示承認するか、削除専用roleを実装・検証した後とする。今回はどちらも実施していない。
+- 実登録前には、本人確認済みの個別Supabase Auth、正確なuser ID、MFAを制限付き運用台帳で
+  確認する。個人のuser IDや認証情報はGit・一般チャットへ記録しない。
+- 削除実行者とは別の確認者、代替実行者、本番migration、単独テストアカウントでの
+  Auth・DB・Storage完走試験は未確定・未実施のまま残した。
+- 池田知也本人のアカウントを削除する場合は、別の登録済み実行者と、さらに別の確認者を必要とする。
+- 上記が揃うまで `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持し、削除実行の正式運用を開始しない。
+- 正式版入力票、運用runbook、Admin認可方針、正式版チェックリスト、公開計画を同期し、
+  この安全境界を静的回帰テストへ追加した。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。
+  既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+- 追記301を含む最終差分の独立した読み取り専用再検証でも、正式版ゲート、local doctor、
+  diff checkが成功した。変更が運用文書6ファイルと静的回帰テスト1ファイルだけであり、
+  指名と権限付与の分離、全Admin共通権限の保留条件、未完了項目、本番非変更境界を確認した。
+- 最終の読み取り専用安全監査でも新規P0/P1なし。秘密、token、実user ID、個人連絡先の混入、
+  対象外ファイルの追跡差分がないことを確認した。staged差分のGitleaksも検出0件。
+
+本番・データの境界:
+
+- アプリコード、SQL、env、Supabase Auth、`app_admins`、MFA、本番deployment、
+  Vercel・Supabase・GitHub・Resend・DNSの権限は変更していない。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、削除依頼、決済、
+  メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次の1項目は、現行の全Admin API共通権限を付けずに済むよう、削除専用roleを実装するかの判断。

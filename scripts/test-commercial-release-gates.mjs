@@ -22,6 +22,7 @@ const adminEnv = read("apps/web/app/api/admin/env-check/route.ts");
 const releaseInputs = read("docs/COMMERCIAL_RELEASE_INPUTS.md");
 const operationsRunbook = read("docs/COMMERCIAL_OPERATIONS_RUNBOOK.md");
 const adminAuthPolicy = read("docs/ADMIN_AUTH_POLICY.md");
+const productionChecklist = read("docs/PRODUCTION_CHECKLIST.md");
 
 const legalKeys = [
   "LEGAL_BUSINESS_NAME",
@@ -73,7 +74,9 @@ assert.ok(envExample.includes("LEGAL_PRIVACY_EFFECTIVE_DATE=\n"), "the privacy e
 assert.doesNotMatch(envExample, /LEGAL_PRIVACY_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the privacy effective-date env value");
 assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed privacy effective-date policy");
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
+assert.ok(releaseInputs.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也（指名方針のみ）** |"), "the release input ledger must retain the intended deletion executor without claiming authorization");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
+assert.ok(operationsRunbook.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・MFA・`app_admins` 登録は未実施）"), "the runbook must retain the intended executor as a policy assignment only");
 assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
 assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
 assert.ok(releaseInputs.includes("アプリ内依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない"), "the release input ledger must distinguish in-app deletion requests from email intake");
@@ -84,6 +87,14 @@ assert.ok(operationsRunbook.includes("共有受信箱のパスワード、MFA、
 assert.ok(operationsRunbook.includes("身分証画像、パスワード、Magic Link、access tokenは受け取らない"), "identity verification must not collect authentication secrets or identity documents");
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
+assert.ok(adminAuthPolicy.includes("現行の `app_admin` は削除専用roleではなく、全Admin APIに共通する管理者権限"), "the policy must retain that app_admin is broader than deletion execution");
+assert.ok(adminAuthPolicy.includes("削除実行予定者の指名だけでは、Supabase Authユーザー、MFA、`app_admins` 行、Vercel・Supabase等の本番権限を作成・付与しない"), "the intended executor assignment must not create production identity or authorization");
+assert.ok(adminAuthPolicy.includes("全Admin APIの閲覧・操作範囲を明示承認するか、削除専用roleを実装・検証"), "broad admin approval or a deletion-only role must precede registration");
+assert.ok(productionChecklist.includes("[x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）"), "the checklist must distinguish executor assignment from authorization");
+assert.ok(productionChecklist.includes("[ ] 削除実行者とは別の確認者を指名"), "a separate deletion verifier must remain pending");
+assert.ok(envExample.includes("ACCOUNT_ERASURE_EXECUTION_ENABLED=false"), "the destructive account-erasure execution switch must remain disabled by default");
+assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する"), "production account erasure must remain disabled until its external prerequisites pass");
+assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認"), "the destructive execution switch must remain behind production migration and end-to-end checks");
 assert.ok(operationsRunbook.includes("二者確認は運用手順であり、実行APIが技術的に二人の承認を強制するものではない"), "the release gate must retain the limitation that dual control is operational rather than API-enforced");
 assert.ok(releaseInputs.includes("| 障害対応責任者・代行者 | **主責任者：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed incident-response assignees and titles");
 assert.ok(operationsRunbook.includes("| 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |"), "the operations runbook must retain both assignees, titles, and confirmed delegate scope without inventing contact details");
