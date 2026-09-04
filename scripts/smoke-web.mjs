@@ -36,7 +36,7 @@ const checks = [
   { path: "/admin/support-packs", label: "admin support packs" },
   { path: "/admin/delete-requests", label: "admin delete requests" },
   { path: "/api/health", label: "health api" },
-  { path: "/api/account/delete-request", label: "account delete api requires auth", method: "POST", expectStatuses: [200, 401] },
+  { path: "/api/account/delete-request", label: "account delete api requires auth or configured backend", method: "POST", expectStatuses: [200, 401, 503] },
   { path: "/api/notification-preferences", label: "notification preferences api requires auth", expectStatus: 401 },
   { path: "/api/family", label: "family api requires auth", expectStatuses: [401, 503] },
   {
@@ -55,14 +55,14 @@ const checks = [
   },
   {
     path: "/api/stripe/checkout",
-    label: "stripe checkout requires token",
+    label: "stripe checkout requires token or stays closed",
     method: "POST",
     body: {
       caseId: "00000000-0000-0000-0000-000000000000",
       contactEmail: "smoke@example.com",
       consentToContact: true
     },
-    expectStatus: 400
+    expectStatuses: [400, 503]
   },
   { path: "/api/admin/env-check", label: "admin env api", admin: true }
 ];

@@ -10933,3 +10933,20 @@ Stage Aの残るNO-GO項目:
 
 スマホアプリ化はStage Aのデータ契約と権限を正本にする。上記の正式情報と本番運用ゲートが未完了のため、
 現時点でTestFlight / Google Play、ストア契約、IAP、外部build、公開は開始していない。
+
+## 2026-09-04 追記 285 — 初回GitHub CIで見つかったsmoke契約の更新
+
+`6bf4bc2` とhandoff commit `5db0f3d` を `origin/main` へpushした。Deploy workflow
+`33827837947` はcheckだけ成功し、deploy jobはskipped。Vercel productionとSupabase本番DBは
+変更していない。
+
+GitHub Actions CI run `33827837956` の1回目は、26項目成功後の日記削除PostgreSQL起動段階で
+内部出力なしのexit 2となった。同じfailed jobを再実行すると該当SQLを含む全SQL・型検査・
+機能test・Web buildは成功したが、最後の `smoke-web.mjs` が旧status契約を期待して2件失敗した。
+
+- Supabase未設定のローカル環境では、アカウント削除受付は401ではなく503でfail closedする。
+- 有料受付スイッチOFFでは、Stripe checkoutはtoken検証前に503でfail closedする。
+
+これは正式版で意図した安全側のAPI応答であり、smokeの期待値を現契約へ更新した。ローカルの
+本番buildを一時起動し、`node scripts/smoke-web.mjs http://localhost:3010` は全対象成功。
+アカウント削除受付503、有料受付503、家族/API未設定503、未認証系401を意図どおり確認した。
