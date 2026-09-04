@@ -45,7 +45,10 @@ const requiredFiles = [
   "apps/web/app/api/notifications/opened/route.ts",
   "apps/web/app/api/account/delete-request/route.ts",
   "apps/web/app/api/admin/delete-requests/route.ts",
+  "apps/web/app/api/admin/delete-requests/auth-status/route.ts",
   "apps/web/app/api/admin/delete-requests/execute/route.ts",
+  "apps/web/lib/adminAuth.ts",
+  "apps/web/lib/adminClientAuth.ts",
   "apps/web/app/api/notebook/diary/route.ts",
   "apps/web/app/api/notebook/person/route.ts",
   "apps/mobile/app/(auth)/welcome.tsx",
@@ -77,6 +80,7 @@ const requiredFiles = [
   "supabase/notebook_person_delete.sql",
   "supabase/family_invite_rpc.sql",
   "supabase/admin_auth_hardening.sql",
+  "supabase/account_delete_executor_role.sql",
   "supabase/family_owner_succession.sql",
   "supabase/family_management_rpc.sql",
   "supabase/account_deletion_pipeline.sql",
@@ -90,6 +94,7 @@ const requiredFiles = [
   "scripts/test-notebook-person-delete-sql.sh",
   "scripts/test-family-invite-permissions.mjs",
   "scripts/test-account-erasure-sql.sh",
+  "scripts/test-account-delete-executor-auth.mjs",
   "scripts/test-web-account-deletion.mjs",
   "supabase/public_api_rate_limits.sql",
   "supabase/anonymous_case_retention.sql",
@@ -176,6 +181,7 @@ const sqlOrder = [
   "notebook_person_delete.sql",
   "family_invite_rpc.sql",
   "admin_auth_hardening.sql",
+  "account_delete_executor_role.sql",
   "family_owner_succession.sql",
   "family_management_rpc.sql",
   "account_deletion_pipeline.sql",
@@ -227,6 +233,17 @@ check(
   deploymentDoc.includes("eas build") || deploymentDoc.includes("eas:mobile:build"),
 );
 check("deployment warns service role", deploymentDoc.includes("SUPABASE_SERVICE_ROLE_KEY"));
+
+const packageJson = JSON.parse(readFileSync(join(root, "package.json"), "utf8"));
+check(
+  "account deletion operator auth test script",
+  packageJson.scripts?.["test:account-delete-executor"] === "node scripts/test-account-delete-executor-auth.mjs"
+);
+const ciWorkflow = readFileSync(join(root, ".github/workflows/ci.yml"), "utf8");
+check(
+  "CI runs account deletion operator auth test",
+  ciWorkflow.includes("pnpm run test:account-delete-executor")
+);
 
 const vercelConfig = JSON.parse(readFileSync(join(root, "vercel.json"), "utf8"));
 check("vercel build command", vercelConfig.buildCommand === "pnpm --filter web run build");

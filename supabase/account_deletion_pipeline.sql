@@ -1,8 +1,10 @@
 -- Account deletion request pipeline hardening for existing databases.
--- Run after schema.sql, notebook_diary_delete.sql, and
--- notebook_person_delete.sql, then before verify_setup.sql. The cleanup queue
+-- Run after schema.sql, notebook_diary_delete.sql,
+-- notebook_person_delete.sql, and account_delete_executor_role.sql, then before verify_setup.sql. The cleanup queue
 -- collectors remain defensive for databases where either optional notebook
 -- deletion migration has not been installed yet.
+
+begin;
 
 create table if not exists account_delete_requests (
   id uuid primary key default uuid_generate_v4(),
@@ -74,6 +76,131 @@ create policy "account_delete_requests admin read"
 on account_delete_requests for select
 using (is_app_admin());
 
+-- Status changes are intentionally service-only. The server authenticates the
+-- human Bearer token and supplies that verified user id; this function derives
+-- the capability and email from database state, then commits the request update
+-- and its audit event atomically. `completed` remains reserved for the verified
+-- Auth/database/Storage finalizer below.
+create or replace function public.update_account_delete_request_status_v1(
+  p_request_id uuid,
+  p_status text,
+  p_note text,
+  p_operator_user_id uuid
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = pg_catalog, public
+as $$
+declare
+  v_request public.account_delete_requests%rowtype;
+  v_operator_method text;
+  v_operator_email text;
+  v_note text;
+  v_audit_id uuid;
+  v_erasure_status text;
+  v_now timestamptz := now();
+begin
+  if p_request_id is null or p_operator_user_id is null then
+    return jsonb_build_object('result', 'invalid_request');
+  end if;
+
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
+    return jsonb_build_object('result', 'operator_forbidden');
+  end if;
+
+  perform pg_advisory_xact_lock(hashtextextended('account-erasure:' || p_request_id::text, 0));
+  lock table public.app_admins, public.account_delete_executors
+    in share row exclusive mode;
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
+    return jsonb_build_object('result', 'operator_forbidden');
+  end if;
+
+  if p_status is null
+     or p_status not in ('reviewing', 'needs_followup') then
+    return jsonb_build_object('result', 'invalid_status');
+  end if;
+
+  v_note := nullif(btrim(coalesce(p_note, '')), '');
+  if length(coalesce(v_note, '')) > 2000 then
+    return jsonb_build_object('result', 'note_too_long');
+  end if;
+
+  select * into v_request
+  from public.account_delete_requests request
+  where request.id = p_request_id
+  for update;
+
+  if not found then
+    return jsonb_build_object('result', 'request_not_found');
+  end if;
+  if v_request.status = 'completed' then
+    return jsonb_build_object('result', 'verified_account_erasure_required');
+  end if;
+
+  select job.status into v_erasure_status
+  from public.account_erasure_jobs job
+  where job.request_id = p_request_id
+  for update;
+  if found then
+    return jsonb_build_object(
+      'result', 'account_erasure_in_progress',
+      'erasureStatus', v_erasure_status
+    );
+  end if;
+
+  select profile.email into v_operator_email
+  from public.profiles profile
+  where profile.id = p_operator_user_id;
+
+  insert into public.audit_logs (
+    actor_user_id, action, target_type, target_id, metadata, created_at
+  ) values (
+    p_operator_user_id,
+    'account_delete_status_updated',
+    'account_delete_request',
+    p_request_id,
+    jsonb_build_object(
+      'previous_status', v_request.status,
+      'status', p_status,
+      'handled_by_user_id', p_operator_user_id,
+      'handled_by_email', v_operator_email,
+      'handled_by_method', v_operator_method,
+      'note_present', v_note is not null
+    ),
+    v_now
+  )
+  returning id into v_audit_id;
+
+  update public.account_delete_requests
+  set status = p_status,
+      last_status_changed_at = v_now,
+      handled_at = null,
+      handled_note = v_note,
+      handled_by = p_operator_user_id,
+      handled_by_email = v_operator_email,
+      handled_by_method = v_operator_method,
+      audit_log_id = v_audit_id
+  where id = p_request_id;
+
+  return jsonb_build_object(
+    'result', 'updated',
+    'requestId', p_request_id,
+    'previousStatus', v_request.status,
+    'status', p_status,
+    'operatorMethod', v_operator_method,
+    'auditLogId', v_audit_id
+  );
+end;
+$$;
+
+revoke all on function public.update_account_delete_request_status_v1(uuid, text, text, uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.update_account_delete_request_status_v1(uuid, text, text, uuid)
+  to service_role;
+
 -- Verified erasure is deliberately split into a database transaction and two
 -- external checks (Supabase Auth and Storage).  The durable job makes retries
 -- safe if the operator's browser, Vercel, Auth, or Storage stops halfway.
@@ -88,6 +215,7 @@ create table if not exists account_erasure_jobs (
   -- at completion because a deterministic email hash is still guessable PII.
   target_email_hash text,
   operator_user_id uuid references profiles(id) on delete set null,
+  operator_method text,
   status text not null default 'prepared',
   owned_family_ids uuid[] not null default '{}'::uuid[],
   storage_objects jsonb not null default '[]'::jsonb,
@@ -140,8 +268,18 @@ create table if not exists account_erasure_jobs (
 -- Repair the earlier draft when this migration is reapplied.
 alter table account_erasure_jobs
   alter column target_email_hash drop not null,
+  add column if not exists operator_method text,
   add column if not exists storage_prefixes jsonb not null default '[]'::jsonb,
   add column if not exists storage_prefix_hashes text[] not null default '{}'::text[];
+
+alter table account_erasure_jobs
+  drop constraint if exists account_erasure_jobs_operator_method;
+alter table account_erasure_jobs
+  add constraint account_erasure_jobs_operator_method
+  check (
+    operator_method is null
+    or operator_method in ('supabase_app_admin', 'supabase_account_delete_executor')
+  );
 
 alter table account_erasure_jobs
   drop constraint if exists account_erasure_jobs_storage_prefix_array;
@@ -687,14 +825,18 @@ declare
   v_storage jsonb := '[]'::jsonb;
   v_storage_prefixes jsonb := '[]'::jsonb;
   v_target_hash text;
+  v_operator_method text;
   v_is_target_admin boolean := false;
   v_admin_count integer := 0;
+  v_is_target_executor boolean := false;
+  v_executor_count integer := 0;
   v_unsupported_storage integer := 0;
 begin
   if p_request_id is null or p_target_user_id is null or p_operator_user_id is null then
     return jsonb_build_object('result', 'invalid_request');
   end if;
-  if not exists (select 1 from public.app_admins where user_id = p_operator_user_id) then
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
 
@@ -747,6 +889,28 @@ begin
   into v_is_target_admin, v_admin_count;
   if v_is_target_admin and v_admin_count <= 1 then
     v_blocked := v_blocked || jsonb_build_array(jsonb_build_object('code', 'last_app_admin'));
+  end if;
+
+  select
+    exists (
+      select 1 from public.account_delete_executors executor
+      where executor.user_id = p_target_user_id
+        and executor.active
+        and executor.activated_at is not null
+        and executor.revoked_at is null
+    ),
+    (
+      select count(*)
+      from public.account_delete_executors executor
+      where executor.active
+        and executor.activated_at is not null
+        and executor.revoked_at is null
+    )
+  into v_is_target_executor, v_executor_count;
+  if v_is_target_executor and v_executor_count <= 1 then
+    v_blocked := v_blocked || jsonb_build_array(
+      jsonb_build_object('code', 'last_account_delete_executor')
+    );
   end if;
 
   select coalesce(array_agg(family.id order by family.id), '{}'::uuid[])
@@ -832,14 +996,18 @@ declare
   v_email text := '';
   v_target_hash text;
   v_email_hash text;
+  v_operator_method text;
   v_is_target_admin boolean := false;
   v_admin_count integer := 0;
+  v_is_target_executor boolean := false;
+  v_executor_count integer := 0;
   v_unsupported_storage integer := 0;
 begin
   if p_request_id is null or p_target_user_id is null or p_operator_user_id is null then
     return jsonb_build_object('result', 'invalid_request');
   end if;
-  if not exists (select 1 from public.app_admins where user_id = p_operator_user_id) then
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
 
@@ -847,6 +1015,12 @@ begin
     hashtextextended('account-erasure-target:' || p_target_user_id::text, 0)
   );
   perform pg_advisory_xact_lock(hashtextextended('account-erasure:' || p_request_id::text, 0));
+  lock table public.app_admins, public.account_delete_executors
+    in share row exclusive mode;
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
+    return jsonb_build_object('result', 'operator_forbidden');
+  end if;
 
   select * into v_request
   from public.account_delete_requests
@@ -909,6 +1083,28 @@ begin
     v_blocked := v_blocked || jsonb_build_array(jsonb_build_object('code', 'last_app_admin'));
   end if;
 
+  select
+    exists (
+      select 1 from public.account_delete_executors executor
+      where executor.user_id = p_target_user_id
+        and executor.active
+        and executor.activated_at is not null
+        and executor.revoked_at is null
+    ),
+    (
+      select count(*)
+      from public.account_delete_executors executor
+      where executor.active
+        and executor.activated_at is not null
+        and executor.revoked_at is null
+    )
+  into v_is_target_executor, v_executor_count;
+  if v_is_target_executor and v_executor_count <= 1 then
+    v_blocked := v_blocked || jsonb_build_array(
+      jsonb_build_object('code', 'last_account_delete_executor')
+    );
+  end if;
+
   select coalesce(array_agg(family.id order by family.id), '{}'::uuid[])
   into v_owned_family_ids
   from public.families family
@@ -968,6 +1164,7 @@ begin
     target_user_hash,
     target_email_hash,
     operator_user_id,
+    operator_method,
     status,
     owned_family_ids,
     storage_objects,
@@ -984,6 +1181,7 @@ begin
     v_target_hash,
     v_email_hash,
     p_operator_user_id,
+    v_operator_method,
     case when jsonb_array_length(v_blocked) > 0 then 'blocked' else 'prepared' end,
     v_owned_family_ids,
     v_storage,
@@ -1003,6 +1201,7 @@ begin
       target_user_hash = excluded.target_user_hash,
       target_email_hash = excluded.target_email_hash,
       operator_user_id = excluded.operator_user_id,
+      operator_method = excluded.operator_method,
       status = excluded.status,
       owned_family_ids = excluded.owned_family_ids,
       storage_objects = excluded.storage_objects,
@@ -1019,7 +1218,11 @@ begin
   set status = case when jsonb_array_length(v_blocked) > 0 then 'needs_followup' else 'reviewing' end,
       last_status_changed_at = now(),
       handled_by = p_operator_user_id,
-      handled_by_method = 'supabase_app_admin',
+      handled_by_email = (
+        select profile.email from public.profiles profile
+        where profile.id = p_operator_user_id
+      ),
+      handled_by_method = v_operator_method,
       handled_note = case
         when jsonb_array_length(v_blocked) > 0 then '自動削除前確認で安全上の停止条件を検出'
         else handled_note
@@ -1054,6 +1257,7 @@ declare
   v_storage_prefixes jsonb := '[]'::jsonb;
   v_storage_blockers jsonb := '[]'::jsonb;
   v_target_hash text;
+  v_operator_method text;
   v_other_members integer := 0;
   v_shared_photo_blockers jsonb := '[]'::jsonb;
   v_unsupported_storage integer := 0;
@@ -1064,7 +1268,8 @@ begin
   if p_request_id is null or p_target_user_id is null or p_operator_user_id is null then
     return jsonb_build_object('result', 'invalid_request');
   end if;
-  if not exists (select 1 from public.app_admins where user_id = p_operator_user_id) then
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
   if p_operator_user_id = p_target_user_id then
@@ -1075,6 +1280,12 @@ begin
     hashtextextended('account-erasure-target:' || p_target_user_id::text, 0)
   );
   perform pg_advisory_xact_lock(hashtextextended('account-erasure:' || p_request_id::text, 0));
+  lock table public.profiles, public.app_admins, public.account_delete_executors
+    in share row exclusive mode;
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
+    return jsonb_build_object('result', 'operator_forbidden');
+  end if;
   select * into v_job
   from public.account_erasure_jobs
   where request_id = p_request_id
@@ -1102,7 +1313,7 @@ begin
   -- These locks are held only for the short destructive transaction. They
   -- ensure a photo reference cannot appear after the final object inventory
   -- but before its parent family/case is removed.
-  lock table public.profiles, public.app_admins, public.families, public.family_members,
+  lock table public.families, public.family_members,
     public.people, public.timeline_events, public.homes, public.home_photos,
     public.cases, public.case_photos
     in share row exclusive mode;
@@ -1121,6 +1332,8 @@ begin
   if v_other_members > 0 then
     update public.account_erasure_jobs
     set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
         blocked_details = jsonb_build_array(jsonb_build_object(
           'code', 'ownership_transfer_required',
           'otherMemberCount', v_other_members
@@ -1130,14 +1343,79 @@ begin
         updated_at = now()
     where id = v_job.id;
     update public.account_delete_requests
-    set status = 'needs_followup', last_status_changed_at = now()
+    set status = 'needs_followup',
+        last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method
     where id = p_request_id;
     return jsonb_build_object('result', 'blocked', 'code', 'ownership_transfer_required');
   end if;
 
   if exists (select 1 from public.app_admins where user_id = p_target_user_id)
      and (select count(*) from public.app_admins) <= 1 then
+    update public.account_erasure_jobs
+    set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
+        blocked_details = jsonb_build_array(jsonb_build_object('code', 'last_app_admin')),
+        last_error_code = 'last_app_admin',
+        last_error_at = now(),
+        updated_at = now()
+    where id = v_job.id;
+    update public.account_delete_requests
+    set status = 'needs_followup',
+        last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method,
+        handled_note = '最後の包括管理者は削除できません'
+    where id = p_request_id;
     return jsonb_build_object('result', 'blocked', 'code', 'last_app_admin');
+  end if;
+
+  if exists (
+       select 1
+       from public.account_delete_executors executor
+       where executor.user_id = p_target_user_id
+         and executor.active
+         and executor.activated_at is not null
+         and executor.revoked_at is null
+     )
+     and (
+       select count(*)
+       from public.account_delete_executors executor
+       where executor.active
+         and executor.activated_at is not null
+         and executor.revoked_at is null
+     ) <= 1 then
+    update public.account_erasure_jobs
+    set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
+        blocked_details = jsonb_build_array(jsonb_build_object('code', 'last_account_delete_executor')),
+        last_error_code = 'last_account_delete_executor',
+        last_error_at = now(),
+        updated_at = now()
+    where id = v_job.id;
+    update public.account_delete_requests
+    set status = 'needs_followup',
+        last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method,
+        handled_note = '最後の削除専用実行者は削除できません'
+    where id = p_request_id;
+    return jsonb_build_object('result', 'blocked', 'code', 'last_account_delete_executor');
   end if;
 
   -- Recheck shared-photo ownership inside the same locked destructive
@@ -1149,6 +1427,8 @@ begin
   if jsonb_array_length(v_shared_photo_blockers) > 0 then
     update public.account_erasure_jobs
     set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
         blocked_details = v_shared_photo_blockers,
         last_error_code = 'shared_photo_transfer_required',
         last_error_at = now(),
@@ -1156,6 +1436,12 @@ begin
     where id = v_job.id;
     update public.account_delete_requests
     set status = 'needs_followup', last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method,
         handled_note = '共有家族に残る写真の所有者引継ぎが必要'
     where id = p_request_id;
     return jsonb_build_object(
@@ -1186,6 +1472,8 @@ begin
   if v_unsupported_storage > 0 then
     update public.account_erasure_jobs
     set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
         blocked_details = jsonb_build_array(jsonb_build_object(
           'code', 'unsupported_storage_bucket',
           'count', v_unsupported_storage
@@ -1196,6 +1484,12 @@ begin
     where id = v_job.id;
     update public.account_delete_requests
     set status = 'needs_followup', last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method,
         handled_note = '自動削除未対応のStorage bucketを検出'
     where id = p_request_id;
     return jsonb_build_object(
@@ -1207,6 +1501,8 @@ begin
   if jsonb_array_length(v_storage_blockers) > 0 then
     update public.account_erasure_jobs
     set status = 'blocked',
+        operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
         blocked_details = v_storage_blockers,
         last_error_code = coalesce(v_storage_blockers->0->>'code', 'unsafe_storage_manifest'),
         last_error_at = now(),
@@ -1214,6 +1510,12 @@ begin
     where id = v_job.id;
     update public.account_delete_requests
     set status = 'needs_followup', last_status_changed_at = now(),
+        handled_by = p_operator_user_id,
+        handled_by_email = (
+          select profile.email from public.profiles profile
+          where profile.id = p_operator_user_id
+        ),
+        handled_by_method = v_operator_method,
         handled_note = 'Storage削除対象の上限または形式を安全に確認できないため停止'
     where id = p_request_id;
     return jsonb_build_object(
@@ -1309,6 +1611,7 @@ begin
   set status = 'database_erased',
       target_user_id = p_target_user_id,
       operator_user_id = p_operator_user_id,
+      operator_method = v_operator_method,
       owned_family_ids = v_owned_family_ids,
       storage_objects = v_storage,
       storage_prefixes = v_storage_prefixes,
@@ -1337,7 +1640,11 @@ begin
   set status = 'reviewing',
       last_status_changed_at = now(),
       handled_by = p_operator_user_id,
-      handled_by_method = 'supabase_app_admin',
+      handled_by_email = (
+        select profile.email from public.profiles profile
+        where profile.id = p_operator_user_id
+      ),
+      handled_by_method = v_operator_method,
       handled_note = 'DB削除済み。Auth・Storageの削除確認待ち'
   where id = p_request_id;
 
@@ -1353,7 +1660,8 @@ begin
       'deletedFamilyCount', v_deleted_families,
       'deletedCaseCount', v_deleted_cases,
       'storageObjectCount', jsonb_array_length(v_storage),
-      'storagePrefixCount', jsonb_array_length(v_storage_prefixes)
+      'storagePrefixCount', jsonb_array_length(v_storage_prefixes),
+      'operatorMethod', v_operator_method
     )
   );
 
@@ -1383,6 +1691,7 @@ as $$
 declare
   v_job public.account_erasure_jobs%rowtype;
   v_target_hash text;
+  v_operator_method text;
   v_db_residual_count integer := 0;
   v_expected_storage_count integer := 0;
   v_now timestamptz := now();
@@ -1390,7 +1699,8 @@ begin
   if p_request_id is null or p_target_user_id is null or p_operator_user_id is null then
     return jsonb_build_object('result', 'invalid_request');
   end if;
-  if not exists (select 1 from public.app_admins where user_id = p_operator_user_id) then
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
 
@@ -1398,6 +1708,12 @@ begin
     hashtextextended('account-erasure-target:' || p_target_user_id::text, 0)
   );
   perform pg_advisory_xact_lock(hashtextextended('account-erasure:' || p_request_id::text, 0));
+  lock table public.app_admins, public.account_delete_executors
+    in share row exclusive mode;
+  v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
+  if v_operator_method is null then
+    return jsonb_build_object('result', 'operator_forbidden');
+  end if;
   select * into v_job
   from public.account_erasure_jobs
   where request_id = p_request_id
@@ -1438,6 +1754,10 @@ begin
     + (select count(*) from public.families where owner_user_id = p_target_user_id)
     + (select count(*) from public.family_members where user_id = p_target_user_id)
     + (select count(*) from public.app_admins where user_id = p_target_user_id)
+    + (
+        select count(*) from public.account_delete_executors
+        where user_id = p_target_user_id or created_by = p_target_user_id
+      )
     + (select count(*) from public.ai_consult_threads where owner_user_id = p_target_user_id)
     + (select count(*) from public.ai_memory_consents where user_id = p_target_user_id)
     + (select count(*) from public.push_tokens where user_id = p_target_user_id)
@@ -1512,7 +1832,9 @@ begin
        where family.id = any(v_job.owned_family_ids)
      ) then
     update public.account_erasure_jobs
-    set last_error_code = 'database_residual_detected',
+    set operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
+        last_error_code = 'database_residual_detected',
         last_error_at = now(),
         updated_at = now()
     where id = v_job.id;
@@ -1620,7 +1942,9 @@ begin
   end if;
   if v_db_residual_count <> 0 then
     update public.account_erasure_jobs
-    set last_error_code = 'cleanup_identity_residual_detected',
+    set operator_user_id = p_operator_user_id,
+        operator_method = v_operator_method,
+        last_error_code = 'cleanup_identity_residual_detected',
         last_error_at = v_now,
         updated_at = v_now
     where id = v_job.id;
@@ -1633,6 +1957,8 @@ begin
 
   update public.account_erasure_jobs
   set status = 'completed',
+      operator_user_id = p_operator_user_id,
+      operator_method = v_operator_method,
       target_user_id = null,
       target_email_hash = null,
       owned_family_ids = '{}'::uuid[],
@@ -1648,7 +1974,7 @@ begin
         'verifiedStorageObjectCount', jsonb_array_length(v_job.storage_objects),
         'verifiedStoragePrefixCount', jsonb_array_length(v_job.storage_prefixes),
         'verifiedStorageManifestEntryCount', v_expected_storage_count,
-        'completedByAppAdmin', true
+        'completedByMethod', v_operator_method
       ),
       last_error_code = null,
       last_error_at = null,
@@ -1664,7 +1990,11 @@ begin
       last_status_changed_at = v_now,
       handled_at = v_now,
       handled_by = p_operator_user_id,
-      handled_by_method = 'supabase_app_admin',
+      handled_by_email = (
+        select profile.email from public.profiles profile
+        where profile.id = p_operator_user_id
+      ),
+      handled_by_method = v_operator_method,
       handled_note = 'Auth・DB・Storageの削除を専用処理で検証済み'
   where id = p_request_id;
 
@@ -1680,7 +2010,8 @@ begin
       'storageObjectCount', v_expected_storage_count,
       'authVerifiedAbsent', true,
       'databaseVerifiedAbsent', true,
-      'storageVerifiedAbsent', true
+      'storageVerifiedAbsent', true,
+      'operatorMethod', v_operator_method
     )
   );
 
@@ -1690,6 +2021,11 @@ $$;
 
 revoke all on table account_erasure_jobs from public, anon, authenticated, service_role;
 grant select on table account_erasure_jobs to service_role;
+
+revoke all on function update_account_delete_request_status_v1(uuid, text, text, uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function update_account_delete_request_status_v1(uuid, text, text, uuid)
+  to service_role;
 
 revoke all on function guard_erased_profile_recreation() from public, anon, authenticated, service_role;
 revoke all on function guard_erased_notebook_storage_write() from public, anon, authenticated, service_role;
@@ -1702,11 +2038,13 @@ revoke all on function collect_account_erasure_pending_cleanup_objects(uuid, uui
 revoke all on function collect_account_erasure_pending_person_cleanup_objects(uuid, uuid[]) from public, anon, authenticated, service_role;
 revoke all on function collect_account_erasure_shared_photo_blockers(uuid, uuid[]) from public, anon, authenticated, service_role;
 revoke all on function merge_account_erasure_storage_objects(jsonb, jsonb) from public, anon, authenticated, service_role;
-revoke all on function inspect_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function prepare_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function execute_account_erasure_database_v1(uuid, uuid, uuid) from public, anon, authenticated;
-revoke all on function finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) from public, anon, authenticated;
+revoke all on function inspect_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function prepare_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function execute_account_erasure_database_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) from public, anon, authenticated, service_role;
 grant execute on function inspect_account_erasure_v1(uuid, uuid, uuid) to service_role;
 grant execute on function prepare_account_erasure_v1(uuid, uuid, uuid) to service_role;
 grant execute on function execute_account_erasure_database_v1(uuid, uuid, uuid) to service_role;
 grant execute on function finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) to service_role;
+
+commit;

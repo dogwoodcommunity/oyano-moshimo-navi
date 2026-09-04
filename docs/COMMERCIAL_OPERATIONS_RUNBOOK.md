@@ -25,8 +25,8 @@
 | --- | --- | --- |
 | 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |
 | リリース担当 | **要指定** | **要指定** |
-| Supabase・個人情報削除担当 | **代表取締役 池田哲也**（メール依頼：`info@bee-ch.co.jp`。アプリ内依頼：`/admin/delete-requests`。両名への通知方針は確定、実際の権限・通知設定・2経路の試験は要確認） | **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施。受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認） |
-| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・MFA・`app_admins` 登録は未実施） | **代替実行者：要指定** |
+| Supabase・個人情報削除担当 | **代表取締役 池田哲也**（メール依頼：`info@bee-ch.co.jp`。アプリ内依頼：`/admin/delete-requests`。両名への通知方針は確定、実際の権限・通知設定・2経路の試験は要確認） | **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施。受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認） |
+| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・TOTP・`account_delete_executors` 登録は未実施） | **代替実行者：要指定** |
 | 問い合わせ一次受付 | **要指定** | **要指定** |
 | セキュリティ・法務連絡先 | **要指定** | **要指定** |
 
@@ -34,7 +34,7 @@
 
 ただし、`LEGAL_CONTACT` と `LEGAL_CONTACT_RESPONSE_TARGET` の本番設定、両名の共有受信権限、双方通知のメールルール、DBキューの監視・通知方法、外部からの実受信・返信、公開画面の表示は未確認である。共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う。共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない。通知メール用の `NOTIFICATION_EMAIL_REPLY_TO` は別用途のため未確定のままとする。[環境変数マトリクス](ENVIRONMENT_MATRIX.md)と公開画面を照合する。
 
-削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の実行予定者は `システム責任者 池田知也` と確定したが、これは指名方針だけであり、Supabase Auth、MFA、`app_admins`、Vercel・Supabase等の本番権限を付与するものではない。現行の `app_admin` は削除専用ではなく全Admin API共通権限のため、全Admin範囲を明示承認するか削除専用roleを実装・検証するまで、池田知也を `app_admins` へ登録しない。登録前に本人確認済みの個別Supabase Auth、正確なuser ID、MFAを確認し、実行者とは別の確認者を立てる。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、実行権限、別確認者、本番での完走試験が未確認の間は、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持して削除実行の正式運用を開始しない。
+削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み実行者と別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の実行予定者は `システム責任者 池田知也` と確定したが、これは指名方針だけであり、Supabase Auth、TOTP、`account_delete_executors`、Vercel・Supabase等の本番権限を付与するものではない。削除専用roleはソース実装済みで、一般Admin APIへは広がらず、緊急用管理キーも受け付けない。登録前に本人確認済みの個別Supabase Auth、正確なuser ID、verified TOTPを確認し、実行者とは別の確認者を立てる。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、本番migration、実行者登録、別確認者、本番での完走試験が未確認の間は、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持して削除実行の正式運用を開始しない。
 
 障害対応の主責任者・代行者の氏名と役職、代行者の責任範囲「主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施」は確定した。これは全般的な運用責任者の指名や、Vercel・Supabase・GitHub・Resend・DNS等の実行権限付与を意味しない。両名の内部連絡手段、アラート通知先とエスカレーション経路、平日・夜間・休日の当番体制、各サービスの権限とMFA・緊急時アクセス回復方法が未確定の間は、障害対応の正式運用を開始しない。秘密情報、個人電話番号、MFA、復旧コードはGitへ記録せず、制限付き運用台帳または承認済みのパスワード管理基盤で管理する。
 
@@ -47,7 +47,7 @@
 | 写真 | Supabase Storage `home-photos` | 実装あり。独立バックアップ・versioning・復元実績は未確認 |
 | メール | Resendを使う期限・月1確認メール | 任意機能。`RESEND_API_KEY` と認証済み送信元が不足するとメールだけ停止する。設定済みとは扱わない |
 | Cron | Vercel Cronから通知、匿名データ削除、日記・対象者Storage cleanup | 設定ファイルあり。本番での登録、直近成功、失敗通知は外部要確認 |
-| アカウント削除 | 本人確認済み受付、管理一覧、app_admin限定実行API、再開可能なDB証跡RPC | 実装あり。実行スイッチは既定OFF。本番migration、管理者ログイン、単独テストアカウントでの完走は外部要確認 |
+| アカウント削除 | 本人確認済み受付、削除専用role、Bearer限定管理一覧、実削除時AAL2、再開可能なDB証跡RPC | 実装あり。実行スイッチは既定OFF。本番migration、個別実行者/TOTP登録、別確認者、単独テストアカウント完走は外部要確認 |
 | 監視 | `/api/health`、Vercel/Supabase/Resendのログ | `/api/health` はWebプロセスだけの浅い確認。外部uptime・error alertは確認できず、未設定扱い |
 
 `/api/health` の200だけでDB、Auth、Storage、Cron、Resendの正常を宣言してはいけない。`/admin/env` も環境変数の「存在」だけを確認し、値の正しさや外部疎通は確認しない。
@@ -288,27 +288,30 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - 端末localStorageの削除は同画面の別の2段階操作であり、クラウド依頼だけでは端末データは消えない。
 - 管理者は `/admin/delete-requests` で `reviewing` / `needs_followup` を更新できる。
 - 管理画面のstatus PATCHは `completed` を拒否する。完了は `account_deletion_pipeline.sql` の検証済み処理だけで記録する。
-- `/api/admin/delete-requests/execute` は、登録済み `app_admin` のSupabase Bearer認証だけを受け付ける。静的な緊急用管理キーでは完全削除できない。現行の `app_admin` はこのAPIだけの権限ではなく、全Admin APIに共通する管理者権限である。
-- 実行予定者は `システム責任者 池田知也` とする方針だけを確定した。個別Supabase Auth、user ID、MFA、`app_admins` 登録、本番権限は未確認・未付与である。
-- 削除前確認は実行スイッチOFFでも行える。実削除は `ACCOUNT_ERASURE_EXECUTION_ENABLED=true`、完全なrequest ID・user ID、確認文 `完全削除 <REQUEST_ID>` が揃った時だけ開始する。
+- `/api/admin/delete-requests` と `/api/admin/delete-requests/execute` は、登録済み `app_admin` または有効な `account_delete_executors` のSupabase Bearer認証だけを受け付ける。静的な緊急用管理キーでは一覧・状態変更・事前確認・完全削除のすべてを拒否する。削除専用実行者はほかのAdmin APIを利用できない。
+- 実行予定者は `システム責任者 池田知也` とする方針だけを確定した。個別Supabase Auth、user ID、verified TOTP、`account_delete_executors` の有効行、本番権限は未確認・未付与である。
+- 削除前確認は実行スイッチOFFかつAAL1でも行える。実削除は追加認証済みAAL2、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true`、完全なrequest ID・user ID、確認文 `完全削除 <REQUEST_ID>` が揃った時だけ開始する。
+- 「確認中」「要確認」の変更は `update_account_delete_request_status_v1` が依頼行と監査ログを1トランザクションで更新する。手動の完了、処理中・完了済み依頼の巻き戻しは拒否する。
 - 実行APIは、DB削除RPC、Supabase Auth userのhard delete、許可された `home-photos` objectの削除と不在確認、最終化RPCの順に進む。途中失敗では `completed` にせず、同じ依頼を再実行できる。
 - これはリポジトリ上の実装境界であり、本番migration・環境変数・deployment・実アカウント完走を確認するまで「削除運用開始済み」と扱わない。
 
 ### 8.2 事前条件
 
-- [ ] `supabase/notebook_diary_delete.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_deletion_pipeline.sql` が本番へ正しい順で適用済み。
+- [ ] `supabase/notebook_diary_delete.sql`、`supabase/notebook_person_delete.sql`、`supabase/admin_auth_hardening.sql`、`supabase/account_delete_executor_role.sql`、`supabase/account_deletion_pipeline.sql` が本番へ正しい順で適用済み。
 - [ ] migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持した。
-- [ ] 実行予定者 `システム責任者 池田知也` の本人確認済み個別Supabase Auth、MFA、正確なuser IDを制限付き運用台帳で確認した。
-- [ ] 現行 `app_admin` の全Admin API共通権限を明示承認するか、削除専用roleを実装・検証した。
-- [ ] 上記確認後に実行者を `app_admins` へ登録し、削除対象本人とは別人であることを確認した。
+- [ ] 実行予定者 `システム責任者 池田知也` の本人確認済み個別Supabase Auth、verified TOTP、正確なuser IDを制限付き運用台帳で確認した。
+- [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査をソース実装し、ローカル回帰を通した。
+- [ ] 本番へ `account_delete_executor_role.sql` と更新済み `account_deletion_pipeline.sql` を適用し、`verify_compact.sql` を確認した。
+- [ ] 上記確認後に実行者を `account_delete_executors` へ有効登録し、削除対象本人とは別人であることを確認した。
 - [ ] 実行者とは別の確認者を指名し、削除ごとの二者確認手順を記録した。
-- [ ] 最後のapp adminを削除しない。
+- [ ] 最後のapp adminと最後の有効な削除専用実行者を削除しない。
 - [ ] familyに他メンバーがいるownerは、Webの家族管理で所有権移管を完了した。
 - [ ] 最新backup、削除後に古いbackupを復元する場合の再削除手順、障害連絡先を確認した。
 - [ ] 破棄可能なPostgreSQLで次が成功した。
 
   ```bash
   pnpm run test:web-account-deletion
+  pnpm run test:account-delete-executor
   pnpm run test:account-erasure:sql
   ```
 
@@ -321,10 +324,11 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 以下の `<REQUEST_ID>`、`<TARGET_USER_ID>` は、画面の実値を別担当が復唱してから入力する。APIによる削除、環境変数変更、deployは本番変更である。運用上の二者確認はコードが自動強制するものではないため、確認者を台帳へ残す。
 
 1. 依頼を確認し、管理画面で `reviewing` にする。期限、本人確認、family所有権、問い合わせ履歴を確認する。
-2. 登録済みapp_adminのメールで管理画面へ再ログインする。緊急用管理キーのsessionでは実行しない。
-3. `/admin/delete-requests` の「検証済みの完全削除」を開き、画面に表示された対象user IDを省略せず入力して「削除前の安全確認」を押す。
-4. `result=ready` の時だけ進む。`blockedDetails`、`jobId`、`ownedFamilyCount`、`storageObjectCount`、Auth状態を台帳へ記録する。`blocked`、`target_mismatch`、`last_app_admin`、`ownership_transfer_required`、`shared_photo_transfer_required`、Auth未確認は解消まで停止する。共有familyに対象user名義の写真pathが残る場合は、写真引継ぎ機能が整うまで `needs_followup` とし、手動で完了にしない。
-5. 削除対象のmanifest件数とhashをread-onlyで確認する。Storage pathそのものは一般台帳へ転記しない。
+2. 登録済み削除実行者の個別メールで管理画面へ再ログインする。緊急用管理キーのsessionでは閲覧も実行もしない。
+3. 実削除前に登録済み認証アプリの6桁コードで追加認証し、画面がAAL2確認済みになったことを確認する。
+4. `/admin/delete-requests` の「検証済みの完全削除」を開き、画面に表示された対象user IDを省略せず入力して「削除前の安全確認」を押す。
+5. `result=ready` の時だけ進む。`blockedDetails`、`jobId`、`ownedFamilyCount`、`storageObjectCount`、Auth状態を台帳へ記録する。`blocked`、`target_mismatch`、`last_app_admin`、`last_account_delete_executor`、`ownership_transfer_required`、`shared_photo_transfer_required`、Auth未確認は解消まで停止する。共有familyに対象user名義の写真pathが残る場合は、写真引継ぎ機能が整うまで `needs_followup` とし、手動で完了にしない。
+6. 削除対象のmanifest件数とhashをread-onlyで確認する。Storage pathそのものは一般台帳へ転記しない。
 
    ```sql
    select id, status, storage_manifest_hash,
@@ -334,7 +338,7 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
    where request_id = '<REQUEST_ID>'::uuid;
    ```
 
-6. 単一日記削除と対象者全体削除の未完了写真jobを確認し、該当job IDと件数だけを制限付き台帳へ記録する。アカウント削除pipelineがこれらをStorage manifestへ含めていることを、手順5の件数と照合する。
+7. 単一日記削除と対象者全体削除の未完了写真jobを確認し、該当job IDと件数だけを制限付き台帳へ記録する。アカウント削除pipelineがこれらをStorage manifestへ含めていることを、手順6の件数と照合する。
 
    ```sql
    select id, status, attempt_count, last_error
@@ -364,10 +368,10 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
    order by created_at;
    ```
 
-7. 別担当がrequest ID、target user ID、manifest件数、blockなし、実行スイッチの承認を復唱する。
-8. 画面どおり `完全削除 <REQUEST_ID>` を入力し、「Auth・DB・写真を検証して完全削除」を1回押す。APIはmanifestの完全一致pathだけを扱う。prefixや手作業でStorageを一括削除しない。
-9. 成功応答の `completed=true` と `verified.authUserAbsent`、`databaseReferencesAbsent`、`storageObjectsAbsent`、`storageObjectCount` を記録する。途中で失敗した場合、手書きで完了にせず、error codeとjob状態を保全する。原因を解消後、同じrequest ID・user IDでpreflightから再実行する。
-10. 管理画面で依頼が `completed` になったこと、および次のread-only検査を別担当が確認する。
+8. 別担当がrequest ID、target user ID、manifest件数、blockなし、実行スイッチの承認を復唱する。
+9. 画面どおり `完全削除 <REQUEST_ID>` を入力し、「Auth・DB・写真を検証して完全削除」を1回押す。APIはmanifestの完全一致pathだけを扱う。prefixや手作業でStorageを一括削除しない。
+10. 成功応答の `completed=true` と `verified.authUserAbsent`、`databaseReferencesAbsent`、`storageObjectsAbsent`、`storageObjectCount` を記録する。途中で失敗した場合、手書きで完了にせず、error codeとjob状態を保全する。原因を解消後、同じrequest ID・user IDでpreflightから再実行する。
+11. 管理画面で依頼が `completed` になったこと、および次のread-only検査を別担当が確認する。
 
     ```sql
     select request.id, request.status,
@@ -398,7 +402,7 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
     from public.person_notebook_deletion_receipts
     where deleted_by = '<TARGET_USER_ID>'::uuid;
 
-    -- 手順6で記録したjobがない場合、この検査は省略する。
+    -- 手順7で記録したjobがない場合、この検査は省略する。
     -- 複数ある場合はjob IDごとに繰り返す。
     select count(*) as retained_cleanup_identity_count
     from public.notebook_storage_deletion_jobs
@@ -406,8 +410,8 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
     ```
 
     全redaction列がtrue、両statusが `completed`、hashと3時刻が存在し、すべてのraw identity countとretained cleanup countが0でなければ完了扱いにしない。
-11. 削除運用を常時開放する承認がない場合は、処理窓口を閉じた後に `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` へ戻し、反映deploymentを記録する。
-12. 指定した問い合わせ窓口から、クラウド削除完了と「各端末のローカル手帳は利用者側で別途削除が必要」を連絡する。
+12. 削除運用を常時開放する承認がない場合は、処理窓口を閉じた後に `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` へ戻し、反映deploymentを記録する。
+13. 指定した問い合わせ窓口から、クラウド削除完了と「各端末のローカル手帳は利用者側で別途削除が必要」を連絡する。
 
 ### 8.4 残す証跡
 

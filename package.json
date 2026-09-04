@@ -35,6 +35,7 @@
     "test:memory-book-export": "node scripts/test-memory-book-export.mjs",
     "test:free-first-redesign": "node scripts/test-free-first-redesign.mjs",
     "test:web-account-deletion": "node scripts/test-web-account-deletion.mjs",
+    "test:account-delete-executor": "node scripts/test-account-delete-executor-auth.mjs",
     "test:account-erasure:sql": "bash scripts/test-account-erasure-sql.sh",
     "test:home-overview-reachability": "node scripts/test-home-overview-reachability.mjs",
     "test:commercial-release-gates": "node scripts/test-commercial-release-gates.mjs",

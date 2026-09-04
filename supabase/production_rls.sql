@@ -4,6 +4,8 @@
 
 alter table profiles enable row level security;
 alter table app_admins enable row level security;
+alter table account_delete_executors enable row level security;
+alter table account_delete_executors force row level security;
 alter table families enable row level security;
 alter table family_members enable row level security;
 alter table people enable row level security;

@@ -3,6 +3,8 @@
 -- RLS still controls anon/authenticated access; these grants only allow the API roles
 -- to reach the tables/functions that policies then restrict.
 
+begin;
+
 grant usage on schema public to anon, authenticated, service_role;
 
 grant select, insert, update, delete on all tables in schema public to service_role;
@@ -146,9 +148,23 @@ begin
     execute 'grant execute on function public.release_daily_free_consult(uuid, uuid, uuid) to service_role';
   end if;
 
+  if to_regclass('public.account_delete_executors') is not null then
+    execute 'revoke all on table public.account_delete_executors from public, anon, authenticated, service_role';
+    execute 'grant select on table public.account_delete_executors to service_role';
+  end if;
+
   if to_regclass('public.account_erasure_jobs') is not null then
     execute 'revoke all on table public.account_erasure_jobs from public, anon, authenticated, service_role';
     execute 'grant select on table public.account_erasure_jobs to service_role';
+  end if;
+
+  if to_regprocedure('public.account_erasure_operator_method(uuid)') is not null then
+    execute 'revoke all on function public.account_erasure_operator_method(uuid) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.update_account_delete_request_status_v1(uuid,text,text,uuid)') is not null then
+    execute 'revoke all on function public.update_account_delete_request_status_v1(uuid, text, text, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.update_account_delete_request_status_v1(uuid, text, text, uuid) to service_role';
   end if;
 
   if to_regprocedure('public.guard_erased_profile_recreation()') is not null then
@@ -216,3 +232,5 @@ begin
   end if;
 end;
 $server_only_rpc_acl$;
+
+commit;

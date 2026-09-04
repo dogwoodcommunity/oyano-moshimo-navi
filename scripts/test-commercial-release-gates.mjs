@@ -76,8 +76,8 @@ assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 |
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
 assert.ok(releaseInputs.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也（指名方針のみ）** |"), "the release input ledger must retain the intended deletion executor without claiming authorization");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
-assert.ok(operationsRunbook.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・MFA・`app_admins` 登録は未実施）"), "the runbook must retain the intended executor as a policy assignment only");
-assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
+assert.ok(operationsRunbook.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。個別Supabase Auth・TOTP・`account_delete_executors` 登録は未実施）"), "the runbook must retain the intended executor as a policy assignment only");
+assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
 assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
 assert.ok(releaseInputs.includes("アプリ内依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない"), "the release input ledger must distinguish in-app deletion requests from email intake");
 assert.ok(operationsRunbook.includes("受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認"), "the operations runbook must retain the account-deletion delegate title and scope without claiming unverified routing");
@@ -88,9 +88,15 @@ assert.ok(operationsRunbook.includes("身分証画像、パスワード、Magic 
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
 assert.ok(adminAuthPolicy.includes("現行の `app_admin` は削除専用roleではなく、全Admin APIに共通する管理者権限"), "the policy must retain that app_admin is broader than deletion execution");
-assert.ok(adminAuthPolicy.includes("削除実行予定者の指名だけでは、Supabase Authユーザー、MFA、`app_admins` 行、Vercel・Supabase等の本番権限を作成・付与しない"), "the intended executor assignment must not create production identity or authorization");
-assert.ok(adminAuthPolicy.includes("全Admin APIの閲覧・操作範囲を明示承認するか、削除専用roleを実装・検証"), "broad admin approval or a deletion-only role must precede registration");
+assert.ok(adminAuthPolicy.includes("削除実行予定者の指名だけでは、Supabase Authユーザー、MFA、`account_delete_executors` 行、Vercel・Supabase等の本番権限を作成・付与しない"), "the intended executor assignment must not create production identity or authorization");
+assert.ok(adminAuthPolicy.includes("削除専用roleは `account_delete_executors` で管理し、有効化済み・未失効の個別ユーザーだけを受け付ける"), "the policy must document the active and unrevoked deletion-only allowlist");
+assert.ok(adminAuthPolicy.includes("一般Admin APIへは権限を広げない"), "the deletion-only role must not widen general Admin access");
+assert.ok(adminAuthPolicy.includes("実削除は登録済みTOTPで追加認証したAAL2を必須"), "account erasure must require verified MFA step-up");
+assert.ok(adminAuthPolicy.includes("削除依頼の一覧・状態変更・事前確認・実行では一切受け付けない"), "the static emergency token must not enter any deletion surface");
 assert.ok(productionChecklist.includes("[x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）"), "the checklist must distinguish executor assignment from authorization");
+assert.ok(productionChecklist.includes("[x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証"), "the checklist must record the locally verified least-privilege implementation");
+assert.ok(productionChecklist.includes("[ ] 本番へ削除専用roleと更新済み削除pipelineをmigration"), "production migration must remain pending");
+assert.ok(productionChecklist.includes("[ ] 上記確認後に `account_delete_executors` へ有効登録"), "the named operator must remain unregistered until external checks pass");
 assert.ok(productionChecklist.includes("[ ] 削除実行者とは別の確認者を指名"), "a separate deletion verifier must remain pending");
 assert.ok(envExample.includes("ACCOUNT_ERASURE_EXECUTION_ENABLED=false"), "the destructive account-erasure execution switch must remain disabled by default");
 assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する"), "production account erasure must remain disabled until its external prerequisites pass");

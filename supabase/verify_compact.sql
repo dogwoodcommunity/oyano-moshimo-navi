@@ -4,6 +4,7 @@
 with checks as (
   select 'table_exists' as check_type, 'profiles' as target, to_regclass('public.profiles') is not null as ok
   union all select 'table_exists', 'app_admins', to_regclass('public.app_admins') is not null
+  union all select 'table_exists', 'account_delete_executors', to_regclass('public.account_delete_executors') is not null
   union all select 'table_exists', 'families', to_regclass('public.families') is not null
   union all select 'table_exists', 'family_members', to_regclass('public.family_members') is not null
   union all select 'table_exists', 'family_invites', to_regclass('public.family_invites') is not null
@@ -25,6 +26,7 @@ with checks as (
   union all select 'table_exists', 'public_api_rate_limits', to_regclass('public.public_api_rate_limits') is not null
   union all select 'rls_enabled', 'profiles', coalesce((select relrowsecurity from pg_class where oid = 'public.profiles'::regclass), false)
   union all select 'rls_enabled', 'app_admins', coalesce((select relrowsecurity from pg_class where oid = 'public.app_admins'::regclass), false)
+  union all select 'rls_enabled', 'account_delete_executors', coalesce((select relrowsecurity and relforcerowsecurity from pg_class where oid = to_regclass('public.account_delete_executors')), false)
   union all select 'rls_enabled', 'families', coalesce((select relrowsecurity from pg_class where oid = 'public.families'::regclass), false)
   union all select 'rls_enabled', 'family_members', coalesce((select relrowsecurity from pg_class where oid = 'public.family_members'::regclass), false)
   union all select 'rls_enabled', 'people', coalesce((select relrowsecurity from pg_class where oid = 'public.people'::regclass), false)
@@ -69,7 +71,12 @@ with checks as (
   union all select 'column_exists', 'ai_consult_turns.saved_to_notebook_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ai_consult_turns' and column_name = 'saved_to_notebook_at')
   union all select 'column_exists', 'ai_memory_consents.revoked_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ai_memory_consents' and column_name = 'revoked_at')
   union all select 'column_exists', 'ai_memory_consents.revision', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'ai_memory_consents' and column_name = 'revision' and data_type = 'integer' and is_nullable = 'NO')
+  union all select 'column_exists', 'account_delete_executors.active_default_false', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_delete_executors' and column_name = 'active' and data_type = 'boolean' and is_nullable = 'NO' and column_default in ('false', 'false::boolean'))
+  union all select 'column_exists', 'account_delete_executors.activated_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_delete_executors' and column_name = 'activated_at' and data_type = 'timestamp with time zone')
+  union all select 'column_exists', 'account_delete_executors.revoked_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_delete_executors' and column_name = 'revoked_at' and data_type = 'timestamp with time zone')
+  union all select 'column_exists', 'account_erasure_jobs.operator_method', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_erasure_jobs' and column_name = 'operator_method' and data_type = 'text')
   union all select 'constraint_exists', 'ai_memory_consents_revision_positive', exists(select 1 from pg_constraint where conrelid = to_regclass('public.ai_memory_consents') and conname = 'ai_memory_consents_revision_positive' and contype = 'c')
+  union all select 'constraint_exists', 'account_delete_executors_activation_state', exists(select 1 from pg_constraint where conrelid = to_regclass('public.account_delete_executors') and conname = 'account_delete_executors_activation_state' and contype = 'c')
   union all select 'constraint_exists', 'family_members_role_allowed', exists(select 1 from pg_constraint where conrelid = to_regclass('public.family_members') and conname = 'family_members_role_allowed' and contype = 'c')
   union all select 'constraint_exists', 'people_cloud_revision_positive', exists(select 1 from pg_constraint where conrelid = to_regclass('public.people') and conname = 'people_cloud_revision_positive' and contype = 'c')
   union all select 'constraint_exists', 'people_cloud_hash_sha256', exists(select 1 from pg_constraint where conrelid = to_regclass('public.people') and conname = 'people_cloud_hash_sha256' and contype = 'c')
@@ -130,6 +137,8 @@ with checks as (
   union all select 'function_exists', 'touch_ai_consult_updated_at', to_regproc('public.touch_ai_consult_updated_at') is not null
   union all select 'function_exists', 'sync_notebook_v2', to_regprocedure('public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)') is not null
   union all select 'function_exists', 'is_family_editor', to_regprocedure('public.is_family_editor(uuid)') is not null
+  union all select 'function_exists', 'account_erasure_operator_method', to_regprocedure('public.account_erasure_operator_method(uuid)') is not null
+  union all select 'function_exists', 'update_account_delete_request_status_v1', to_regprocedure('public.update_account_delete_request_status_v1(uuid,text,text,uuid)') is not null
   union all select 'trigger_exists', 'people_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.people') and tgname = 'people_notebook_cloud_version' and not tgisinternal)
   union all select 'trigger_exists', 'tasks_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.tasks') and tgname = 'tasks_notebook_cloud_version' and not tgisinternal)
   union all select 'trigger_exists', 'timeline_events_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.timeline_events') and tgname = 'timeline_events_notebook_cloud_version' and not tgisinternal)
@@ -145,6 +154,17 @@ with checks as (
     has_function_privilege('service_role', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
+  union all select 'security_check', 'account_delete_executor_acl',
+    has_table_privilege('service_role', 'public.account_delete_executors', 'SELECT')
+    and not has_table_privilege('service_role', 'public.account_delete_executors', 'INSERT,UPDATE,DELETE')
+    and not has_table_privilege('authenticated', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
+    and not has_table_privilege('anon', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
+    and not has_function_privilege('service_role', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
   union all select 'security_check', 'consult_daily_claim_service_only',
     has_function_privilege('service_role', 'public.claim_daily_free_consult(uuid,uuid,uuid,uuid)', 'EXECUTE')
     and has_function_privilege('service_role', 'public.persist_and_finalize_daily_free_consult(uuid,uuid,uuid,uuid,uuid,text,jsonb,uuid[],integer,text)', 'EXECUTE')

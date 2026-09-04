@@ -68,13 +68,19 @@ export async function sendNotebookMagicLink(email: string): Promise<{ ok: boolea
   return sendMagicLink(email, "/home?cloud=1");
 }
 
-export async function sendAdminMagicLink(email: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendAdminMagicLink(
+  email: string,
+  redirectPath = "/admin/monitor-feedback"
+): Promise<{ ok: boolean; error?: string }> {
   const client = getBrowserSupabase();
   if (!client || typeof window === "undefined") {
     return { ok: false, error: "管理者認証の設定がまだありません。" };
   }
 
-  const redirectTo = `${window.location.origin}/admin/monitor-feedback`;
+  const safeRedirectPath = redirectPath.startsWith("/") && !redirectPath.startsWith("//")
+    ? redirectPath
+    : "/admin/monitor-feedback";
+  const redirectTo = `${window.location.origin}${safeRedirectPath}`;
   const { error } = await client.auth.signInWithOtp({
     email,
     options: {
