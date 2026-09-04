@@ -11611,3 +11611,25 @@ Supabase本番 `ypnuxyfirlvbsqujocuy` へ適用し、PR #3をmainへ通常マー
 
 次の操作は、ユーザーの実行時確認後にSupabaseから個別招待メールを1通送信すること。
 並行して、本人だけがTOTPを登録・確認できる安全な初回設定導線を実装・検証する必要がある。
+
+## 2026-09-04 追記 305 — 削除実行者の個別Auth招待を送信
+
+ユーザーの実行時承認を得て、`システム責任者 池田知也` 本人用の個別メールアドレスへ、
+Supabase本番からAuth招待メールを1通送信した。個人連絡先そのものはGit・引継ぎへ記録していない。
+
+- Supabaseの送信完了通知とユーザー詳細を確認し、Authユーザー1件、招待日時・確認メール送信日時あり、
+  メール確認0件、最終ログインなしであることを確認した。
+- 読み取り専用SQLで、該当Authユーザー1件に対して `profiles=0`、MFA factor 0件、
+  verified MFA 0件、`account_delete_executors=0`、有効executor 0件、削除依頼0件を確認した。
+- 今回実施したのは個別Authへの招待送信だけであり、TOTP MFAの登録・確認、一般Admin登録、
+  削除専用roleの付与・有効化は行っていない。
+- Vercel本番の `ACCOUNT_ERASURE_EXECUTION_ENABLED` は未登録のままで、完全削除は引き続き
+  fail closedのOFF状態である。
+- 削除依頼・削除ジョブの作成、DB削除RPC、Auth削除、Storage削除は実行していない。
+  既存利用者、モニター回答、日記、写真、AI相談その他の本番データにも変更を加えていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、本人が招待メールを受諾してメール確認を完了すること。
+その後、本人セッションで安全にTOTPを登録・確認できる初回設定導線を実装・検証し、
+正確なAuth UUIDとverified MFAを確認してから削除専用roleを付与する。
