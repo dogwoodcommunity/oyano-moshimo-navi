@@ -11202,3 +11202,43 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、障害対応の主責任者。
+
+## 2026-09-04 追記 295 — 障害対応の主責任者を確定
+
+ユーザー確認により、障害対応の主責任者 / Incident Commanderを
+`代表取締役 池田哲也` と確定した。障害対応の代行者、内部連絡手段、アラート通知先、
+平日・夜間・休日の当番体制、各サービスの実行権限は、今回の回答から推測せず未確定のまま残した。
+
+- `COMMERCIAL_RELEASE_INPUTS.md` に主責任者の確定値と、代行者・連絡・通知・当番・権限の
+  未確定状態を分離して記録した。
+- `COMMERCIAL_OPERATIONS_RUNBOOK.md` は、全般的な運用責任者まで指名したと誤解しないよう
+  役割名を `障害対応主責任者 / Incident Commander` に限定した。
+- 正式版チェックリストと公開計画へ、主責任者名だけが確定し、正式な障害対応体制は
+  未完成であることを反映した。
+- 主責任者名の記録だけでは、Vercel・Supabase・GitHub・Resend・DNS等の権限、MFA、
+  アラート、当番、rollback・DB操作・secret rotationの実行資格を付与しない。
+- 承認者と本番操作の実行者を分離し、秘密情報・個人電話番号・MFA・復旧コードはGitへ書かず、
+  制限付き運用台帳または承認済みのパスワード管理基盤で管理する境界をrunbookへ明記した。
+- 正式版ゲート回帰に、確定した主責任者が入力票・runbookから消えないこと、代行者や権限を
+  捏造しないこと、正式運用を閉じたままにすることを追加した。
+- 独立した読み取り専用監査でP0指摘なし。ただし代行者・連絡経路・通知先・当番・権限・演習が
+  揃うまで、障害対応運用はNO-GOのまま。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+- 独立した読み取り専用再検証でも、上記4項目がすべて成功し、差分が運用文書と
+  回帰テストの6ファイルだけであることを確認。
+
+本番・データの境界:
+
+- Vercel・Supabase・GitHub・Resend・DNSのアカウント、権限、MFA、通知、環境変数、
+  本番deploymentは変更していない。障害対応に関する本番操作も行っていない。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、削除依頼、決済、
+  メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、障害対応の代行者。
