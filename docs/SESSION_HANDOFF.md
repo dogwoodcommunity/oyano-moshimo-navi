@@ -11541,3 +11541,51 @@ GitHub・本番の境界:
 正式運用前の次項目は、本番適用を別承認したうえで、SQLの順序投入、池田知也の個別Supabase Auth、
 確認済みTOTP、正確なuser IDに対する有効role行、別確認者、単独テストアカウントでの
 Auth・DB・Storage完走を確認すること。すべて揃うまで完全削除スイッチはOFFを維持する。
+
+## 2026-09-04 追記 303 — 削除専用roleのDB・Web本番反映を完了
+
+ユーザーから本番DB変更の明示承認を得た後、削除専用roleと削除パイプラインを
+Supabase本番 `ypnuxyfirlvbsqujocuy` へ適用し、PR #3をmainへ通常マージしてVercel本番へ反映した。
+
+- Supabase SQL Editorで `account_delete_executor_role.sql`、`notebook_diary_delete.sql`、
+  `notebook_person_delete.sql`、`account_deletion_pipeline.sql` の順に適用し、4本とも
+  `Success. No rows returned` を確認した。
+- 既存の `app_admins` と削除依頼テーブルは投入前に存在を確認した。
+  `admin_auth_hardening.sql` は家族招待関数を古い定義で上書きする可能性があるため再投入せず、
+  今回必要な専用migrationだけを適用した。
+- 投入後の読み取り専用検証は13項目すべて `true`。テーブル存在、`active=false` 既定値、
+  有効化状態制約、FORCE RLS、`operator_method`、状態更新RPC、削除4 RPC、
+  service_role限定ACL、operator helperのAPI実行禁止を確認した。
+- `account_delete_executors=0`、`account_delete_requests=0`、`account_erasure_jobs=0` で、
+  実担当者の自動登録、削除依頼の捏造、削除ジョブの起動がないことを確認した。
+- 個人情報の内容は取得せず件数だけを確認し、`profiles=4`、`families=5`、
+  `family_members=5`、`people=4` が本番に残っている。DB削除RPC、Auth削除、Storage削除は呼んでいない。
+  Vercel反映は利用者ブラウザのlocalStorageを消去しないため、端末内の日記・モニター途中状態も
+  今回の操作対象外である。
+- PR #3は通常mergeで履歴を保持し、main merge commitは
+  `9dcd1de13ce7d709aaefeff8f8cbc1eef15321d5`。
+- main CI run `33877360113` の `web-and-mobile` は2分32秒で成功した。
+  型検査、全静的回帰、PostgreSQL削除回帰、Web build、smokeがすべて成功した。
+- GitHubの `Deploy to Vercel` run `33877360092` はcheckだけ成功し、Vercel secrets未設定のため
+  deploy jobがskipされた。成功表示を本番反映の証拠にせず、同じmain SHAをローカルへ
+  fast-forwardした後、Vercel CLIで本番deployした。
+- Vercel deploymentは `dpl_BTP4b2aMtEdrTwQbXSNCeNCbNAGe`、target `production`、
+  status `READY`。`https://oyano-moshimo-navi.vercel.app` へのaliasを確認した。
+- 本番URLに対する `scripts/smoke-web.mjs` は主要画面・APIすべて成功。
+  `/api/health` は200、削除専用auth-status/listはBearerなしで401、無効な静的
+  `x-admin-token` だけでも401を確認した。
+- Vercel Production環境には `ACCOUNT_ERASURE_EXECUTION_ENABLED` が登録されていない。
+  実装は値が厳密に `true` の場合だけ削除可能なため、完全削除はfail closedのOFF状態である。
+
+未完了・正式運用前の境界:
+
+- `システム責任者 池田知也` の個別メールアドレス、本人確認済みSupabase Auth、正確なuser ID、
+  verified TOTPは未確認で、`account_delete_executors` 行はまだ作成していない。
+- `info@bee-ch.co.jp` は削除依頼の共有受信箱であり、本人の個別Authメールとして推測利用しない。
+- 実行者と別の確認者、代替実行者、共有受信箱とDBキューの通知試験、破棄用単独アカウントによる
+  Auth・DB・Storage完全削除の本番完走は未実施。
+- 上記が揃うまで `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持し、実利用者の削除は行わない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、池田知也本人だけが受信できるSupabase Auth用の個別メールアドレスを確認すること。
