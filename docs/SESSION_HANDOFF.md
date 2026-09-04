@@ -11360,3 +11360,44 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、アカウント削除対応における代行者の責任範囲。
+
+## 2026-09-04 追記 299 — アカウント削除対応代行者の責任範囲を確定
+
+ユーザー確認により、アカウント削除対応代行者 `システム責任者 池田知也` の責任範囲を
+`主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施`
+と確定した。
+
+- `COMMERCIAL_RELEASE_INPUTS.md`、`COMMERCIAL_OPERATIONS_RUNBOOK.md`、正式版チェックリスト、
+  公開計画へ確定した責任範囲を同期した。
+- 代行者の「本人確認」は、利用者が `/account/delete` のMagic Link認証を完了した状態と、
+  request ID・対象user IDの一致を確認する意味に限定した。身分証画像、パスワード、
+  Magic Link、access tokenを受け取る運用にはしない。
+- 代行者の担当は受付・確認・実行担当への引継ぎまでとし、今回の確定だけでは
+  `app_admins` 登録、削除実行、別確認者、最終承認者の資格を付与しない。
+- 本番削除の二者確認は、登録済みapp_adminの実行者と別確認者による運用統制であり、
+  現行APIが技術的に二人の承認を強制するものではない境界を維持した。
+- 主担当または代行者本人のアカウントを削除する場合は、その本人を実行者・確認者にせず、
+  別の登録済みapp_adminと確認者を必要とする。
+- 両名の内部連絡手段、実行app_admin、別確認者、本番migration、単独テストアカウントでの
+  完走試験が揃うまで、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持し正式運用を開始しない。
+- 独立した読み取り専用監査でP0指摘なし。コード・SQL・envの変更は不要と確認した。
+- 独立した読み取り専用再検証でも、正式版ゲート、local doctor、diff checkが成功し、
+  変更が運用文書5ファイルと静的回帰テスト1ファイルだけであることを確認した。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。
+  既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- 法務ページ、アプリコード、SQL、env、Supabase Auth、`app_admins`、本番deployment、
+  Vercel・Supabase・GitHub・Resend・DNSの権限やMFAは変更していない。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、削除依頼、決済、
+  メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、アカウント削除対応の主担当・代行者の内部連絡手段。

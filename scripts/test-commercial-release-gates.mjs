@@ -74,9 +74,12 @@ assert.doesNotMatch(envExample, /LEGAL_PRIVACY_EFFECTIVE_DATE=(?:正式公開日
 assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed privacy effective-date policy");
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
-assert.ok(operationsRunbook.includes("| **システム責任者 池田知也**（削除対応での責任範囲・連絡手段は要指定。指定後は制限付き運用台帳に記録） |"), "the operations runbook must retain the account-deletion delegate title without inventing responsibility or contact details");
+assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
+assert.ok(operationsRunbook.includes("| **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施。内部連絡手段は要指定） |"), "the operations runbook must retain the account-deletion delegate title and confirmed scope without inventing contact details");
+assert.ok(operationsRunbook.includes("身分証画像、パスワード、Magic Link、access tokenは受け取らない"), "identity verification must not collect authentication secrets or identity documents");
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
+assert.ok(operationsRunbook.includes("二者確認は運用手順であり、実行APIが技術的に二人の承認を強制するものではない"), "the release gate must retain the limitation that dual control is operational rather than API-enforced");
 assert.ok(releaseInputs.includes("| 障害対応責任者・代行者 | **主責任者：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed incident-response assignees and titles");
 assert.ok(operationsRunbook.includes("| 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |"), "the operations runbook must retain both assignees, titles, and confirmed delegate scope without inventing contact details");
 assert.doesNotMatch(envExample, /LEGAL_RESPONSIBLE_PERSON=システム責任者 池田知也/, "the system title must not replace the confirmed public legal responsible person");
