@@ -10950,3 +10950,17 @@ GitHub Actions CI run `33827837956` の1回目は、26項目成功後の日記�
 これは正式版で意図した安全側のAPI応答であり、smokeの期待値を現契約へ更新した。ローカルの
 本番buildを一時起動し、`node scripts/smoke-web.mjs http://localhost:3010` は全対象成功。
 アカウント削除受付503、有料受付503、家族/API未設定503、未認証系401を意図どおり確認した。
+
+## 2026-09-04 追記 286 — 正式版ソース基盤のGitHub CI完走
+
+smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3`
+(`test: align smoke with closed commercial gates`) として `origin/main` へpushした。
+
+- GitHub Actions CI run `33828280291` は2分13秒で成功。Web/Mobile typecheck、モニター保護、手帳同期、
+  memory book、無料導線、アカウント完全削除、family権限/招待/管理、匿名診断handoff、
+  AI長期記憶と1日1回claim、日記/対象者削除の各静的・破棄PostgreSQL回帰、Web build、
+  最終smokeがすべてgreen。
+- Deploy workflow `33828280306` はcheckだけ成功し、deploy jobはskipped。Supabase本番migration、
+  Vercel production、本番データは未変更。
+- GitHub ActionsはNode 20対象actionをrunner側でNode 24に強制実行する廃止予定warningを表示した。
+  test/build失敗ではないが、workflowとアプリruntimeのNode 22以上への明示更新は次回タスク。
