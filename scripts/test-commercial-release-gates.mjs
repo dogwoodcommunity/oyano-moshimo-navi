@@ -75,7 +75,12 @@ assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 |
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
 assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
-assert.ok(operationsRunbook.includes("| **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済みapp_adminと別確認者の二者で実施。内部連絡手段は要指定） |"), "the operations runbook must retain the account-deletion delegate title and confirmed scope without inventing contact details");
+assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
+assert.ok(releaseInputs.includes("アプリ内依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない"), "the release input ledger must distinguish in-app deletion requests from email intake");
+assert.ok(operationsRunbook.includes("受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認"), "the operations runbook must retain the account-deletion delegate title and scope without claiming unverified routing");
+assert.ok(operationsRunbook.includes("現行実装は、このDBキューへの保存時に自動メール通知を行わない"), "the runbook must not claim that in-app deletion requests currently generate email");
+assert.ok(operationsRunbook.includes("共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う"), "shared inbox access must be individually attributable");
+assert.ok(operationsRunbook.includes("共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない"), "shared inbox credentials and recovery material must remain out of tracked documentation and general chat");
 assert.ok(operationsRunbook.includes("身分証画像、パスワード、Magic Link、access tokenは受け取らない"), "identity verification must not collect authentication secrets or identity documents");
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
