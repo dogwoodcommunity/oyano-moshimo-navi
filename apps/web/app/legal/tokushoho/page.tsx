@@ -24,6 +24,7 @@ export default function TokushohoPage() {
               <tr><th>所在地</th><td>{disclosure.address}</td></tr>
               <tr><th>電話番号</th><td>{disclosure.phone}（受付時間: {disclosure.phoneHours}）</td></tr>
               <tr><th>問い合わせ先</th><td>{contactHref ? <a href={contactHref}>{disclosure.contact}</a> : disclosure.contact}</td></tr>
+              <tr><th>問い合わせ受付・返信目安</th><td>{disclosure.contactResponseTarget}</td></tr>
               <tr><th>販売価格</th><td>{disclosure.priceDescription}</td></tr>
               <tr><th>商品代金以外の必要料金</th><td>インターネット接続料金・通信料はお客様のご負担です。追加料金がある場合は、申込確定前に表示します。</td></tr>
               <tr><th>支払方法</th><td>クレジットカード等、決済画面に表示される方法</td></tr>

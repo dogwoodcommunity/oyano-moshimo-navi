@@ -11039,3 +11039,35 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、問い合わせ受付時間と一次返信目標。
+
+## 2026-09-04 追記 290 — 問い合わせ受付・返信目安を確定
+
+ユーザーが提案文言を承認し、公開する問い合わせ対応目安を
+`メール受付：24時間／原則3営業日以内に返信` と確定した。
+
+- `LEGAL_CONTACT_RESPONSE_TARGET` を新設し、無料正式版の公開情報として必須化した。
+  `LEGAL_PHONE_HOURS`（将来の電話受付時間）と `NOTIFICATION_EMAIL_REPLY_TO`（通知メール返信先）
+  とは分離している。
+- 利用規約、プライバシーポリシー、特商法表示の問い合わせ欄へ「受付・返信目安」を追加した。
+- `.env.example`、管理者env確認、local doctor、`ENVIRONMENT_MATRIX.md`、`DEPLOYMENT.md`、
+  正式版入力票、公開チェックリスト、モバイル公開資料、運用runbookを同期した。
+- 管理者env確認は空白だけの環境変数を設定済みと誤判定しないよう、trim後の値で判定する。
+- 公開約束は原則3営業日以内、運用上は余裕を持って2営業日以内に一次返信する内部目標と明記した。
+- 正式版ゲート回帰に、新しい環境変数、確定文言、3法務ページの表示、管理者env空白判定を追加した。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm --filter web run typecheck`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- Vercel本番環境の `LEGAL_CONTACT_RESPONSE_TARGET` は未設定で、本番法務ページは未更新。
+  実際のメール受信・返信、担当不在時の引継ぎも未確認のため、Stage AはNO-GOを継続する。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、決済、メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、利用規約の施行日。

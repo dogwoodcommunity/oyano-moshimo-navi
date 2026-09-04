@@ -25,11 +25,18 @@ CRON_SECRET=
 RESEND_API_KEY=
 NOTIFICATION_EMAIL_FROM=
 NOTIFICATION_EMAIL_REPLY_TO=
+LEGAL_BUSINESS_NAME=株式会社BEECH
+LEGAL_RESPONSIBLE_PERSON=代表取締役 池田哲也
+LEGAL_CONTACT=info@bee-ch.co.jp
+LEGAL_CONTACT_RESPONSE_TARGET=メール受付：24時間／原則3営業日以内に返信
+LEGAL_TERMS_EFFECTIVE_DATE=
+LEGAL_PRIVACY_EFFECTIVE_DATE=
 NEXT_PUBLIC_APP_SCHEME=oyanomoshimo
 NEXT_PUBLIC_WEB_BASE_URL=
 ```
 
-詳細は `docs/ENVIRONMENT_MATRIX.md` を参照。
+上記の施行日を含む無料正式版の設定、および有料受付時だけ必要な所在地・電話・価格・返金条件等の
+詳細は `docs/ENVIRONMENT_MATRIX.md` を参照。有料受付スイッチは必要情報と試験が揃うまで `false` にする。
 
 ### 本番へ反映する3つの方法
 

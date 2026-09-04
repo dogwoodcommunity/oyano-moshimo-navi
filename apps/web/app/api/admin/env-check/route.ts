@@ -20,6 +20,7 @@ const requiredEnv = [
   "LEGAL_PHONE",
   "LEGAL_PHONE_HOURS",
   "LEGAL_CONTACT",
+  "LEGAL_CONTACT_RESPONSE_TARGET",
   "LEGAL_TERMS_EFFECTIVE_DATE",
   "LEGAL_PRIVACY_EFFECTIVE_DATE",
   "LEGAL_PRICE_DESCRIPTION",
@@ -40,7 +41,7 @@ export async function GET(request: Request) {
     checkedAt: new Date().toISOString(),
     env: requiredEnv.map((key) => ({
       key,
-      configured: Boolean(process.env[key])
+      configured: Boolean(process.env[key]?.trim())
     }))
   });
 }

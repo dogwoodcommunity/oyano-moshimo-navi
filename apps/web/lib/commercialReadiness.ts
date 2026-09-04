@@ -7,6 +7,7 @@ export type LegalDisclosure = {
   phone: string;
   phoneHours: string;
   contact: string;
+  contactResponseTarget: string;
   priceDescription: string;
   serviceDelivery: string;
   cancellationPolicy: string;
@@ -16,6 +17,7 @@ export type PublicOperatorDisclosure = {
   operatorName: string;
   responsiblePerson: string;
   contact: string;
+  contactResponseTarget: string;
   termsEffectiveDate: string;
   privacyEffectiveDate: string;
 };
@@ -27,6 +29,7 @@ const legalEnvKeys = [
   "LEGAL_PHONE",
   "LEGAL_PHONE_HOURS",
   "LEGAL_CONTACT",
+  "LEGAL_CONTACT_RESPONSE_TARGET",
   "LEGAL_PRICE_DESCRIPTION",
   "LEGAL_SERVICE_DELIVERY",
   "LEGAL_CANCELLATION_POLICY"
@@ -36,6 +39,7 @@ const freeWebLegalEnvKeys = [
   "LEGAL_BUSINESS_NAME",
   "LEGAL_RESPONSIBLE_PERSON",
   "LEGAL_CONTACT",
+  "LEGAL_CONTACT_RESPONSE_TARGET",
   "LEGAL_TERMS_EFFECTIVE_DATE",
   "LEGAL_PRIVACY_EFFECTIVE_DATE"
 ] as const;
@@ -70,6 +74,7 @@ export function getLegalDisclosure(): LegalDisclosure | null {
     phone: value("LEGAL_PHONE"),
     phoneHours: value("LEGAL_PHONE_HOURS"),
     contact: value("LEGAL_CONTACT"),
+    contactResponseTarget: value("LEGAL_CONTACT_RESPONSE_TARGET"),
     priceDescription: value("LEGAL_PRICE_DESCRIPTION"),
     serviceDelivery: value("LEGAL_SERVICE_DELIVERY"),
     cancellationPolicy: value("LEGAL_CANCELLATION_POLICY")
@@ -86,6 +91,7 @@ export function getPublicOperatorDisclosure(): PublicOperatorDisclosure | null {
     operatorName: value("LEGAL_BUSINESS_NAME"),
     responsiblePerson: value("LEGAL_RESPONSIBLE_PERSON"),
     contact: value("LEGAL_CONTACT"),
+    contactResponseTarget: value("LEGAL_CONTACT_RESPONSE_TARGET"),
     termsEffectiveDate: value("LEGAL_TERMS_EFFECTIVE_DATE"),
     privacyEffectiveDate: value("LEGAL_PRIVACY_EFFECTIVE_DATE")
   };

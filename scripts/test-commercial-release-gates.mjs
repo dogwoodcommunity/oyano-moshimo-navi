@@ -28,6 +28,7 @@ const legalKeys = [
   "LEGAL_PHONE",
   "LEGAL_PHONE_HOURS",
   "LEGAL_CONTACT",
+  "LEGAL_CONTACT_RESPONSE_TARGET",
   "LEGAL_TERMS_EFFECTIVE_DATE",
   "LEGAL_PRIVACY_EFFECTIVE_DATE",
   "LEGAL_PRICE_DESCRIPTION",
@@ -52,12 +53,16 @@ for (const key of saleSwitches) {
   assert.ok(adminEnv.includes(`"${key}"`), `admin env check must report ${key}`);
 }
 
+assert.ok(adminEnv.includes("Boolean(process.env[key]?.trim())"), "admin env readiness must reject whitespace-only values");
+
 assert.ok(envExample.includes("LEGAL_BUSINESS_NAME=株式会社BEECH"), "the release configuration example must retain the confirmed operator name");
 assert.ok(releaseInputs.includes("| サービス運営者の正式名称 | **株式会社BEECH** |"), "the release input ledger must retain the confirmed operator name");
 assert.ok(envExample.includes("LEGAL_RESPONSIBLE_PERSON=代表取締役 池田哲也"), "the release configuration example must retain the confirmed responsible person");
 assert.ok(releaseInputs.includes("| 個人情報管理責任者の氏名または役職 | **代表取締役 池田哲也** |"), "the release input ledger must retain the confirmed responsible person");
 assert.ok(envExample.includes("LEGAL_CONTACT=info@bee-ch.co.jp"), "the release configuration example must retain the confirmed public contact");
 assert.ok(releaseInputs.includes("| 利用者向け問い合わせ先 | **info@bee-ch.co.jp** |"), "the release input ledger must retain the confirmed public contact");
+assert.ok(envExample.includes("LEGAL_CONTACT_RESPONSE_TARGET=メール受付：24時間／原則3営業日以内に返信"), "the release configuration example must retain the confirmed response target");
+assert.ok(releaseInputs.includes("| 問い合わせ受付時間・一次返信目標 | **メール受付：24時間／原則3営業日以内に返信** |"), "the release input ledger must retain the confirmed response target");
 
 assert.ok(plans.includes("<PlusUpgrade salesReady={salesReady} />"), "the plans page must pass server-side sale readiness to the client");
 assert.ok(plans.includes('plan.name === "Family Plus" && !salesReady'), "closed Plus sales must not render an actionable plan link");
@@ -81,9 +86,11 @@ assert.ok(readiness.includes("getPublicOperatorDisclosure()"), "paid sales must 
 assert.ok(readiness.includes("legalContactHref"), "published contact destinations must reject unsafe URL schemes");
 assert.ok(privacy.includes("operator.privacyEffectiveDate"), "privacy policy must publish its configured effective date");
 assert.ok(terms.includes("operator.termsEffectiveDate"), "terms must publish their configured effective date");
+assert.ok(tokushoho.includes("disclosure.contactResponseTarget"), "commercial disclosure must publish the configured response target");
 for (const page of [privacy, terms]) {
   assert.ok(page.includes("operator.operatorName"), "formal free Web legal pages must publish the configured operator");
   assert.ok(page.includes("operator.contact"), "formal free Web legal pages must publish the configured contact");
+  assert.ok(page.includes("operator.contactResponseTarget"), "formal free Web legal pages must publish the configured response target");
 }
 assert.ok(layout.includes('href="/legal/privacy#contact"'), "the public footer must provide a direct contact route");
 for (const page of [tokushoho, privacy, terms]) {

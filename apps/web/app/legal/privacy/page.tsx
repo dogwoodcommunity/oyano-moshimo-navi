@@ -140,7 +140,8 @@ export default function PrivacyPage() {
           <p>
             運営者: {operator.operatorName}<br />
             個人情報管理責任者: {operator.responsiblePerson}<br />
-            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}
+            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}<br />
+            受付・返信目安: {operator.contactResponseTarget}
           </p>
         ) : (
           <p>正式な問い合わせ先、事業者情報、個人情報管理責任者は本番公開前に確定します。</p>

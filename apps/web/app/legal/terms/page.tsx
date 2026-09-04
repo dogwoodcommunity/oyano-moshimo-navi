@@ -52,7 +52,8 @@ export default function TermsPage() {
           <p>
             運営者: {operator.operatorName}<br />
             運営責任者: {operator.responsiblePerson}<br />
-            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}
+            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}<br />
+            受付・返信目安: {operator.contactResponseTarget}
           </p>
         ) : (
           <p>正式な運営者と問い合わせ先は、正式公開前にこのページへ表示します。</p>

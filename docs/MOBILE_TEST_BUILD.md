@@ -86,7 +86,7 @@ productionも同じ値を `--environment production` で登録する。
 
 - Apple Developer / Google Play Consoleの登録
 - TestFlightまたはinternal distributionの配布経路
-- 問い合わせ窓口と削除依頼後の運用SLA
+- 公開窓口 `info@bee-ch.co.jp` と返信目安は確定済み。実際の受信・返信体制と削除依頼後の運用SLAを確認
 - プライバシーポリシーURL、特商法表記、事業者情報の正式化
 
 ## コマンド
