@@ -223,6 +223,68 @@ function sampleCase(overrides = {}) {
 }
 
 {
+  const store = loadStore();
+  store.overwriteLocalNotebook({
+    cases: [sampleCase(), sampleCase({ id: "case-b" })],
+    diaryEntries: [
+      {
+        id: "diary-delete-success",
+        caseId: "case-a",
+        date: "2026-09-01",
+        mood: "stable",
+        body: "削除する記録",
+        attachments: [],
+        createdAt: "2026-09-01T01:00:00.000Z",
+        updatedAt: "2026-09-01T01:00:00.000Z",
+        cloudRevision: 2,
+        cloudHash: "a".repeat(64)
+      },
+      {
+        id: "diary-delete-success",
+        caseId: "case-b",
+        date: "2026-09-02",
+        mood: "stable",
+        body: "別の対象者の同名ID",
+        attachments: [],
+        createdAt: "2026-09-02T01:00:00.000Z",
+        updatedAt: "2026-09-02T01:00:00.000Z"
+      }
+    ]
+  });
+  const result = store.deleteDiaryEntryWithStatus({ caseId: "case-a", entryId: "diary-delete-success" });
+  assert.equal(result.persisted, true, "diary deletion must be persisted before the UI removes the card");
+  assert.equal(result.deleted, true);
+  assert.equal(store.listDiaryEntries("case-a").length, 0);
+  assert.equal(store.listDiaryEntries("case-b").length, 1, "case identity must scope local diary deletion");
+  const restored = store.replaceLocalNotebook({ cases: [sampleCase()], diaryEntries: [] });
+  assert.equal(restored.diaryEntries.some((entry) => entry.caseId === "case-a"), false, "a persisted local deletion must not reappear on the next restore merge");
+}
+
+{
+  const storage = memoryStorage();
+  const store = loadStore(storage);
+  store.overwriteLocalNotebook({
+    cases: [sampleCase()],
+    diaryEntries: [{
+      id: "diary-delete-failure",
+      caseId: "case-a",
+      date: "2026-09-01",
+      mood: "stable",
+      body: "削除に失敗する記録",
+      attachments: [],
+      createdAt: "2026-09-01T01:00:00.000Z",
+      updatedAt: "2026-09-01T01:00:00.000Z"
+    }]
+  });
+  storage.setFailNotebookWrites(true);
+  const result = store.deleteDiaryEntryWithStatus({ caseId: "case-a", entryId: "diary-delete-failure" });
+  assert.equal(result.persisted, false, "failed local deletion must be reported");
+  assert.equal(result.deleted, false);
+  assert.equal(store.listDiaryEntries("case-a").length, 1, "failed deletion must keep the local record for retry");
+  assert.match(store.consumeNotebookStorageWarning() ?? "", /保存容量/);
+}
+
+{
   const storage = memoryStorage();
   const store = loadStore(storage);
   store.overwriteLocalNotebook({ cases: [sampleCase()], diaryEntries: [] });

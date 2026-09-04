@@ -1,26 +1,13 @@
 import { NextResponse } from "next/server";
 import {
-  FREE_PLAN_MEMBER_LIMIT,
-  getOrCreateFamilyId,
-  resolveFamilyContext
+  familySelectionErrorResponse,
+  messageForRpcError,
+  resolveFamilyId,
+  resolveFamilyContext,
+  statusForFamilyManagementRpcError
 } from "@/lib/family";
 
 export const dynamic = "force-dynamic";
-
-type MemberRow = {
-  user_id: string | null;
-  role: string | null;
-  relationship: string | null;
-  created_at: string | null;
-};
-
-type InviteRow = {
-  invited_email: string | null;
-  role: string | null;
-  relationship: string | null;
-  created_at: string | null;
-  token: string | null;
-};
 
 export async function GET(request: Request) {
   const context = await resolveFamilyContext(request);
@@ -28,8 +15,11 @@ export async function GET(request: Request) {
 
   let familyId: string;
   try {
-    familyId = await getOrCreateFamilyId(context);
+    const requestedFamilyId = new URL(request.url).searchParams.get("familyId");
+    familyId = await resolveFamilyId(context, requestedFamilyId);
   } catch (error) {
+    const selectionError = familySelectionErrorResponse(error);
+    if (selectionError) return selectionError;
     // 握りつぶすと本番で原因が追えない。今回それで診断が遅れた。
     console.error("[family] failed to prepare family", error);
     return NextResponse.json(
@@ -38,51 +28,22 @@ export async function GET(request: Request) {
     );
   }
 
-  const { data: family } = await context.service
-    .from("families")
-    .select("id, name, plan, owner_user_id")
-    .eq("id", familyId)
-    .single();
-
-  const { data: memberRows } = await context.service
-    .from("family_members")
-    .select("user_id, role, relationship, created_at")
-    .eq("family_id", familyId)
-    .order("created_at", { ascending: true });
-
-  const { data: inviteRows } = await context.service
-    .from("family_invites")
-    .select("invited_email, role, relationship, created_at, token")
-    .eq("family_id", familyId)
-    .eq("status", "pending")
-    .gt("created_at", new Date(Date.now() - 7 * 86400000).toISOString())
-    .order("created_at", { ascending: true });
-
-  const members = (memberRows ?? []) as MemberRow[];
-  const invites = (inviteRows ?? []) as InviteRow[];
-  const ownerUserId = family?.owner_user_id ?? null;
-  const plan = family?.plan === "plus" ? "plus" : "free";
-
-  const joinedOthers = members.filter((member) => member.user_id && member.user_id !== ownerUserId).length;
-  const used = joinedOthers + invites.length;
-
-  return NextResponse.json({
-    plan,
-    isOwner: ownerUserId === context.userId,
-    limit: plan === "plus" ? null : FREE_PLAN_MEMBER_LIMIT,
-    remaining: plan === "plus" ? null : Math.max(0, FREE_PLAN_MEMBER_LIMIT - used),
-    members: members.map((member) => ({
-      isYou: member.user_id === context.userId,
-      isOwner: member.user_id === ownerUserId,
-      role: member.role ?? "member",
-      relationship: member.relationship ?? null,
-      joinedAt: member.created_at
-    })),
-    pendingInvites: invites.map((invite) => ({
-      invitedEmail: invite.invited_email,
-      relationship: invite.relationship,
-      role: invite.role ?? "member",
-      createdAt: invite.created_at
-    }))
+  const { data, error } = await context.user.rpc("get_family_management_summary", {
+    p_family_id: familyId
   });
+
+  if (error) {
+    return NextResponse.json(
+      { error: "family_summary_failed", message: messageForRpcError(error) },
+      { status: statusForFamilyManagementRpcError(error) }
+    );
+  }
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return NextResponse.json(
+      { error: "family_summary_failed", message: "家族の情報を読み込めませんでした。" },
+      { status: 500 }
+    );
+  }
+
+  return NextResponse.json(data);
 }

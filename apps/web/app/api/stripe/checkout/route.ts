@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
 import { getServerSupabase } from "@/lib/serverSupabase";
+import { supportPackSalesReady } from "@/lib/commercialReadiness";
 
 type StripeCheckoutResponse = {
   id: string;
@@ -28,6 +29,13 @@ function looksLikeEmail(value: string) {
 }
 
 export async function POST(request: Request) {
+  if (!supportPackSalesReady()) {
+    return NextResponse.json(
+      { error: "support_pack_not_configured", message: "発動サポートパックはまだ受付を始めていません。" },
+      { status: 503 }
+    );
+  }
+
   const rateLimited = await checkPublicRateLimit(request, {
     keyPrefix: "stripe:checkout",
     limit: 8,
@@ -45,15 +53,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "checkout_token_required" }, { status: 400 });
   }
 
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
-  const priceId = process.env.STRIPE_SUPPORT_PACK_PRICE_ID;
-
-  if (!stripeSecretKey || !priceId) {
-    return NextResponse.json({
-      error: "Stripe is not configured",
-      requiredEnv: ["STRIPE_SECRET_KEY", "STRIPE_SUPPORT_PACK_PRICE_ID"]
-    }, { status: 501 });
-  }
+  const stripeSecretKey = process.env.STRIPE_SECRET_KEY as string;
+  const priceId = process.env.STRIPE_SUPPORT_PACK_PRICE_ID as string;
 
   const supabase = getServerSupabase();
   if (!supabase) {

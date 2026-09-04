@@ -51,4 +51,9 @@ begin
 end;
 $$;
 
-grant execute on function public.promote_family_member_to_owner(uuid) to authenticated;
+-- Deprecated: this legacy signature has no explicit family id and can create
+-- multiple role='owner' rows. Keep it only for trusted maintenance while Web
+-- and Mobile move to transfer_family_ownership(family_id, member_id).
+revoke all on function public.promote_family_member_to_owner(uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.promote_family_member_to_owner(uuid) to service_role;

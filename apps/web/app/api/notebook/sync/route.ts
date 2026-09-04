@@ -733,6 +733,12 @@ function normalizedNotebookDiary(
 
 function notebookRpcErrorResponse(error: unknown) {
   const message = postgrestMessage(error);
+  if (/notebook_diary_deleted/i.test(message)) {
+    return NextResponse.json({
+      error: "notebook_deleted_record",
+      message: "削除済みの記録が端末に残っています。クラウドの控えを読み直してください。"
+    }, { status: 409 });
+  }
   if (/family_selection_required|notebook_sync_family_id_required|notebook_sync_choose_family_or_create/i.test(message)) {
     return NextResponse.json({ error: "family_selection_required", message: "保存先の家族を選んでください。" }, { status: 409 });
   }

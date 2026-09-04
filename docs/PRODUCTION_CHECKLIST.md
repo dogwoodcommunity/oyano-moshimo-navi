@@ -38,6 +38,12 @@
 - [x] `supabase/admin_auth_hardening.sql` を実行
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [ ] `supabase/account_deletion_pipeline.sql` を実行
+  - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。
+  - 共有家族に対象user名義の写真pathが残る依頼は `shared_photo_transfer_required` で停止する。自動引継ぎ機能が完成するまでは手動で完了にしない。
+  - 破棄DBの `pnpm run test:account-erasure:sql`、管理者メールログイン、所有権移管の運用確認が終わるまで `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する。
+- [ ] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_compact.sql` で台帳・3 RPC・service-only ACLを確認
+- [ ] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
+- [ ] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [ ] `supabase/public_api_rate_limits.sql` を実行
 - [ ] `supabase/anonymous_case_retention.sql` を実行
 - [x] `supabase/storage_setup.sql` を実行
@@ -58,6 +64,8 @@
 - [x] `node scripts/smoke-web.mjs https://oyano-moshimo-navi.vercel.app` を実行
 - [x] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [x] `/admin` を確認
+- [ ] `/admin/delete-requests` で、共有家族ownerは完全削除が停止し、所有権移管後のみ再開できることを2アカウントで確認
+- [ ] 単独テストアカウントでAuth・DB・Storageの削除と再実行時の冪等性を確認後、削除運用を開始
 - [x] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
   - 2026-07-09監査対応: Admin判定は `family_members` から `app_admins` 専用テーブルへ変更。
   - 2026-07-09再確認: `scripts/smoke-admin-bearer.mjs` で一時 `app_admins` 行を作成し、`/api/admin/env-check` がBearer認証を受け付けることを確認。確認後、一時データは削除済み。
@@ -65,6 +73,7 @@
 - [ ] Resend送信ドメインを認証し、`RESEND_API_KEY` / `NOTIFICATION_EMAIL_FROM` を設定
 - [ ] 期限通知メールと月1確認メールをテスト受信し、通知OFF後は送られないことを確認
 - [x] `/api/cron/purge-anonymous-cases` をdeploy対象に含める
+- [ ] `/api/cron/cleanup-notebook-storage` と `/api/cron/cleanup-person-notebook-storage` をdeploy対象に含め、本番の登録・直近成功・失敗通知を確認
 - [ ] Stripe関連env 3項目を設定
 
 ## 4. Stripe
@@ -107,12 +116,16 @@
 - [x] 公開APIにレート制限を追加
 - [ ] 本番DBで `public_api_rate_limits.sql` を投入し、DB側レート制限を有効化
 - [ ] 本番DBで `anonymous_case_retention.sql` を投入し、匿名診断の保持期限削除を有効化
+- [ ] 破棄DBで `test:diary-deletion:sql`、`test:person-deletion:sql`、`test:account-erasure:sql` を通し、本番では2端末から削除済み記録が復活しないことを確認
+- [ ] Supabase DB/AuthとStorage object本体を別々にバックアップし、隔離環境で復元を完走
 
 ## 7. 公開前
 
 - [x] 利用規約の叩き台
 - [x] プライバシーポリシーの叩き台
 - [x] 特定商取引法表示の叩き台
-- [ ] 事業者名、代表者、住所、電話番号、問い合わせ先の正式情報
+- [ ] `LEGAL_BUSINESS_NAME`、`LEGAL_RESPONSIBLE_PERSON`、`LEGAL_CONTACT`、規約・プライバシーの発効日を正式情報で設定
+- [ ] 有料受付を開く前に、所在地、電話番号、税込価格、提供時期、解約・返金条件を正式情報で設定
+- [ ] 公開フッターから問い合わせ窓口へ到達し、実際に受け付けられることを確認
 - [x] 法律/税務判断の免責
 - [ ] 弁護士による最終確認

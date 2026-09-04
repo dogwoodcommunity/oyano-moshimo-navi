@@ -88,16 +88,16 @@ export function PwaInstallPanel() {
         <h2>このアプリで続けてできること</h2>
         <ol>
           <li>
-            <strong>1人目の状況を登録</strong>
-            <span>まずは1人だけ。あとから2人目、3人目を追加できます。</span>
+            <strong>1人分の手帳を作る</strong>
+            <span>呼び名と状況を選ぶと、今日から使う確認リストができます。</span>
           </li>
           <li>
-            <strong>今やることを表示</strong>
-            <span>期限のある手続き、担当未定、家族に聞くことを分けます。</span>
+            <strong>毎日の変化を短く残す</strong>
+            <span>1行の記録、写真、書類や鍵の場所をあとから見返せます。</span>
           </li>
           <li>
-            <strong>進捗を更新</strong>
-            <span>完了、進行中、変化ありを見ながら次の確認へ進みます。</span>
+            <strong>家族と共有し、AIへ相談する</strong>
+            <span>家族1人との共有と、記録を踏まえた1日1回のAI相談を無料で使えます。</span>
           </li>
         </ol>
       </section>
@@ -106,11 +106,11 @@ export function PwaInstallPanel() {
         登録済みの家族ボードを見る
       </Link>
 
-      <section className="entry-plus-card" aria-label="有料プランの案内">
-        <p className="pill">Family Plus</p>
-        <h2>親が2人以上いる家族、履歴を残したい家族へ。</h2>
-        <p>無料では1人目の整理と基本の確認から始められます。複数の親、家族会議用PDF、写真容量、履歴保存が必要になったらPlusを提案します。</p>
-        <Link className="secondary" href="/plans">有料プランを見る</Link>
+      <section className="entry-plus-card" aria-label="無料で使える範囲">
+        <p className="pill">カード登録なし</p>
+        <h2>まずは無料で、記録と振り返りを続けられます。</h2>
+        <p>1人分の手帳、家族1人との共有、毎日の記録、1日1回のAI相談、思い出の手帳PDFを無料で使えます。</p>
+        <Link className="secondary" href="/plans">無料でできることを見る</Link>
       </section>
 
       <div className="pwa-note">

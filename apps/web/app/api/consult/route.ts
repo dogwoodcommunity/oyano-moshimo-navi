@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { randomUUID } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import {
   hasNotebookSubstance,
@@ -16,7 +17,6 @@ import {
   CONSULT_PER_CLIENT_DAILY_LIMIT,
   CONSULT_PER_FAMILY_MONTHLY_LIMIT,
   CONSULT_SERVICE_DAILY_LIMIT,
-  currentJstDayStart,
   currentJstMonthStart,
   wasUsedOnCurrentJstDay
 } from "@/lib/consultLimits";
@@ -32,6 +32,7 @@ import {
   authorizeConsultPerson,
   isConsultMemorySchemaMissing,
   loadDurableConsultContext,
+  persistAndFinalizeFreeConsultTurn,
   persistConsultTurn,
   recordConsultMemoryConsent,
   type AuthorizedConsultPerson,
@@ -58,6 +59,119 @@ type ConsultAccessState = {
 };
 
 type ConsultAccessResult = ConsultAccessState | { response: NextResponse };
+
+type DailyFreeReservation = {
+  claimToken: string;
+  familyId: string;
+  userId: string;
+};
+
+type DailyFreeClaimResult =
+  | { reservation: DailyFreeReservation | null }
+  | { response: NextResponse };
+
+function claimPayload(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : {};
+}
+
+async function claimDailyFreeConsult(
+  access: ConsultAccessState,
+  personId: string
+): Promise<DailyFreeClaimResult> {
+  if (access.plan === "plus") return { reservation: null };
+
+  const familyId = access.dailyFreeFamilyId;
+  const userId = access.userId;
+  const supabase = getServerSupabase();
+  if (!supabase || !familyId || !userId || access.familyId !== familyId) {
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "今日の無料相談枠を安全に確保できませんでした。時間をおいてお試しください。",
+        503
+      )
+    };
+  }
+
+  const claimToken = randomUUID();
+  const { data, error } = await supabase.rpc("claim_daily_free_consult", {
+    p_claim_token: claimToken,
+    p_family_id: familyId,
+    p_person_id: personId,
+    p_user_id: userId
+  });
+  if (error) {
+    console.error("[consult] failed to claim daily free allowance", error);
+    return {
+      response: jsonError(
+        "consult_unavailable",
+        "今日の無料相談枠を確認できませんでした。時間をおいてお試しください。",
+        503
+      )
+    };
+  }
+
+  const result = claimPayload(data);
+  const status = typeof result.result === "string" ? result.result : "";
+  if (status === "claimed") {
+    return { reservation: { claimToken, familyId, userId } };
+  }
+  if (status === "already_used") {
+    return {
+      response: jsonError(
+        "daily_free_limit",
+        "今日の無料AI相談は利用済みです。明日また1回使えます。手帳と記録はこのまま無料です。",
+        429
+      )
+    };
+  }
+  if (status === "in_progress") {
+    const retryAfter = typeof result.retryAfterSeconds === "number"
+      ? Math.max(1, Math.ceil(result.retryAfterSeconds))
+      : 5;
+    return {
+      response: NextResponse.json(
+        {
+          error: "consult_in_progress",
+          message: "同じ手帳のAI相談を整理しています。少し待ってから、相談履歴を確認してください。"
+        },
+        { status: 409, headers: { "Retry-After": String(retryAfter) } }
+      )
+    };
+  }
+  if (status === "forbidden" || status === "not_found") {
+    return {
+      response: jsonError("forbidden", "この手帳でAI相談を使う権限を確認できませんでした。", 403)
+    };
+  }
+
+  console.error("[consult] unexpected daily free claim result", result);
+  return {
+    response: jsonError(
+      "consult_unavailable",
+      "今日の無料相談枠を安全に確保できませんでした。時間をおいてお試しください。",
+      503
+    )
+  };
+}
+
+async function releaseDailyFreeConsult(reservation: DailyFreeReservation | null) {
+  if (!reservation) return true;
+  const supabase = getServerSupabase();
+  if (!supabase) return false;
+  const { data, error } = await supabase.rpc("release_daily_free_consult", {
+    p_claim_token: reservation.claimToken,
+    p_family_id: reservation.familyId,
+    p_user_id: reservation.userId
+  });
+  if (error || data !== true) {
+    console.error("[consult] failed to release daily free allowance", error ?? { data });
+    return false;
+  }
+  return true;
+}
 
 async function recordConsultUsage(params: {
   access: ConsultAccessState;
@@ -329,7 +443,7 @@ async function authorizeConsult(request: NextRequest, requiredFamilyId?: string)
     return {
       response: jsonError(
         "daily_free_limit",
-        "今日の無料AI相談は利用済みです。明日また1回使えます。今すぐ続けたい場合はFamily Plusで使えます。手帳と記録はこのまま無料です。",
+        "今日の無料AI相談は利用済みです。明日また1回使えます。今日の回答と手帳の記録は、このまま無料で見返せます。",
         429
       )
     };
@@ -384,6 +498,13 @@ export async function POST(request: NextRequest) {
   if (question.length > CONSULT_MAX_QUESTION_LENGTH) {
     return badRequest(`相談内容は${CONSULT_MAX_QUESTION_LENGTH}文字までにしてください。`);
   }
+  if (!durableRequested) {
+    return jsonError(
+      "cloud_notebook_required",
+      "AI相談は、メール確認をしてクラウド保存した手帳から使ってください。記録と相談履歴を安全に引き継ぐためです。",
+      422
+    );
+  }
   // historyは自由入力の塊なので、形が崩れたまま通すと組み立て時に落ちたり、
   // 巨大な配列でプロンプト（＝API費用）が膨らむ。枠を消費する前にここで弾く。
   if (!durableRequested && payload.history !== undefined) {
@@ -403,6 +524,13 @@ export async function POST(request: NextRequest) {
         localCaseId: payload.localCaseId,
         familyId: payload.familyId
       });
+      if (durableAuthorization.memberRole === "viewer") {
+        return jsonError(
+          "viewer_read_only",
+          "閲覧のみの家族はAI相談を送れません。手帳の所有者または編集できる家族にご相談ください。",
+          403
+        );
+      }
       await recordConsultMemoryConsent(
         durableAuthorization,
         payload.memoryConsentVersion ?? "",
@@ -422,6 +550,10 @@ export async function POST(request: NextRequest) {
       console.error("[consult] failed to load durable memory", error);
       return jsonError("memory_failed", "この人専用AIの記憶を読み取れませんでした。時間をおいてお試しください。", 503);
     }
+  }
+
+  if (!durableAuthorization || !durableContext) {
+    return jsonError("memory_not_ready", CONSULT_MEMORY_NOT_READY_MESSAGE, 503);
   }
 
   const authorized = await authorizeConsult(request, durableAuthorization?.familyId);
@@ -507,6 +639,13 @@ export async function POST(request: NextRequest) {
   if (durableAuthorization && durableContext) {
     try {
       durableAuthorization = await authorizeConsultPerson(request, { personId: durableContext.personId });
+      if (durableAuthorization.memberRole === "viewer") {
+        return jsonError(
+          "viewer_read_only",
+          "閲覧のみの家族はAI相談を送れません。手帳の所有者または編集できる家族にご相談ください。",
+          403
+        );
+      }
       await recordConsultMemoryConsent(
         durableAuthorization,
         payload.memoryConsentVersion ?? "",
@@ -534,6 +673,12 @@ export async function POST(request: NextRequest) {
       return jsonError("consent_failed", "長期記憶の同意状態を確認できませんでした。時間をおいてお試しください。", 503);
     }
   }
+
+  // 無料枠は外部AIを呼ぶ前にDBで予約する。同じ家族から並行送信
+  // されても、ここを通れるのはJSTの1日につき1件だけ。
+  const dailyFreeClaim = await claimDailyFreeConsult(authorized, durableContext.personId);
+  if ("response" in dailyFreeClaim) return dailyFreeClaim.response;
+  const dailyFreeReservation = dailyFreeClaim.reservation;
 
   const client = new Anthropic({ apiKey, timeout: 55_000, maxRetries: 1 });
 
@@ -582,6 +727,7 @@ export async function POST(request: NextRequest) {
           ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
         outcome: "refusal"
       });
+      await releaseDailyFreeConsult(dailyFreeReservation);
       return NextResponse.json(
         {
           error: "consult_declined",
@@ -607,6 +753,7 @@ export async function POST(request: NextRequest) {
           ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
         outcome: "invalid_response"
       });
+      await releaseDailyFreeConsult(dailyFreeReservation);
       return NextResponse.json(
         {
           error: "consult_failed",
@@ -621,6 +768,14 @@ export async function POST(request: NextRequest) {
       try {
         // AI処理中に権限・同意が変わった場合、回答や相談文を永続化しない。
         durableAuthorization = await authorizeConsultPerson(request, { personId: durableContext.personId });
+        if (durableAuthorization.memberRole === "viewer") {
+          await releaseDailyFreeConsult(dailyFreeReservation);
+          return jsonError(
+            "viewer_read_only",
+            "相談中に家族権限が閲覧のみに変わったため、回答は保存・表示しませんでした。",
+            403
+          );
+        }
         await recordConsultMemoryConsent(
           durableAuthorization,
           payload.memoryConsentVersion ?? "",
@@ -630,28 +785,43 @@ export async function POST(request: NextRequest) {
           memoryVersion: durableContext.memoryState.memoryVersion,
           memoryResetAt: durableContext.memoryState.memoryResetAt
         });
-        persistedTurn = await persistConsultTurn({
-          authorized: durableAuthorization,
-          threadId: durableContext.threadId,
-          question,
-          answer,
-          sourceEventIds: durableContext.sourceEventIds,
-          memoryVersion: durableContext.memoryState.memoryVersion
-        });
+        persistedTurn = dailyFreeReservation
+          ? await persistAndFinalizeFreeConsultTurn({
+              authorized: durableAuthorization,
+              threadId: durableContext.threadId,
+              claimToken: dailyFreeReservation.claimToken,
+              question,
+              answer,
+              sourceEventIds: durableContext.sourceEventIds,
+              memoryVersion: durableContext.memoryState.memoryVersion
+            })
+          : await persistConsultTurn({
+              authorized: durableAuthorization,
+              threadId: durableContext.threadId,
+              question,
+              answer,
+              sourceEventIds: durableContext.sourceEventIds,
+              memoryVersion: durableContext.memoryState.memoryVersion
+            });
       } catch (error) {
         if (error instanceof ConsultMemoryAccessError) {
+          await releaseDailyFreeConsult(dailyFreeReservation);
           return jsonError(error.code, error.message, error.status);
         }
         if (error instanceof ConsultMemoryConsentRequiredError) {
+          await releaseDailyFreeConsult(dailyFreeReservation);
           return jsonError(error.code, error.message, error.status);
         }
         if (error instanceof ConsultMemoryConflictError) {
+          await releaseDailyFreeConsult(dailyFreeReservation);
           return jsonError(error.code, "相談中にAIの記憶が変更または削除されました。最新の状態を読み直して、もう一度お試しください。", 409);
         }
         if (error instanceof ConsultMemoryNotReadyError || isConsultMemorySchemaMissing(error)) {
+          await releaseDailyFreeConsult(dailyFreeReservation);
           return jsonError("memory_not_ready", CONSULT_MEMORY_NOT_READY_MESSAGE, 503);
         }
         console.error("[consult] failed to persist durable turn", error);
+        await releaseDailyFreeConsult(dailyFreeReservation);
         return jsonError(
           "memory_failed",
           "回答を長期記憶へ保存できなかったため、今回は表示しませんでした。時間をおいてもう一度お試しください。",
@@ -669,21 +839,6 @@ export async function POST(request: NextRequest) {
         ?? (Array.isArray(payload.history) ? Math.min(payload.history.length, CONSULT_MAX_HISTORY) : 0),
       outcome: "success"
     });
-
-    if (authorized.dailyFreeFamilyId) {
-      const supabase = getServerSupabase();
-      const usedAt = new Date().toISOString();
-      let updateQuery = supabase!.from("families")
-        .update({ consult_trial_used_at: usedAt, updated_at: usedAt })
-        .eq("id", authorized.dailyFreeFamilyId);
-      updateQuery = authorized.dailyFreeUsedAt
-        ? updateQuery.lt("consult_trial_used_at", currentJstDayStart())
-        : updateQuery.is("consult_trial_used_at", null);
-      const { error: trialError } = await updateQuery;
-      if (trialError) {
-        console.error("[consult] failed to mark daily free consult", trialError);
-      }
-    }
 
     const result = NextResponse.json({
       answer,
@@ -726,6 +881,7 @@ export async function POST(request: NextRequest) {
     }
     return result;
   } catch (error) {
+    await releaseDailyFreeConsult(dailyFreeReservation);
     if (error instanceof Anthropic.RateLimitError) {
       return NextResponse.json(
         { error: "consult_busy", message: "いま混み合っています。少し待ってからもう一度お試しください。" },

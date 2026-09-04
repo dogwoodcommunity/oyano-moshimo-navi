@@ -108,9 +108,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <footer className="footer">
             <Link href="/safety">安全方針</Link>
             <Link href="/legal/privacy">プライバシー</Link>
+            <Link href="/legal/privacy#contact">お問い合わせ</Link>
             <Link href="/legal/terms">利用規約</Link>
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
+            <Link href="/account/delete">アカウント・データ削除</Link>
             <Link href="/sponsors">スポンサー枠</Link>
             <Link href="/home">手帳</Link>
           </footer>

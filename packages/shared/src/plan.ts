@@ -36,7 +36,7 @@ export function canCreateNotebook(plan: FamilyPlan | string | null | undefined, 
  * 「上限です」で終わらせず、いま持っているものは無事だと必ず添える。
  */
 export const NOTEBOOK_LIMIT_MESSAGE =
-  `無料で作れる手帳は${FREE_PLAN_NOTEBOOK_LIMIT}冊です。もう1人分をつくるにはPlusが要ります。いまの手帳はこれまで通り使えます。`;
+  `現在、無料で作れる手帳は${FREE_PLAN_NOTEBOOK_LIMIT}冊です。追加の手帳は受付準備中です。いまの手帳はこれまで通り使えます。`;
 
 export const MEMBER_LIMIT_MESSAGE =
-  `無料で一緒に見られるのは、あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人までです。もう1人ふやすにはPlusが要ります。`;
+  `現在、無料で一緒に見られるのは、あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人までです。追加の家族枠は受付準備中です。`;

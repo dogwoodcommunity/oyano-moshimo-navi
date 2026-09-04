@@ -77,6 +77,25 @@ as $$
   );
 $$;
 
+-- Content editors may add/update the shared notebook. A viewer is deliberately
+-- excluded here even though is_family_member() must continue to allow reads.
+-- Family administration and the person's basic profile remain owner/admin-only.
+create or replace function is_family_editor(target_family_id uuid)
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from family_members
+    where family_members.family_id = target_family_id
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
+  );
+$$;
+
 create or replace function is_app_admin()
 returns boolean
 language sql
@@ -90,6 +109,18 @@ as $$
     where app_admins.user_id = auth.uid()
   );
 $$;
+
+-- PostgreSQL gives new functions EXECUTE to PUBLIC by default. These helpers
+-- are intended only for authenticated RLS evaluation (and trusted service
+-- operations), so keep anonymous PostgREST callers out explicitly.
+revoke all on function is_family_member(uuid) from public, anon;
+revoke all on function is_family_admin(uuid) from public, anon;
+revoke all on function is_family_editor(uuid) from public, anon;
+revoke all on function is_app_admin() from public, anon;
+grant execute on function is_family_member(uuid) to authenticated, service_role;
+grant execute on function is_family_admin(uuid) to authenticated, service_role;
+grant execute on function is_family_editor(uuid) to authenticated, service_role;
+grant execute on function is_app_admin() to authenticated, service_role;
 
 create policy "app_admins read own"
 on app_admins for select
@@ -116,10 +147,11 @@ create policy "families read members"
 on families for select
 using (is_family_member(id));
 
-create policy "families update admins"
-on families for update
-using (is_family_admin(id))
-with check (is_family_admin(id));
+-- Family ownership and other family-row mutations are RPC-only. A row policy
+-- cannot distinguish a harmless rename from replacing owner_user_id, so the
+-- atomic family_management_rpc.sql surface deliberately keeps direct updates
+-- closed for authenticated clients.
+drop policy if exists "families update admins" on families;
 
 create policy "family_members read family"
 on family_members for select
@@ -127,14 +159,8 @@ using (is_family_member(family_id));
 
 drop policy if exists "family_members manage admins" on family_members;
 
-create policy "family_members update admins"
-on family_members for update
-using (is_family_admin(family_id))
-with check (is_family_admin(family_id));
-
-create policy "family_members delete admins"
-on family_members for delete
-using (is_family_admin(family_id));
+drop policy if exists "family_members update admins" on family_members;
+drop policy if exists "family_members delete admins" on family_members;
 
 create policy "people read family"
 on people for select
@@ -155,13 +181,19 @@ using (
   )
 );
 
+drop policy if exists "status_events insert family" on person_status_events;
+
 create policy "status_events insert family"
 on person_status_events for insert
+to authenticated
 with check (
   exists (
-    select 1 from people
+    select 1
+    from people
+    join family_members on family_members.family_id = people.family_id
     where people.id = person_status_events.person_id
-      and is_family_member(people.family_id)
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 );
 
@@ -175,20 +207,29 @@ using (
   )
 );
 
+drop policy if exists "tasks manage family" on tasks;
+
 create policy "tasks manage family"
 on tasks for all
+to authenticated
 using (
   exists (
-    select 1 from people
+    select 1
+    from people
+    join family_members on family_members.family_id = people.family_id
     where people.id = tasks.person_id
-      and is_family_member(people.family_id)
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 )
 with check (
   exists (
-    select 1 from people
+    select 1
+    from people
+    join family_members on family_members.family_id = people.family_id
     where people.id = tasks.person_id
-      and is_family_member(people.family_id)
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 );
 
@@ -214,20 +255,23 @@ using (
   )
 );
 
+drop policy if exists "asset_items manage family" on asset_items;
+
 create policy "asset_items manage family"
 on asset_items for all
+to authenticated
 using (
   exists (
     select 1 from people
     where people.id = asset_items.person_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 )
 with check (
   exists (
     select 1 from people
     where people.id = asset_items.person_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 );
 
@@ -241,20 +285,29 @@ using (
   )
 );
 
+drop policy if exists "timeline_events manage family" on timeline_events;
+
 create policy "timeline_events manage family"
 on timeline_events for all
+to authenticated
 using (
   exists (
-    select 1 from people
+    select 1
+    from people
+    join family_members on family_members.family_id = people.family_id
     where people.id = timeline_events.person_id
-      and is_family_member(people.family_id)
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 )
 with check (
   exists (
-    select 1 from people
+    select 1
+    from people
+    join family_members on family_members.family_id = people.family_id
     where people.id = timeline_events.person_id
-      and is_family_member(people.family_id)
+      and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 );
 
@@ -328,20 +381,23 @@ using (
   )
 );
 
+drop policy if exists "homes manage family" on homes;
+
 create policy "homes manage family"
 on homes for all
+to authenticated
 using (
   exists (
     select 1 from people
     where people.id = homes.person_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 )
 with check (
   exists (
     select 1 from people
     where people.id = homes.person_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 );
 
@@ -357,15 +413,18 @@ using (
   )
 );
 
+drop policy if exists "home_photos manage family" on home_photos;
+
 create policy "home_photos manage family"
 on home_photos for all
+to authenticated
 using (
   exists (
     select 1
     from homes
     join people on people.id = homes.person_id
     where homes.id = home_photos.home_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 )
 with check (
@@ -374,7 +433,7 @@ with check (
     from homes
     join people on people.id = homes.person_id
     where homes.id = home_photos.home_id
-      and is_family_member(people.family_id)
+      and is_family_editor(people.family_id)
   )
 );
 

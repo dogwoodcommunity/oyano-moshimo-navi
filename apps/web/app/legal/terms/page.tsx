@@ -1,4 +1,8 @@
+import { getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
+
 export default function TermsPage() {
+  const operator = getPublicOperatorDisclosure();
+  const contactHref = operator ? legalContactHref(operator.contact) : null;
   return (
     <main className="container">
       <section className="legal-hero">
@@ -7,6 +11,11 @@ export default function TermsPage() {
         <p className="lead">親のもしもナビの利用条件と、専門判断を断定しない方針を定めます。</p>
       </section>
       <section className="panel legal-panel">
+        {operator ? (
+          <p className="hint">施行日: {operator.termsEffectiveDate}／運営: {operator.operatorName}</p>
+        ) : (
+          <p className="hint">運営者、問い合わせ先、施行日は正式公開前に最終反映します。</p>
+        )}
         <h2>サービスの位置づけ</h2>
         <p>
           親のもしもナビは、家族が親の状況変化に応じて情報やタスクを整理するための支援サービスです。
@@ -38,6 +47,16 @@ export default function TermsPage() {
         <p>
           提示されるタスクや相談先カテゴリは一般的な整理支援です。法的・税務的判断は必ず専門家へ確認してください。
         </p>
+        <h2 id="contact">運営・問い合わせ</h2>
+        {operator ? (
+          <p>
+            運営者: {operator.operatorName}<br />
+            運営責任者: {operator.responsiblePerson}<br />
+            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}
+          </p>
+        ) : (
+          <p>正式な運営者と問い合わせ先は、正式公開前にこのページへ表示します。</p>
+        )}
       </section>
     </main>
   );

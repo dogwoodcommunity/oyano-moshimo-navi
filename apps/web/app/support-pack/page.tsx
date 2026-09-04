@@ -1,14 +1,18 @@
 import { Suspense } from "react";
 import { SupportPackClient } from "./SupportPackClient";
+import { supportPackSalesReady } from "@/lib/commercialReadiness";
 
 export default function SupportPackPage() {
+  const salesReady = supportPackSalesReady();
   return (
     <main className="container">
       <section className="result-summary">
         <p className="pill">Web申し込み</p>
         <h1 className="page-title">発動サポートパック</h1>
         <p className="lead">
-          整理結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。
+          {salesReady
+            ? "整理結果を人が確認し、家族会議で話す順番と相談先の比較軸を整理するWeb申し込みの商品です。"
+            : "この人的サポートは現在、受付準備中です。無料の手帳・AI相談はそのまま利用できます。"}
         </p>
         <div className="meta-row">
           <span className="meta-chip">Webで申し込み</span>
@@ -50,7 +54,7 @@ export default function SupportPackPage() {
       </section>
 
       <Suspense fallback={<section className="panel" style={{ marginTop: 18 }}>読み込み中</section>}>
-        <SupportPackClient />
+        <SupportPackClient salesReady={salesReady} />
       </Suspense>
     </main>
   );

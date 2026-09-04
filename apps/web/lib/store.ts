@@ -117,9 +117,36 @@ const PLAN_STORAGE_KEY = "oyano_plan_v01";
 const FAMILY_BILLING_MANAGER_STORAGE_KEY = "oyano_family_billing_manager_v01";
 const DIARY_STORAGE_NAME = "oyano_diary_entries_v01";
 const NOTEBOOK_CLOUD_BINDING_STORAGE_KEY = "oyano_notebook_cloud_binding_v01";
+const PERSON_NOTEBOOK_DELETION_STORAGE_KEY = "oyano_person_notebook_deletions_v01";
+const DIARY_ENTRY_DELETION_STORAGE_KEY = "oyano_diary_entry_deletions_v01";
 let memoryCases: CaseRecord[] = [];
 let memoryDiaryEntries: DiaryEntry[] = [];
 let lastNotebookStorageWarning: string | null = null;
+
+export type PersonNotebookDeletionTombstone = {
+  version: 1;
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  cloudRevision: number;
+  cloudHash: string;
+  status: "pending" | "deleted";
+  preparedAt: string;
+  deletedAt?: string;
+};
+
+export type DiaryEntryDeletionTombstone = {
+  version: 1;
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  localDiaryId: string;
+  cloudRevision: number | null;
+  cloudHash: string | null;
+  status: "pending" | "deleted";
+  preparedAt: string;
+  deletedAt?: string;
+};
 
 function storageWarningMessage() {
   return "端末内の保存容量が足りず、今回の変更を端末に残せていない可能性があります。写真を減らすか、クラウド保存を設定してからもう一度保存してください。";
@@ -184,10 +211,16 @@ function writeCases(cases: CaseRecord[]): boolean {
 }
 
 export function listLocalCases(): CaseRecord[] {
-  return readCases().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const deletedIds = new Set(readPersonNotebookDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => item.localCaseId));
+  return readCases()
+    .filter((item) => !deletedIds.has(item.id))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export function getLocalCase(caseId: string): CaseRecord | undefined {
+  if (personDeletionTombstone(caseId)?.status === "deleted") return undefined;
   return readCases().find((item) => item.id === caseId);
 }
 
@@ -237,6 +270,265 @@ function writeDiaryEntries(entries: DiaryEntry[]): boolean {
     lastNotebookStorageWarning = storageWarningMessage();
     return false;
   }
+}
+
+function readDiaryEntryDeletionTombstones(): DiaryEntryDeletionTombstone[] {
+  const storage = getLocalStorage();
+  if (!storage) return [];
+  try {
+    const parsed = JSON.parse(storage.getItem(DIARY_ENTRY_DELETION_STORAGE_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is DiaryEntryDeletionTombstone => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Partial<DiaryEntryDeletionTombstone>;
+      const hasCloudIdentity = Number.isInteger(row.cloudRevision)
+        && Number(row.cloudRevision) >= 1
+        && typeof row.cloudHash === "string"
+        && /^[0-9a-f]{64}$/i.test(row.cloudHash);
+      const hasNoCloudIdentity = row.cloudRevision === null && row.cloudHash === null;
+      return row.version === 1
+        && typeof row.familyId === "string" && Boolean(row.familyId)
+        && typeof row.personId === "string" && Boolean(row.personId)
+        && typeof row.localCaseId === "string" && Boolean(row.localCaseId)
+        && typeof row.localDiaryId === "string" && Boolean(row.localDiaryId)
+        && (hasCloudIdentity || hasNoCloudIdentity)
+        && (row.status === "pending" || row.status === "deleted")
+        && typeof row.preparedAt === "string";
+    });
+  } catch {
+    return [];
+  }
+}
+
+function writeDiaryEntryDeletionTombstones(tombstones: DiaryEntryDeletionTombstone[]) {
+  const storage = getLocalStorage();
+  if (!storage) {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+  try {
+    storage.setItem(DIARY_ENTRY_DELETION_STORAGE_KEY, JSON.stringify(tombstones));
+    lastNotebookStorageWarning = null;
+    return true;
+  } catch {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+}
+
+function diaryEntryDeletionTombstone(localCaseId: string, localDiaryId: string) {
+  return readDiaryEntryDeletionTombstones().find((item) => (
+    item.localCaseId === localCaseId && item.localDiaryId === localDiaryId
+  ));
+}
+
+export function isDiaryEntryCloudSyncBlocked(localCaseId: string, localDiaryId: string) {
+  return Boolean(diaryEntryDeletionTombstone(localCaseId, localDiaryId));
+}
+
+export function prepareDiaryEntryLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  localDiaryId: string;
+  cloudRevision: number | null;
+  cloudHash: string | null;
+}) {
+  const current = readDiaryEntryDeletionTombstones();
+  const existing = diaryEntryDeletionTombstone(input.localCaseId, input.localDiaryId);
+  if (existing) {
+    return existing.familyId === input.familyId
+      && existing.personId === input.personId
+      && existing.cloudRevision === input.cloudRevision
+      && existing.cloudHash === input.cloudHash;
+  }
+  return writeDiaryEntryDeletionTombstones([{
+    version: 1,
+    ...input,
+    status: "pending",
+    preparedAt: new Date().toISOString()
+  }, ...current]);
+}
+
+export function clearPendingDiaryEntryLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  localDiaryId: string;
+}) {
+  const current = readDiaryEntryDeletionTombstones();
+  const existing = diaryEntryDeletionTombstone(input.localCaseId, input.localDiaryId);
+  if (!existing) return true;
+  if (existing.status !== "pending"
+      || existing.familyId !== input.familyId
+      || existing.personId !== input.personId) return false;
+  return writeDiaryEntryDeletionTombstones(current.filter((item) => (
+    item.localCaseId !== input.localCaseId || item.localDiaryId !== input.localDiaryId
+  )));
+}
+
+export function completeDiaryEntryLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  localDiaryId: string;
+  cloudRevision: number | null;
+  cloudHash: string | null;
+}): DiaryEntryDeleteResult {
+  const current = readDiaryEntryDeletionTombstones();
+  const existing = diaryEntryDeletionTombstone(input.localCaseId, input.localDiaryId);
+  if (!existing
+      || existing.familyId !== input.familyId
+      || existing.personId !== input.personId
+      || existing.cloudRevision !== input.cloudRevision
+      || existing.cloudHash !== input.cloudHash) {
+    return { deleted: false, persisted: false };
+  }
+  const tombstones = current.map((item) => (
+    item.localCaseId === input.localCaseId && item.localDiaryId === input.localDiaryId
+      ? { ...item, status: "deleted" as const, deletedAt: item.deletedAt ?? new Date().toISOString() }
+      : item
+  ));
+  if (!writeDiaryEntryDeletionTombstones(tombstones)) return { deleted: false, persisted: false };
+
+  const entries = readDiaryEntries();
+  const entry = entries.find((item) => item.caseId === input.localCaseId && item.id === input.localDiaryId);
+  const persisted = writeDiaryEntries(entries.filter((item) => (
+    item.caseId !== input.localCaseId || item.id !== input.localDiaryId
+  )));
+  return { entry, deleted: true, persisted };
+}
+
+export function retryCompletedDiaryEntryLocalDeletions() {
+  const deletedKeys = new Set(readDiaryEntryDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => `${item.localCaseId}:${item.localDiaryId}`));
+  if (deletedKeys.size === 0) return true;
+  return writeDiaryEntries(readDiaryEntries().filter((item) => !deletedKeys.has(`${item.caseId}:${item.id}`)));
+}
+
+function readPersonNotebookDeletionTombstones(): PersonNotebookDeletionTombstone[] {
+  const storage = getLocalStorage();
+  if (!storage) return [];
+  try {
+    const parsed = JSON.parse(storage.getItem(PERSON_NOTEBOOK_DELETION_STORAGE_KEY) ?? "[]") as unknown;
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((item): item is PersonNotebookDeletionTombstone => {
+      if (!item || typeof item !== "object") return false;
+      const row = item as Partial<PersonNotebookDeletionTombstone>;
+      return row.version === 1
+        && typeof row.familyId === "string" && Boolean(row.familyId)
+        && typeof row.personId === "string" && Boolean(row.personId)
+        && typeof row.localCaseId === "string" && Boolean(row.localCaseId)
+        && Number.isInteger(row.cloudRevision) && Number(row.cloudRevision) >= 1
+        && typeof row.cloudHash === "string" && /^[0-9a-f]{64}$/i.test(row.cloudHash)
+        && (row.status === "pending" || row.status === "deleted")
+        && typeof row.preparedAt === "string";
+    });
+  } catch {
+    return [];
+  }
+}
+
+function writePersonNotebookDeletionTombstones(tombstones: PersonNotebookDeletionTombstone[]) {
+  const storage = getLocalStorage();
+  if (!storage) {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+  try {
+    storage.setItem(PERSON_NOTEBOOK_DELETION_STORAGE_KEY, JSON.stringify(tombstones));
+    lastNotebookStorageWarning = null;
+    return true;
+  } catch {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+}
+
+function personDeletionTombstone(localCaseId: string) {
+  return readPersonNotebookDeletionTombstones().find((item) => item.localCaseId === localCaseId);
+}
+
+export function isPersonNotebookCloudSyncBlocked(localCaseId: string) {
+  return Boolean(personDeletionTombstone(localCaseId));
+}
+
+export function preparePersonNotebookLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  cloudRevision: number;
+  cloudHash: string;
+}) {
+  const current = readPersonNotebookDeletionTombstones();
+  const existing = current.find((item) => item.localCaseId === input.localCaseId);
+  if (existing) {
+    return existing.familyId === input.familyId
+      && existing.personId === input.personId
+      && existing.cloudRevision === input.cloudRevision
+      && existing.cloudHash === input.cloudHash;
+  }
+  return writePersonNotebookDeletionTombstones([{
+    version: 1,
+    ...input,
+    status: "pending",
+    preparedAt: new Date().toISOString()
+  }, ...current]);
+}
+
+export function clearPendingPersonNotebookLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+}) {
+  const current = readPersonNotebookDeletionTombstones();
+  const existing = current.find((item) => item.localCaseId === input.localCaseId);
+  if (!existing) return true;
+  if (existing.status !== "pending"
+      || existing.familyId !== input.familyId
+      || existing.personId !== input.personId) return false;
+  return writePersonNotebookDeletionTombstones(
+    current.filter((item) => item.localCaseId !== input.localCaseId)
+  );
+}
+
+export function completePersonNotebookLocalDeletion(input: {
+  familyId: string;
+  personId: string;
+  localCaseId: string;
+  cloudRevision: number;
+  cloudHash: string;
+}) {
+  const current = readPersonNotebookDeletionTombstones();
+  const existing = current.find((item) => item.localCaseId === input.localCaseId);
+  if (!existing
+      || existing.familyId !== input.familyId
+      || existing.personId !== input.personId
+      || existing.cloudRevision !== input.cloudRevision
+      || existing.cloudHash !== input.cloudHash) {
+    return { persisted: false, deleted: false };
+  }
+  const tombstones = current.map((item) => item.localCaseId === input.localCaseId
+    ? { ...item, status: "deleted" as const, deletedAt: item.deletedAt ?? new Date().toISOString() }
+    : item);
+  // Persist the server-confirmed tombstone first. If either legacy storage key
+  // cannot be compacted, future restores and auto-sync still cannot resurrect
+  // or expose this notebook; the cleanup is retried on the next page load.
+  if (!writePersonNotebookDeletionTombstones(tombstones)) return { persisted: false, deleted: false };
+  const casesPersisted = writeCases(readCases().filter((item) => item.id !== input.localCaseId));
+  const diaryPersisted = writeDiaryEntries(readDiaryEntries().filter((item) => item.caseId !== input.localCaseId));
+  return { persisted: casesPersisted && diaryPersisted, deleted: true };
+}
+
+export function retryCompletedPersonNotebookLocalDeletions() {
+  const deletedIds = new Set(readPersonNotebookDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => item.localCaseId));
+  if (deletedIds.size === 0) return true;
+  const casesPersisted = writeCases(readCases().filter((item) => !deletedIds.has(item.id)));
+  const diaryPersisted = writeDiaryEntries(readDiaryEntries().filter((item) => !deletedIds.has(item.caseId)));
+  return casesPersisted && diaryPersisted;
 }
 
 export function readNotebookCloudBinding(): NotebookCloudBinding | null {
@@ -293,17 +585,28 @@ export function clearNotebookCloudBinding() {
 }
 
 export function listDiaryEntries(caseId: string): DiaryEntry[] {
+  if (personDeletionTombstone(caseId)?.status === "deleted") return [];
+  const deletedDiaryIds = new Set(readDiaryEntryDeletionTombstones()
+    .filter((item) => item.localCaseId === caseId && item.status === "deleted")
+    .map((item) => item.localDiaryId));
   return readDiaryEntries()
-    .filter((item) => item.caseId === caseId)
+    .filter((item) => item.caseId === caseId && !deletedDiaryIds.has(item.id))
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt.localeCompare(a.createdAt));
 }
 
 export function exportNotebookData(): NotebookExport {
+  const cases = listLocalCases();
+  const visibleCaseIds = new Set(cases.map((item) => item.id));
+  const deletedDiaryKeys = new Set(readDiaryEntryDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => `${item.localCaseId}:${item.localDiaryId}`));
   return {
     version: 1,
     exportedAt: new Date().toISOString(),
-    cases: listLocalCases(),
-    diaryEntries: readDiaryEntries()
+    cases,
+    diaryEntries: readDiaryEntries().filter((entry) => (
+      visibleCaseIds.has(entry.caseId) && !deletedDiaryKeys.has(`${entry.caseId}:${entry.id}`)
+    ))
   };
 }
 
@@ -544,10 +847,24 @@ function mergeDiaryEntries(
 }
 
 export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
+  const deletedIds = new Set(readPersonNotebookDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => item.localCaseId));
+  const incomingCases = input.cases.filter((item) => !deletedIds.has(item.id));
+  const deletedDiaryKeys = new Set(readDiaryEntryDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => `${item.localCaseId}:${item.localDiaryId}`));
+  const incomingDiaryEntries = input.diaryEntries.filter((item) => (
+    !deletedIds.has(item.caseId) && !deletedDiaryKeys.has(`${item.caseId}:${item.id}`)
+  ));
+  const localCases = readCases().filter((item) => !deletedIds.has(item.id));
+  const localEntries = readDiaryEntries().filter((item) => (
+    !deletedIds.has(item.caseId) && !deletedDiaryKeys.has(`${item.caseId}:${item.id}`)
+  ));
   const conflicts: NotebookMergeConflict[] = [];
-  const adopted = adoptMatchingCloudMetadata(input.cases, readCases(), input.diaryEntries, readDiaryEntries());
-  const mergedCases = mergeCaseRecords(input.cases, adopted.localCases, conflicts);
-  const mergedDiaryEntries = mergeDiaryEntries(input.diaryEntries, adopted.localEntries, conflicts);
+  const adopted = adoptMatchingCloudMetadata(incomingCases, localCases, incomingDiaryEntries, localEntries);
+  const mergedCases = mergeCaseRecords(incomingCases, adopted.localCases, conflicts);
+  const mergedDiaryEntries = mergeDiaryEntries(incomingDiaryEntries, adopted.localEntries, conflicts);
 
   const casesPersisted = writeCases(mergedCases);
   const diaryEntriesPersisted = writeDiaryEntries(mergedDiaryEntries);
@@ -561,11 +878,21 @@ export function replaceLocalNotebook(input: { cases: CaseRecord[]; diaryEntries:
 }
 
 export function overwriteLocalNotebook(input: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] }) {
-  const casesPersisted = writeCases(input.cases);
-  const diaryEntriesPersisted = writeDiaryEntries(input.diaryEntries);
+  const deletedIds = new Set(readPersonNotebookDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => item.localCaseId));
+  const cases = input.cases.filter((item) => !deletedIds.has(item.id));
+  const deletedDiaryKeys = new Set(readDiaryEntryDeletionTombstones()
+    .filter((item) => item.status === "deleted")
+    .map((item) => `${item.localCaseId}:${item.localDiaryId}`));
+  const diaryEntries = input.diaryEntries.filter((item) => (
+    !deletedIds.has(item.caseId) && !deletedDiaryKeys.has(`${item.caseId}:${item.id}`)
+  ));
+  const casesPersisted = writeCases(cases);
+  const diaryEntriesPersisted = writeDiaryEntries(diaryEntries);
   return {
-    cases: input.cases,
-    diaryEntries: input.diaryEntries,
+    cases,
+    diaryEntries,
     conflicts: [] as NotebookMergeConflict[],
     persisted: casesPersisted && diaryEntriesPersisted
   };
@@ -680,6 +1007,8 @@ export function resetLocalNotebookData() {
     storage.removeItem(DIARY_STORAGE_NAME);
     storage.removeItem(PLAN_STORAGE_KEY);
     storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
+    storage.removeItem(PERSON_NOTEBOOK_DELETION_STORAGE_KEY);
+    storage.removeItem(DIARY_ENTRY_DELETION_STORAGE_KEY);
   } catch {
     // If storage removal is blocked, the in-memory state above still gives
     // the current session a fresh start.
@@ -729,6 +1058,26 @@ export function updateDiaryEntry(entryId: string, patch: Partial<Omit<DiaryEntry
   const persisted = writeDiaryEntries([updated, ...entries.filter((item) => item.id !== entryId)]);
   if (!persisted) memoryDiaryEntries = entries;
   return { entry: updated, persisted };
+}
+
+export type DiaryEntryDeleteResult = {
+  entry?: DiaryEntry;
+  deleted: boolean;
+  persisted: boolean;
+};
+
+export function deleteDiaryEntryWithStatus(input: {
+  caseId: string;
+  entryId: string;
+}): DiaryEntryDeleteResult {
+  const entries = readDiaryEntries();
+  const existing = entries.find((item) => item.caseId === input.caseId && item.id === input.entryId);
+  if (!existing) return { deleted: false, persisted: true };
+
+  const nextEntries = entries.filter((item) => item.caseId !== input.caseId || item.id !== input.entryId);
+  const persisted = writeDiaryEntries(nextEntries);
+  if (!persisted) memoryDiaryEntries = entries;
+  return { entry: existing, deleted: persisted, persisted };
 }
 
 export type CaseProfileWriteResult = {

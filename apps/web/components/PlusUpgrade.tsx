@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendMagicLink } from "@/lib/browserSupabase";
+import { readNotebookCloudBinding } from "@/lib/store";
 
 type State =
   | "checking"
@@ -14,15 +15,21 @@ type State =
   | "already"
   | "error";
 
-export function PlusUpgrade() {
+export function PlusUpgrade({ salesReady }: { salesReady: boolean }) {
   const [state, setState] = useState<State>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [outcome, setOutcome] = useState<"success" | "cancel" | null>(null);
   const [canManageBilling, setCanManageBilling] = useState(true);
+  const [familyId, setFamilyId] = useState<string | null>(null);
+  const [familyResolved, setFamilyResolved] = useState(false);
 
   useEffect(() => {
+    if (!salesReady) {
+      setState("unavailable");
+      return;
+    }
     let cancelled = false;
 
     async function boot() {
@@ -44,15 +51,30 @@ export function PlusUpgrade() {
       setAccessToken(token);
       if (token) {
         try {
-          const response = await fetch("/api/family", { headers: { Authorization: `Bearer ${token}` } });
+          const binding = readNotebookCloudBinding();
+          const boundFamilyId = binding && binding.authUserId === data.session?.user.id ? binding.familyId : null;
+          const params = new URLSearchParams();
+          if (boundFamilyId) params.set("familyId", boundFamilyId);
+          const endpoint = params.size > 0 ? `/api/family?${params.toString()}` : "/api/family";
+          const response = await fetch(endpoint, { headers: { Authorization: `Bearer ${token}` } });
           if (response.ok) {
-            const family = await response.json() as { isOwner?: boolean };
+            const family = await response.json() as { familyId?: string; isOwner?: boolean };
             if (cancelled) return;
             setCanManageBilling(family.isOwner !== false);
+            setFamilyId(family.familyId ?? null);
+            setFamilyResolved(Boolean(family.familyId));
+          } else {
+            const failure = await response.json().catch(() => ({})) as { message?: string };
+            if (cancelled) return;
+            setMessage(failure.message ?? "手帳の情報を確認できませんでした。");
+            setState("error");
+            return;
           }
         } catch {
           if (cancelled) return;
-          setCanManageBilling(true);
+          setMessage("手帳の情報を確認できませんでした。通信を確認して、もう一度開いてください。");
+          setState("error");
+          return;
         }
       }
       if (cancelled) return;
@@ -61,7 +83,7 @@ export function PlusUpgrade() {
 
     void boot();
     return () => { cancelled = true; };
-  }, []);
+  }, [salesReady]);
 
   async function requestSignIn() {
     if (!email.trim()) return;
@@ -84,7 +106,8 @@ export function PlusUpgrade() {
     try {
       const response = await fetch("/api/stripe/plus-checkout", {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` }
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ familyId })
       });
       const data = await response.json() as { url?: string; message?: string; error?: string };
 
@@ -127,7 +150,10 @@ export function PlusUpgrade() {
       {state === "checking" ? <p className="plus-note">読み込み中です</p> : null}
 
       {state === "unavailable" ? (
-        <p className="plus-note">この環境では受付を開いていません。</p>
+        <div className="plus-note" role="status">
+          <strong>現在は受付準備中です。</strong>
+          <p>1人分の手帳、家族1人との共有、毎日の記録、1日1回のAI相談、思い出の手帳PDFは無料のまま使えます。</p>
+        </div>
       ) : null}
 
       {state === "already" ? (
@@ -163,7 +189,7 @@ export function PlusUpgrade() {
         </>
       ) : null}
 
-      {state === "ready" || state === "opening" || state === "error" ? (
+      {(state === "ready" || state === "opening" || state === "error") && familyResolved ? (
         canManageBilling ? (
           <button className="plus-button" disabled={state === "opening"} onClick={openCheckout} type="button">
             {state === "opening" ? "決済画面を開いています…" : "Plusの手続きへ進む"}

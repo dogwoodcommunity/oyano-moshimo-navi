@@ -901,6 +901,16 @@ begin
     return v_receipt.response;
   end if;
 
+  -- Mobile create_initial_family_person and this Web sync must acquire the
+  -- same per-user lock before either upserts profiles. Keeping both namespace
+  -- and lock order identical avoids duplicate families and profile/advisory
+  -- deadlocks when a user's first Web and Mobile requests overlap.
+  if p_family_id is null then
+    perform pg_advisory_xact_lock(
+      hashtextextended('notebook-first-family:' || p_actor_user_id::text, 0)
+    );
+  end if;
+
   insert into public.profiles (id, email, display_name, updated_at)
   values (
     p_actor_user_id,
@@ -913,10 +923,6 @@ begin
       updated_at = excluded.updated_at;
 
   if p_family_id is null then
-    perform pg_advisory_xact_lock(
-      hashtextextended('notebook-first-family:' || p_actor_user_id::text, 0)
-    );
-
     select count(*), (array_agg(fm.family_id order by fm.created_at, fm.family_id))[1]
     into v_membership_count, v_family_id
     from public.family_members fm

@@ -1030,8 +1030,7 @@ export async function persistConsultTurn(input: {
   const now = new Date().toISOString();
   // 外部AIへ送る時だけでなく、永続履歴へ保存する前にも必ず伏せる。
   // 端末から届いた質問をそのままDBへ残さない。
-  const safeQuestion = redactSensitive(input.question.trim()).slice(0, 600).trim()
-    || "相談内容（機密情報を除外しました）";
+  const safeQuestion = persistentConsultQuestion(input.question);
   const { data, error } = await input.authorized.supabase
     .from("ai_consult_turns")
     .insert({
@@ -1054,6 +1053,70 @@ export async function persistConsultTurn(input: {
     .eq("owner_user_id", input.authorized.userId);
   if (threadError) console.error("[consult-memory] failed to touch thread", threadError);
   return { id: asString(data.id, 80), createdAt: safeIso(data.created_at) ?? null };
+}
+
+function persistentConsultQuestion(question: string): string {
+  return redactSensitive(question.trim()).slice(0, 600).trim()
+    || "相談内容（機密情報を除外しました）";
+}
+
+/**
+ * Free plan only: persist the private turn and consume the reserved daily
+ * allowance in one database transaction. The same claim token is retried once
+ * so an RPC response lost after commit returns the already-created turn instead
+ * of creating a second paid call/turn or reopening the allowance.
+ */
+export async function persistAndFinalizeFreeConsultTurn(input: {
+  authorized: AuthorizedConsultPerson;
+  threadId: string;
+  claimToken: string;
+  question: string;
+  answer: ConsultAnswer;
+  sourceEventIds: string[];
+  memoryVersion: number;
+}): Promise<{ id: string; createdAt: string | null }> {
+  const args = {
+    p_answer: input.answer,
+    p_claim_token: input.claimToken,
+    p_consent_version: CONSULT_MEMORY_CONSENT_VERSION,
+    p_family_id: input.authorized.familyId,
+    p_memory_version: input.memoryVersion,
+    p_person_id: input.authorized.personId,
+    p_redacted_question: persistentConsultQuestion(input.question),
+    p_source_event_ids: input.sourceEventIds.slice(0, 18),
+    p_thread_id: input.threadId,
+    p_user_id: input.authorized.userId
+  };
+
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const { data, error } = await input.authorized.supabase
+      .rpc("persist_and_finalize_daily_free_consult", args);
+    if (error) {
+      lastError = error;
+      continue;
+    }
+
+    const result = asRecord(data);
+    if (asString(result.result, 40) === "persisted") {
+      const id = asString(result.turnId, 80);
+      if (id) return { id, createdAt: safeIso(result.createdAt) ?? null };
+    }
+    if (asString(result.result, 40) === "forbidden") {
+      throw new ConsultMemoryAccessError(
+        "forbidden",
+        "この手帳でAI相談を保存する権限を確認できませんでした。",
+        403
+      );
+    }
+    if (asString(result.result, 40) === "memory_consent_required") {
+      throw new ConsultMemoryConsentRequiredError();
+    }
+    lastError = new Error(`Unexpected free consultation persistence result: ${asString(result.result, 80) || "empty"}`);
+  }
+
+  throwIfMemorySchemaMissing(lastError);
+  throw lastError instanceof Error ? lastError : new Error("Free consultation persistence failed");
 }
 
 export async function listConsultMemory(

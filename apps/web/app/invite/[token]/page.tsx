@@ -31,11 +31,11 @@ export default function InvitePage({ params }: InvitePageProps) {
       <InviteAccept token={params.token} />
 
       <section className="family-card">
-        <h2>この招待でできること</h2>
+        <h2>共有される内容と権限</h2>
         <ul className="family-list">
-          <li>家族で同じ記録と期限を確認できます。</li>
-          <li>担当が決まっていないことを、見えるようにできます。</li>
-          <li>期限が近い手続きを、必要なときだけ思い出せます。</li>
+          <li>親の基本情報、日々の記録、確認リスト、写真が共有されます。</li>
+          <li>「見るだけ」か「記録・確認リスト・写真を編集」かは、参加前に上の欄で確認できます。</li>
+          <li>見るだけの人は、記録の追加・変更・削除やAI相談はできません。</li>
           <li>招待された人の追加課金はありません。</li>
         </ul>
         <p className="family-note">招待リンクは発行から7日間有効です。</p>

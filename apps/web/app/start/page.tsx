@@ -362,7 +362,6 @@ export default function StartPage() {
             <p>{chooseError}</p>
             {limitReached ? (
               <p className="toc-error-actions">
-                <Link href="/plans#plus">Plusを見る</Link>
                 <Link className="secondary" href="/home">いまの手帳へ戻る</Link>
               </p>
             ) : null}

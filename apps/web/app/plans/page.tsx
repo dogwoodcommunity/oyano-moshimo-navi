@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
 import { PlanCompletionNotice } from "@/components/PlanCompletionNotice";
 import { PlusUpgrade } from "@/components/PlusUpgrade";
+import { plusSalesReady } from "@/lib/commercialReadiness";
 
 export const metadata: Metadata = {
   title: "料金と使い方",
@@ -45,6 +46,10 @@ const plans = [
 ];
 
 export default function PlansPage() {
+  const salesReady = plusSalesReady();
+  const displayedPlans = plans.map((plan) => plan.name === "Family Plus" && !salesReady
+    ? { ...plan, price: "受付準備中", cta: "受付準備中" }
+    : plan);
   return (
     <main className="container">
       <section className="result-summary">
@@ -52,13 +57,14 @@ export default function PlansPage() {
         <h1 className="page-title">まず無料で、1人分の手帳を続けられます。</h1>
         <p className="lead">
           日々の記録、過去の振り返り、家族1人との共有、AI相談を無料で使えます。カード登録は要りません。
-          複数人の手帳などが本当に必要になった時だけ、Plusを検討できます。
-          支払いは家族手帳ごとです。招待された人が、同じ手帳で二重に支払う必要はありません。
+          {salesReady
+            ? "複数人の手帳などが本当に必要になった時だけ、Plusを検討できます。支払いは家族手帳ごとです。"
+            : "有料プランは現在受付準備中です。無料機能の利用に決済情報は必要ありません。"}
         </p>
       </section>
 
       <section className="pricing-grid">
-        {plans.map((plan) => (
+        {displayedPlans.map((plan) => (
           <article className={`panel pricing-card ${plan.featured ? "featured" : ""}`} key={plan.name}>
             <p className="pill">{plan.audience}</p>
             <h2>{plan.name}</h2>
@@ -66,7 +72,11 @@ export default function PlansPage() {
             <ul className="list">
               {plan.items.map((item) => <li key={item}>{item}</li>)}
             </ul>
-            <Link className={plan.featured ? "button" : "secondary"} href={plan.href}>{plan.cta}</Link>
+            {plan.name === "Family Plus" && !salesReady ? (
+              <span aria-disabled="true" className="secondary">{plan.cta}</span>
+            ) : (
+              <Link className={plan.featured ? "button" : "secondary"} href={plan.href}>{plan.cta}</Link>
+            )}
           </article>
         ))}
       </section>
@@ -126,7 +136,7 @@ export default function PlansPage() {
 
       <PlanCompletionNotice />
 
-      <PlusUpgrade />
+      <PlusUpgrade salesReady={salesReady} />
     </main>
   );
 }

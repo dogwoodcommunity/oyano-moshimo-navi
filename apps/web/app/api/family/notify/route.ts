@@ -76,6 +76,12 @@ export async function POST(request: Request) {
   if (!actorMember) {
     return NextResponse.json(SILENT_OK);
   }
+  if (!["owner", "admin", "member"].includes(actorMember.role)) {
+    return NextResponse.json(
+      { error: "viewer_cannot_notify", message: "閲覧のみの家族は、更新通知を送れません。" },
+      { status: 403 }
+    );
+  }
 
   const recipientIds = rows
     .map((member) => member.user_id)

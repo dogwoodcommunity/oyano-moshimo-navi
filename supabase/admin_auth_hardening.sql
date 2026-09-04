@@ -64,13 +64,21 @@ begin
   v_role := lower(trim(coalesce(p_role, 'member')));
   v_relationship := nullif(trim(coalesce(p_relationship, '')), '');
 
-  if v_role not in ('admin', 'member', 'viewer') then
+  if v_role not in ('member', 'viewer') then
     raise exception 'invalid_invite_role';
   end if;
 
   if lower(coalesce(v_relationship, '')) = 'app_admin' then
     raise exception 'reserved_relationship';
   end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended('notebook-family:' || p_family_id::text, 0)
+  );
+
+  perform pg_advisory_xact_lock(
+    hashtextextended('family-invite-capacity:' || p_family_id::text, 0)
+  );
 
   select role into v_inviter_role
   from family_members
@@ -84,10 +92,6 @@ begin
 
   if v_inviter_role not in ('owner', 'admin') then
     raise exception 'invite_requires_family_admin';
-  end if;
-
-  if v_role = 'admin' and v_inviter_role <> 'owner' then
-    raise exception 'admin_invite_requires_owner';
   end if;
 
   select plan into v_plan
@@ -106,6 +110,11 @@ begin
     and created_at > now() - interval '7 days';
 
   if found then
+    if v_invite.role not in ('member', 'viewer')
+      or lower(coalesce(v_invite.relationship, '')) = 'app_admin' then
+      raise exception 'invite_has_reserved_role';
+    end if;
+
     return v_invite;
   end if;
 
@@ -173,14 +182,30 @@ declare
   v_invite family_invites;
   v_member family_members;
   v_user_email text;
+  v_family_id uuid;
 begin
   if auth.uid() is null then
     raise exception 'not_authenticated';
   end if;
 
+  select family_id into v_family_id
+  from family_invites
+  where token = p_token
+    and status = 'pending'
+    and created_at > now() - interval '7 days';
+
+  if not found then
+    raise exception 'invite_invalid_or_expired';
+  end if;
+
+  perform pg_advisory_xact_lock(
+    hashtextextended('notebook-family:' || v_family_id::text, 0)
+  );
+
   select * into v_invite
   from family_invites
   where token = p_token
+    and family_id = v_family_id
     and status = 'pending'
     and created_at > now() - interval '7 days'
   for update;
@@ -189,7 +214,11 @@ begin
     raise exception 'invite_invalid_or_expired';
   end if;
 
-  if v_invite.role not in ('admin', 'member', 'viewer')
+  perform pg_advisory_xact_lock(
+    hashtextextended('family-invite-capacity:' || v_invite.family_id::text, 0)
+  );
+
+  if v_invite.role not in ('member', 'viewer')
     or lower(coalesce(v_invite.relationship, '')) = 'app_admin' then
     raise exception 'invite_has_reserved_role';
   end if;

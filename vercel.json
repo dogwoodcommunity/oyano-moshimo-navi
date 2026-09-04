@@ -12,6 +12,14 @@
     {
       "path": "/api/cron/purge-anonymous-cases",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-notebook-storage",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/cleanup-person-notebook-storage",
+      "schedule": "15 4 * * *"
     }
   ]
 }

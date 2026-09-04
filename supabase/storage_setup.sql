@@ -48,6 +48,7 @@ using (
     join family_members on family_members.family_id = people.family_id
     where home_photos.storage_path = storage.objects.name
       and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 );
 
@@ -63,5 +64,6 @@ using (
     join family_members on family_members.family_id = people.family_id
     where home_photos.storage_path = storage.objects.name
       and family_members.user_id = auth.uid()
+      and family_members.role in ('owner', 'admin', 'member')
   )
 );

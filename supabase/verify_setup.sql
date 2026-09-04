@@ -36,6 +36,7 @@ with required_tables(name) as (
     ('admin_notes'),
     ('audit_logs'),
     ('account_delete_requests'),
+    ('account_erasure_jobs'),
     ('products'),
     ('partners'),
     ('purchases'),
@@ -89,6 +90,7 @@ where n.nspname = 'public'
     'admin_notes',
     'audit_logs',
     'account_delete_requests',
+    'account_erasure_jobs',
     'products',
     'partners',
     'purchases',
@@ -202,7 +204,20 @@ with required_functions(name) as (
     ('create_initial_family_person'),
     ('create_family_invite'),
     ('accept_family_invite'),
-    ('promote_family_member_to_owner')
+    ('promote_family_member_to_owner'),
+    ('transfer_family_ownership'),
+    ('remove_family_member'),
+    ('leave_family'),
+    ('cancel_family_invite'),
+    ('get_family_management_summary'),
+    ('guard_erased_profile_recreation'),
+    ('guard_erased_notebook_storage_write'),
+    ('guard_erased_notebook_attachment_reference'),
+    ('collect_account_erasure_shared_photo_blockers'),
+    ('inspect_account_erasure_v1'),
+    ('prepare_account_erasure_v1'),
+    ('execute_account_erasure_database_v1'),
+    ('finalize_account_erasure_v1')
 )
 select
   'function_exists' as check_type,

@@ -8,6 +8,7 @@ const maxFileSizeBytes = 8 * 1024 * 1024;
 const uploadUrlHourlyLimit = Number(process.env.NOTEBOOK_PHOTO_UPLOAD_URL_HOURLY_LIMIT ?? 40);
 const freeStorageQuotaBytes = Number(process.env.NOTEBOOK_PHOTO_FREE_QUOTA_BYTES ?? 50 * 1024 * 1024);
 const plusStorageQuotaBytes = Number(process.env.NOTEBOOK_PHOTO_PLUS_QUOTA_BYTES ?? 500 * 1024 * 1024);
+const familyEditorRoles = new Set(["owner", "admin", "member"]);
 
 function bearerToken(request: Request) {
   const auth = request.headers.get("authorization");
@@ -29,16 +30,26 @@ function bytesFromStorageObject(value: Record<string, any>) {
   return Number.isFinite(numeric) ? numeric : 0;
 }
 
-async function userHasPlusFamily(supabase: NonNullable<ReturnType<typeof getServerSupabase>>, userId: string) {
+async function editableFamilyIdsForUser(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  userId: string
+) {
   const { data: memberships, error: membershipError } = await supabase
     .from("family_members")
-    .select("family_id")
+    .select("family_id, role")
     .eq("user_id", userId);
   if (membershipError) throw membershipError;
 
-  const familyIds = asArray<Record<string, any>>(memberships)
+  return asArray<Record<string, any>>(memberships)
+    .filter((row) => familyEditorRoles.has(String(row.role ?? "")))
     .map((row) => typeof row.family_id === "string" ? row.family_id : "")
     .filter(Boolean);
+}
+
+async function userHasPlusFamily(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  familyIds: string[]
+) {
   if (familyIds.length === 0) return false;
 
   const { data: families, error: familyError } = await supabase
@@ -129,8 +140,16 @@ export async function POST(request: Request) {
 
   const incomingBytes = Number.isFinite(Number(body.fileSizeBytes)) ? Number(body.fileSizeBytes) : 0;
   try {
+    const editableFamilyIds = await editableFamilyIdsForUser(supabase, userId);
+    if (editableFamilyIds.length === 0) {
+      return NextResponse.json(
+        { error: "You cannot upload photos with viewer-only family access" },
+        { status: 403 }
+      );
+    }
+
     const [isPlus, currentUsageBytes] = await Promise.all([
-      userHasPlusFamily(supabase, userId),
+      userHasPlusFamily(supabase, editableFamilyIds),
       notebookPhotoUsageBytes(supabase, userId)
     ]);
     const quotaBytes = isPlus ? plusStorageQuotaBytes : freeStorageQuotaBytes;

@@ -57,6 +57,36 @@ jobs:
       - name: Test free-first redesign
         run: pnpm run test:free-first-redesign
 
+      - name: Test home overview reachability
+        run: pnpm run test:home-overview-reachability
+
+      - name: Test web account deletion
+        run: pnpm run test:web-account-deletion
+
+      - name: Test verified account erasure PostgreSQL pipeline
+        run: pnpm run test:account-erasure:sql
+
+      - name: Test commercial release gates
+        run: pnpm run test:commercial-release-gates
+
+      - name: Test family roles and signed upload authorization
+        run: pnpm run test:family-role-security
+
+      - name: Test explicit family invite permissions
+        run: pnpm run test:family-invite-permissions
+
+      - name: Test family role PostgreSQL RLS
+        run: pnpm run test:family-role-security:sql
+
+      - name: Test family management
+        run: pnpm run test:family-management
+
+      - name: Test family management PostgreSQL transactions
+        run: pnpm run test:family-management:sql
+
+      - name: Test explicit family context selection
+        run: pnpm run test:family-context-selection
+
       - name: Test anonymous diagnosis and handoff route security
         run: pnpm run test:handoff-security
 
@@ -68,6 +98,21 @@ jobs:
 
       - name: Test consult memory PostgreSQL RLS
         run: pnpm run test:consult-memory:sql
+
+      - name: Test atomic daily free consultation claim
+        run: pnpm run test:consult-daily-claim:sql
+
+      - name: Test diary deletion
+        run: pnpm run test:diary-deletion
+
+      - name: Test diary deletion PostgreSQL transactions
+        run: pnpm run test:diary-deletion:sql
+
+      - name: Test whole-person notebook deletion
+        run: pnpm run test:person-deletion
+
+      - name: Test whole-person notebook deletion PostgreSQL transactions
+        run: pnpm run test:person-deletion:sql
 
       - name: Build web
         run: pnpm --filter web run build

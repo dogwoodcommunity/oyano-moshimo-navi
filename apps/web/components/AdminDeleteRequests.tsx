@@ -9,6 +9,13 @@ export function AdminDeleteRequests() {
   const [error, setError] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [erasureUserIds, setErasureUserIds] = useState<Record<string, string>>({});
+  const [erasurePhrases, setErasurePhrases] = useState<Record<string, string>>({});
+  const [erasureChecks, setErasureChecks] = useState<Record<string, {
+    ready: boolean;
+    executionEnabled: boolean;
+    message: string;
+  }>>({});
 
   function loadDeleteRequests() {
     fetch("/api/admin/delete-requests", { headers: adminHeaders() })
@@ -33,10 +40,6 @@ export function AdminDeleteRequests() {
 
   async function updateStatus(id: string, status: AdminDeleteRequestRow["status"]) {
     const note = notes[id]?.trim() ?? "";
-    if (status === "completed" && note.length < 10) {
-      setError("完了にする場合は、実施内容を10文字以上で記録してください。");
-      return;
-    }
 
     setUpdatingId(id);
     setError("");
@@ -56,6 +59,74 @@ export function AdminDeleteRequests() {
     }
 
     loadDeleteRequests();
+  }
+
+  async function runErasure(item: AdminDeleteRequestRow, action: "preflight" | "execute") {
+    const targetUserId = erasureUserIds[item.id]?.trim() ?? "";
+    if (!item.userId || targetUserId !== item.userId) {
+      setError("対象利用者の完全なIDを、表示どおり入力してください。");
+      return;
+    }
+
+    setUpdatingId(item.id);
+    setError("");
+    const response = await fetch("/api/admin/delete-requests/execute", {
+      method: "POST",
+      headers: {
+        ...adminHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action,
+        requestId: item.id,
+        targetUserId,
+        confirmation: erasurePhrases[item.id]?.trim() ?? ""
+      })
+    });
+    const body = await response.json().catch(() => ({})) as {
+      completed?: boolean;
+      executionEnabled?: boolean;
+      authState?: string;
+      message?: string;
+      result?: { result?: string; ownedFamilyCount?: number; storageObjectCount?: number };
+    };
+    setUpdatingId(null);
+
+    if (!response.ok) {
+      setError(body.message ?? "検証済み削除処理を続行できませんでした。");
+      setErasureChecks((current) => ({
+        ...current,
+        [item.id]: { ready: false, executionEnabled: false, message: body.message ?? "安全に停止しました。" }
+      }));
+      return;
+    }
+
+    if (action === "preflight") {
+      const ready = body.result?.result === "ready" || body.result?.result === "database_erased";
+      const executionEnabled = body.executionEnabled === true;
+      const detail = ready
+        ? `削除前確認OK：単独利用の家族${body.result?.ownedFamilyCount ?? 0}件、写真${body.result?.storageObjectCount ?? 0}件、Auth=${body.authState ?? "未確認"}`
+        : "すでに検証済みで完了しています。";
+      setErasureChecks((current) => ({
+        ...current,
+        [item.id]: {
+          ready,
+          executionEnabled,
+          message: executionEnabled ? detail : `${detail}／実行スイッチはOFFです。`
+        }
+      }));
+      return;
+    }
+
+    if (body.completed) {
+      setErasureChecks((current) => ({
+        ...current,
+        [item.id]: { ready: false, executionEnabled: false, message: "Auth・DB・写真を確認し、削除を完了しました。" }
+      }));
+      setErasureUserIds((current) => ({ ...current, [item.id]: "" }));
+      setErasurePhrases((current) => ({ ...current, [item.id]: "" }));
+      loadDeleteRequests();
+    }
   }
 
   return (
@@ -79,12 +150,15 @@ export function AdminDeleteRequests() {
             <tr key={item.id}>
               <td>{new Date(item.createdAt).toLocaleString("ja-JP")}</td>
               <td>{item.contactEmail || "-"}</td>
-              <td>{item.userId ? item.userId.slice(0, 8) : "-"}</td>
+              <td><span className="hint" style={{ wordBreak: "break-all" }}>{item.userId || "削除済み"}</span></td>
               <td>{item.reason || "-"}</td>
               <td>
                 <span className={`admin-chip ${item.status === "completed" ? "success" : item.isOverdue ? "warning" : ""}`}>
                   {item.status}
                 </span>
+                {item.erasureStatus && item.erasureStatus !== "completed" ? (
+                  <p className="hint">完全削除: {item.erasureStatus}</p>
+                ) : null}
                 {item.handledAt ? <p className="hint">{new Date(item.handledAt).toLocaleString("ja-JP")}</p> : null}
               </td>
               <td>
@@ -100,7 +174,7 @@ export function AdminDeleteRequests() {
                     aria-label="処理メモ"
                     className="admin-note-input"
                     onChange={(event) => setNotes((current) => ({ ...current, [item.id]: event.target.value }))}
-                    placeholder="処理メモ。完了時は実施内容を必ず記録"
+                    placeholder="本人確認や所有権移管などの処理メモ"
                     rows={2}
                     value={notes[item.id] ?? item.handledNote ?? ""}
                   />
@@ -110,9 +184,59 @@ export function AdminDeleteRequests() {
                   <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "needs_followup")} type="button">
                     要確認
                   </button>
-                  <button className="secondary compact" disabled={updatingId === item.id} onClick={() => updateStatus(item.id, "completed")} type="button">
-                    完了
-                  </button>
+                  <p className="hint">完了は、実データ・認証・写真の削除確認を残す専用処理からのみ記録します。</p>
+                  {item.status !== "completed" && item.userId ? (
+                    <details className="admin-erasure-control">
+                      <summary>検証済みの完全削除</summary>
+                      <p className="hint">
+                        共有家族の所有者、または本人が保存した写真が共有家族に残る場合は停止します。所有権・写真を家族側へ引き継いだ後に再確認してください。単独家族、本人の相談履歴、端末登録をDBから削除し、Authと写真が消えたことを再確認してからだけ完了にします。
+                      </p>
+                      <label>
+                        <span className="hint">対象利用者IDを確認入力</span>
+                        <input
+                          className="input"
+                          onChange={(event) => setErasureUserIds((current) => ({ ...current, [item.id]: event.target.value }))}
+                          placeholder={item.userId}
+                          type="text"
+                          value={erasureUserIds[item.id] ?? ""}
+                        />
+                      </label>
+                      <button
+                        className="secondary compact"
+                        disabled={updatingId === item.id}
+                        onClick={() => void runErasure(item, "preflight")}
+                        type="button"
+                      >
+                        削除前の安全確認
+                      </button>
+                      {erasureChecks[item.id] ? <p className="hint" role="status">{erasureChecks[item.id].message}</p> : null}
+                      {erasureChecks[item.id]?.ready ? (
+                        <>
+                          <label>
+                            <span className="hint">次の確認文を入力：<code>完全削除 {item.id}</code></span>
+                            <input
+                              className="input"
+                              onChange={(event) => setErasurePhrases((current) => ({ ...current, [item.id]: event.target.value }))}
+                              type="text"
+                              value={erasurePhrases[item.id] ?? ""}
+                            />
+                          </label>
+                          <button
+                            className="secondary compact"
+                            disabled={
+                              updatingId === item.id
+                              || !erasureChecks[item.id]?.executionEnabled
+                              || erasurePhrases[item.id]?.trim() !== `完全削除 ${item.id}`
+                            }
+                            onClick={() => void runErasure(item, "execute")}
+                            type="button"
+                          >
+                            Auth・DB・写真を検証して完全削除
+                          </button>
+                        </>
+                      ) : null}
+                    </details>
+                  ) : null}
                 </div>
               </td>
             </tr>

@@ -14,19 +14,30 @@ import {
   addDiaryEntryWithStatus,
   applyNotebookCloudRevisions,
   canAdoptNotebookCloudIdentity,
+  clearPendingDiaryEntryLocalDeletion,
+  clearPendingPersonNotebookLocalDeletion,
+  completeDiaryEntryLocalDeletion,
+  completePersonNotebookLocalDeletion,
   consumeNotebookStorageWarning,
   createLocalId,
+  deleteDiaryEntryWithStatus,
   diaryAdvice,
   diaryCompanionComment,
   exportNotebookData,
   listDiaryEntries,
   listLocalCases,
+  isDiaryEntryCloudSyncBlocked,
+  isPersonNotebookCloudSyncBlocked,
   notebookCloudBindingMatches,
   overwriteLocalNotebook,
   readNotebookCloudBinding,
   readCanManageFamilyBilling,
+  preparePersonNotebookLocalDeletion,
+  prepareDiaryEntryLocalDeletion,
   replaceLocalNotebook,
   resetLocalNotebookData,
+  retryCompletedPersonNotebookLocalDeletions,
+  retryCompletedDiaryEntryLocalDeletions,
   updateDiaryEntry,
   updateCaseProfileWithStatus,
   writeNotebookCloudBinding,
@@ -52,6 +63,19 @@ type DiaryEditForm = {
   date: string;
   mood: DiaryEntry["mood"];
   body: string;
+};
+
+type DiaryDeleteState = {
+  entryId: string;
+  scope: "cloud" | "local";
+  status: "confirming" | "deleting" | "error";
+  message?: string;
+};
+
+type PersonNotebookDeleteState = {
+  caseId: string;
+  status: "confirming" | "deleting" | "error";
+  message?: string;
 };
 
 type TaskWithDue = NonNullable<CaseRecord["result"]>["tasks"][number];
@@ -97,6 +121,7 @@ type DiaryCalendarCell = {
 };
 
 const notebookTabs: { id: NotebookTab; label: string; note: string }[] = [
+  { id: "overview", label: "まとめ", note: "今日見る" },
   { id: "record", label: "今日", note: "記録する" },
   { id: "history", label: "履歴", note: "見返す" },
   { id: "profile", label: "情報", note: "書類・連絡先" },
@@ -1155,6 +1180,10 @@ export default function FamilyBoardPage() {
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
   const [diarySavedId, setDiarySavedId] = useState<string | null>(null);
   const [diaryUpdatedId, setDiaryUpdatedId] = useState<string | null>(null);
+  const [diaryDeleteState, setDiaryDeleteState] = useState<DiaryDeleteState | null>(null);
+  const [diaryDeleteNotice, setDiaryDeleteNotice] = useState<string | null>(null);
+  const [personNotebookDeleteState, setPersonNotebookDeleteState] = useState<PersonNotebookDeleteState | null>(null);
+  const [personNotebookDeleteNotice, setPersonNotebookDeleteNotice] = useState<string | null>(null);
   const [diaryValidationCaseId, setDiaryValidationCaseId] = useState<string | null>(null);
   const [taskAddedEntryId, setTaskAddedEntryId] = useState<string | null>(null);
   const [profileForms, setProfileForms] = useState<Record<string, PersonProfile>>({});
@@ -1193,6 +1222,10 @@ export default function FamilyBoardPage() {
   const lastSyncedPayloadRef = useRef("");
   const cloudSyncInFlightRef = useRef(false);
   const pendingAutoSyncPayloadRef = useRef<NotebookSyncPayload | null>(null);
+  const diaryCloudDeletionInFlightRef = useRef<string | null>(null);
+  const blockedCloudDiarySyncKeysRef = useRef(new Set<string>());
+  const personNotebookDeletionInFlightRef = useRef<string | null>(null);
+  const blockedCloudCaseSyncIdsRef = useRef(new Set<string>());
   const cloudSyncRetryCountRef = useRef(0);
   const cloudSyncRetrySignatureRef = useRef("");
   const cloudSyncRetryTimerRef = useRef<number | null>(null);
@@ -1228,6 +1261,8 @@ export default function FamilyBoardPage() {
       }
     }
 
+    retryCompletedPersonNotebookLocalDeletions();
+    retryCompletedDiaryEntryLocalDeletions();
     const localCases = listLocalCases();
     setCases(localCases);
     setActiveCaseId((current) => current ?? localCases[0]?.id ?? null);
@@ -1340,6 +1375,9 @@ export default function FamilyBoardPage() {
     setEditingDiaryId(null);
     setDiarySavedId(null);
     setDiaryUpdatedId(null);
+    setDiaryDeleteState(null);
+    setDiaryDeleteNotice(null);
+    setPersonNotebookDeleteState(null);
     setTaskAddedEntryId(null);
     setEditingTaskKey(null);
     setTaskSavedKey(null);
@@ -1424,6 +1462,7 @@ export default function FamilyBoardPage() {
       : "いま未完了の確認リストはありません";
 
   function tabForHash(hash: string): NotebookTab | undefined {
+    if (hash === "#notebook-overview") return "overview";
     if (hash === "#today-diary") return "record";
     if (hash === "#diary-history") return "history";
     if (hash === "#person-profile" || hash === "#profile-edit-fields" || hash === "#document-location-note") return "profile";
@@ -1433,6 +1472,7 @@ export default function FamilyBoardPage() {
   }
 
   function hashForNotebookTab(tab: NotebookTab) {
+    if (tab === "overview") return "#notebook-overview";
     if (tab === "history") return "#diary-history";
     if (tab === "profile") return "#person-profile";
     if (tab === "tasks") return "#task-checklist";
@@ -1486,6 +1526,7 @@ export default function FamilyBoardPage() {
   }
 
   function notebookTabNote(tab: NotebookTab) {
+    if (tab === "overview") return "今日見る";
     if (tab === "record") return todayEntry ? "保存済み" : "未記録";
     if (tab === "history") return `${activeEntries.length}件`;
     if (tab === "profile") return `${activeProfileCompletion.percent}%`;
@@ -1991,6 +2032,395 @@ export default function FamilyBoardPage() {
     scrollToDiaryEntry(entryId);
   }
 
+  function openDiaryDeleteConfirmation(entry: DiaryEntry) {
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      return;
+    }
+    setDiaryDeleteNotice(null);
+    setDiaryDeleteState({
+      entryId: entry.id,
+      scope: readNotebookCloudBinding() ? "cloud" : "local",
+      status: "confirming"
+    });
+  }
+
+  async function confirmDiaryDelete(caseRecord: CaseRecord, entry: DiaryEntry) {
+    if (diaryDeleteState?.entryId !== entry.id || diaryDeleteState.status === "deleting") return;
+    if (cloudContentReadOnly) {
+      showCloudRoleReadOnlyMessage("content");
+      setDiaryDeleteState(null);
+      return;
+    }
+
+    const binding = readNotebookCloudBinding();
+    const cloudLinked = Boolean(binding);
+    let deletionIdentity: {
+      familyId: string;
+      personId: string;
+      localCaseId: string;
+      localDiaryId: string;
+      cloudRevision: number | null;
+      cloudHash: string | null;
+    } | null = null;
+    if (cloudLinked) {
+      if (
+        !cloudUserId
+        || cloudIdentityStatus !== "ready"
+        || !notebookCloudBindingMatches(binding, cloudUserId, cloudFamilyId)
+        || !cloudFamilyId
+        || !caseRecord.cloudPersonId
+      ) {
+        setDiaryDeleteState({
+          entryId: entry.id,
+          scope: "cloud",
+          status: "error",
+          message: "この記録はクラウド手帳に紐づいています。ログインと保存先の家族を確認してから、もう一度削除してください。"
+        });
+        return;
+      }
+      if (cloudSyncInFlightRef.current || cloudRestoringRef.current) {
+        setDiaryDeleteState({
+          entryId: entry.id,
+          scope: "cloud",
+          status: "error",
+          message: "クラウド保存または復元が進行中です。完了表示を確認してから、もう一度削除してください。"
+        });
+        return;
+      }
+
+      const hasCloudVersion = Number.isInteger(entry.cloudRevision)
+        && Number(entry.cloudRevision) >= 1
+        && typeof entry.cloudHash === "string"
+        && /^[0-9a-f]{64}$/i.test(entry.cloudHash);
+      deletionIdentity = {
+        familyId: cloudFamilyId,
+        personId: caseRecord.cloudPersonId,
+        localCaseId: caseRecord.id,
+        localDiaryId: entry.id,
+        cloudRevision: hasCloudVersion ? Number(entry.cloudRevision) : null,
+        cloudHash: hasCloudVersion ? entry.cloudHash!.toLowerCase() : null
+      };
+      if (!prepareDiaryEntryLocalDeletion(deletionIdentity)) {
+        setDiaryDeleteState({
+          entryId: entry.id,
+          scope: "cloud",
+          status: "error",
+          message: "削除中の記録を端末に安全に記録できませんでした。保存容量やブラウザ設定を確認して、もう一度お試しください。"
+        });
+        return;
+      }
+    }
+
+    setDiaryDeleteState({
+      entryId: entry.id,
+      scope: cloudLinked ? "cloud" : "local",
+      status: "deleting"
+    });
+
+    const cloudSyncBlockKey = `${caseRecord.id}:${entry.id}`;
+    let cloudDeletionStarted = false;
+    let resumeCloudSync = false;
+    let cloudDeleteResult: Record<string, unknown> = {};
+    try {
+      if (cloudLinked) {
+        cloudDeletionStarted = true;
+        diaryCloudDeletionInFlightRef.current = entry.id;
+        blockedCloudDiarySyncKeysRef.current.add(cloudSyncBlockKey);
+        if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+        if (cloudSyncRetryTimerRef.current !== null) window.clearTimeout(cloudSyncRetryTimerRef.current);
+        autoSyncTimerRef.current = null;
+        cloudSyncRetryTimerRef.current = null;
+        pendingAutoSyncPayloadRef.current = null;
+
+        const token = await getAccessToken();
+        if (!token) {
+          const tombstoneCleared = deletionIdentity
+            ? clearPendingDiaryEntryLocalDeletion(deletionIdentity)
+            : true;
+          if (tombstoneCleared) blockedCloudDiarySyncKeysRef.current.delete(cloudSyncBlockKey);
+          resumeCloudSync = true;
+          setDiaryDeleteState({
+            entryId: entry.id,
+            scope: "cloud",
+            status: "error",
+            message: tombstoneCleared
+              ? "クラウドから削除するため、もう一度ログインを確認してください。端末の記録は削除していません。"
+              : "ログインを確認できず削除を開始できませんでした。端末の安全な削除待ち状態を解除できないため、この記録はクラウド自動保存から除外しています。"
+          });
+          return;
+        }
+
+        const response = await fetch("/api/notebook/diary", {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            familyId: cloudFamilyId,
+            personId: caseRecord.cloudPersonId,
+            localCaseId: caseRecord.id,
+            localDiaryId: entry.id,
+            cloudRevision: entry.cloudRevision ?? null,
+            cloudHash: entry.cloudHash ?? null
+          })
+        });
+        cloudDeleteResult = await response.json().catch(() => ({})) as Record<string, unknown>;
+        if (!response.ok) {
+          const authoritativeRejection = response.status >= 400 && response.status < 500;
+          const tombstoneCleared = authoritativeRejection && deletionIdentity
+            ? clearPendingDiaryEntryLocalDeletion(deletionIdentity)
+            : false;
+          if (tombstoneCleared) blockedCloudDiarySyncKeysRef.current.delete(cloudSyncBlockKey);
+          resumeCloudSync = true;
+          setDiaryDeleteState({
+            entryId: entry.id,
+            scope: "cloud",
+            status: "error",
+            message: typeof cloudDeleteResult.message === "string"
+              ? `${cloudDeleteResult.message} 端末の記録は削除していません。${authoritativeRejection && tombstoneCleared ? "" : " 完了状態が不明なため、この記録はクラウド自動保存から除外したままです。もう一度削除をお試しください。"}`
+              : authoritativeRejection && tombstoneCleared
+                ? "クラウドから削除できませんでした。端末の記録は削除していません。"
+                : "削除完了を確認できませんでした。端末の記録は残し、この記録をクラウド自動保存から除外したままにしています。もう一度削除をお試しください。"
+          });
+          return;
+        }
+        pendingAutoSyncPayloadRef.current = null;
+      }
+
+      const localResult = cloudLinked && deletionIdentity
+        ? completeDiaryEntryLocalDeletion(deletionIdentity)
+        : deleteDiaryEntryWithStatus({ caseId: caseRecord.id, entryId: entry.id });
+      const storageWarning = consumeNotebookStorageWarning();
+      if (!localResult.deleted) {
+        if (cloudLinked) resumeCloudSync = true;
+        setDiaryDeleteState({
+          entryId: entry.id,
+          scope: cloudLinked ? "cloud" : "local",
+          status: "error",
+          message: cloudLinked
+            ? "クラウドからは削除しましたが、この端末に削除完了を記録できませんでした。記録はクラウド自動保存から除外したままです。画面を閉じずに、保存容量やブラウザ設定を確認してもう一度お試しください。"
+            : storageWarning ?? "この端末から削除できませんでした。空き容量やブラウザ設定を確認して、もう一度お試しください。"
+        });
+        return;
+      }
+
+      const remainingEntries = listDiaryEntries(caseRecord.id);
+      setDiaryEntries((current) => ({ ...current, [caseRecord.id]: remainingEntries }));
+      setDiaryEditForms((current) => {
+        const next = { ...current };
+        delete next[entry.id];
+        return next;
+      });
+      setEditingDiaryId((current) => current === entry.id ? null : current);
+      setDiarySavedId((current) => current === entry.id ? null : current);
+      setDiaryUpdatedId((current) => current === entry.id ? null : current);
+      setTaskAddedEntryId((current) => current === entry.id ? null : current);
+      setSelectedDiaryDate((current) => current && !remainingEntries.some((item) => item.date === current) ? null : current);
+      blockedCloudDiarySyncKeysRef.current.delete(cloudSyncBlockKey);
+      if (cloudLinked) resumeCloudSync = true;
+      setDiaryDeleteState(null);
+      if (cloudLinked) {
+        const pendingStorageJobs = typeof cloudDeleteResult.pendingStorageJobs === "number"
+          && Number.isInteger(cloudDeleteResult.pendingStorageJobs)
+          && cloudDeleteResult.pendingStorageJobs > 0
+          ? cloudDeleteResult.pendingStorageJobs
+          : 0;
+        const storageMessage = pendingStorageJobs > 0
+          ? ` 添付写真${pendingStorageJobs}件は削除確認待ちです。毎日の自動処理で再試行します。`
+          : entry.attachments.length > 0
+            ? " 添付写真もクラウド上に残っていないことを確認しました。"
+            : "";
+        const localMessage = localResult.persisted
+          ? ""
+          : " 端末の元データ消去は次回起動時にも再試行しますが、削除済み記録は表示・自動保存されません。";
+        setDiaryDeleteNotice(
+          `${formatLongDate(entry.date)}の記録を、クラウドとこの端末から削除しました。${storageMessage}${localMessage}`
+        );
+      } else {
+        setDiaryDeleteNotice(`${formatLongDate(entry.date)}の記録を、この端末から削除しました。`);
+      }
+    } catch {
+      if (cloudLinked) resumeCloudSync = true;
+      setDiaryDeleteState({
+        entryId: entry.id,
+        scope: cloudLinked ? "cloud" : "local",
+        status: "error",
+        message: cloudLinked
+          ? "通信が途中で切れたため、削除完了を確認できませんでした。端末の記録は残し、この記録をクラウド自動保存から除外したままにしています。もう一度削除をお試しください。"
+          : "この端末から削除できませんでした。もう一度お試しください。"
+      });
+    } finally {
+      if (cloudDeletionStarted) {
+        diaryCloudDeletionInFlightRef.current = null;
+        pendingAutoSyncPayloadRef.current = null;
+        if (resumeCloudSync) {
+          const resumePayload = notebookSyncPayload();
+          window.setTimeout(() => {
+            void syncNotebookToCloud({ silent: true, payload: resumePayload });
+          }, 150);
+        }
+      }
+    }
+  }
+
+  function openPersonNotebookDeleteConfirmation(caseRecord: CaseRecord) {
+    if (cloudMemberRole !== "owner" && cloudMemberRole !== "admin") {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "この人の手帳全体を削除できるのは、家族の所有者または管理者だけです。"
+      });
+      return;
+    }
+    setPersonNotebookDeleteNotice(null);
+    setPersonNotebookDeleteState({ caseId: caseRecord.id, status: "confirming" });
+  }
+
+  async function confirmPersonNotebookDelete(caseRecord: CaseRecord) {
+    if (personNotebookDeleteState?.caseId !== caseRecord.id
+        || personNotebookDeleteState.status === "deleting") return;
+    if (cloudMemberRole !== "owner" && cloudMemberRole !== "admin") {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "家族の所有者または管理者であることを確認できませんでした。"
+      });
+      return;
+    }
+
+    const binding = readNotebookCloudBinding();
+    if (!cloudUserId || cloudIdentityStatus !== "ready"
+        || !notebookCloudBindingMatches(binding, cloudUserId, cloudFamilyId)
+        || !cloudFamilyId || !caseRecord.cloudPersonId
+        || !Number.isInteger(caseRecord.cloudRevision) || Number(caseRecord.cloudRevision) < 1
+        || !caseRecord.cloudHash || !/^[0-9a-f]{64}$/i.test(caseRecord.cloudHash)) {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "削除する手帳のクラウド版を確認できません。先にクラウドの控えを読み直してください。"
+      });
+      return;
+    }
+    if (cloudSyncInFlightRef.current || cloudRestoringRef.current
+        || diaryCloudDeletionInFlightRef.current || personNotebookDeletionInFlightRef.current) {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "クラウド保存・復元・削除が進行中です。完了してから、もう一度お試しください。"
+      });
+      return;
+    }
+
+    const deletionIdentity = {
+      familyId: cloudFamilyId,
+      personId: caseRecord.cloudPersonId,
+      localCaseId: caseRecord.id,
+      cloudRevision: Number(caseRecord.cloudRevision),
+      cloudHash: caseRecord.cloudHash.toLowerCase()
+    };
+    if (!preparePersonNotebookLocalDeletion(deletionIdentity)) {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "この端末に削除中の印を安全に保存できません。ブラウザの保存設定を確認してください。クラウドの手帳は削除していません。"
+      });
+      return;
+    }
+
+    personNotebookDeletionInFlightRef.current = caseRecord.id;
+    blockedCloudCaseSyncIdsRef.current.add(caseRecord.id);
+    if (autoSyncTimerRef.current) window.clearTimeout(autoSyncTimerRef.current);
+    if (cloudSyncRetryTimerRef.current !== null) window.clearTimeout(cloudSyncRetryTimerRef.current);
+    autoSyncTimerRef.current = null;
+    cloudSyncRetryTimerRef.current = null;
+    pendingAutoSyncPayloadRef.current = null;
+    setPersonNotebookDeleteState({ caseId: caseRecord.id, status: "deleting" });
+
+    try {
+      const token = await getAccessToken();
+      if (!token) throw new Error("missing_access_token");
+      const response = await fetch("/api/notebook/person", {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          familyId: deletionIdentity.familyId,
+          personId: deletionIdentity.personId,
+          localCaseId: deletionIdentity.localCaseId,
+          cloudRevision: deletionIdentity.cloudRevision,
+          cloudHash: deletionIdentity.cloudHash
+        })
+      });
+      const result = await response.json().catch(() => ({})) as Record<string, unknown>;
+      if (!response.ok) {
+        const rollbackConfirmedErrors = new Set([
+          "owner_admin_required", "family_access_denied", "person_not_found",
+          "invalid_identity", "shared_storage_reference", "unsafe_storage_reference",
+          "unsupported_person_reference", "person_delete_conflict", "unauthorized"
+        ]);
+        const errorCode = typeof result.error === "string" ? result.error : "";
+        if (response.status >= 400 && response.status < 500
+            && rollbackConfirmedErrors.has(errorCode)
+            && clearPendingPersonNotebookLocalDeletion(deletionIdentity)) {
+          blockedCloudCaseSyncIdsRef.current.delete(caseRecord.id);
+        }
+        setPersonNotebookDeleteState({
+          caseId: caseRecord.id,
+          status: "error",
+          message: typeof result.message === "string"
+            ? `${result.message} この端末の手帳は削除していません。`
+            : "削除完了を確認できませんでした。この端末の手帳は残し、古い内容を自動送信しない状態にしています。もう一度お試しください。"
+        });
+        return;
+      }
+
+      const localResult = completePersonNotebookLocalDeletion(deletionIdentity);
+      if (!localResult.deleted) {
+        setPersonNotebookDeleteState({
+          caseId: caseRecord.id,
+          status: "error",
+          message: "クラウドからは削除しましたが、この端末に削除済みの印を確定できませんでした。画面を閉じず、ブラウザの保存設定を確認してもう一度お試しください。"
+        });
+        return;
+      }
+
+      const nextCases = listLocalCases();
+      const nextEntries = nextCases.flatMap((item) => listDiaryEntries(item.id));
+      reloadNotebookState(nextCases, nextEntries);
+      setPersonNotebookDeleteState(null);
+      const pendingStorageJobs = typeof result.pendingStorageJobs === "number"
+        ? result.pendingStorageJobs
+        : 0;
+      setPersonNotebookDeleteNotice(
+        localResult.persisted
+          ? `${personName(caseRecord)}さんの手帳を、クラウドとこの端末から削除しました。${pendingStorageJobs > 0 ? `写真${pendingStorageJobs}件は安全な削除待ちに入り、毎日自動で後片付けします。` : ""}`
+          : `${personName(caseRecord)}さんのクラウド手帳は削除しました。端末の削除済み印で再表示・再送信を止めています。端末内の後片付けは次に開いた時も続けます。`
+      );
+      lastSyncedPayloadRef.current = notebookPayloadSignature(notebookSyncPayload(nextCases, nextEntries));
+    } catch {
+      setPersonNotebookDeleteState({
+        caseId: caseRecord.id,
+        status: "error",
+        message: "通信が途中で切れたため、削除完了を確認できませんでした。この端末の手帳は残し、古い内容を自動送信しない状態にしています。同じ削除操作をもう一度お試しください。"
+      });
+    } finally {
+      personNotebookDeletionInFlightRef.current = null;
+      pendingAutoSyncPayloadRef.current = null;
+      const remainingCases = listLocalCases();
+      const remainingEntries = remainingCases.flatMap((item) => listDiaryEntries(item.id));
+      window.setTimeout(() => {
+        void syncNotebookToCloud({
+          silent: true,
+          payload: notebookSyncPayload(remainingCases, remainingEntries)
+        });
+      }, 150);
+    }
+  }
+
   function addDiaryTask(caseId: string, entry: DiaryEntry) {
     if (cloudContentReadOnly) {
       showCloudRoleReadOnlyMessage("content");
@@ -2025,17 +2455,33 @@ export default function FamilyBoardPage() {
     setProfileForms(Object.fromEntries(nextCases.map((item) => [item.id, profileSeed(item)])));
   }
 
+  function diaryEntriesAllowedForCloudSync(entries: DiaryEntry[]) {
+    return entries.filter((entry) => (
+      !blockedCloudDiarySyncKeysRef.current.has(`${entry.caseId}:${entry.id}`)
+      && !isDiaryEntryCloudSyncBlocked(entry.caseId, entry.id)
+    ));
+  }
+
   function allDiaryEntriesForSync() {
-    return diaryEntriesForNotebookSync(Object.values(diaryEntries).flat());
+    return diaryEntriesAllowedForCloudSync(Object.values(diaryEntries).flat());
   }
 
   function notebookSyncPayload(
     nextCases = cases,
     nextDiaryEntries = allDiaryEntriesForSync()
   ): NotebookSyncPayload {
+    const blockedCaseIds = new Set(nextCases
+      .filter((caseRecord) => blockedCloudCaseSyncIdsRef.current.has(caseRecord.id)
+        || isPersonNotebookCloudSyncBlocked(caseRecord.id))
+      .map((caseRecord) => caseRecord.id));
     return {
-      cases: nextCases,
-      diaryEntries: diaryEntriesForNotebookSync(nextDiaryEntries)
+      cases: nextCases.filter((caseRecord) => !blockedCaseIds.has(caseRecord.id)),
+      diaryEntries: diaryEntriesForNotebookSync(
+        diaryEntriesAllowedForCloudSync(nextDiaryEntries)
+          .filter((entry) => !blockedCaseIds.has(entry.caseId)
+            && !blockedCloudCaseSyncIdsRef.current.has(entry.caseId)
+            && !isPersonNotebookCloudSyncBlocked(entry.caseId))
+      )
     };
   }
 
@@ -2136,6 +2582,10 @@ export default function FamilyBoardPage() {
   async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
     const authGeneration = cloudAuthGenerationRef.current;
     const payload = options.payload ?? notebookSyncPayload();
+    if (diaryCloudDeletionInFlightRef.current || personNotebookDeletionInFlightRef.current) {
+      if (options.silent) pendingAutoSyncPayloadRef.current = payload;
+      return;
+    }
     const binding = readNotebookCloudBinding();
     if (
       !cloudUserId
@@ -2658,6 +3108,10 @@ export default function FamilyBoardPage() {
         hasRecordToday={activeEntries.some((entry) => entry.date === todayInputValue())}
       />
 
+      {personNotebookDeleteNotice ? (
+        <p className="person-notebook-delete-notice" role="status">{personNotebookDeleteNotice}</p>
+      ) : null}
+
       {!loaded ? (
         <section className="nb-card board-empty">
           <h2>読み込み中です</h2>
@@ -2787,7 +3241,7 @@ export default function FamilyBoardPage() {
                 <button
                   aria-controls={hashForNotebookTab(tab.id).slice(1)}
                   aria-selected={activeNotebookTab === tab.id}
-                  className={activeNotebookTab === tab.id ? "is-active" : ""}
+                  className={`${tab.id === "overview" ? "is-overview" : ""} ${activeNotebookTab === tab.id ? "is-active" : ""}`.trim()}
                   id={`notebook-tab-${tab.id}`}
                   key={tab.id}
                   role="tab"
@@ -2964,7 +3418,12 @@ export default function FamilyBoardPage() {
             </details>
           </section>
 
-          <section className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`} aria-label="今日見るところ">
+          <section
+            aria-labelledby="notebook-tab-overview"
+            className={`nb-section ${activeNotebookTab === "overview" ? "" : "is-hidden-tab"}`}
+            id="notebook-overview"
+            role="tabpanel"
+          >
             <div className="nb-section-head">
               <strong>今日見るところ</strong>
               <span className="rule" aria-hidden="true" />
@@ -3430,6 +3889,7 @@ export default function FamilyBoardPage() {
               <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
             </div>
             <article className="nb-card history-card">
+              {diaryDeleteNotice ? <p className="diary-delete-notice" role="status">{diaryDeleteNotice}</p> : null}
               {activeEntries.length > 0 ? (
                 <DiaryCalendar
                   entries={activeEntries}
@@ -3487,6 +3947,7 @@ export default function FamilyBoardPage() {
                           {group.items.map((entry) => {
                             const editForm = diaryEditForms[entry.id] ?? diaryEditSeed(entry);
                             const isEditing = editingDiaryId === entry.id;
+                            const deleteState = diaryDeleteState?.entryId === entry.id ? diaryDeleteState : null;
 
                             return (
                               <article className={`diary-entry-card ${isEditing ? "is-editing" : ""}`} id={`diary-entry-${entry.id}`} key={entry.id}>
@@ -3604,8 +4065,47 @@ export default function FamilyBoardPage() {
                                     >
                                       <strong>AIに相談</strong>
                                     </button>
+                                    <button
+                                      aria-label="この記録を削除するための確認を開く"
+                                      className="is-delete"
+                                      disabled={cloudContentReadOnly || deleteState?.status === "deleting"}
+                                      type="button"
+                                      onClick={() => openDiaryDeleteConfirmation(entry)}
+                                    >
+                                      <strong>{cloudContentReadOnly ? "閲覧のみ" : "記録を削除"}</strong>
+                                    </button>
                                   </div>
                                 </div>
+                                {deleteState ? (
+                                  <div className="diary-delete-confirm" role="group" aria-label="記録削除の最終確認">
+                                    <strong>本当にこの1件を削除しますか？</strong>
+                                    <p>
+                                      {deleteState.scope === "cloud"
+                                        ? "この記録と添付写真を、家族のクラウド手帳とこの端末の両方から削除します。元には戻せません。"
+                                        : "この記録をこの端末から削除します。元には戻せません。"}
+                                    </p>
+                                    {deleteState.status === "error" && deleteState.message ? (
+                                      <p className="diary-delete-error" role="alert">{deleteState.message}</p>
+                                    ) : null}
+                                    <div>
+                                      <button
+                                        disabled={deleteState.status === "deleting" || cloudContentReadOnly}
+                                        type="button"
+                                        onClick={() => void confirmDiaryDelete(activeCase, entry)}
+                                      >
+                                        {deleteState.status === "deleting" ? "削除しています…" : "この1件を削除する"}
+                                      </button>
+                                      <button
+                                        className="is-secondary"
+                                        disabled={deleteState.status === "deleting"}
+                                        type="button"
+                                        onClick={() => setDiaryDeleteState(null)}
+                                      >
+                                        削除せず戻る
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : null}
                               </article>
                             );
                           })}
@@ -4178,6 +4678,77 @@ export default function FamilyBoardPage() {
                 title="実家や書類は、場所が分かる写真が後で効きます。"
                 body="鍵、保険証券、部屋の状態、施設からの書類などは、日記に添付しておくと家族で同じ前提を持てます。"
               />
+            </article>
+          </section>
+
+          <section className={`nb-section ${activeNotebookTab === "profile" ? "" : "is-hidden-tab"}`} aria-label="この人の手帳の削除">
+            <div className="nb-section-head">
+              <strong>手帳の管理</strong>
+              <span className="rule" aria-hidden="true" />
+              <span className="aside">取り消せない操作</span>
+            </div>
+            <article className="nb-card person-notebook-delete-card">
+              <div>
+                <strong>{personName(activeCase)}さんの手帳を削除</strong>
+                <p>ほかの人の手帳や家族アカウントは残し、この人の手帳1冊だけを削除します。</p>
+              </div>
+              {cloudMemberRole === "owner" || cloudMemberRole === "admin" ? (
+                <button
+                  className="person-notebook-delete-open"
+                  disabled={personNotebookDeleteState?.status === "deleting"
+                    || cloudIdentityStatus !== "ready"
+                    || !activeCase.cloudPersonId
+                    || !activeCase.cloudRevision
+                    || !activeCase.cloudHash}
+                  type="button"
+                  onClick={() => openPersonNotebookDeleteConfirmation(activeCase)}
+                >
+                  削除する内容を確認
+                </button>
+              ) : (
+                <p className="person-notebook-delete-permission">
+                  {cloudMemberRole === "member" || cloudMemberRole === "viewer"
+                    ? "この操作は家族の所有者・管理者だけが行えます。"
+                    : "クラウド保存へログインし、保存先の家族を確認すると管理操作を表示します。"}
+                </p>
+              )}
+
+              {personNotebookDeleteState?.caseId === activeCase.id ? (
+                <div className="person-notebook-delete-confirm" role="group" aria-label="手帳全体削除の最終確認">
+                  <strong>削除する範囲をもう一度確認してください</strong>
+                  <p><b>{personName(activeCase)}さんの手帳1冊</b>から、次の内容をすべて削除します。元には戻せません。</p>
+                  <ul>
+                    <li>基本情報・書類や連絡先のメモ</li>
+                    <li>確認リスト {activeTasks.length}件</li>
+                    <li>日々の記録 {activeEntries.length}件・添付写真 {attachments.length}件</li>
+                    <li>対象者のAI長期記憶・家族共有のAI記憶</li>
+                    <li>この人についてのAI相談履歴</li>
+                  </ul>
+                  <p className="person-notebook-delete-keep">ほかの対象者の手帳、家族メンバー、契約情報は削除しません。</p>
+                  {personNotebookDeleteState.status === "error" && personNotebookDeleteState.message ? (
+                    <p className="person-notebook-delete-error" role="alert">{personNotebookDeleteState.message}</p>
+                  ) : null}
+                  <div>
+                    <button
+                      disabled={personNotebookDeleteState.status === "deleting"}
+                      type="button"
+                      onClick={() => void confirmPersonNotebookDelete(activeCase)}
+                    >
+                      {personNotebookDeleteState.status === "deleting"
+                        ? "手帳1冊を削除しています…"
+                        : "この人の手帳1冊をすべて削除"}
+                    </button>
+                    <button
+                      className="is-secondary"
+                      disabled={personNotebookDeleteState.status === "deleting"}
+                      type="button"
+                      onClick={() => setPersonNotebookDeleteState(null)}
+                    >
+                      削除せず戻る
+                    </button>
+                  </div>
+                </div>
+              ) : null}
             </article>
           </section>
 

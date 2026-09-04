@@ -456,7 +456,12 @@ begin
 end;
 $$;
 
-grant execute on function public.promote_family_member_to_owner(uuid) to authenticated;
+-- Deprecated client contract: it lacks family_id and creates co-owner rows.
+-- Running this historical bundle after family_management_rpc.sql must never
+-- reopen that bypass.
+revoke all on function public.promote_family_member_to_owner(uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.promote_family_member_to_owner(uuid) to service_role;
 
 -- 5. Notification cron claims due rows before sending so concurrent cron runs
 -- do not send the same scheduled notification twice.

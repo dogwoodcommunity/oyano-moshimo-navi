@@ -97,11 +97,6 @@ export default function ResultPage() {
       label: "無料",
       title: "記録がたまったら、一冊のPDFへ",
       body: "積み重ねた日々の記録と写真は、家族で振り返る『思い出の手帳PDF』に無料でまとめられます。"
-    },
-    {
-      label: "Plus",
-      title: "必要になったら広げる",
-      body: "2人目以降の登録、容量拡張、長期相談、家族会議用PDFは有料プランで追加します。"
     }
   ];
 
@@ -218,22 +213,16 @@ export default function ResultPage() {
           期限のあるタスク、担当未定、家族に聞くこと、日々の記録をこの人の管理手帳で進めます。
           あとから状況が変わったら、同じ対象者として更新できます。
         </p>
-        <p className="hint">
-          父母・義父母・親戚など複数人を管理する場合も、1人ずつ登録して、人ごとに状態、期限、担当、日記を分けます。
-        </p>
+        <p className="hint">まずはこの1人分を、記録・確認リスト・家族共有・AI相談まで無料で使えます。</p>
         <div className="handoff-choice-grid" aria-label="家族ボードで続けること">
           <div>
-            <strong>無料で始める</strong>
-            <span>1人目のプロフィール、日記、写真、確認リスト、思い出の手帳PDF</span>
-          </div>
-          <div>
-            <strong>Plusで広げる</strong>
-            <span>2人目以降、容量拡張、長期相談、家族会議用PDF</span>
+            <strong>今日から無料で続ける</strong>
+            <span>プロフィール、日記、写真、確認リスト、家族1人との共有、1日1回のAI相談、思い出の手帳PDF</span>
           </div>
         </div>
         <div className="actions">
           <Link className="button" href="/home">この人の管理手帳へ進む</Link>
-          <Link className="secondary" href="/plans">Plusで広げる項目を見る</Link>
+          <Link className="secondary" href="/plans">無料でできることを見る</Link>
         </div>
       </section>
 

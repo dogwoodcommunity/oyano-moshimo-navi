@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { getLocalCase } from "@/lib/store";
 
-export function SupportPackClient() {
+export function SupportPackClient({ salesReady }: { salesReady: boolean }) {
   const params = useSearchParams();
   const caseId = params.get("caseId");
   const checkoutToken = params.get("checkoutToken");
@@ -14,6 +14,18 @@ export function SupportPackClient() {
   const [consentToContact, setConsentToContact] = useState(false);
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  if (!salesReady) {
+    return (
+      <section className="panel handoff-band" style={{ marginTop: 18 }}>
+        <h2>現在は受付準備中です</h2>
+        <p className="hint">
+          事業者情報、提供条件、キャンセル・返金条件、決済後の対応体制を確定してから受付を開始します。
+          それまでは申込情報や決済情報を入力する必要はありません。
+        </p>
+      </section>
+    );
+  }
 
   async function startCheckout() {
     if (!caseId) return;

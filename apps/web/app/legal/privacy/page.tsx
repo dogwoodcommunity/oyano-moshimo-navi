@@ -1,6 +1,9 @@
 import { SENSITIVE_INFO_CONSENT_TEXT, SENSITIVE_INFO_CONSENT_VERSION } from "@oyano/shared";
+import { getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
 
 export default function PrivacyPage() {
+  const operator = getPublicOperatorDisclosure();
+  const contactHref = operator ? legalContactHref(operator.contact) : null;
   return (
     <main className="container">
       <section className="legal-hero">
@@ -13,7 +16,11 @@ export default function PrivacyPage() {
           親のもしもナビは、家族が親の状況、手続き、実家情報、相談先候補を整理するために必要な情報を取り扱います。
           銀行暗証番号、パスワード、マイナンバー画像など、保存禁止の情報は預かりません。
         </p>
-        <p className="hint">事業者情報、問い合わせ先、法務レビュー結果は正式公開前に最終反映します。</p>
+        {operator ? (
+          <p className="hint">施行日: {operator.privacyEffectiveDate}／運営: {operator.operatorName}</p>
+        ) : (
+          <p className="hint">事業者情報、問い合わせ先、施行日、法務レビュー結果は正式公開前に最終反映します。</p>
+        )}
         <h2>取得する情報</h2>
         <ul className="list">
           <li>状況整理チェックの回答、親のステータス、家族構成、困りごと</li>
@@ -64,7 +71,7 @@ export default function PrivacyPage() {
         <h2>利用状況の計測</h2>
         <p>
           サービスの改善のために、端末ごとに割り当てた匿名のIDと、操作の種類（危機モード、対象者登録、記録、AI相談、履歴の表示、書類メモの保存、家族招待リンクの作成・共有）と、その時刻だけを記録します。
-          氏名、メールアドレス、記録の本文、閲覧したページの内容は含みません。匿名IDから個人を特定することはできません。
+          氏名、メールアドレス、記録の本文、閲覧したページの内容は含みません。通常利用では、この計測用IDを氏名やメールアドレスへ結び付けません。
         </p>
         <p>
           この記録は、無料の手帳で記録を続け、あとから見返し、必要に応じて家族と使える導線になっているかを確認するために使います。広告や第三者への提供には使いません。
@@ -96,6 +103,10 @@ export default function PrivacyPage() {
         </p>
         <p>
           送信した内容は、Anthropic のAPI利用条件に基づき、モデルの学習には使用されません。
+          Anthropicが案内する標準のAPI保持期間では、入力と出力は受領・生成から30日以内に削除されますが、
+          利用ポリシー違反への対応、法令上の必要、個別契約などの例外があります。
+          親のもしもナビ側では、伏せ字処理後の相談履歴と要約を、継続相談のためSupabaseに保存します。
+          保存済みの相談履歴・AI記憶はAI相談画面から削除でき、アカウント全体の削除も別途依頼できます。
           生成AIの出力は、医療、法律、税務の判断ではありません。判断が必要なことは、必ず主治医、役所、専門家に確認してください。
         </p>
         <h2>対象者ごとのAI記憶と相談履歴</h2>
@@ -119,10 +130,21 @@ export default function PrivacyPage() {
         <h2>同意の撤回と削除</h2>
         <p>
           ユーザーは、登録情報の修正、削除、家族共有の解除、通知停止を求めることができます。
-          Expoアプリ内の設定画面からアカウント削除依頼を送信できます。誤削除を避けるため、運営側で依頼内容を確認したうえで、原則として30日以内に削除処理または継続確認の連絡を行います。
+          Webの「アカウント・データ削除」画面とExpoアプリ内の設定画面から、アカウント削除依頼を送信できます。
+          誤削除を避けるため、運営側で依頼内容を確認したうえで、原則として30日以内に削除処理または継続確認の連絡を行います。
+          ほかの家族も利用している手帳は、一人の退会だけで家族全員の共有記録を消さず、所有権の移管、本人の退出、手帳全体の削除を分けて確認します。
+          ブラウザ内だけに残っている手帳は、Webの同じ画面から別に削除できます。
         </p>
-        <h2>問い合わせ</h2>
-        <p>正式な問い合わせ先、事業者情報、個人情報管理責任者は本番公開前に確定します。</p>
+        <h2 id="contact">問い合わせ</h2>
+        {operator ? (
+          <p>
+            運営者: {operator.operatorName}<br />
+            個人情報管理責任者: {operator.responsiblePerson}<br />
+            問い合わせ先: {contactHref ? <a href={contactHref}>{operator.contact}</a> : operator.contact}
+          </p>
+        ) : (
+          <p>正式な問い合わせ先、事業者情報、個人情報管理責任者は本番公開前に確定します。</p>
+        )}
       </section>
     </main>
   );

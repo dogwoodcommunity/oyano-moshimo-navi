@@ -633,26 +633,17 @@ export async function createFamilyInvite(
 }
 
 export async function promoteFamilyMemberToOwner(
-  memberId: string
+  _memberId: string
 ): Promise<{ source: "supabase" | "demo"; error?: string }> {
   const supabase = getSupabase();
-  if (!supabase) return { source: "demo" };
-
-  const { error } = await supabase.rpc("promote_family_member_to_owner", {
-    p_family_member_id: memberId
-  });
-
-  if (error) {
-    const message = error.message ?? "";
-    const friendlyMessage = message.includes("not_family_admin")
-      ? "共同管理者にできるのは家族代表または管理者だけです。"
-      : message.includes("member_not_found")
-        ? "メンバーが見つかりませんでした。"
-        : "共同管理者に変更できませんでした。時間をおいてもう一度お試しください。";
-    return { source: "supabase", error: friendlyMessage };
-  }
-
-  return { source: "supabase" };
+  // The legacy RPC accepted only memberId and let an admin create additional
+  // owner rows. It is intentionally revoked server-side. Mobile must stay
+  // fail-closed until its Stage C screen carries an explicit familyId and the
+  // product defines transfer (single owner) versus admin delegation.
+  return {
+    source: supabase ? "supabase" : "demo",
+    error: "共同管理者の変更は現在準備中です。所有権の変更はWeb版の家族共有画面から行ってください。"
+  };
 }
 
 export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInviteResult> {

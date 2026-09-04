@@ -13,6 +13,12 @@ grant select, insert, update, delete on all tables in schema public to authentic
 grant usage, select, update on all sequences in schema public to authenticated;
 grant execute on all functions in schema public to authenticated;
 
+-- Family ownership and membership are changed only through the atomic,
+-- explicit-family RPCs. Keep a later re-run of this broad bootstrap file from
+-- restoring direct DML around those checks.
+revoke update, delete on table families from authenticated;
+revoke insert, update, delete on table family_members, family_invites from authenticated;
+
 -- Per-person AI memory mutations are server-only. RLS still limits direct reads,
 -- while revoking client writes protects the server-derived fact/source boundary.
 revoke all
@@ -63,6 +69,150 @@ begin
   if to_regprocedure('public.submit_anonymous_case_diagnosis(uuid,text,text,jsonb,text,text,boolean,text,text,text,text,text,text,jsonb,jsonb,jsonb,text)') is not null then
     execute 'revoke all on function public.submit_anonymous_case_diagnosis(uuid, text, text, jsonb, text, text, boolean, text, text, text, text, text, text, jsonb, jsonb, jsonb, text) from public, anon, authenticated';
     execute 'grant execute on function public.submit_anonymous_case_diagnosis(uuid, text, text, jsonb, text, text, boolean, text, text, text, text, text, text, jsonb, jsonb, jsonb, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.promote_family_member_to_owner(uuid)') is not null then
+    execute 'revoke all on function public.promote_family_member_to_owner(uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.promote_family_member_to_owner(uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)') is not null then
+    execute 'revoke all on function public.sync_notebook_v2(uuid, text, uuid, boolean, jsonb, jsonb, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.sync_notebook_v2(uuid, text, uuid, boolean, jsonb, jsonb, uuid) to service_role';
+  end if;
+
+  if to_regclass('public.ai_consult_daily_claims') is not null then
+    execute 'revoke all on table public.ai_consult_daily_claims from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regclass('public.notebook_storage_deletion_jobs') is not null then
+    execute 'revoke all on table public.notebook_storage_deletion_jobs from public, anon, authenticated, service_role';
+    execute 'grant select, insert, update, delete on table public.notebook_storage_deletion_jobs to service_role';
+  end if;
+
+  if to_regclass('public.notebook_diary_deletion_receipts') is not null then
+    execute 'revoke all on table public.notebook_diary_deletion_receipts from public, anon, authenticated, service_role';
+    execute 'grant select, insert, delete on table public.notebook_diary_deletion_receipts to service_role';
+  end if;
+
+  if to_regclass('public.person_notebook_deletion_receipts') is not null then
+    execute 'revoke all on table public.person_notebook_deletion_receipts from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regclass('public.person_notebook_storage_deletion_jobs') is not null then
+    execute 'revoke all on table public.person_notebook_storage_deletion_jobs from public, anon, authenticated, service_role';
+    execute 'grant select, insert, update, delete on table public.person_notebook_storage_deletion_jobs to service_role';
+  end if;
+
+  if to_regprocedure('public.guard_notebook_storage_deletion_paths()') is not null then
+    execute 'revoke all on function public.guard_notebook_storage_deletion_paths() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.delete_notebook_diary_v1(uuid,uuid,uuid,text,text,bigint,text)') is not null then
+    execute 'revoke all on function public.delete_notebook_diary_v1(uuid, uuid, uuid, text, text, bigint, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.delete_notebook_diary_v1(uuid, uuid, uuid, text, text, bigint, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.guard_deleted_person_notebook_identity()') is not null then
+    execute 'revoke all on function public.guard_deleted_person_notebook_identity() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.guard_person_notebook_storage_deletion_path()') is not null then
+    execute 'revoke all on function public.guard_person_notebook_storage_deletion_path() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.person_notebook_storage_path_is_referenced(text,text)') is not null then
+    execute 'revoke all on function public.person_notebook_storage_path_is_referenced(text, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.person_notebook_storage_path_is_referenced(text, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.delete_person_notebook_v1(uuid,uuid,uuid,text,bigint,text)') is not null then
+    execute 'revoke all on function public.delete_person_notebook_v1(uuid, uuid, uuid, text, bigint, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.delete_person_notebook_v1(uuid, uuid, uuid, text, bigint, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.claim_daily_free_consult(uuid,uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.claim_daily_free_consult(uuid, uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.claim_daily_free_consult(uuid, uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.persist_and_finalize_daily_free_consult(uuid,uuid,uuid,uuid,uuid,text,jsonb,uuid[],integer,text)') is not null then
+    execute 'revoke all on function public.persist_and_finalize_daily_free_consult(uuid, uuid, uuid, uuid, uuid, text, jsonb, uuid[], integer, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.persist_and_finalize_daily_free_consult(uuid, uuid, uuid, uuid, uuid, text, jsonb, uuid[], integer, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.release_daily_free_consult(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.release_daily_free_consult(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.release_daily_free_consult(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regclass('public.account_erasure_jobs') is not null then
+    execute 'revoke all on table public.account_erasure_jobs from public, anon, authenticated, service_role';
+    execute 'grant select on table public.account_erasure_jobs to service_role';
+  end if;
+
+  if to_regprocedure('public.guard_erased_profile_recreation()') is not null then
+    execute 'revoke all on function public.guard_erased_profile_recreation() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.guard_erased_notebook_storage_write()') is not null then
+    execute 'revoke all on function public.guard_erased_notebook_storage_write() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.guard_erased_notebook_attachment_reference()') is not null then
+    execute 'revoke all on function public.guard_erased_notebook_attachment_reference() from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_storage_objects(uuid,uuid[])') is not null then
+    execute 'revoke all on function public.collect_account_erasure_storage_objects(uuid, uuid[]) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_storage_prefixes(uuid[])') is not null then
+    execute 'revoke all on function public.collect_account_erasure_storage_prefixes(uuid[]) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.hash_account_erasure_storage_prefixes(jsonb)') is not null then
+    execute 'revoke all on function public.hash_account_erasure_storage_prefixes(jsonb) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_storage_manifest_blockers(jsonb,jsonb)') is not null then
+    execute 'revoke all on function public.collect_account_erasure_storage_manifest_blockers(jsonb, jsonb) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_pending_cleanup_objects(uuid,uuid[])') is not null then
+    execute 'revoke all on function public.collect_account_erasure_pending_cleanup_objects(uuid, uuid[]) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_pending_person_cleanup_objects(uuid,uuid[])') is not null then
+    execute 'revoke all on function public.collect_account_erasure_pending_person_cleanup_objects(uuid, uuid[]) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.collect_account_erasure_shared_photo_blockers(uuid,uuid[])') is not null then
+    execute 'revoke all on function public.collect_account_erasure_shared_photo_blockers(uuid, uuid[]) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.merge_account_erasure_storage_objects(jsonb,jsonb)') is not null then
+    execute 'revoke all on function public.merge_account_erasure_storage_objects(jsonb, jsonb) from public, anon, authenticated, service_role';
+  end if;
+
+  if to_regprocedure('public.prepare_account_erasure_v1(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.prepare_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.prepare_account_erasure_v1(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.inspect_account_erasure_v1(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.inspect_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.inspect_account_erasure_v1(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.execute_account_erasure_database_v1(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.execute_account_erasure_database_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.execute_account_erasure_database_v1(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)') is not null then
+    execute 'revoke all on function public.finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) to service_role';
   end if;
 end;
 $server_only_rpc_acl$;
