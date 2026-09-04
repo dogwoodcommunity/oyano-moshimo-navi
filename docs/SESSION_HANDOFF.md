@@ -11321,3 +11321,42 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
 
 次にユーザーへ1項目ずつ確認する正式情報は、障害対応代行者 `池田知也` の役職。
+
+## 2026-09-04 追記 298 — 池田知也の役職をシステム責任者に確定
+
+ユーザー確認により、池田知也の会社・運用上の役職を `システム責任者` と確定した。
+同一人物を記載している障害対応代行者とアカウント削除代行者の両方へ、この役職を反映した。
+
+- `COMMERCIAL_RELEASE_INPUTS.md` と `COMMERCIAL_OPERATIONS_RUNBOOK.md` の両代行者欄を
+  `システム責任者 池田知也` に更新した。
+- 正式版チェックリストと公開計画でも役職確定を完了扱いにした。
+- 障害対応の確定済み責任範囲は変更していない。アカウント削除対応における代行者の
+  具体的責任範囲は、今回の回答から推測せず未確定のまま残した。
+- `LEGAL_RESPONSIBLE_PERSON`、利用規約・プライバシーポリシー・特商法表示の公開責任者は
+  `代表取締役 池田哲也` のまま変更していない。
+- `システム責任者` という役職だけでは、app_admin、リリース担当、DB管理者、最終承認者、
+  Vercel・Supabase・GitHub・Resend・DNS等の閲覧・操作権限を付与しない。
+- 正式版ゲート回帰に、削除対応と障害対応の両方で役職が保持されることと、
+  公開上の責任者を池田知也へ置換しないことを追加した。
+- 独立した読み取り専用監査でP0指摘なし。内部連絡、通知、当番、サービス別権限、
+  最終承認者、MFA、演習が揃うまで正式運用はNO-GOのまま。
+- 独立した読み取り専用再検証でも、正式版ゲート、local doctor、diff checkが成功し、
+  役職が両代行者欄へ反映され、公開責任者と権限境界が維持されていることを確認した。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `pnpm --filter web run build`: 成功、静的ページ166/166生成。
+  既知のSupabase Node 20将来廃止warningのみ。
+- `git diff --check`: 成功。
+
+本番・データの境界:
+
+- 法務ページ、アプリコード、SQL、env、Vercel・Supabase・GitHub・Resend・DNSの権限、
+  MFA、通知、本番deploymentは変更していない。
+- Supabase本番DB/Auth/Storage、モニター回答、日記、写真、AI相談、削除依頼、決済、
+  メール送信には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、アカウント削除対応における代行者の責任範囲。
