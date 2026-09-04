@@ -78,9 +78,12 @@ assert.ok(operationsRunbook.includes("| **池田知也**（役職・連絡手段
 assert.ok(operationsRunbook.includes("削除実行の正式運用を開始しない"), "account deletion must remain operationally closed until delegate and dual control are assigned");
 assert.ok(adminAuthPolicy.includes("指名しただけではAdmin権限を付与しない"), "an operational assignment must not grant app-admin authorization");
 assert.ok(releaseInputs.includes("| 障害対応責任者・代行者 | **主責任者：代表取締役 池田哲也／代行者：池田知也** |"), "the release input ledger must retain both confirmed incident-response assignees");
-assert.ok(operationsRunbook.includes("| 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **池田知也**（役職・責任範囲・内部連絡手段は要指定。指定後は制限付き運用台帳に記録） |"), "the operations runbook must retain both confirmed assignees without inventing role or contact details");
+assert.ok(operationsRunbook.includes("| 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。役職・内部連絡手段は要指定） |"), "the operations runbook must retain both assignees and the confirmed delegate scope without inventing role or contact details");
+assert.ok(releaseInputs.includes("本番操作は別途権限を持つ担当者が実施"), "the release ledger must keep incident delegation separate from production execution authorization");
 assert.ok(operationsRunbook.includes("これは全般的な運用責任者の指名や、Vercel・Supabase・GitHub・Resend・DNS等の実行権限付与を意味しない"), "the incident assignment must not imply broader operations ownership or service authorization");
 assert.ok(operationsRunbook.includes("障害対応の正式運用を開始しない"), "incident response must remain operationally closed until delegate, contacts, alerts, on-call, and access are assigned");
+assert.ok(operationsRunbook.includes("初動判断」は、暫定的なSEV分類、変更停止・証拠保全の依頼、権限を持つ担当者の招集まで"), "the delegate's initial-decision scope must remain bounded");
+assert.ok(operationsRunbook.includes("主責任者不在時に代行者が最終承認できる範囲は未確定"), "delegate scope must not silently grant final approval authority");
 assert.ok(operationsRunbook.includes("Incident Commanderの承認権限と、実際にVercelのrollback、SupabaseのDB操作、secret rotation等を実行できるサービス権限は別に管理する"), "incident approval and execution authorization must remain separated");
 
 assert.ok(plans.includes("<PlusUpgrade salesReady={salesReady} />"), "the plans page must pass server-side sale readiness to the client");
