@@ -124,7 +124,8 @@
 - [x] 利用規約の叩き台
 - [x] プライバシーポリシーの叩き台
 - [x] 特定商取引法表示の叩き台
-- [ ] `LEGAL_BUSINESS_NAME`、`LEGAL_RESPONSIBLE_PERSON`、`LEGAL_CONTACT`、規約・プライバシーの発効日を正式情報で設定
+- [x] 公開する運営者名を `株式会社BEECH` と確定し、`LEGAL_BUSINESS_NAME` の設定値として記録
+- [ ] 本番環境へ `LEGAL_BUSINESS_NAME=株式会社BEECH`、`LEGAL_RESPONSIBLE_PERSON`、`LEGAL_CONTACT`、規約・プライバシーの発効日を正式情報で設定
 - [ ] 有料受付を開く前に、所在地、電話番号、税込価格、提供時期、解約・返金条件を正式情報で設定
 - [ ] 公開フッターから問い合わせ窓口へ到達し、実際に受け付けられることを確認
 - [x] 法律/税務判断の免責

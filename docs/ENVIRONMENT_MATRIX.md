@@ -28,7 +28,7 @@
 | `NEXT_PUBLIC_ANDROID_APP_URL` | 公開後 | no | 同上（Google Play） |
 | `STRIPE_PLUS_PRICE_ID` | Plus提供時 | no | 継続課金のprice。未設定なら `/api/stripe/plus-checkout` は503 |
 | `NEXT_PUBLIC_PLUS_PRICE_LABEL` | Plus提供時 | no | `/plans` の価格表示。未設定なら「準備中」 |
-| `LEGAL_BUSINESS_NAME` | 無料正式公開時 | no | 無料版の運営主体。有料時は特商法表示の正式な販売事業者名にも使う |
+| `LEGAL_BUSINESS_NAME` | 無料正式公開時 | no | 確定値は `株式会社BEECH`。無料版の運営主体、有料時は特商法表示の正式な販売事業者名にも使う |
 | `LEGAL_RESPONSIBLE_PERSON` | 無料正式公開時 | no | 個人情報管理・運営の責任者。有料時は特商法表示の責任者にも使う |
 | `LEGAL_ADDRESS` | 有料提供時 | no | 特商法表示の所在地 |
 | `LEGAL_PHONE` | 有料提供時 | no | 特商法表示の電話番号 |

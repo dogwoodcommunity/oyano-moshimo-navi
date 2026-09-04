@@ -10964,3 +10964,28 @@ smoke契約修正と追記285をcommit `14bfdae85511de2c0a98711eb6b616c98de79dc3
   Vercel production、本番データは未変更。
 - GitHub ActionsはNode 20対象actionをrunner側でNode 24に強制実行する廃止予定warningを表示した。
   test/build失敗ではないが、workflowとアプリruntimeのNode 22以上への明示更新は次回タスク。
+
+## 2026-09-04 追記 287 — 正式運営者名を株式会社BEECHに確定
+
+ユーザー確認により、無料Web正式版および将来の有料受付で公開するサービス運営者・販売事業者の
+正式名称を `株式会社BEECH` と確定した。
+
+- `apps/web/.env.example` の `LEGAL_BUSINESS_NAME` を `株式会社BEECH` に固定し、Vercel本番環境にも
+  同じ値を設定することを明記した。本番環境変数そのものは、この作業では変更していない。
+- `docs/COMMERCIAL_RELEASE_INPUTS.md` の無料Web正式版と有料受付の入力票へ確定値を記録した。
+  公開前の登記情報等との最終照合は残している。
+- `docs/ENVIRONMENT_MATRIX.md` と `docs/PRODUCTION_CHECKLIST.md` を更新し、名称の確定と本番設定を
+  別の完了条件にした。責任者、問い合わせ窓口、規約・プライバシー施行日は推測せず未確定のまま。
+- `scripts/test-commercial-release-gates.mjs` に、環境設定例と正式版入力票から確定名称が消えない
+  回帰検査を追加した。
+
+検証は `pnpm run test:commercial-release-gates`、`pnpm --filter web run typecheck`、
+`git diff --check` がすべて成功。
+
+本番・データの境界:
+
+- Supabase本番DB/Auth/Storage、Vercel production、本番環境変数、モニター回答、日記、写真、
+  AI相談、決済には触れていない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は参照・変更・commitしない。
+
+次にユーザーへ1項目ずつ確認する正式情報は、個人情報管理・運営の責任者名または役職。
