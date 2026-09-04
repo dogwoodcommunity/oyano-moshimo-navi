@@ -10858,3 +10858,78 @@ green。Deploy workflow `33765778447` はcheckだけ成功し、deploy jobはski
 
 Claude reviewで特定した認可P0、終了済みモニター受付、日記保存の偽成功、日常Plus導線のhotfixは
 公開版へ反映済み。`docs/PRODUCTION_CHECKLIST.md` に両RPCと今回のproduction deploymentを記録した。
+
+## 2026-09-04 追記 284 — 無料Web正式版のソース基盤を実装、本番反映前のためStage AはNO-GO継続
+
+ユーザーの「正式商用版まですすめ、その後アプリ化」という方針に対し、11人のモニター結果で確定した
+無料ユーザー優先の方針をStage Aの完成条件に固定した。実装commitは
+`6bf4bc24d8a1d9c0b34988ea619d82fa434f79ca` (`feat: prepare free web commercial release`)。
+
+今回のソース実装:
+
+- 有料受付は `COMMERCIAL_SUPPORT_PACK_SALES_ENABLED` / `COMMERCIAL_PLUS_SALES_ENABLED` が明示的に
+  `true`で、必須のStripe・価格・特商法情報が全て揃う場合だけ開く。通常は初期OFFで、
+  画面は「受付準備中」、Checkout APIは副作用前に503で停止する。無料の手帳・AI相談に
+  決済情報は求めない。
+- 複数家族所属で暗黙に先頭を選ばず、対象familyを明示選択・検証する。viewerはWeb API、
+  Storage、DB RLSで閲覧専用とし、owner/admin/memberだけが対応範囲を更新できる。
+- 家族招待は「見るだけ」または「記録・確認リスト・写真を編集」を送信前に必ず選び、
+  受け取る側は参加前に権限を確認できる。公開RPCの直接実行もmember/viewerの2種類に限定し、
+  旧admin招待はfail closed、既存admin/ownerが参加しても権限を降格させず実権限を表示する。
+- 招待取消、メンバー解除、本人退出、最後のownerの移管をfamily単位で直列化した。招待取消と受諾、
+  写真追加とメンバー解除の競合で、先に確定した片方だけが成立する。
+- 無料AI相談の1日1回を家族単位のDB claimで原子的に制御した。事前確保、外部AI失敗時の返却、
+  応答消失時の同一回復を包み、成功した相談だけを使用済みとする。対象者別の長期サマリー、
+  重要変化、相談履歴、関連日記、記憶の確認・訂正・削除、家族と非共有の相談の境界を維持する。
+- 単一日記と対象者の手帳全体を、CAS、2段階確認、永続receipt、Storage cleanup jobで削除する。
+  通信不明時は端末に削除墓標を保持して再同期から除外し、旧端末からの復活を防ぐ。
+  未知Storage bucketはDB削除前に停止し、写真不在を全ページ確認するまで完了表示しない。
+- Webから本人確認済みのアカウント削除依頼と状態確認を行える。実削除はログイン済みapp_adminと
+  初期OFFの安全スイッチが必要で、DB・Auth・Storageの不在検証前にcompletedにしない。
+  5,000件を超えるStorage manifestは破壊トランザクション前に停止し、旧homeId署名uploadの遅延も
+  prefix lock/triggerとcleanupで回収する。
+- 現在の手帳から呼ばれていない旧 `/api/storage/home-photo-upload-url` は、request body、認証、
+  Supabase、Storageに触れず410を返す。新しい孤立objectを作らない一方、過去objectのcleanup互換は残す。
+- 運営主体、責任者、問い合わせ、規約/プライバシー施行日、有料条件を `LEGAL_*` で表示する構造にした。
+  未確定値を正式情報のように表示せず、メール/HTTPS問い合わせは押せる導線にした。
+- `docs/COMMERCIAL_RELEASE_PLAN_2026-09-03.md`、`COMMERCIAL_RELEASE_INPUTS.md`、
+  `COMMERCIAL_OPERATIONS_RUNBOOK.md` を追加し、無料Web → 有料受付 → iOS/Androidの順、backup/RPO/RTO、
+  監視、障害、削除、復旧、release/rollbackの運用境界を文書化した。
+
+検証:
+
+- package内のnon-SQL `test:*` 19本は全て成功。モニター保護、同期、AI記憶、1日1回claim、無料導線、
+  family選択/招待/管理、日記/対象者/アカウント削除を含む。実Anthropic送信は行っていない。
+- PostgreSQL 16の破棄専用DBでSQL回帰8本は全て成功。アカウント削除は5,001件fixture、
+  family管理は取消/受諾と写真/退出の両競合順を実動確認した。
+- Web/Mobile `tsc --noEmit`、local doctor、mobile build doctor、`git diff --check` は成功。
+- Web production buildは成功し、静的ページ166/166を生成。Supabase SDKが将来Node 20以下を
+  サポートしないというwarningのみで、現時点のbuild失敗はない。
+- 独立security reviewで最初に4件のP1と招待契約のP2を発見し、全件修正後の最終判定は
+  **P0=0、P1=0、P2=0**。
+- staged差分のGitleaksは713.14 KBを走査し、leakは0件。
+- `pnpm --filter web run lint` はESLint設定がなく対話式setupに入るため単独実行できない。
+  `next build`内のコンパイル/型チェックは成功しているが、lint設定の明示追加は残課題。
+
+本番・データの境界:
+
+- 今回はローカルソース、破棄専用DB、文書のみ。Supabase本番migration、Vercel production deploy、
+  本番環境変数、Storage/Auth、決済、Resend、Cronは変更していない。
+- 保存済みモニター最終回答11件・画像14件、日記、AI相談、家族、写真の本番データは読み取り・
+  更新・削除していない。
+- 未追跡の `review_exports/` は参照・変更・追加・commit対象外。機密review文書2件も未追跡のままで
+  commitしていない。
+
+Stage Aの残るNO-GO項目:
+
+1. 正式な運営者名、責任者、実稼働の問い合わせ窓口、規約/プライバシー施行日を確定する。
+2. 個人情報、要配慮情報、AI委託の表示を実契約と照合して法務確認する。
+3. 承認済み順序で本番migrationとWeb deployを行い、`verify_compact.sql`、無書き込みsmoke、
+   既存件数不変を確認する。
+4. Supabase DB/AuthとStorageのbackup方式・保持、復旧演習のRPO/RTO、Vercel/Supabase/Cronの
+   失敗通知を本番管理画面で確認する。
+5. 2アカウント×2端末とBrave/Safari/Chrome、iPhone/Android幅で登録、保存、復元、招待、
+   viewer拒否、写真、個別削除、アカウント削除依頼を実機完走する。
+
+スマホアプリ化はStage Aのデータ契約と権限を正本にする。上記の正式情報と本番運用ゲートが未完了のため、
+現時点でTestFlight / Google Play、ストア契約、IAP、外部build、公開は開始していない。
