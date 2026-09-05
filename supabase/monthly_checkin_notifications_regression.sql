@@ -5,6 +5,12 @@ begin;
 
 do $bootstrap$
 begin
+  if not exists (select 1 from pg_roles where rolname = 'anon') then
+    create role anon nologin;
+  end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then
+    create role authenticated nologin;
+  end if;
   if not exists (select 1 from pg_roles where rolname = 'service_role') then
     create role service_role nologin;
   end if;
@@ -36,6 +42,11 @@ create table public.scheduled_notifications (
   status text not null default 'scheduled'
 );
 
+\ir monthly_checkin_notifications.sql
+
+-- Emulate production's old explicit grants. Revoking PUBLIC alone must not
+-- count as closing anon/authenticated access after CREATE OR REPLACE.
+grant execute on function public.ensure_monthly_checkin_notifications() to anon, authenticated;
 \ir monthly_checkin_notifications.sql
 
 insert into public.profiles (id, email)
@@ -85,6 +96,16 @@ declare
 begin
   if has_function_privilege(
        'public',
+       'public.ensure_monthly_checkin_notifications()',
+       'EXECUTE'
+     )
+     or has_function_privilege(
+       'anon',
+       'public.ensure_monthly_checkin_notifications()',
+       'EXECUTE'
+     )
+     or has_function_privilege(
+       'authenticated',
        'public.ensure_monthly_checkin_notifications()',
        'EXECUTE'
      )
@@ -158,5 +179,57 @@ begin
   end if;
 end;
 $regression$;
+
+-- The later email-delivery migration replaces this same function. Reapply
+-- after dirty legacy grants and prove it restores the same service-only ACL.
+grant execute on function public.ensure_monthly_checkin_notifications() to anon, authenticated;
+\ir notification_email_delivery.sql
+
+do $email_acl$
+begin
+  if has_function_privilege('public', 'public.ensure_monthly_checkin_notifications()', 'EXECUTE')
+     or has_function_privilege('anon', 'public.ensure_monthly_checkin_notifications()', 'EXECUTE')
+     or has_function_privilege('authenticated', 'public.ensure_monthly_checkin_notifications()', 'EXECUTE')
+     or not has_function_privilege('service_role', 'public.ensure_monthly_checkin_notifications()', 'EXECUTE') then
+    raise exception 'email-delivery replacement must remove legacy monthly check-in client grants';
+  end if;
+end;
+$email_acl$;
+
+set local role anon;
+do $anon_denied$
+begin
+  begin
+    perform public.ensure_monthly_checkin_notifications();
+    raise exception 'anon unexpectedly executed the monthly check-in scheduler';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$anon_denied$;
+reset role;
+
+set local role authenticated;
+do $authenticated_denied$
+begin
+  begin
+    perform public.ensure_monthly_checkin_notifications();
+    raise exception 'authenticated unexpectedly executed the monthly check-in scheduler';
+  exception when insufficient_privilege then
+    null;
+  end;
+end;
+$authenticated_denied$;
+reset role;
+
+set local role service_role;
+do $service_allowed$
+begin
+  if public.ensure_monthly_checkin_notifications() <> 0 then
+    raise exception 'service role must retain idempotent monthly scheduling after email migration';
+  end if;
+end;
+$service_allowed$;
+reset role;
 
 rollback;

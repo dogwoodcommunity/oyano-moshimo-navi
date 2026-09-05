@@ -38,6 +38,9 @@ docker cp \
   "$REPO_ROOT/supabase/monthly_checkin_notifications.sql" \
   "$REGRESSION_CONTAINER_NAME:/tmp/monthly_checkin_notifications.sql"
 docker cp \
+  "$REPO_ROOT/supabase/notification_email_delivery.sql" \
+  "$REGRESSION_CONTAINER_NAME:/tmp/notification_email_delivery.sql"
+docker cp \
   "$REPO_ROOT/supabase/monthly_checkin_notifications_regression.sql" \
   "$REGRESSION_CONTAINER_NAME:/tmp/monthly_checkin_notifications_regression.sql"
 

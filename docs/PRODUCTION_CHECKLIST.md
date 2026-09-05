@@ -3,9 +3,9 @@
 ## 2026-09-05 終了条件の再整理
 
 無料Web正式版（Stage A）を先に完成させる。有料受付（Stage B）・ストア公開（Stage C）は別段階。
-この日のローカル修正を本番反映済みとは扱わない。最新の実行記録は `SESSION_HANDOFF.md` 追記332を参照。
+この日のローカル修正を本番反映済みとは扱わない。最新の実行記録は `SESSION_HANDOFF.md` 追記333を参照。
 
-- [ ] 外部通信許可後に、今回の限定commitをGitHubへpushしCIを確認
+- [x] 前回の限定commit `35bc7a9` をGitHubへpushしCI成功を確認（run `33954325618`）。deploy workflowのdeploy jobはskipであり、本番反映ではない
 - [ ] 本番の家族権限・家族管理RPC・原子的な1日1回相談RPCをread-onlyで検査し、**不足を確認したものだけ**承認後にDB-first適用。過去の未チェックだけを根拠に再実行しない
 - [ ] 月次通知関数の現行定義をread-onlyで照合し、今回の修正版が必要か判定。回帰用SQLを本番へ実行しない
 - [ ] 確定済みの運営者・責任者・問い合わせ先・返信目安4値を本番へ設定してWebを反映。施行日は公開日確定まで未設定のまま、準備中と表示
@@ -15,7 +15,10 @@
 - [ ] 法務最終確認、正式公開日、運用担当・連絡方法を確定して最終判定
 
 `node scripts/test-stage-a-local.mjs` はソース/runtime・lint・型・隔離DB・buildをまとめて検査する。
-現時点でlint設定/依存は不足しており全体PASSではない。`--source-only` / `--sql-only` の
+ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目のLOCAL_PASSを確認した。
+本番DBのread-only検査では家族権限helper・家族管理5 RPC・日次相談3 RPCの欠落と、
+月次通知の旧alias・authenticated実行権限残存が見つかった。DB変更の直前承認を得るまでWeb反映を保留する。
+このローカル合格や `--source-only` / `--sql-only` の
 部分PASSや、2つの疑似端末による同期試験だけで正式公開・実機復元を完了扱いにしない。
 
 ## 1. GitHub

@@ -2,6 +2,7 @@
   "name": "oyano-moshimo-navi-v0-3",
   "private": true,
   "version": "0.3.0",
+  "packageManager": "pnpm@9.15.9",
   "workspaces": [
     "apps/*",
     "packages/*"

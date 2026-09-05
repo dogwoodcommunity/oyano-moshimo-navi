@@ -280,7 +280,9 @@ begin
     );
   end if;
 
-  v_turn_id := uuid_generate_v4();
+  -- Supabase may install uuid-ossp in extensions, outside this function's
+  -- fixed search_path. PostgreSQL's native generator needs no extension.
+  v_turn_id := pg_catalog.gen_random_uuid();
 
   insert into public.ai_consult_turns (
     id,

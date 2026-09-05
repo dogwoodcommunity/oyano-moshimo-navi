@@ -3,6 +3,23 @@
 
 begin;
 
+-- Match production: uuid-ossp is installed in extensions, not public. The
+-- transaction restores its original schema along with all fixture rows.
+create schema if not exists extensions;
+alter extension "uuid-ossp" set schema extensions;
+set local search_path = pg_catalog, public;
+
+do $uuid_extension_fixture$
+begin
+  if to_regprocedure('public.uuid_generate_v4()') is not null
+     or to_regprocedure('pg_catalog.uuid_generate_v4()') is not null
+     or to_regprocedure('extensions.uuid_generate_v4()') is null
+     or to_regprocedure('pg_catalog.gen_random_uuid()') is null then
+    raise exception 'daily claim regression requires extension-only uuid-ossp and a native UUID generator';
+  end if;
+end;
+$uuid_extension_fixture$;
+
 insert into auth.users (id, email)
 values
   ('fa000000-0000-4000-8000-000000000001', 'daily-owner-a@example.test'),
@@ -187,7 +204,7 @@ begin
     'consult-memory-v02-2026-09-01'
   );
   if v_result->>'result' <> 'persisted' or coalesce((v_result->>'idempotent')::boolean, true) then
-    raise exception 'atomic first persistence must succeed: %', v_result;
+    raise exception 'atomic first persistence must succeed without public.uuid_generate_v4: %', v_result;
   end if;
   v_turn_id := (v_result->>'turnId')::uuid;
 

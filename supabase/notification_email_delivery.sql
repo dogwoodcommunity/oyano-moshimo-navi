@@ -77,5 +77,6 @@ begin
 end;
 $$;
 
-revoke all on function public.ensure_monthly_checkin_notifications() from public;
+-- Keep the later function replacement from retaining legacy client grants.
+revoke all on function public.ensure_monthly_checkin_notifications() from public, anon, authenticated;
 grant execute on function public.ensure_monthly_checkin_notifications() to service_role;

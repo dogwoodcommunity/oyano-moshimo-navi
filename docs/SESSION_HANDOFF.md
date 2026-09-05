@@ -12611,3 +12611,79 @@ GitHubへのpushは未実施。通信許可後にこの記録commitをpushする
 既存の利用者・日記・写真・AI相談・モニター回答・削除依頼は一切変更/削除していない。
 `review_exports/` と未追跡Claudeレビュー文書2件は参照・変更・stage対象外。
 GitHub push・本番反映は未実施のまま、この追記を含む限定commitをローカルへ保存する。
+
+## 2026-09-05 追記 333 — 通信再開、本番DBの実際の不足を確認しDB変更承認待ち
+
+ユーザーの「ええよ」と通信許可を受け、保留していた `35bc7a9062e5b65a5b44ddc334ced568cf1ac473`
+をorigin/mainへpush。CI `33954325618` は成功した。Deploy workflow `33954325573` は全体表示が
+successでもdeploy jobはskipであり、本番反映ではない。追加の本番DB照合で不足が判明したため、
+新Webの手動deployは実施せずDB-firstを維持している。既存本番aliasは変更していない。
+
+完了した本番設定:
+
+- Vercel Productionへ確定済みの `LEGAL_BUSINESS_NAME`（株式会社BEECH）、
+  `LEGAL_RESPONSIBLE_PERSON`（代表取締役 池田哲也）、`LEGAL_CONTACT`（info@bee-ch.co.jp）、
+  `LEGAL_CONTACT_RESPONSE_TARGET`（メール受付：24時間／原則3営業日以内に返信）を追加した。
+- 既存keyを上書きせず、4値の追加成功をCLIで確認。秘密値は出力・保存していない。
+- 施行日2値は未設定。有料受付と削除実行の環境スイッチも未設定/OFFのまま。
+  **env追加は新Webの表示確認ではない。deployと公開表示の確認は残る。**
+
+2026-09-05 17時台JST、本番project `ypnuxyfirlvbsqujocuy` の認証済みSupabase SQL Editorで
+SELECTだけを実行した。従来の利用者のSQLタブは残し、別の新規query
+`b7498551-dd8d-4c09-a0ec-6b0ee32d2311` を使用。入力内容の一致を照合してからRunし、
+関数・ACLの有無、boolean、集計件数だけを取得。日記・写真・相談・回答・認証情報の中身は取得していない。
+
+| 照合対象 | 本番で確認した結果 |
+| --- | --- |
+| `is_family_editor(uuid)` | 必要1件に対し0件（未導入） |
+| 家族管理5 RPC | 5件すべて未導入 |
+| 日次相談のclaim/persist/release 3 RPC | 3件すべて未導入 |
+| 月次通知 | 関数は存在。旧 `push_tokens.user_id` aliasが残存、正しい `profiles.id` aliasは未反映。authenticatedのEXECUTEが残る（anon/PUBLICは閉鎖、service_roleは許可） |
+| 前提機能 | 同期v2・日記削除・招待作成/受諾RPCあり。指定13テーブル、10列はすべて存在 |
+| UUID | `uuid_generate_v4()` はextensionsのみ。public/pg_catalogには存在せず、native `pg_catalog.gen_random_uuid()` は存在 |
+| 家族管理migrationの既存role補正 | 主owner補正0件、legacy owner降格0件。実行直前に再確認する |
+| 削除のprivate実行制御 | control行1件、active control 0、active grant 0。閉鎖状態を再確認 |
+
+これで追記332の「台帳だけでは不足と断定できない」は実測に置き換わった。現在の本番で家族管理・
+原子的相談処理が導入済みとは扱わない。記録消失の証拠ではなく、未反映のDB機能である。
+
+今回のソース修正:
+
+- Next 14.2.35に合わせたESLint 8.57.1 / eslint-config-next 14.2.35を固定し、設定と
+  非対話lintを追加。pnpm 9.15.9をroot packageManager・CIに固定。lockfileも同versionで更新。
+  Next/Reactのupgradeはしていない。lintはerror 0だが、既存の画像最適化・React依存配列warningsは残る。
+- `consult_daily_claim.sql` のUUID生成を `pg_catalog.gen_random_uuid()` に修正。
+  本番同様uuid-osspがextensionsにしかない隔離DBで、相談保存・確定・冪等性を検証する回帰を追加。
+- 月次通知と後発email migrationの同関数について、PUBLICだけでなくanon/authenticatedの
+  古い明示EXECUTEもrevoke。古い権限を付けてから各migrationを再適用し、client拒否・service成功を検証。
+- `supabase/verify_stage_a_release.sql` は今後の再照合用。メタデータとprivate gate集計だけの
+  SELECTで、アプリRPCの実行・個人行の返却・DB変更はしない。USING/WITH CHECKとRLSを別々に照合。
+  構造的な差分検査であり、全okを実機・複数アカウント・全権限の完全保証に読み替えない。
+  今回本番で実行したのは上表の限定SELECT群であり、この全体verifierの本番PASSではない。
+
+検証:
+
+- lint追加後の全38項目runnerは初回handoff SQLでexit1。単独2回では再現せず両方PASS。
+  原因を特定したとは扱わない。その後の全体再実行は25 source/runtime・lint・Web/Mobile型・
+  9 SQL・buildすべてLOCAL_PASS。月次/UUID修正後にも対象SQLと関連source試験はPASS。
+- 月次/UUIDの追加修正を含む最終全体runnerも全38項目LOCAL_PASS（25 source/runtime・lint・
+  Web/Mobile型・9 SQL・build）。最新コードでの隔離検証が完了した。新commitのCI結果は次の追記で記録する。
+- 本番DBへDDL/DML、家族権限補正、通知関数実行、owner control/grant、削除、メール送信は行っていない。
+
+次の本番変更（ユーザーへ実行直前の承認を求める。今回の通信許可をDB変更許可に拡張しない）:
+
+1. 確認済み不足だけを、`family_role_hardening_20260904.sql` → `family_management_rpc.sql` →
+   修正版 `consult_daily_claim.sql` → 修正版 `monthly_checkin_notifications.sql` の順で適用する。
+   初期schema/api_grants/production_rlsや後発email migration全体の再投入はしない。
+2. 家族管理SQLには既存family_membersのrole補正UPDATEが2本ある。件数を再照合し、
+   current owner pointerに合わせる。日記・写真・モニター回答・相談履歴を消すSQLではない。
+   新しい家族管理RPCへの権限付与も含むため、Run直前承認が必要。削除機能自体は実行しない。
+3. 短い保守時間帯で各transactionの成功を確認。月次SQLも適用部分をtransactionで包み、
+   lock待ちを無制限にしない。途中失敗は先へ進まずROLLBACK・原因確認。通知関数の試験実行はしない。
+4. read-onlyで必要関数・権限と削除OFFを再確認し、CI成功した最終SHAだけをclean git archiveから
+   Vercelへ反映する。`.vercel` 全体やenv/未追跡資料は送らず、必要ならproject.jsonだけを使用する。
+5. 公開alias・運営情報表示・本人sessionの手動5 API診断を確認する。その後の正式公開前条件は追記332
+   の実機2アカウント、backup/隔離復旧、受信試験、別確認者AAL2と単独テスト削除、法務/公開日が残る。
+
+既存の利用者データは変更・削除していない。`review_exports/` と未追跡Claudeレビュー文書2件は
+参照・変更・stage・送信の対象外。今回の新しい変更と本追記を限定commitしてGitHubへ保存する。

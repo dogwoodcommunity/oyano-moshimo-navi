@@ -76,5 +76,6 @@ begin
 end;
 $$;
 
-revoke all on function public.ensure_monthly_checkin_notifications() from public;
+-- CREATE OR REPLACE preserves explicit grants from an earlier deployment.
+revoke all on function public.ensure_monthly_checkin_notifications() from public, anon, authenticated;
 grant execute on function public.ensure_monthly_checkin_notifications() to service_role;
