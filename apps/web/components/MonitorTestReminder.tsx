@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type MouseEvent, useEffect, useMemo, useState } from "react";
+import { isMonitorCampaignSubmissionOpen } from "@/lib/monitorCampaign";
 import {
   declineMonitorProgressConsent,
   grantMonitorProgressConsent,
@@ -17,21 +18,23 @@ import {
 import styles from "./MonitorTestReminder.module.css";
 
 export function MonitorTestReminder({ hasNotebook, hasRecordToday }: { hasNotebook: boolean; hasRecordToday: boolean }) {
+  const campaignOpen = isMonitorCampaignSubmissionOpen();
   const [session, setSession] = useState<MonitorSession | null>(null);
   const [progressConsent, setProgressConsent] = useState<MonitorProgressConsent>(null);
   const [now, setNow] = useState(() => new Date());
 
   useEffect(() => {
+    if (!campaignOpen) return;
     const currentSession = readMonitorSession();
     setSession(currentSession);
     setProgressConsent(readMonitorProgressConsent());
     if (currentSession) markMonitorActivity("appOpened");
     const timer = window.setInterval(() => setNow(new Date()), 60_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [campaignOpen]);
 
   const progress = useMemo(() => (session ? monitorProgress(session, now) : null), [session, now]);
-  if (!session || session.reportSubmittedAt || !progress) return null;
+  if (!campaignOpen || !session || session.reportSubmittedAt || !progress) return null;
 
   function grantProgressSharing() {
     if (grantMonitorProgressConsent()) setProgressConsent("granted");

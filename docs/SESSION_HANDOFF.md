@@ -14163,3 +14163,43 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 今回は回答のみ。上記の改善実装はユーザーの指示待ち。
 前回のナビ/AI折りたたみは修正ブランチ `fa1d1cd` にあり、本番未反映の状態を維持する。
 この調査メモだけを同ブランチへcommit/push。`review_exports/` と未追跡Claude_FULL 2文書は触らない。
+
+## 2026-09-06 追記 376 — 終了したモニターの案内・活動記録・送信を停止（確認版）
+
+ユーザーの「変更して」を受け、追記375の修正を実装。
+開始点 `fix/collapsible-notebook-guidance` / `247a6eb`。前回の折りたたみ修正も同ブランチに保持する。
+今回と折りたたみを合わせた本番反映について非同期で質問したが、この追記時点では未回答。
+本番は追記373の `744b68e` のまま、確認版の変更とcommit/pushまで実施する。
+
+- `MonitorTestReminder` はcampaign closedなら表示しない。effectも参加情報/同意情報の読取前に止め、
+  appOpenedの記録や1分タイマーも作らない。
+- `monitorSession` は活動記録・送信予約・直接送信・共有同意の再設定それぞれで終了判定を最初に実行。
+  終了時はStorageを読む/書く前に戻り、force指定でも送信しない。待機中の送信タイマーは取消してnullへ。
+  手帳/写真/過去の回答/参加情報/同意/過去の活動履歴は削除しない。
+- 同意拒否/撤回処理と、正常に受け付けられた最終回答の提出済み印は維持。
+  APIの終了後410拒否も維持。過去に配信されたコードの開きっぱなしタブや開始済み通信までは
+  新クライアントで取り消せないため、更新後の画面から新しい収集・送信をしないという境界。
+- 独立reviewでmarkMonitorActivityは計測専用/戻り値未使用であること、force経路を含めた遮断、
+  成功済み回答の完了印保持、APIの最終拒否を確認。通常の保存/AI相談/画面遷移には変更なし。
+
+検証：
+
+- 独立担当が既存submission-gate試験を維持して実module VM回帰を追加。
+  終了後96条件（参加情報4種類×同意3状態×force2指定×4入口）でStorage read/write/remove 0、
+  fetch 0、timer 0、過去の全保存キーbyte不変。旧sessionの自動upgradeも発生しない。
+  受付中のstubで予約→終了に切替後の取消、取り出し済み旧callbackでもfetch 0を確認。
+- 受付中stubでは未同意/拒否をforceでも迂回できず、同意ありだけ従来の匿名集計payloadを送る。
+  reminder実hooksの12条件で初回/読み込み済みとも非表示・effect仕事0。受付中3同意状態もpositive controlで確認。
+  テストはメモリ内mockのみ、本番/実Storage/外部送信なし。
+- `node scripts/test-stage-a-local.mjs --source-only` 32/32 PASS、diff --check PASS。
+  credential除外/dotenv拒否環境でWeb production build（lint/type含む）PASS。既存img/Hook警告のみ。
+  API/DB/SQL/依存の変更なし。今回SQL再実行なし。
+- ローカル3119を最終buildで再起動/reload。通常手帳の3入口、既存架空記録1件、空の新規入力、写真説明、
+  閉じたナビ/AI表示を確認。モニター案内なし、幅709px横はみ出し0、console error/warn 0。
+  ローカルは古い参加情報がない手帳なので、過去参加端末の条件は上記VM試験で検証。
+- 本番はread-onlyで旧案内が残っていること/テスト母3件を確認しただけ。共有ボタンは押していない。
+  記録・写真・回答・DB/Auth/設定・AI送信の操作なし。
+
+引き継ぎと今回のcomponent/lib/回帰だけを同ブランチへcommit/push。
+確認版タブとローカル3119を維持し、本番反映の承認後にexact SHAのCI・公開・旧案内が消えることを確認する。
+`review_exports/` と未追跡Claude_FULL 2文書は引き続き触らない。

@@ -1,6 +1,6 @@
 "use client";
 
-import { MONITOR_CAMPAIGN_ID } from "@/lib/monitorCampaign";
+import { isMonitorCampaignSubmissionOpen, MONITOR_CAMPAIGN_ID } from "@/lib/monitorCampaign";
 
 export const MONITOR_SESSION_STORAGE_KEY = "oyano_monitor_session_v01";
 export const MONITOR_ACTIVITY_STORAGE_KEY = "oyano_monitor_activity_v01";
@@ -99,6 +99,7 @@ export function readMonitorProgressConsent(): MonitorProgressConsent {
 }
 
 export function grantMonitorProgressConsent() {
+  if (stopClosedMonitorProgressSync()) return false;
   const storage = getStorage();
   if (!storage) return false;
   try {
@@ -265,6 +266,7 @@ export function readMonitorActivity(): MonitorActivity {
 }
 
 export function markMonitorActivity(name: MonitorActivityName, now = new Date()) {
+  if (stopClosedMonitorProgressSync()) return;
   const session = readMonitorSession();
   if (!session || session.reportSubmittedAt) return;
   const storage = getStorage();
@@ -397,7 +399,18 @@ function readMonitorProgressSyncState(): MonitorProgressSyncState | null {
 
 let pendingMonitorProgressSync: number | null = null;
 
+// Keep past monitor data intact, but do not collect or send after closure.
+function stopClosedMonitorProgressSync() {
+  if (isMonitorCampaignSubmissionOpen()) return false;
+  if (pendingMonitorProgressSync !== null && typeof window !== "undefined") {
+    window.clearTimeout(pendingMonitorProgressSync);
+    pendingMonitorProgressSync = null;
+  }
+  return true;
+}
+
 export function scheduleMonitorProgressSync(options: { force?: boolean; now?: Date } = {}) {
+  if (stopClosedMonitorProgressSync()) return;
   if (typeof window === "undefined") return;
   if (readMonitorProgressConsent() !== "granted") return;
   const session = readMonitorSession();
@@ -425,6 +438,7 @@ export function scheduleMonitorProgressSync(options: { force?: boolean; now?: Da
 }
 
 export async function syncMonitorProgress(options: { force?: boolean; now?: Date } = {}) {
+  if (stopClosedMonitorProgressSync()) return false;
   if (readMonitorProgressConsent() !== "granted") return false;
   const session = readMonitorSession();
   const storage = getStorage();
