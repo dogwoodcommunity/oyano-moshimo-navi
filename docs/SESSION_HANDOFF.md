@@ -12137,3 +12137,24 @@ GitHub・検証:
 有効化を同一transactionで行うことである。これは本番削除権限を付与する別の本番writeなので、
 実行直前に状態を再照合し、新しい明示確認を得るまで行わない。完全削除スイッチはその後も、
 単独テストアカウントのAuth・DB・Storage削除完走までOFFを維持する。
+
+## 2026-09-05 追記 318 — 無効担当者登録の記録をmainへ反映
+
+追記317の本番実績に合わせ、商用運用手順、公開準備台帳、本番checklist、商用gateテスト、
+SESSION_HANDOFFを更新し、許可した5ファイルだけをmainへpushした。
+
+- commit: `04bf75b4b1aed0bf210b2a6230064c327e656853`
+- `pnpm run test:commercial-release-gates`、`pnpm run test:account-delete-executor`、
+  `pnpm run test:delete-operator-mfa-setup`、`pnpm run test:web-account-deletion`、
+  `node --check scripts/test-commercial-release-gates.mjs`、`git diff --check` はすべて成功した。
+- 限定stageの `git diff --cached --check` とGitleaksが成功し、secret検出は0件だった。
+- main CI run `33941563335` は2分34秒で成功した。型検査、monitor、認証、削除専用権限、
+  private台帳を含む削除系PostgreSQL回帰、家族権限、AI記憶、日記・対象者削除、build、smokeを含む。
+- Deploy workflow run `33941563353` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  今回は本番DBへの無効登録と文書・テスト更新だけでWeb runtime byteを変更していないため、
+  このworkflowをVercel本番deployの証拠にはしておらず、CLI deployも行っていない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFF、有効executorと承認eventは0件のままである。
+  未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は追記317記載の有効化であり、新しい実行時明示確認なしには進めない。
