@@ -6,6 +6,8 @@ with checks as (
   union all select 'table_exists', 'app_admins', to_regclass('public.app_admins') is not null
   union all select 'table_exists', 'account_delete_executors', to_regclass('public.account_delete_executors') is not null
   union all select 'table_exists', 'account_delete_private.operator_identity_events', to_regclass('account_delete_private.operator_identity_events') is not null
+  union all select 'table_exists', 'account_delete_private.account_erasure_execution_grants', to_regclass('account_delete_private.account_erasure_execution_grants') is not null
+  union all select 'table_exists', 'account_delete_private.account_erasure_execution_control', to_regclass('account_delete_private.account_erasure_execution_control') is not null
   union all select 'table_exists', 'families', to_regclass('public.families') is not null
   union all select 'table_exists', 'family_members', to_regclass('public.family_members') is not null
   union all select 'table_exists', 'family_invites', to_regclass('public.family_invites') is not null
@@ -28,6 +30,8 @@ with checks as (
   union all select 'rls_enabled', 'profiles', coalesce((select relrowsecurity from pg_class where oid = 'public.profiles'::regclass), false)
   union all select 'rls_enabled', 'app_admins', coalesce((select relrowsecurity from pg_class where oid = 'public.app_admins'::regclass), false)
   union all select 'rls_enabled', 'account_delete_executors', coalesce((select relrowsecurity and relforcerowsecurity from pg_class where oid = to_regclass('public.account_delete_executors')), false)
+  union all select 'rls_enabled', 'account_delete_private.account_erasure_execution_grants', coalesce((select relrowsecurity and relforcerowsecurity from pg_class where oid = to_regclass('account_delete_private.account_erasure_execution_grants')), false)
+  union all select 'rls_enabled', 'account_delete_private.account_erasure_execution_control', coalesce((select relrowsecurity and relforcerowsecurity from pg_class where oid = to_regclass('account_delete_private.account_erasure_execution_control')), false)
   union all select 'rls_enabled', 'families', coalesce((select relrowsecurity from pg_class where oid = 'public.families'::regclass), false)
   union all select 'rls_enabled', 'family_members', coalesce((select relrowsecurity from pg_class where oid = 'public.family_members'::regclass), false)
   union all select 'rls_enabled', 'people', coalesce((select relrowsecurity from pg_class where oid = 'public.people'::regclass), false)
@@ -76,6 +80,10 @@ with checks as (
   union all select 'column_exists', 'account_delete_executors.activated_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_delete_executors' and column_name = 'activated_at' and data_type = 'timestamp with time zone')
   union all select 'column_exists', 'account_delete_executors.revoked_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_delete_executors' and column_name = 'revoked_at' and data_type = 'timestamp with time zone')
   union all select 'column_exists', 'account_erasure_jobs.operator_method', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_erasure_jobs' and column_name = 'operator_method' and data_type = 'text')
+  union all select 'column_exists', 'account_erasure_jobs.prepared_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_erasure_jobs' and column_name = 'prepared_at' and data_type = 'timestamp with time zone')
+  union all select 'column_exists', 'account_erasure_jobs.prepared_expires_at', exists(select 1 from information_schema.columns where table_schema = 'public' and table_name = 'account_erasure_jobs' and column_name = 'prepared_expires_at' and data_type = 'timestamp with time zone')
+  union all select 'column_exists', 'account_delete_private.account_erasure_execution_grants.control_epoch', exists(select 1 from information_schema.columns where table_schema = 'account_delete_private' and table_name = 'account_erasure_execution_grants' and column_name = 'control_epoch' and data_type = 'uuid' and is_nullable = 'NO')
+  union all select 'index_exists', 'account_delete_private.account_erasure_execution_grants_one_open_per_epoch', to_regclass('account_delete_private.account_erasure_execution_grants_one_open_per_epoch') is not null
   union all select 'constraint_exists', 'ai_memory_consents_revision_positive', exists(select 1 from pg_constraint where conrelid = to_regclass('public.ai_memory_consents') and conname = 'ai_memory_consents_revision_positive' and contype = 'c')
   union all select 'constraint_exists', 'account_delete_executors_activation_state', exists(select 1 from pg_constraint where conrelid = to_regclass('public.account_delete_executors') and conname = 'account_delete_executors_activation_state' and contype = 'c')
   union all select 'constraint_exists', 'family_members_role_allowed', exists(select 1 from pg_constraint where conrelid = to_regclass('public.family_members') and conname = 'family_members_role_allowed' and contype = 'c')
@@ -139,7 +147,29 @@ with checks as (
   union all select 'function_exists', 'sync_notebook_v2', to_regprocedure('public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)') is not null
   union all select 'function_exists', 'is_family_editor', to_regprocedure('public.is_family_editor(uuid)') is not null
   union all select 'function_exists', 'account_erasure_operator_method', to_regprocedure('public.account_erasure_operator_method(uuid)') is not null
+  union all select 'function_exists', 'verify_account_delete_operator_v2', to_regprocedure('public.verify_account_delete_operator_v2(uuid)') is not null
   union all select 'function_exists', 'update_account_delete_request_status_v1', to_regprocedure('public.update_account_delete_request_status_v1(uuid,text,text,uuid)') is not null
+  union all select 'function_exists', 'update_account_delete_request_status_v2', to_regprocedure('public.update_account_delete_request_status_v2(uuid,text,text,uuid)') is not null
+  union all select 'function_exists', 'issue_account_erasure_execution_grant_v1', to_regprocedure('public.issue_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text,integer)') is not null
+  union all select 'function_exists', 'inspect_account_erasure_v2', to_regprocedure('public.inspect_account_erasure_v2(uuid,uuid,uuid)') is not null
+  union all select 'function_exists', 'prepare_account_erasure_v2', to_regprocedure('public.prepare_account_erasure_v2(uuid,uuid,uuid)') is not null
+  union all select 'security_check', 'prepare_account_erasure_v2_role_lock', coalesce(pg_get_functiondef(to_regprocedure('public.prepare_account_erasure_v2(uuid,uuid,uuid)')) ~ 'lock table public\.app_admins,[[:space:]]*public\.account_delete_executors[[:space:]]+in share row exclusive mode', false)
+  union all select 'security_check', 'prepare_account_erasure_v2_lock_order', coalesce((
+    select
+      strpos(definition, 'account-erasure-target:') > 0
+      and strpos(definition, 'account-erasure-target:') < strpos(definition, 'account-erasure:')
+      and strpos(definition, 'account-erasure:') < strpos(definition, 'lock table public.app_admins')
+    from (
+      select lower(pg_get_functiondef(to_regprocedure('public.prepare_account_erasure_v2(uuid,uuid,uuid)'))) as definition
+    ) function_source
+  ), false)
+  union all select 'function_exists', 'inspect_account_erasure_execution_grant_v1', to_regprocedure('public.inspect_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text)') is not null
+  union all select 'function_exists', 'execute_account_erasure_database_v2', to_regprocedure('public.execute_account_erasure_database_v2(uuid,uuid,uuid,uuid,text)') is not null
+  union all select 'function_exists', 'account_delete_private.create_account_erasure_execution_grant_v1', to_regprocedure('account_delete_private.create_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,uuid,text,integer)') is not null
+  union all select 'function_exists', 'account_delete_private.sanitize_account_erasure_operator_response_v1', to_regprocedure('account_delete_private.sanitize_account_erasure_operator_response_v1(jsonb)') is not null
+  union all select 'function_exists', 'account_delete_private.open_account_erasure_execution_control_v1', to_regprocedure('account_delete_private.open_account_erasure_execution_control_v1(integer)') is not null
+  union all select 'function_exists', 'account_delete_private.close_account_erasure_execution_control_v1', to_regprocedure('account_delete_private.close_account_erasure_execution_control_v1()') is not null
+  union all select 'function_exists', 'account_delete_private.fail_close_account_erasure_execution_control_v1', to_regprocedure('account_delete_private.fail_close_account_erasure_execution_control_v1(uuid,text)') is not null
   union all select 'trigger_exists', 'people_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.people') and tgname = 'people_notebook_cloud_version' and not tgisinternal)
   union all select 'trigger_exists', 'tasks_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.tasks') and tgname = 'tasks_notebook_cloud_version' and not tgisinternal)
   union all select 'trigger_exists', 'timeline_events_notebook_cloud_version', exists(select 1 from pg_trigger where tgrelid = to_regclass('public.timeline_events') and tgname = 'timeline_events_notebook_cloud_version' and not tgisinternal)
@@ -156,16 +186,21 @@ with checks as (
     and not has_function_privilege('authenticated', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
   union all select 'security_check', 'account_delete_executor_acl',
-    has_table_privilege('service_role', 'public.account_delete_executors', 'SELECT')
-    and not has_table_privilege('service_role', 'public.account_delete_executors', 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+    not has_table_privilege('service_role', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
     and not has_table_privilege('authenticated', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
     and not has_table_privilege('anon', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
     and not has_function_privilege('service_role', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
-    and has_function_privilege('service_role', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.verify_account_delete_operator_v2(uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.verify_account_delete_operator_v2(uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.verify_account_delete_operator_v2(uuid)', 'EXECUTE')
+    and not has_function_privilege('service_role', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.update_account_delete_request_status_v2(uuid,text,text,uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.update_account_delete_request_status_v2(uuid,text,text,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.update_account_delete_request_status_v2(uuid,text,text,uuid)', 'EXECUTE')
   union all select 'security_check', 'account_delete_identity_ledger_private_append_only',
     coalesce((
       select
@@ -742,18 +777,86 @@ with checks as (
     and not has_table_privilege('service_role', 'public.account_erasure_jobs', 'DELETE')
     and not has_table_privilege('authenticated', 'public.account_erasure_jobs', 'SELECT')
     and not has_table_privilege('anon', 'public.account_erasure_jobs', 'SELECT')
-    and has_function_privilege('service_role', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
-    and has_function_privilege('service_role', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
-    and has_function_privilege('service_role', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('service_role', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('service_role', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.inspect_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.prepare_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('service_role', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.issue_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.inspect_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    and has_function_privilege('service_role', 'public.execute_account_erasure_database_v2(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
     and has_function_privilege('service_role', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.inspect_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.prepare_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.issue_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.inspect_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    and not has_function_privilege('authenticated', 'public.execute_account_erasure_database_v2(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.inspect_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.prepare_account_erasure_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.inspect_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.prepare_account_erasure_v2(uuid,uuid,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.execute_account_erasure_database_v1(uuid,uuid,uuid)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.issue_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.inspect_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
+    and not has_function_privilege('anon', 'public.execute_account_erasure_database_v2(uuid,uuid,uuid,uuid,text)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)', 'EXECUTE')
+  union all select 'security_check', 'account_erasure_execution_grant_private',
+    coalesce((
+      select
+        pg_get_userbyid(namespace.nspowner) = 'postgres'
+        and pg_get_userbyid(relation.relowner) = 'postgres'
+        and relation.relrowsecurity
+        and relation.relforcerowsecurity
+        and to_regclass('account_delete_private.account_erasure_execution_control') is not null
+        and to_regclass('account_delete_private.account_erasure_execution_grants_one_open_per_epoch') is not null
+        and pg_get_userbyid((
+          select control.relowner
+          from pg_class control
+          where control.oid = to_regclass('account_delete_private.account_erasure_execution_control')
+        )) = 'postgres'
+        and coalesce((
+          select control.relrowsecurity and control.relforcerowsecurity
+          from pg_class control
+          where control.oid = to_regclass('account_delete_private.account_erasure_execution_control')
+        ), false)
+        and not has_schema_privilege('service_role', namespace.oid, 'USAGE,CREATE')
+        and not has_schema_privilege('authenticated', namespace.oid, 'USAGE,CREATE')
+        and not has_schema_privilege('anon', namespace.oid, 'USAGE,CREATE')
+        and not has_table_privilege('service_role', relation.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_table_privilege('authenticated', relation.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_table_privilege('anon', relation.oid, 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_table_privilege('service_role', 'account_delete_private.account_erasure_execution_control', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_table_privilege('authenticated', 'account_delete_private.account_erasure_execution_control', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_table_privilege('anon', 'account_delete_private.account_erasure_execution_control', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+        and not has_function_privilege('service_role', 'account_delete_private.open_account_erasure_execution_control_v1(integer)', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.open_account_erasure_execution_control_v1(integer)', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.open_account_erasure_execution_control_v1(integer)', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.close_account_erasure_execution_control_v1()', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.close_account_erasure_execution_control_v1()', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.close_account_erasure_execution_control_v1()', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.fail_close_account_erasure_execution_control_v1(uuid,text)', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.fail_close_account_erasure_execution_control_v1(uuid,text)', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.fail_close_account_erasure_execution_control_v1(uuid,text)', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.create_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.create_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.create_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,uuid,text,integer)', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.stamp_account_erasure_prepared_window()', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.stamp_account_erasure_prepared_window()', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.stamp_account_erasure_prepared_window()', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.revoke_grant_after_reprepare()', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.revoke_grant_after_reprepare()', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.revoke_grant_after_reprepare()', 'EXECUTE')
+        and not has_function_privilege('service_role', 'account_delete_private.sanitize_account_erasure_operator_response_v1(jsonb)', 'EXECUTE')
+        and not has_function_privilege('authenticated', 'account_delete_private.sanitize_account_erasure_operator_response_v1(jsonb)', 'EXECUTE')
+        and not has_function_privilege('anon', 'account_delete_private.sanitize_account_erasure_operator_response_v1(jsonb)', 'EXECUTE')
+      from pg_class relation
+      join pg_namespace namespace on namespace.oid = relation.relnamespace
+      where relation.oid = to_regclass('account_delete_private.account_erasure_execution_grants')
+    ), false)
   union all select 'security_check', 'account_erasure_profile_recreation_guard',
     exists (
       select 1 from pg_trigger

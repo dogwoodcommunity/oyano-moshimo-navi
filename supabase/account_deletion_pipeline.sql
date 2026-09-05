@@ -76,11 +76,11 @@ create policy "account_delete_requests admin read"
 on account_delete_requests for select
 using (is_app_admin());
 
--- Status changes are intentionally service-only. The server authenticates the
--- human Bearer token and supplies that verified user id; this function derives
--- the capability and email from database state, then commits the request update
--- and its audit event atomically. `completed` remains reserved for the verified
--- Auth/database/Storage finalizer below.
+-- Status changes commit the request update and its audit event atomically.
+-- This v1 helper remains owner-internal; account_erasure_execution_gate.sql
+-- exposes only the current v2 wrapper to service_role so immutable older Web
+-- deployments cannot bypass the current AAL2/app_admin route boundary.
+-- `completed` remains reserved for the verified Auth/database/Storage finalizer.
 create or replace function public.update_account_delete_request_status_v1(
   p_request_id uuid,
   p_status text,
@@ -106,7 +106,7 @@ begin
   end if;
 
   v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
-  if v_operator_method is null then
+  if v_operator_method is distinct from 'supabase_app_admin' then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
 
@@ -114,7 +114,7 @@ begin
   lock table public.app_admins, public.account_delete_executors
     in share row exclusive mode;
   v_operator_method := public.account_erasure_operator_method(p_operator_user_id);
-  if v_operator_method is null then
+  if v_operator_method is distinct from 'supabase_app_admin' then
     return jsonb_build_object('result', 'operator_forbidden');
   end if;
 
@@ -198,8 +198,6 @@ $$;
 
 revoke all on function public.update_account_delete_request_status_v1(uuid, text, text, uuid)
   from public, anon, authenticated, service_role;
-grant execute on function public.update_account_delete_request_status_v1(uuid, text, text, uuid)
-  to service_role;
 
 -- Verified erasure is deliberately split into a database transaction and two
 -- external checks (Supabase Auth and Storage).  The durable job makes retries
@@ -234,6 +232,8 @@ create table if not exists account_erasure_jobs (
   completed_at timestamptz,
   last_error_code text,
   last_error_at timestamptz,
+  prepared_at timestamptz,
+  prepared_expires_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint account_erasure_jobs_status_check
@@ -270,7 +270,9 @@ alter table account_erasure_jobs
   alter column target_email_hash drop not null,
   add column if not exists operator_method text,
   add column if not exists storage_prefixes jsonb not null default '[]'::jsonb,
-  add column if not exists storage_prefix_hashes text[] not null default '{}'::text[];
+  add column if not exists storage_prefix_hashes text[] not null default '{}'::text[],
+  add column if not exists prepared_at timestamptz,
+  add column if not exists prepared_expires_at timestamptz;
 
 alter table account_erasure_jobs
   drop constraint if exists account_erasure_jobs_operator_method;
@@ -384,7 +386,16 @@ begin
       select job.target_user_id into v_path_user_id
       from public.account_erasure_jobs job
       where v_candidate_prefix_hash = any(job.storage_prefix_hashes)
-        and job.status in ('prepared', 'database_erased')
+        and (
+          job.status = 'database_erased'
+          or (
+            job.status = 'prepared'
+            and (
+              job.prepared_expires_at is null
+              or job.prepared_expires_at > clock_timestamp()
+            )
+          )
+        )
       limit 1;
     end if;
   else
@@ -402,7 +413,16 @@ begin
   if exists (
     select 1
     from public.account_erasure_jobs job
-    where job.status in ('prepared', 'database_erased', 'completed')
+    where (
+      job.status in ('database_erased', 'completed')
+      or (
+        job.status = 'prepared'
+        and (
+          job.prepared_expires_at is null
+          or job.prepared_expires_at > clock_timestamp()
+        )
+      )
+    )
       and (
         (
           v_is_notebook_path
@@ -463,7 +483,16 @@ begin
       select 1
       from public.account_erasure_jobs job
       where job.target_user_hash = encode(digest(v_path_user_id::text, 'sha256'), 'hex')
-        and job.status in ('prepared', 'database_erased', 'completed')
+        and (
+          job.status in ('database_erased', 'completed')
+          or (
+            job.status = 'prepared'
+            and (
+              job.prepared_expires_at is null
+              or job.prepared_expires_at > clock_timestamp()
+            )
+          )
+        )
     ) then
       raise exception using
         errcode = '42501',
@@ -2024,8 +2053,6 @@ grant select on table account_erasure_jobs to service_role;
 
 revoke all on function update_account_delete_request_status_v1(uuid, text, text, uuid)
   from public, anon, authenticated, service_role;
-grant execute on function update_account_delete_request_status_v1(uuid, text, text, uuid)
-  to service_role;
 
 revoke all on function guard_erased_profile_recreation() from public, anon, authenticated, service_role;
 revoke all on function guard_erased_notebook_storage_write() from public, anon, authenticated, service_role;
@@ -2042,9 +2069,13 @@ revoke all on function inspect_account_erasure_v1(uuid, uuid, uuid) from public,
 revoke all on function prepare_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role;
 revoke all on function execute_account_erasure_database_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role;
 revoke all on function finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) from public, anon, authenticated, service_role;
-grant execute on function inspect_account_erasure_v1(uuid, uuid, uuid) to service_role;
-grant execute on function prepare_account_erasure_v1(uuid, uuid, uuid) to service_role;
-grant execute on function execute_account_erasure_database_v1(uuid, uuid, uuid) to service_role;
+-- The legacy inspect/prepare responses may contain raw family identifiers,
+-- names, or Storage paths, and the legacy destructive helper has no one-shot
+-- gate. Keep all three service-inaccessible here. The post-pipeline
+-- account_erasure_execution_gate.sql grants only privacy-safe inspect/prepare
+-- v2 wrappers and the exact-job, one-time-approval destructive v2 wrapper.
+-- Reapplying this base migration therefore fails closed until the gate is
+-- reapplied, including for old generated deployments.
 grant execute on function finalize_account_erasure_v1(uuid, uuid, uuid, boolean, boolean, integer) to service_role;
 
 commit;

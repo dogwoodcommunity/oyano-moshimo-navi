@@ -38,7 +38,7 @@ alter table public.account_delete_executors enable row level security;
 alter table public.account_delete_executors force row level security;
 
 comment on table public.account_delete_executors is
-  'Service-readable allowlist for account-deletion operations only; membership does not grant general app_admin access.';
+  'Owner-only allowlist for account-deletion operations; membership does not grant general app_admin access.';
 
 -- Remove the short-lived development guard if this migration is reapplied to
 -- a disposable database. Emergency revocation of a compromised executor must
@@ -74,7 +74,6 @@ $$;
 
 revoke all on table public.account_delete_executors
   from public, anon, authenticated, service_role;
-grant select on table public.account_delete_executors to service_role;
 
 revoke all on function public.account_erasure_operator_method(uuid)
   from public, anon, authenticated, service_role;

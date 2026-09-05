@@ -150,7 +150,6 @@ begin
 
   if to_regclass('public.account_delete_executors') is not null then
     execute 'revoke all on table public.account_delete_executors from public, anon, authenticated, service_role';
-    execute 'grant select on table public.account_delete_executors to service_role';
   end if;
 
   if to_regclass('public.account_erasure_jobs') is not null then
@@ -162,9 +161,18 @@ begin
     execute 'revoke all on function public.account_erasure_operator_method(uuid) from public, anon, authenticated, service_role';
   end if;
 
+  if to_regprocedure('public.verify_account_delete_operator_v2(uuid)') is not null then
+    execute 'revoke all on function public.verify_account_delete_operator_v2(uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.verify_account_delete_operator_v2(uuid) to service_role';
+  end if;
+
   if to_regprocedure('public.update_account_delete_request_status_v1(uuid,text,text,uuid)') is not null then
     execute 'revoke all on function public.update_account_delete_request_status_v1(uuid, text, text, uuid) from public, anon, authenticated, service_role';
-    execute 'grant execute on function public.update_account_delete_request_status_v1(uuid, text, text, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.update_account_delete_request_status_v2(uuid,text,text,uuid)') is not null then
+    execute 'revoke all on function public.update_account_delete_request_status_v2(uuid, text, text, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.update_account_delete_request_status_v2(uuid, text, text, uuid) to service_role';
   end if;
 
   if to_regprocedure('public.guard_erased_profile_recreation()') is not null then
@@ -213,17 +221,39 @@ begin
 
   if to_regprocedure('public.prepare_account_erasure_v1(uuid,uuid,uuid)') is not null then
     execute 'revoke all on function public.prepare_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
-    execute 'grant execute on function public.prepare_account_erasure_v1(uuid, uuid, uuid) to service_role';
   end if;
 
   if to_regprocedure('public.inspect_account_erasure_v1(uuid,uuid,uuid)') is not null then
     execute 'revoke all on function public.inspect_account_erasure_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
-    execute 'grant execute on function public.inspect_account_erasure_v1(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.prepare_account_erasure_v2(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.prepare_account_erasure_v2(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.prepare_account_erasure_v2(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.inspect_account_erasure_v2(uuid,uuid,uuid)') is not null then
+    execute 'revoke all on function public.inspect_account_erasure_v2(uuid, uuid, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.inspect_account_erasure_v2(uuid, uuid, uuid) to service_role';
   end if;
 
   if to_regprocedure('public.execute_account_erasure_database_v1(uuid,uuid,uuid)') is not null then
     execute 'revoke all on function public.execute_account_erasure_database_v1(uuid, uuid, uuid) from public, anon, authenticated, service_role';
-    execute 'grant execute on function public.execute_account_erasure_database_v1(uuid, uuid, uuid) to service_role';
+  end if;
+
+  if to_regprocedure('public.issue_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text,integer)') is not null then
+    execute 'revoke all on function public.issue_account_erasure_execution_grant_v1(uuid, uuid, uuid, uuid, text, integer) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.issue_account_erasure_execution_grant_v1(uuid, uuid, uuid, uuid, text, integer) to service_role';
+  end if;
+
+  if to_regprocedure('public.inspect_account_erasure_execution_grant_v1(uuid,uuid,uuid,uuid,text)') is not null then
+    execute 'revoke all on function public.inspect_account_erasure_execution_grant_v1(uuid, uuid, uuid, uuid, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.inspect_account_erasure_execution_grant_v1(uuid, uuid, uuid, uuid, text) to service_role';
+  end if;
+
+  if to_regprocedure('public.execute_account_erasure_database_v2(uuid,uuid,uuid,uuid,text)') is not null then
+    execute 'revoke all on function public.execute_account_erasure_database_v2(uuid, uuid, uuid, uuid, text) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.execute_account_erasure_database_v2(uuid, uuid, uuid, uuid, text) to service_role';
   end if;
 
   if to_regprocedure('public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer)') is not null then

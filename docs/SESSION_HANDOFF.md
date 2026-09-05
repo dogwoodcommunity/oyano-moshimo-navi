@@ -12369,3 +12369,42 @@ SESSION_HANDOFFを更新し、対象5ファイルだけをmainへpushした。
 
 次は単独テストアカウントを用意し、別の実行時承認のもとでAAL1 preflightとAAL2完全削除を
 確認する工程である。現在の本人セッションや既存利用者をテスト削除対象にしてはならない。
+
+## 2026-09-05 追記 326 — 完全削除のDB-first one-shot安全gateを実装
+
+単独テスト削除へ進む前に、過去deploymentや誤操作から本番データを守るDB側の安全境界を
+sourceと使い捨てDBで実装・検証した。この追記時点では本番DBへ適用しておらず、Webも未deployである。
+
+- DB ownerだけが最大15分開けられるone-shot controlと、別のAAL2 app adminが発行する
+  最大10分・1回限りの実行grantを追加した。grantはrequest、target、job、manifest、実行者、
+  control epochへ固定し、DB削除成功時にgrantとcontrolを同一transactionで消費する。
+- 削除専用実行者の生tableをservice roleから読めなくし、対応Web用の
+  `verify_account_delete_operator_v2` だけをservice-onlyで追加した。旧deploymentは認可段階で
+  fail closedになる。旧inspect、prepare、status update、3引数executeのservice実行権限も失効させる。
+- 依頼状態更新は `update_account_delete_request_status_v2` でDB側も正確なAAL2 app adminを再確認する。
+  削除専用実行者や旧AAL1 deploymentからのPATCHは拒否する。
+- DB削除後にAuthまたはStorage処理で止まった場合だけ、同じjob・manifestと消費済みgrantを持つ
+  元の削除実行者本人に限り再開できる。別の有効な削除実行者による横取りを回帰テストで拒否した。
+- 古いprepared jobの不正な時間幅はmigration時に安全に失効させる。対象・依頼のadvisory lock、
+  role表lock、対象scope再計算、control/grantの原子的消費を回帰で確認した。
+- `pnpm run test:account-erasure:sql` はPostgreSQLの全回帰を最初から実行して成功した。
+  `pnpm run test:commercial-release-gates`、`pnpm run test:account-delete-executor`、
+  `pnpm run test:web-account-deletion`、Web typecheck、production build、各構文検査、
+  `git diff --check` も成功した。buildのNode 20非推奨警告は既知で、build自体は成功している。
+- 独立レビューでは、最後に見つかった復旧実行者の結び付け不足を上記のとおり修正後、
+  DB-first対象に残るコードレベルのP0/P1がないことを再確認し、SOURCE/CI GOと判定した。
+
+安全境界:
+
+- 本番DBのschema・権限・利用者データはまだ変更していない。削除依頼PATCH、preflight、prepare、
+  execute、削除RPC、Auth削除、Storage削除はいずれも実行していない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま、既存利用者、モニター回答、日記、写真、AI相談、
+  family・対象者・profile・削除依頼・削除jobは変更・削除していない。
+- 対応Web/API/UIの差分はDB-first適用後に反映するためローカルに分離して残している。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次はDB側の対象ファイルだけをmainへpushし、CI成功後に本番SQL Editorで
+`account_erasure_execution_gate.sql` を1回適用する。これはschema・権限変更なのでRun直前に
+ユーザーの実行時確認を得る。controlは閉じたままにし、read-only ACL確認が成功してから
+対応Webを別commit・deployする。実アカウント削除はさらに別の明示承認まで行わない。

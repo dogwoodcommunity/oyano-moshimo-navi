@@ -60,8 +60,14 @@ run_sql supabase/account_delete_executor_role.sql
 run_sql supabase/account_delete_identity_ledger.sql
 run_sql supabase/account_deletion_pipeline.sql
 run_sql supabase/account_deletion_pipeline.sql
-# A later broad bootstrap must not reopen the operator-only pipeline.
+run_sql supabase/account_erasure_execution_gate_regression_bootstrap.sql
+run_sql supabase/account_erasure_execution_gate.sql
+run_sql supabase/account_erasure_execution_gate.sql
+# Later broad/base bootstraps must not reopen the legacy destructive RPC or
+# replace the expiring prepared-write guards with a permanent freeze.
+run_sql supabase/account_deletion_pipeline.sql
 run_sql supabase/api_grants.sql
+run_sql supabase/account_erasure_execution_gate.sql
 run_sql supabase/account_delete_identity_ledger_regression.sql
 run_sql supabase/account_erasure_regression.sql
 run_sql supabase/account_delete_operator_provisioning_regression_bootstrap.sql

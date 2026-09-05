@@ -7,7 +7,13 @@ SQL Editorで以下の順に実行する。
 既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。`production_pending_hardening.sql` だけでは新しい匿名診断RPCは作成されない。匿名診断・アプリ引き継ぎの権限境界を更新する場合は、Webをデプロイする前に、`production_pending_hardening.sql`（未適用の場合）、更新済み `handoff_consume_rpc.sql`、`anonymous_diagnosis_rpc.sql` の3ファイルをこの順で実行し、`verify_compact.sql` で両関数を確認する。`production_pending_hardening.sql` を過去に適用済みの場合も、今回更新した後ろ2ファイルは必ず再実行する。先に `handoff_consume_rpc.sql` を入れることで、Web更新までの間も変換済みcaseから別アカウントをowner追加する経路を閉じる。
 既存DBへ対象者ごとの長期AI記憶と安全な手帳同期を追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、短時間のメンテナンス枠で `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql`、`verify_compact.sql` の順に実行する。先にDB移行を完了し、`verify_compact.sql` がすべて `ok=true` になってから対応するWebをデプロイする。`notebook_atomic_sync_v2.sql` は古いDBに不足する手帳用・都道府県用の最小列も同じトランザクションで追加し、既存IDを補完する。重複を検出した場合は削除せず、列追加を含む全体をロールバックする。この手順では `person_notebook_hardening.sql` や `regional_sponsor_data.sql` 全体を先に実行しない。`ai_consult_memory.sql` は新テーブルのgrant/revokeとRLSを含み、既存の手帳記録を変更・削除しない。`consult_daily_claim.sql` は無料AI相談を外部API呼出前に家族・日本時間の日単位で予約し、成功後だけ確定するserver-only RPCを追加する。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
 
-既存DBへ個別削除と検証済みアカウント削除を追加する場合は、先に `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql` が適用済みであることを確認し、`notebook_diary_delete.sql`、`notebook_person_delete.sql`、`admin_auth_hardening.sql`、`account_delete_executor_role.sql`、`account_delete_identity_ledger.sql`、`account_deletion_pipeline.sql`、`verify_compact.sql` の順に実行する。`account_delete_executor_role.sql` は削除専用の空の許可表と非公開認可helperだけを作り、ユーザー作成・権限付与・既存記録変更は行わない。`account_delete_identity_ledger.sql` はメール・氏名・OTP・tokenを保存せず、DB ownerだけが扱う追記専用の本人確認台帳をprivate schemaへ作る。一度適用した同名schemaを自動で受容せず、安全境界の確認なしに再実行しない。日記削除と対象者の手帳全体削除は、削除receiptとStorage cleanup jobを同じトランザクションで残し、古い端末からの再同期でも復活させない。アカウント削除は `account_erasure_jobs` に途中状態を残し、再実行できる。対象者が所有する家族に別メンバーがいる場合は所有権移管まで停止する。本人名義の写真が退会後も共有家族に残る場合も、家族側へ写真を引き継ぐ仕組みができるまでは安全停止し、完了扱いにしない。DB・Supabase Auth・Storageの全確認が揃うまで依頼は `completed` にならない。migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` のままとし、破棄DB回帰試験、個別実行者のTOTP/AAL2、別確認者、単独テストアカウントの実運用試験後だけ明示的に開く。
+既存DBへ個別削除と検証済みアカウント削除を追加する場合は、先に `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql` が適用済みであることを確認し、`notebook_diary_delete.sql`、`notebook_person_delete.sql`、`admin_auth_hardening.sql`、`account_delete_executor_role.sql`、`account_delete_identity_ledger.sql`、`account_deletion_pipeline.sql`、`account_erasure_execution_gate.sql`、`verify_compact.sql` の順に実行する。DBを先に更新し、検証が通ってから対応Webをdeployする。Webの事前確認と対象確定は `inspect_account_erasure_v2` / `prepare_account_erasure_v2` だけを使う。v2は安全停止時も正規化したblocker codeと個人を識別しない数値件数だけを返し、`familyId`、`familyName`、Storage object/prefixの生pathをAPI応答に含めない。内部用の旧 `inspect_account_erasure_v1` / `prepare_account_erasure_v1` はservice roleから失効させ、Webから呼ばない。`account_erasure_execution_gate.sql` は旧の3引数 `execute_account_erasure_database_v1` もservice roleから取り上げ、DB ownerだけが開閉できるone-shot controlを既定closedで作る。旧Webはv1権限拒否、新旧いずれのv2経路もcontrolなしでは `execution_control_disabled` となるため、過去の `ACCOUNT_ERASURE_EXECUTION_ENABLED=true` deploymentが直接URLで残ってもDB削除前にfail closedになる。この一時的な互換性切断は安全のための仕様である。`account_delete_executor_role.sql` は削除専用の空の許可表と非公開認可helperだけを作り、ユーザー作成・権限付与・既存記録変更は行わない。`account_delete_identity_ledger.sql` はメール・氏名・OTP・tokenを保存せず、DB ownerだけが扱う追記専用の本人確認台帳をprivate schemaへ作る。一度適用した同名schemaを自動で受容せず、安全境界の確認なしに再実行しない。日記削除と対象者の手帳全体削除は、削除receiptとStorage cleanup jobを同じトランザクションで残し、古い端末からの再同期でも復活させない。アカウント削除はread-only事前確認、AAL2による対象確定、DB ownerによる最大15分のone-shot control開放、当該実行者の有効化を承認した別のAAL2 app adminによる最大10分・1回限りの許可、実行の5段階に分ける。削除専用実行者の一覧取得はSELECT段階で連絡先・自由記載の理由・処理メモ・担当者のメールとuser IDを除外する（個人を識別しない認証方式名は残す）。依頼状態と処理メモのPATCHはWeb・DBの両方でAAL2の `app_admin` に限り、Webは `update_account_delete_request_status_v2` だけを呼ぶ。v2は正確なoperator user IDをDB側でも有効なapp adminとして再確認し、削除専用実行者は更新できない。旧 `update_account_delete_request_status_v1` はservice roleから失効させるため、AAL1の旧deploymentもPATCH前にfail closedになる。対象確定は `account_erasure_jobs` にjob ID・manifest hash・件数を耐久保存し、1時間で失効する。別確認者の許可はrequest/target/job/hash/operatorと現在のcontrol epochに固定され、有効期限をcontrolの残り時間以内に収める。DB削除が成功した同じトランザクションでgrantとcontrolを両方消費する。対象範囲が変わった場合は削除せずcontrolをfail closeしてgrantを取り消し、再確定・control再開放・再承認を必須とする。処理を放棄する場合はDB ownerが `account_delete_private.close_account_erasure_execution_control_v1()` を実行する。対象者が所有する家族に別メンバーがいる場合は所有権移管まで停止する。本人名義の写真が退会後も共有家族に残る場合も、家族側へ写真を引き継ぐ仕組みができるまでは安全停止し、完了扱いにしない。DB・Supabase Auth・Storageの全確認が揃うまで依頼は `completed` にならない。migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` のままとし、破棄DB回帰試験、個別実行者のTOTP/AAL2、別確認者、単独テストアカウントの実運用試験後だけ、1件ごとの承認時間帯に限って明示的に開く。
+
+現時点では、この更新版 `account_erasure_execution_gate.sql` の本番適用、対応Webの本番反映、完全削除E2Eは未完了である。ソースとローカル検証があることを本番適用済みの根拠にしない。
+
+同じDB-first gateは `account_delete_executors` 生tableのSELECTをservice roleから取り上げる。対応Webはservice-onlyの `verify_account_delete_operator_v2(uuid)` で利用者のrole methodだけを検証し、生の実行者行を読まない。旧deploymentは生tableを直接SELECTしようとするため、gate適用後は一覧・実行handler到達前の認可時点でfail closedになる。削除依頼一覧は `requested` / `reviewing` / `needs_followup` を日付順にページ取得して未完了を全件含め、`completed` だけを新しい順の直近100件に限る。大量の完了履歴や新着依頼で期限前の未完了依頼を一覧から押し出さない。
+
+通常の新規DB削除は `ACCOUNT_ERASURE_EXECUTION_ENABLED=true`、live owner control、未使用・未失効grantが引き続き必須である。例外はDB削除がすでにcommit済みで、AuthまたはStorageの不在確認・最終化だけが残った `database_erased` の途中状態に限る。最初のDB削除を実行した本人と同じ削除専用実行者が現在も有効かつAAL2で、正確なrequest/target/job/manifest hashを送り、DB v2がその実行者のhashと消費済み・revokeされていないgrantの `operator_user_hash` まで一致すると再検証できた場合だけ、envをOFFに戻した後も後続処理を再開できる。別の有効な削除専用実行者による引継ぎも拒否する。これはすでに消去したDB処理の完了回復であり、未削除データの新規削除に対するenv OFFの迂回路ではない。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
@@ -37,10 +43,11 @@ SQL Editorで以下の順に実行する。
 26. `family_owner_succession.sql`
 27. `family_management_rpc.sql`
 28. `account_deletion_pipeline.sql`
-29. `public_api_rate_limits.sql`
-30. `anonymous_case_retention.sql`
-31. `storage_setup.sql`
-32. `regional_sponsor_data.sql`
+29. `account_erasure_execution_gate.sql`
+30. `public_api_rate_limits.sql`
+31. `anonymous_case_retention.sql`
+32. `storage_setup.sql`
+33. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -55,8 +62,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-33. `verify_setup.sql`
-34. `verify_compact.sql`
+34. `verify_setup.sql`
+35. `verify_compact.sql`
 
 `notebook_atomic_sync_v2_regression.sql`、`ai_consult_memory_regression.sql`、`consult_daily_claim_regression.sql`、
 `notebook_diary_delete_regression.sql`、`notebook_person_delete_regression.sql`、
@@ -69,7 +76,8 @@ PostgreSQL 16 containerを作成し、migrationを2回適用して回帰SQLを�
 匿名診断と引き継ぎの権限回帰は `pnpm run test:handoff-security:sql` で同様に破棄専用containerへ実行する。
 家族管理の所有者保護・別family拒否・退出・招待取消は `pnpm run test:family-management:sql` で確認する。
 単一日記の削除・再同期拒否・写真cleanupは `pnpm run test:diary-deletion:sql`、対象者の手帳全体削除・CAS・再作成拒否は `pnpm run test:person-deletion:sql` で確認する。
-削除専用Bearer認証がほかのAdmin APIへ広がらず、緊急用管理キーを拒否し、実削除だけAAL2を要求することは `pnpm run test:account-delete-executor` で確認する。Auth・DB・Storageのアカウント削除、専用実行者の認可、共有家族の停止、共有記録の保持、証跡の匿名化、RPC権限は `pnpm run test:account-erasure:sql` で確認する。
+削除専用Bearer認証がほかのAdmin APIへ広がらず、緊急用管理キーを拒否することに加え、削除専用実行者の一覧SELECTが連絡先・理由・処理メモ・担当者identityを取得せず、状態/処理メモPATCHが `update_account_delete_request_status_v2` だけを使ってAAL2 app adminに限定されること、Webのpreflight/prepareがv2だけを使い、blocker応答をcode/数値件数に限定することは `pnpm run test:account-delete-executor` で確認する。Auth・DB・Storageのアカウント削除、専用実行者の対象確定、owner-only controlの最大15分・既定closed・放棄時close、別のAAL2 app adminによるcontrol残時間内の10分間実行許可、job/hash/control epoch不一致の拒否、DB削除成功時のgrant/control同時消費、`database_erased` のexact job/hash・消費済みgrant・同一operator hashだけを許して別の有効実行者も拒否するenv OFF回復、旧v1 inspect/prepare/status update/execute RPCのservice role権限剥奪、v2 inspect/prepare/status update/execute RPCのservice-only ACL、共有家族の停止、共有記録の保持、証跡の匿名化は `pnpm run test:account-erasure:sql` で確認する。
+その回帰では、Webが `verify_account_delete_operator_v2` を使うこと、service roleが `account_delete_executors` を直接SELECTできないこと、旧deploymentの認可がfail closedになること、一覧が未完了全件と完了直近100件の境界を守ることも確認する。
 
 ## 重要
 
@@ -92,7 +100,9 @@ PostgreSQL 16 containerを作成し、migrationを2回適用して回帰SQLを�
 - 上記3テーブルと `ai_memory_consents` は、ログイン済みクライアントにも直接の追加・更新・削除権限を与えない。長期要約、根拠ID、相談履歴、同意状態の変更は、対象者と家族権限を再確認するWeb APIからservice roleでだけ行う。
 - `excluded_event_ids` に入れた手帳記録は、再要約・関連記録検索の入力から必ず除外する。配列自体は外部キーではないため、アプリ側でも `timeline_events.person_id` との一致を検証する。
 - 記憶の削除時は元の手帳記録を消さず、派生要約と参照IDを空にして `memory_reset_at` を更新する。再構築ではその時刻以前の記録を除外し、削除した記憶が直後に復活しないようにする。
-- アカウント完全削除は、緊急用管理キーでは一覧・状態変更・事前確認・実行のいずれも行わない。登録済みapp_adminまたは有効な削除専用実行者が個別Bearerで入り、実削除時は登録済みTOTPでAAL2へ上げる。削除依頼IDと利用者IDを一致確認し、`prepare_account_erasure_v1` → DB削除 → Auth/Storage不在確認 → `finalize_account_erasure_v1` の順で行う。共有家族のownerは先に所有権を移管する。共有家族に本人名義の写真pathが残る場合は自動削除せず、写真の引継ぎ機能が整うまで `needs_followup` で停止する。完了証跡には件数とmanifest hashだけを残し、利用者ID・メール由来hash・連絡先・写真path・日記cleanupのraw identityは消す。
+- アカウント完全削除は、緊急用管理キーでは一覧・状態変更・事前確認・実行のいずれも行わない。WebはAAL1のread-only `inspect_account_erasure_v2` と、有効な削除専用実行者がTOTPでAAL2へ上げた後の `prepare_account_erasure_v2` だけを呼ぶ。v2のblocker応答は正規化codeと数値件数だけで、`familyId`、`familyName`、Storage object/prefixの生pathをブラウザへ返さない。生の範囲を返し得る旧 `inspect_account_erasure_v1` / `prepare_account_erasure_v1` はowner所有の内部処理に限定し、service roleから失効させる。削除依頼の状態・処理メモは現routeのAAL2 app admin確認に加えて、`update_account_delete_request_status_v2` が正確なoperator user IDをDB側でもapp adminとして再確認してから更新する。Webはv2だけを呼び、旧 `update_account_delete_request_status_v1` はservice roleから失効させる。削除依頼IDと利用者IDを一致確認し、v2 prepareで対象を確定する。次にDB ownerがSQL Editorから `account_delete_private.open_account_erasure_execution_control_v1(900)` を実行し、最大15分・1回限りのcontrol epochを開く。当該実行者の `activation_approved` eventに登録された別のapp adminがAAL2で同じjob IDとmanifest hashを確認し、controlの残り時間を超えない最大10分・1回限りのgrantを発行する。`execute_account_erasure_database_v2` は現在のcontrol epoch、grant、対象範囲、job/hashを同じトランザクション内で再照合し、DB削除成功時にgrantとcontrolを両方消費する。その後、Auth/Storage不在確認 → `finalize_account_erasure_v1` の順で行う。範囲が変わった場合はcontrolをfail closeしてgrantを取消し、再確定・control再開放・再承認まで削除しない。放棄時はDB ownerが `account_delete_private.close_account_erasure_execution_control_v1()` を実行する。DB削除後にAuth/Storageで停止した場合だけは、同じ実行者のAAL2、同じjob/hash、消費済みgrantのoperator hash一致を検証して再開し、別の有効実行者へ引き継がない。共有家族のownerは先に所有権を移管する。共有家族に本人名義の写真pathが残る場合は自動削除せず、写真の引継ぎ機能が整うまで `needs_followup` で停止する。完了証跡には件数とmanifest hashだけを残し、利用者ID・メール由来hash・連絡先・写真path・日記cleanupのraw identityは消す。
+- DB削除が成功した後の `database_erased` 回復だけは、最初のDB削除を実行した本人と同じ削除専用実行者が現在も有効かつAAL2で、exact request/target/job/manifest hash、そのjobに固定された消費済み・未取消しgrant、現在の実行者hashとgrantの `operator_user_hash` の一致をDB v2が再検証した場合に限り、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` でAuth/Storage不在確認と最終化を続行できる。ジョブがDB未削除、ID/hash不一致、grant未消費・取消済み、現在の実行者が無効またはAAL1、別の有効な削除専用実行者なら停止する。この回復経路を新規DB削除のenv OFF bypassとして使ってはならない。
+- 削除依頼一覧は、通常の `app_admin` だけが連絡先・自由記載の理由・処理メモ・担当者identityを取得できる。削除専用実行者のクエリはSELECT列からこれらを外し、返却直前のマスクだけに依存しない。依頼状態と処理メモのPATCHはAAL2の `app_admin` だけが行い、削除専用実行者のAAL2でも拒否する。
 
 ## SQL実行後に取得する値
 
