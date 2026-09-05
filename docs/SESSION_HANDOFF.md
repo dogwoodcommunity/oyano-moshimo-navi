@@ -13876,3 +13876,66 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 過去trim済みデータの自動救済、PDFの実保存先・複数ページ/写真、別端末復元と招待のStage A、
 無誘導の操作/音声入力、無料での自然継続、親本人通知の需要検証は残件として維持。
 `review_exports/` と未追跡Claude_FULL 2文書は触らず、今回の限定差分のみcommit/pushする。
+
+## 2026-09-05 追記 369 — Bデザイン・モニター残意見の採用済み改善を本番公開
+
+ユーザーの「本番反映して」を受け、直前まで確認したB案・10色・追記367/368の改善を公開した。
+開始時は `design/readable-three-entry` の `1b2a3719ef274d30651a62bfd0147bd92bd54329`。
+最新originを取得し、`main` の `3206a6b` が祖先であることを確認してfast-forwardし、同SHAをmainへpush。
+今回の公開作業ではアプリコードを追加変更していない。
+
+### 公開前の確認と公開証跡
+
+- 独立差分点検：DB migration/RPC/schema/RLS/grants、Auth、環境変数、価格・削除スイッチの変更なし。
+  SQL差分は使い捨てDB向け回帰fixtureのみ。対象者・家族権限、CAS、tombstoneの防御を維持。
+- exact SHAのCI `33972405073` はsuccess（web-and-mobile 3分10秒）。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/33972405073
+  lint/Web・mobile型/ソース回帰/隔離PG16 SQL/build/smokeを通過。既存警告は残る。
+- Deploy workflow `33972405050` はcheck成功だがdeploy jobは設定済みVercel secrets不足でskipped。
+  workflowのsuccessを本番公開とは扱わず、CI成功後に既存認証済みVercel CLIで公開した。
+- Gitのexact SHAからクリーン書庫を `/private/tmp/oyano-design-release-1b2a371.WCY0Qx` に展開。
+  outputs/、review_exports/、env、git、node_modules、ビルド成果物、未追跡レビュー文書は送らない。
+  書庫444ファイル、Git blob不一致0・想定外0。source inventory SHA256は
+  `bec446dd5211f8d0225e01a344f807170a5cc9ca638e4d593024d0539c9f1ca2`。
+  CLI dry-runは443ファイル/9,348,813 bytes、除外対象の混入0（.gitignoreだけupload対象外）。
+- Vercelアカウントdogwoodcommunity、scope dogwoodcommunity1、project
+  `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` が既存本番であることを読み取り確認。
+  既存キャッシュの公式CLI 59.11.7で `deploy --prod --yes --project ... --scope ...`
+  と `releaseSha=1b2a3719ef274d30651a62bfd0147bd92bd54329` metadataを付けて実行し成功。
+- 新deployment：`dpl_FATDrYm527bz7QNqW5soU6Rpqos2`（2026-09-05 23:42:17 JST作成）。
+  https://oyano-moshimo-navi-9ydshxh9f-dogwoodcommunity1.vercel.app
+  公開URL https://oyano-moshimo-navi.vercel.app のaliasを別途inspectし、同deployment/production/Readyを確認。
+- 直前のrollback候補は `dpl_6VgHqjwPQMCR3E8XzqqdGzWndBVp`（旧アプリsource `4dad543`）。
+  https://oyano-moshimo-navi-dmw20mc9z-dogwoodcommunity1.vercel.app
+  今回rollbackは実行していない。
+
+### 公開後の確認
+
+- `/home` `/start` `/monitor` `/monitor/report?preview=1` `/guides` `/crisis`
+  `/crisis/hospital-night` `/consult` `/family` `/legal/tokushoho` `/legal/privacy`
+  `/sponsors` `/memory-book/release-smoke` の13ページが200、Bデザインと10色の選択UIを含む。
+- `/api/health` 200。`/install` は307、HTML内のredirectが同じ本番hostの `/` を指す既存動作。
+- 保存・統合APIはsourceの認証先行を確認したうえで、認証なし空JSONのPOSTだけで各401を確認。
+  対象は `/api/notebook/sync` と `/api/notebook/reconcile`。実データ入りの要求は送信していない。
+- 本番ブラウザで以前から端末内にあった架空対象者の3記録（日記2件/AI相談メモ1件）を表示できた。
+  これは端末内の表示確認であり、全利用者のDB記録の完全一致検証ではない。編集・保存・削除なし。
+- 10色のラジオと初期水色を確認（選択変更なし）。手帳/読む/急なときの各ページで表示中が1つだけ。
+  通常reload後もBデザイン、Zen Maru Gothic、本文 `rgb(25,55,70)`、3記録の表示を確認。
+  手帳/読む/急なときは確認幅709pxでscrollWidthも709px。最終console error/warn 0件。
+- 履歴上部のPDF入口から同じ対象者の日記2件が選ばれ、AIメモは既定どおり除外。
+  「PDF保存の準備ができました。」まで確認。OSの最終保存画面・実ファイル保存は未実施。
+- モニター回答プレビューは新書体/濃色、クラウドワークス表示名、画像1枚必須/最大3枚の案内を確認。
+  送信ボタンは「プレビューでは送信できません」でdisabled。幅1280pxで横はみ出しなし。
+  入力・画像upload・回答送信はしていない。
+
+### 境界・次回への引き継ぎ
+
+本番Webへの反映は完了。記録のリセット/削除/編集/統合/復元、モニター共有同意の変更、
+メール・招待・AI・回答送信、本番DB migration、Auth/環境設定/価格/削除スイッチ変更はしていない。
+実iPhone・AndroidのPDF保存先/写真/複数ページ、認証済みの別端末復元・招待・権限のStage A、
+無誘導の操作/音声入力、自然継続、親本人通知の需要検証は残る。商用版全体の完成とはしない。
+10000字超の別手帳統合の上限拡張、過去trim済みデータの自動救済も引き続き未実装。
+
+本番の手帳を新しい表示タブで開いたままにし、ローカル `127.0.0.1:3119` も停止していない。
+この公開後の追記は文書だけを更新してmainへcommit/pushする。アプリsourceは上記1b2a371のまま。
+`review_exports/` と未追跡Claude_FULL 2文書は今回も触らず保持する。
