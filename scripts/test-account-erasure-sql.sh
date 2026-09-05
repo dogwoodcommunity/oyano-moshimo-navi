@@ -36,6 +36,12 @@ run_sql() {
     psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$REPO_ROOT/$1"
 }
 
+run_policy_sql() {
+  node "$REPO_ROOT/scripts/render-delete-operator-policy-sql.mjs" "$1" |
+    docker exec -i "$REGRESSION_CONTAINER_NAME" \
+      psql -v ON_ERROR_STOP=1 -U postgres -d postgres
+}
+
 run_sql supabase/ai_consult_memory_regression_bootstrap.sql
 run_sql supabase/family_role_rls_regression_bootstrap.sql
 run_sql supabase/account_erasure_regression_bootstrap.sql
@@ -51,10 +57,16 @@ run_sql supabase/notebook_person_delete.sql
 run_sql supabase/admin_auth_hardening.sql
 run_sql supabase/account_delete_executor_role.sql
 run_sql supabase/account_delete_executor_role.sql
+run_sql supabase/account_delete_identity_ledger.sql
 run_sql supabase/account_deletion_pipeline.sql
 run_sql supabase/account_deletion_pipeline.sql
 # A later broad bootstrap must not reopen the operator-only pipeline.
 run_sql supabase/api_grants.sql
+run_sql supabase/account_delete_identity_ledger_regression.sql
 run_sql supabase/account_erasure_regression.sql
+run_sql supabase/account_delete_operator_provisioning_regression_bootstrap.sql
+run_policy_sql provision
+run_policy_sql activate
+run_sql supabase/account_delete_operator_provisioning_regression.sql
 
 echo "Verified account erasure PostgreSQL regression: ok"
