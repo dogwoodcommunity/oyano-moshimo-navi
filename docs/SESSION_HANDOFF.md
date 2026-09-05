@@ -12297,3 +12297,24 @@ Chrome側には別の既存管理セッションが残っており、表示メ�
 
 次は `.vercelignore` の除外をmainへpushして本番を再deployし、先のdeploymentを公開aliasから置き換える。
 その後、分離した同一ブラウザで新しいMagic Linkを開き、GETだけの権限分離試験を行う。
+
+## 2026-09-05 追記 323 — レビュー資料を除外した本番deployで置換
+
+`.vercelignore` の追加と追記322をcommit `a56870c48dd68bd69ed7801fccb3486c722ff838` として
+mainへpushし、そのclean HEADからVercel本番を再deployした。
+
+- final deployment: `dpl_HjCxNNBgixEqg4qrGPsKjJnzKgBB`
+- deployment URL: `https://oyano-moshimo-navi-18i85duor-dogwoodcommunity1.vercel.app`
+- targetはproduction、statusはReady、公開aliasは
+  `https://oyano-moshimo-navi.vercel.app` であることを `vercel inspect` で確認した。
+- `.vercelignore` 適用前のuploadは413 files・約1.4MB、適用後は411 files・915.6KBだった。
+  除外対象の未追跡Claude文書2件は本番uploadから外れた。`review_exports` も将来を含め明示除外した。
+- 公開aliasに対する最終 `node scripts/smoke-web.mjs` は成功した。
+- HEADとorigin/mainは上記commitで一致し、残るstatusは対象外の未追跡Claude文書2件だけである。
+
+削除専用ログイン試験はまだ未完了である。Chromeには今回の実行者と異なる既存管理セッションがあり、
+分離試験へ流用していない。Codex内ブラウザの分離状態では未ログインを確認済みである。
+次は新しいMagic Linkをその分離状態で送信し、届いたリンクを同じブラウザで1回だけ開く。
+
+`ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま。削除依頼PATCH、preflight、execute、削除RPC、
+Auth・Storage削除は行っておらず、既存本番データは変更・削除していない。
