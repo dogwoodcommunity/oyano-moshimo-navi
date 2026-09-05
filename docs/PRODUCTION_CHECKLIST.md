@@ -36,16 +36,16 @@
 - [x] `supabase/production_rls.sql` を実行
 - [x] `supabase/family_invite_rpc.sql` を実行
 - [x] `supabase/admin_auth_hardening.sql` を実行
-- [ ] `supabase/account_delete_executor_role.sql` を実行
-  - migration単体ではユーザー作成・権限付与をしない。`account_delete_executors` のRLS/ACL、認可helperを `verify_compact.sql` で確認する。
+- [x] `supabase/account_delete_executor_role.sql` を実行
+  - 2026-09-04確認: 本番へ適用し、migration単体ではユーザー作成・権限付与をせず、`account_delete_executors` のRLS/ACL、認可helperを含む読み取り専用13項目を確認。
 - [ ] `supabase/family_owner_succession.sql` を実行
-- [ ] `supabase/account_deletion_pipeline.sql` を実行
+- [x] `supabase/account_deletion_pipeline.sql` を実行
   - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。
   - 共有家族に対象user名義の写真pathが残る依頼は `shared_photo_transfer_required` で停止する。自動引継ぎ機能が完成するまでは手動で完了にしない。
   - 破棄DBの `pnpm run test:account-erasure:sql`、削除専用認可回帰、個別メール/TOTPログイン、所有権移管の運用確認が終わるまで `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する。
 - [ ] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_compact.sql` で台帳・3 RPC・service-only ACLを確認
-- [ ] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
-- [ ] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
+- [x] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
+- [x] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [ ] `supabase/public_api_rate_limits.sql` を実行
 - [ ] `supabase/anonymous_case_retention.sql` を実行
 - [x] `supabase/storage_setup.sql` を実行
@@ -144,10 +144,11 @@
 - [ ] テスト用アプリ内削除依頼がDBキューへ表示され、割り当てた監視・通知方法で両名が認知できることを確認
 - [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）
 - [x] 池田知也本人用の個別Supabase Auth招待を受諾し、メール確認済みであることを本番で確認（個人メール・user IDはGitへ記録しない）
-- [ ] `/admin/delete-requests/setup` でverified TOTPと現在のAAL2を確認し、正確なuser IDを制限付き運用台帳で照合
+- [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認
+- [ ] 正確なAuth user IDを制限付き運用台帳へ記録し、監査用の最小profileと `active=false` のexecutor行を家族所属・一般Adminなしで同一transactionにより作成
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証
 - [x] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、読み取り専用13項目を確認
-- [ ] 上記確認後に `account_delete_executors` へ有効登録し、削除専用ログインを確認
+- [ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化して削除専用ログインを確認
 - [ ] 削除実行者とは別の確認者を指名し、削除ごとの二者確認手順を確定
 - [ ] verified TOTP・実行者role・別確認者・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認
 - [x] 障害対応の主責任者を `代表取締役 池田哲也` と確定

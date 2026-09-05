@@ -1,5 +1,9 @@
 # 正式商用版からアプリ公開までの実装計画（2026-09-03）
 
+> 履歴資料：これは2026-09-03作成時の基準線であり、現在の完了状況を示す台帳ではない。
+> 現況は `COMMERCIAL_RELEASE_INPUTS.md`、`PRODUCTION_CHECKLIST.md`、
+> `COMMERCIAL_OPERATIONS_RUNBOOK.md` を正として確認する。
+
 ## 方針
 
 11人のモニター結果に従い、最初の商用公開は有料転換を急がず、無料Web版で
