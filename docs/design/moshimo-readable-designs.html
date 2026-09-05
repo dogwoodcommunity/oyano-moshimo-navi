@@ -1,0 +1,178 @@
+<style>
+@font-face { font-family:'BIZ UDPMincho'; font-style:normal; font-weight:400; font-display:swap; src:url('https://fonts.gstatic.com/s/bizudpmincho/v11/ypvfbXOBrmYppy7oWWTg1_58nhg.ttf') format('truetype'); }
+@font-face { font-family:'BIZ UDPMincho'; font-style:normal; font-weight:700; font-display:swap; src:url('https://fonts.gstatic.com/s/bizudpmincho/v11/ypvCbXOBrmYppy7oWWTg1_58pqR3kU4.ttf') format('truetype'); }
+@font-face { font-family:'BIZ UDPGothic'; font-style:normal; font-weight:400; font-display:swap; src:url('https://fonts.gstatic.com/s/bizudpgothic/v16/hES36X5pHAIBjmS84VL0Bue83nU.ttf') format('truetype'); }
+@font-face { font-family:'BIZ UDPGothic'; font-style:normal; font-weight:700; font-display:swap; src:url('https://fonts.gstatic.com/s/bizudpgothic/v16/hESq6X5pHAIBjmS84VL0Bue85skjZWE.ttf') format('truetype'); }
+@font-face { font-family:'Zen Maru Gothic'; font-style:normal; font-weight:400 500; font-display:swap; src:url('https://fonts.gstatic.com/s/zenmarugothic/v19/o-0XIpIxzW5b-RxT-6A8jWAtCp-cGWtCPA.ttf') format('truetype'); }
+@font-face { font-family:'Zen Maru Gothic'; font-style:normal; font-weight:700; font-display:swap; src:url('https://fonts.gstatic.com/s/zenmarugothic/v19/o-0XIpIxzW5b-RxT-6A8jWAtCp-cUW1CPA.ttf') format('truetype'); }
+#moshimo-designs { color-scheme:light dark; --mn-label:light-dark(#1b2522,#f0f4f1); color:var(--mn-label); font-family:system-ui,sans-serif; }
+#moshimo-designs * { box-sizing:border-box; }
+#moshimo-designs .mn-concept { margin:0 0 48px; }
+#moshimo-designs .mn-caption { max-width:440px; margin:0 auto 14px; }
+#moshimo-designs .mn-caption h2 { font:700 23px/1.5 system-ui,sans-serif; margin:0 0 5px; color:var(--mn-label); }
+#moshimo-designs .mn-caption p { font:500 16px/1.6 system-ui,sans-serif; margin:0; color:var(--mn-label); }
+#moshimo-designs .mn-phone { --mn-ink:light-dark(#18211e,#f4f5ef); --mn-sub:light-dark(#43534b,#c4d2c9); --mn-paper:light-dark(#ffffff,#17201c); --mn-bg:light-dark(#ffffff,#17201c); --mn-line:light-dark(#aabbb1,#708579); --mn-soft:light-dark(#edf3ef,#26382e); --mn-accent:light-dark(#145438,#a4e0b9); --mn-onaccent:light-dark(#ffffff,#11261a); --mn-size:20px; --mn-weight:700; --mn-family:'BIZ UDPMincho','Hiragino Mincho ProN','Yu Mincho',serif; max-width:440px; margin:0 auto; color:var(--mn-ink); background:var(--mn-bg); border:1px solid var(--mn-line); border-radius:22px; overflow:clip; font-family:var(--mn-family); font-size:var(--mn-size); font-weight:var(--mn-weight); line-height:1.75; }
+#moshimo-designs .mn-b { --mn-bg:light-dark(#faf7f0,#211e19); --mn-paper:light-dark(#ffffff,#2a2720); --mn-ink:light-dark(#29261f,#f8f3e9); --mn-sub:light-dark(#554d3b,#e0d5bd); --mn-soft:light-dark(#eee5d1,#393224); --mn-accent:light-dark(#60421f,#f0cb91); --mn-onaccent:light-dark(#ffffff,#291c0c); --mn-line:light-dark(#b8a989,#8e8065); --mn-family:'Zen Maru Gothic','Hiragino Maru Gothic ProN',sans-serif; }
+#moshimo-designs .mn-c { --mn-bg:light-dark(#f2f5f8,#161e28); --mn-paper:light-dark(#ffffff,#1c2937); --mn-ink:light-dark(#172633,#f0f5fb); --mn-sub:light-dark(#405565,#ccd8e4); --mn-soft:light-dark(#e0eaf4,#2b4055); --mn-accent:light-dark(#204f7d,#a9d6ff); --mn-onaccent:light-dark(#ffffff,#142435); --mn-line:light-dark(#9caebf,#738ba0); --mn-family:'BIZ UDPGothic','Hiragino Kaku Gothic ProN',sans-serif; }
+#moshimo-designs .mn-head { padding:16px 20px; border-bottom:1px solid var(--mn-line); background:var(--mn-paper); display:flex; gap:12px; align-items:center; justify-content:space-between; }
+#moshimo-designs .mn-brand { font:700 18px/1.5 'BIZ UDPGothic',sans-serif; letter-spacing:-.03em; }
+#moshimo-designs .mn-demo { font:400 14px/1.4 system-ui,sans-serif; color:var(--mn-sub); white-space:nowrap; }
+#moshimo-designs .mn-content { padding:24px 22px; min-width:0; }
+#moshimo-designs .mn-content > :first-child { margin-top:0; }
+#moshimo-designs h1,#moshimo-designs h2,#moshimo-designs h3,#moshimo-designs p { color:inherit; overflow-wrap:anywhere; }
+#moshimo-designs .mn-phone h1 { font-family:inherit; font-weight:700; font-size:calc(var(--mn-size) * 1.4); line-height:1.5; letter-spacing:-.03em; margin:5px 0 8px; }
+#moshimo-designs .mn-phone h2 { font-family:inherit; font-weight:700; font-size:calc(var(--mn-size) * 1.1); line-height:1.5; margin:26px 0 15px; }
+#moshimo-designs .mn-phone p { margin:0; }
+#moshimo-designs .mn-small { font-size:16px; font-weight:400; line-height:1.65; color:var(--mn-sub); }
+#moshimo-designs .mn-subtitle { margin:0 0 24px; }
+#moshimo-designs .mn-phone button,#moshimo-designs .mn-phone input,#moshimo-designs .mn-phone textarea { font-family:inherit; color:var(--mn-ink); }
+#moshimo-designs .mn-phone button { cursor:pointer; font-size:18px; font-weight:700; line-height:1.5; min-height:48px; padding:8px 12px; border:1px solid var(--mn-line); border-radius:10px; background:var(--mn-paper); text-align:center; }
+#moshimo-designs .mn-phone button:hover { text-decoration:underline; }
+#moshimo-designs .mn-phone .mn-primary { background:var(--mn-accent); color:var(--mn-onaccent); border:2px solid var(--mn-accent); width:100%; min-height:56px; font-size:20px; padding:12px; }
+#moshimo-designs .mn-phone .mn-primary + * { margin-top:22px; }
+#moshimo-designs .mn-phone .mn-text-button { display:inline-flex; align-items:center; gap:6px; padding:8px 0; border:0; border-radius:0; text-decoration:underline; text-underline-offset:5px; color:var(--mn-accent); background:transparent; }
+#moshimo-designs .mn-phone .mn-back { margin:0 0 16px; }
+#moshimo-designs .mn-date { font-size:17px; line-height:1.6; color:var(--mn-sub); font-weight:700; display:flex; gap:10px; justify-content:space-between; flex-wrap:wrap; margin:0 0 10px; }
+#moshimo-designs .mn-status { font-size:15px; font-weight:400; }
+#moshimo-designs .mn-entry { padding:18px 0; border-bottom:1px solid var(--mn-line); }
+#moshimo-designs .mn-entry:first-of-type { padding-top:0; }
+#moshimo-designs .mn-entry-body { white-space:pre-wrap; font-size:var(--mn-size); font-weight:var(--mn-weight); line-height:1.85; margin:0 0 8px; }
+#moshimo-designs .mn-entry-actions { margin-top:8px; }
+#moshimo-designs .mn-entry-actions button { font-size:16px; font-weight:400; }
+#moshimo-designs .mn-line-link { width:100%; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+#moshimo-designs .mn-phone .mn-history-link { margin-top:18px; }
+#moshimo-designs .mn-footer { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); background:var(--mn-paper); border-top:1px solid var(--mn-line); padding:10px 8px; gap:4px; }
+#moshimo-designs .mn-footer button { min-width:0; min-height:58px; border:0; background:transparent; border-radius:8px; font:700 16px/1.45 var(--mn-family); padding:7px 2px; display:flex; flex-direction:column; align-items:center; gap:3px; }
+#moshimo-designs .mn-footer button[aria-pressed="true"] { background:var(--mn-soft); color:var(--mn-accent); text-decoration:underline; text-underline-offset:5px; }
+#moshimo-designs .mn-footer svg { width:21px; height:21px; }
+#moshimo-designs .mn-choices { display:grid; gap:14px; margin:22px 0 25px; }
+#moshimo-designs .mn-phone .mn-choice { display:flex; justify-content:space-between; text-align:left; align-items:center; gap:10px; padding:18px; min-height:78px; font-size:24px; border:1.5px solid var(--mn-line); border-radius:14px; }
+#moshimo-designs .mn-choice small { display:block; font-size:16px; font-weight:500; margin-top:2px; }
+#moshimo-designs .mn-phone .mn-choice.mn-primary { margin:0; }
+#moshimo-designs .mn-timeline { padding-left:18px; border-left:2px solid var(--mn-line); margin:22px 0; }
+#moshimo-designs .mn-c .mn-entry { padding:0 0 18px; border:0; margin:0 0 18px; }
+#moshimo-designs .mn-c .mn-entry:last-child { padding-bottom:0; margin-bottom:0; }
+#moshimo-designs .mn-c .mn-entry-body { padding:16px; border:1px solid var(--mn-line); border-radius:12px; background:var(--mn-paper); }
+#moshimo-designs .mn-b .mn-entry { padding:16px; border:1px solid var(--mn-line); border-radius:12px; background:var(--mn-paper); }
+#moshimo-designs .mn-phone label { display:block; font-size:18px; margin:18px 0 8px; }
+#moshimo-designs .mn-phone input,#moshimo-designs .mn-phone textarea { width:100%; min-width:0; max-width:100%; background:var(--mn-paper); border:2px solid var(--mn-line); border-radius:10px; font-size:var(--mn-size); font-weight:var(--mn-weight); line-height:1.8; padding:12px; }
+#moshimo-designs .mn-phone textarea { min-height:190px; resize:vertical; }
+#moshimo-designs .mn-phone input { min-height:52px; }
+#moshimo-designs .mn-form-actions { display:grid; gap:10px; margin-top:18px; }
+#moshimo-designs .mn-notice { margin:0 0 16px; padding:12px; font-size:16px; border-left:4px solid var(--mn-accent); background:var(--mn-soft); }
+#moshimo-designs .mn-error { color:light-dark(#941c20,#ffb6b6); font-size:17px; font-weight:700; margin:8px 0; }
+#moshimo-designs .mn-tool-list { display:grid; gap:12px; margin:20px 0; }
+#moshimo-designs .mn-phone details { border-top:1px solid var(--mn-line); margin-top:24px; padding-top:10px; font-size:17px; }
+#moshimo-designs .mn-phone summary { cursor:pointer; padding:12px 0; min-height:48px; color:var(--mn-accent); }
+#moshimo-designs .mn-phone details p { font-size:17px; line-height:1.8; }
+@media(max-width:370px) { #moshimo-designs .mn-content { padding:20px 16px; } #moshimo-designs .mn-head { padding:14px 16px; } #moshimo-designs .mn-brand { font-size:16px; } #moshimo-designs .mn-phone { border-radius:16px; } }
+</style>
+<div id="moshimo-designs" aria-label="親のもしもナビのデザイン3案">
+  <section class="mn-concept">
+    <div class="mn-caption"><h2>A　くっきり手帳 · おすすめ</h2><p>太めの明朝 ／ 記録が主役 ／ 白地と深緑</p></div>
+    <div id="moshimo-design-a" class="mn-phone mn-a" aria-label="A くっきり手帳の文字調整">
+      <header class="mn-head"><span class="mn-brand">親のもしもナビ</span><span class="mn-demo">操作見本</span></header>
+      <main class="mn-content"></main><nav class="mn-footer" aria-label="Aのメニュー"></nav>
+    </div>
+  </section>
+  <section class="mn-concept">
+    <div class="mn-caption"><h2>B　迷わない3つの入口</h2><p>丸みのある太字 ／ 目的から選ぶ ／ 生成りと茶</p></div>
+    <div id="moshimo-design-b" class="mn-phone mn-b" aria-label="B 3つの入口の文字調整">
+      <header class="mn-head"><span class="mn-brand">親のもしもナビ</span><span class="mn-demo">操作見本</span></header>
+      <main class="mn-content"></main><nav class="mn-footer" aria-label="Bのメニュー"></nav>
+    </div>
+  </section>
+  <section class="mn-concept">
+    <div class="mn-caption"><h2>C　すっきり記録一覧</h2><p>くっきりした角文字 ／ 日付順に読む ／ 白と紺</p></div>
+    <div id="moshimo-design-c" class="mn-phone mn-c" aria-label="C 記録一覧の文字調整">
+      <header class="mn-head"><span class="mn-brand">親のもしもナビ</span><span class="mn-demo">操作見本</span></header>
+      <main class="mn-content"></main><nav class="mn-footer" aria-label="Cのメニュー"></nav>
+    </div>
+  </section>
+</div>
+<script>
+(() => {
+  const root = document.getElementById('moshimo-designs');
+  const escapeText = text => String(text).replace(/[&<>"']/g, character => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
+  const icon = name => '<i data-lucide="' + name + '" aria-hidden="true"></i>';
+  const settings = {
+    a:{ font:'BIZ UDPMincho', size:20, weight:'700' },
+    b:{ font:'Zen Maru Gothic', size:20, weight:'700' },
+    c:{ font:'BIZ UDPGothic', size:20, weight:'700' }
+  };
+  ['a','b','c'].forEach(key => {
+    const phone = root.querySelector('#moshimo-design-' + key);
+    const main = phone.querySelector('main');
+    const navigation = phone.querySelector('nav');
+    const state = { screen:'home', editIndex:null, notice:'', entries:[
+      { date:'2026-09-05', body:'夕方、一緒に近所を散歩した。\n帰りに好きなお茶を買った。' },
+      { date:'2026-09-04', body:'明日の予定を家族に伝えた。\n迎えは午前10時。' }
+    ]};
+    const dateLabel = date => Number(date.slice(5,7)) + '月' + Number(date.slice(8,10)) + '日';
+    const button = (label, target, style='') => '<button type="button" class="' + style + '" data-go="' + target + '">' + label + '</button>';
+    function entry(item,index) {
+      return '<article class="mn-entry"><div class="mn-date"><span>' + dateLabel(item.date) + '</span><span class="mn-status">記録</span></div><p class="mn-entry-body">' + escapeText(item.body) + '</p><div class="mn-entry-actions"><button type="button" class="mn-text-button" data-edit="' + index + '">この記録を編集</button></div></article>';
+    }
+    function heading(title,subtitle='') {
+      return '<h1>' + title + '</h1>' + (subtitle ? '<div class="mn-subtitle mn-small">' + subtitle + '</div>' : '');
+    }
+    function render() {
+      const notice = state.notice ? '<div class="mn-notice" role="status">' + escapeText(state.notice) + '</div>' : '';
+      let content = '';
+      if(state.screen === 'home' && key === 'a') {
+        content = '<p class="mn-small">9月5日 土曜日</p>' + heading('お母さんの手帳','毎日のことを、少しずつ。') + button('今日の記録を書く','write','mn-primary') + '<h2>最近の記録</h2>' + entry(state.entries[0],0) + button('過去の記録を見る　→','history','mn-line-link mn-history-link');
+      } else if(state.screen === 'home' && key === 'b') {
+        content = heading('お母さんの手帳','今日は何をしますか？') + '<div class="mn-choices">' + button('<span>記録を書く<small>今日あったことを残す</small></span><span aria-hidden="true">→</span>','write','mn-choice mn-primary') + button('<span>記録を見返す<small>日付ごとに読む・直す</small></span><span aria-hidden="true">→</span>','history','mn-choice') + button('<span>AIに相談する<small>記録をもとに相談する</small></span><span aria-hidden="true">→</span>','consult','mn-choice') + '</div><h2>いちばん新しい記録</h2>' + entry(state.entries[0],0);
+      } else if(state.screen === 'history' || (state.screen === 'home' && key === 'c')) {
+        content = (state.screen === 'history' ? button('← 手帳に戻る','home','mn-text-button mn-back') : '<p class="mn-small">お母さんの手帳</p>') + heading('記録を見返す',state.entries.length + '件の記録 · 新しい日付から') + '<div class="' + (key === 'c' ? 'mn-timeline' : 'mn-records') + '">' + state.entries.map(entry).join('') + '</div>' + button('今日の記録を書く','write','mn-primary');
+      } else if(state.screen === 'write') {
+        const existing = state.editIndex === null ? null : state.entries[state.editIndex];
+        content = button('← 変更せず戻る','cancel','mn-text-button mn-back') + heading(existing ? '記録を編集する' : '今日の記録を書く') + '<div class="mn-editor"><label for="mn-date-' + key + '">記録する日</label><input id="mn-date-' + key + '" name="date" type="date" value="' + (existing ? existing.date : '2026-09-05') + '" required><label for="mn-body-' + key + '">この日に残すこと</label><textarea id="mn-body-' + key + '" name="body" required>' + (existing ? escapeText(existing.body) : '') + '</textarea><p class="mn-small">この見本では、入力は送信されません。</p><p class="mn-error" role="alert" hidden></p><div class="mn-form-actions"><button type="button" data-save="true" class="mn-primary">' + (existing ? '変更を保存する' : '記録を保存する') + '</button></div></div>';
+      } else if(state.screen === 'consult') {
+        content = button('← 手帳に戻る','home','mn-text-button mn-back') + heading('AIに相談する','記録を書く画面とは分けて表示します。') + '<div class="mn-notice">AIへの送信・回答生成は行わない見本です。</div><h2>相談に使う記録</h2>' + entry(state.entries[0],0) + '<label for="mn-question-' + key + '">相談したいこと</label><textarea id="mn-question-' + key + '">家族に伝えることを整理したい。</textarea>' + button('画面見本を確認する','demo','mn-primary') + '<details><summary>AI相談の注意点を見る</summary><p>AIの提案と、本人の記録は分けて表示します。医療などの判断は専門家へ確認してください。</p></details>';
+      } else if(state.screen === 'tools') {
+        content = heading('そのほかの機能') + '<div class="mn-tool-list">' + ['家族と共有する','確認すること','書類・鍵の場所','手帳の保存先','急なとき','使い方・設定'].map(label => button(label + '　→','demo','mn-line-link')).join('') + '<p class="mn-small">この見本は配置の確認用です。</p>';
+      }
+      main.innerHTML = notice + content;
+      navigation.innerHTML = [ ['home','book-open','手帳'], ['consult','message-circle','AI相談'], ['tools','menu','その他'] ].map(([target,graphic,label]) => '<button type="button" data-go="' + target + '" aria-pressed="' + ((target === 'home' ? ['home','history','write'].includes(state.screen) : state.screen === target) ? 'true' : 'false') + '">' + icon(graphic) + '<span>' + label + '</span></button>').join('');
+      if(globalThis.lucide) globalThis.lucide.createIcons({attrs:{width:20,height:20}});
+    }
+    phone.addEventListener('click',event => {
+      const control = event.target.closest('button');
+      if(!control || !phone.contains(control)) return;
+      if(control.dataset.save) { savePreview(); return; }
+      if(control.dataset.edit !== undefined) {
+        state.editIndex = Number(control.dataset.edit); state.screen = 'write'; state.notice = ''; render();
+      } else if(control.dataset.go) {
+        const target = control.dataset.go;
+        if(target === 'demo') { state.notice = '画面見本です。送信・共有・本番の変更は行いません。'; render(); return; }
+        state.screen = target === 'cancel' ? 'home' : target;
+        state.editIndex = null; state.notice = ''; render();
+      }
+    });
+    function savePreview() {
+      const editor = main.querySelector('.mn-editor');
+      const body = editor.querySelector('textarea').value.trim();
+      const date = editor.querySelector('input').value;
+      if(!body || !date) { const error = editor.querySelector('.mn-error'); error.hidden = false; error.textContent = '日付と記録の内容を入力してください。'; return; }
+      const item = { date, body };
+      if(state.editIndex === null) state.entries.unshift(item); else state.entries[state.editIndex] = item;
+      state.entries.sort((a,b) => b.date.localeCompare(a.date));
+      state.editIndex = null; state.screen = 'history'; state.notice = '見本の中に保存しました。本番の記録は変わりません。'; render();
+    }
+    const design = settings[key];
+    function updateDesign() {
+      phone.style.setProperty('--mn-size',design.size + 'px');
+      phone.style.setProperty('--mn-family','"' + design.font + '", "Hiragino Mincho ProN", serif');
+      phone.style.setProperty('--mn-weight',design.weight);
+    }
+    render(); updateDesign();
+    if(globalThis.Tweak) {
+      const tweak = new Tweak({ container:phone, onChange:updateDesign });
+      tweak.addSlider(design,'size',{ label:'本文の大きさ', min:20, max:24, step:1, unit:'px' });
+      tweak.addSelect(design,'font',{ label:'書体', options:[{label:'太めの明朝',value:'BIZ UDPMincho'},{label:'丸みのある書体',value:'Zen Maru Gothic'},{label:'くっきりした角文字',value:'BIZ UDPGothic'}] });
+      tweak.addSelect(design,'weight',{ label:'文字の太さ', options:[{label:'太め',value:'700'},{label:'標準',value:'400'}] });
+    }
+  });
+})();
+</script>
