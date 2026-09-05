@@ -3759,18 +3759,22 @@ export default function FamilyBoardPage() {
                     ))}
                   </div>
                 </div>
-                <label className="file-button">
-                  写真を追加
-                  <input
-                    accept="image/*"
-                    multiple
-                    type="file"
-                    onChange={(event) => {
-                      void attachFiles(activeCase.id, event.target.files);
-                      event.currentTarget.value = "";
-                    }}
-                  />
-                </label>
+                <div className="diary-photo-choice">
+                  <label className="file-button">
+                    写真を追加
+                    <input
+                      accept="image/*"
+                      aria-describedby={`diary-photo-help-${activeCase.id}`}
+                      multiple
+                      type="file"
+                      onChange={(event) => {
+                        void attachFiles(activeCase.id, event.target.files);
+                        event.currentTarget.value = "";
+                      }}
+                    />
+                  </label>
+                  <p className="diary-photo-help" id={`diary-photo-help-${activeCase.id}`}>思い出の写真や、その日の様子を残せます</p>
+                </div>
               </div>
               {activeForm.files.length > 0 ? (
                 <div className="attachment-strip">

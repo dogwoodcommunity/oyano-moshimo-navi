@@ -264,6 +264,62 @@ for (const kind of ["new", "edit"]) {
 }
 assert.equal(moodScenarios, 18);
 
+// Keep explanatory text outside the photo label: pressing that text/space must
+// not trigger a file picker. Execute the actual input callback, not a copy of it.
+const photoNode = jsxWithClass("diary-photo-choice");
+const recordToolsNode = jsxWithClass("record-tool-row");
+assert.ok(photoNode.pos > recordToolsNode.pos && photoNode.end < recordToolsNode.end);
+const photoInputNodes = allNodes.filter((node) => ts.isJsxSelfClosingElement(node)
+  && node.tagName.getText(parsed) === "input" && node.pos > photoNode.pos && node.end < photoNode.end);
+assert.equal(photoInputNodes.length, 1);
+const photoChange = photoInputNodes[0].attributes.properties.find((node) => ts.isJsxAttribute(node)
+  && node.name.getText(parsed) === "onChange")?.initializer?.expression;
+assert.ok(photoChange && ts.isArrowFunction(photoChange) && ts.isBlock(photoChange.body));
+assert.equal(photoChange.body.statements.length, 2, "photo input keeps only attachFiles and clearing the native input");
+assert.equal(photoChange.body.getText(parsed).replace(/\s+/g, ""),
+  '{voidattachFiles(activeCase.id,event.target.files);event.currentTarget.value="";}');
+const photoHelpIds = new Set();
+for (const caseId of ["photo-case-one", "photo-case-two"]) {
+  const attachments = [];
+  const photo = compile(`export const choice = (${photoNode.getText(parsed)});`, {
+    activeCase: { id: caseId },
+    attachFiles(id, files) { attachments.push([id, files]); return Promise.resolve(); }
+  }).choice;
+  assert.equal(photo.type, "div");
+  assert.equal(photo.props.onClick, undefined, "wrapper whitespace must not open the native picker");
+  const directChildren = [].concat(photo.props.children).filter((node) => node && typeof node === "object");
+  assert.equal(directChildren.length, 2);
+  const label = directChildren[0];
+  const help = directChildren[1];
+  assert.equal(label.type, "label"); assert.ok(hasClass(label, "file-button"));
+  assert.equal(text(label).trim(), "写真を追加");
+  assert.equal(label.props.onClick, undefined);
+  assert.equal(help.type, "p"); assert.ok(hasClass(help, "diary-photo-help"));
+  assert.equal(text(help), "思い出の写真や、その日の様子を残せます");
+  assert.equal(help.props.onClick, undefined);
+  assert.equal(descendants(label, (node) => node === help).length, 0, "description must be the label's sibling, not its child");
+  assert.equal(descendants(help, (node) => ["input", "button", "label", "a"].includes(node.type)).length, 0);
+  const inputs = descendants(label, (node) => node.type === "input");
+  assert.equal(inputs.length, 1);
+  const input = inputs[0];
+  assert.equal(input.props.type, "file");
+  assert.equal(input.props.accept, "image/*");
+  assert.equal(input.props.multiple, true);
+  assert.equal(help.props.id, `diary-photo-help-${caseId}`);
+  assert.equal(input.props["aria-describedby"], help.props.id);
+  photoHelpIds.add(help.props.id);
+  const files = Object.freeze([{ name: "one.jpg", type: "image/jpeg" }, { name: "two.png", type: "image/png" }]);
+  for (const selection of [files, files, null]) {
+    const currentTarget = { value: "C:\\fakepath\\one.jpg" };
+    assert.equal(input.props.onChange({ target: { files: selection }, currentTarget }), undefined);
+    assert.equal(currentTarget.value, "", "clear after each selection so selecting the same photo again still works");
+    assert.equal(attachments.at(-1)[0], caseId, "photos remain attached to the active notebook's exact ID");
+    assert.equal(attachments.at(-1)[1], selection, "pass the original FileList or cancellation through unchanged");
+  }
+  assert.equal(attachments.length, 3);
+}
+assert.equal(photoHelpIds.size, 2, "description IDs must follow the active notebook, not a hard-coded person");
+
 // The mascot and heading share normal document flow; insight content is intact.
 const kizukiNode = jsxWithClass("kizuki-card");
 const notebookInsight = {
@@ -362,6 +418,27 @@ assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "padding
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-wrap"), "nowrap");
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-shrink"), "0");
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button small`, "white-space"), "nowrap");
+assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "display"), "grid");
+assert.match(declaration(`${themeRoot} .diary-photo-choice`, "grid-template-columns"), /^auto minmax\(0,\s*1fr\)$/);
+assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "align-items"), "center");
+assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "gap"), "12px");
+assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "width"), "100%");
+assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "min-width"), "0");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "margin"), "0");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "font-size"), "18px");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "font-weight"), "700");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "color"), "var(--ink)");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "line-height"), "1.6");
+assert.equal(declaration(`${themeRoot} .diary-photo-help`, "overflow-wrap"), "anywhere");
+for (const [property, expected] of [["grid-template-columns", "1fr"], ["gap", "8px"]]) {
+  let value;
+  css.walkRules(`${themeRoot} .diary-photo-choice`, (rule) => {
+    if (rule.parent.type === "atrule" && rule.parent.name === "media" && rule.parent.params === "(max-width: 760px)") {
+      rule.walkDecls(property, (decl) => { value = decl.value; });
+    }
+  });
+  assert.equal(value, expected, `mobile photo explanation must declare ${property}`);
+}
 const mainNav = read("apps/web/components/MainNav.tsx");
 assert.match(mainNav, /aria-current=\{isActive \? "page" : undefined\}/, "current navigation stays accessible");
 assert.match(mainNav, /className="nav-current-label" aria-hidden=\{!isActive\}/, "inactive status reserves layout without being announced");
@@ -559,4 +636,4 @@ for (const options of [{ denyGet: true }, { denySet: true }, { denyAccess: true 
 paletteUi.cleanups.forEach((cleanup) => cleanup());
 assert.equal(paletteUi.listeners.size, 0);
 
-console.log("B design navigation, ten colors, 18 new/edit mood scenarios, insight heading and safety contracts: passed (layout/device QA separate)");
+console.log("B design navigation, ten colors, 18 mood scenarios, photo help/input, insight heading and safety contracts: passed (layout/device QA separate)");

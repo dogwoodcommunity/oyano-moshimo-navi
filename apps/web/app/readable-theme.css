@@ -370,6 +370,10 @@ html.readable-design-b .record-chip { border-color: var(--line); border-radius: 
 html.readable-design-b .diary-voice-help { background: transparent; border-color: var(--line); }
 html.readable-design-b .diary-voice-help summary { color: var(--primary-deep); font-size: 16px; }
 
+html.readable-design-b .diary-photo-choice { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 12px; width: 100%; min-width: 0; }
+html.readable-design-b .diary-photo-choice .file-button { width: auto; white-space: nowrap; }
+html.readable-design-b .diary-photo-help { margin: 0; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.6; overflow-wrap: anywhere; }
+
 /* Keep the logo and heading in normal flow, including when text wraps or grows. */
 html.readable-design-b .kizuki-card { background: #fff; border-color: var(--line); padding: 16px; gap: 16px; }
 html.readable-design-b .kizuki-heading { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 12px; }
@@ -453,6 +457,8 @@ html.readable-design-b .display-theme-message:empty { display: none; }
 }
 
 @media (max-width: 760px) {
+  html.readable-design-b .diary-photo-choice { grid-template-columns: 1fr; gap: 8px; }
+  html.readable-design-b .diary-photo-choice .file-button { width: 100%; }
   html.readable-design-b .notebook-workspace [role="tabpanel"],
   html.readable-design-b #document-location-note { scroll-margin-top: 150px; }
   html.readable-design-b .nav { padding: 12px 16px; gap: 8px; }

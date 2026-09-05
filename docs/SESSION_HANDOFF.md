@@ -14029,3 +14029,28 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 メール/招待/AI/回答送信は行っていない。全利用者データの完全一致監査や実iPhone/Android受入とは別。
 本番タブは修正箇所を表示して残し、ローカル3119も維持。文書だけを追加commit/pushする。
 公開アプリsourceは上記6c6deb8のまま。`review_exports/` と未追跡Claude_FULL 2文書は触らない。
+
+## 2026-09-06 追記 372 — 写真ボタンに思い出を残せる説明を追加（本番反映承認済み）
+
+ユーザーの「せやな。いれて」に基づき、「写真を追加」の横に
+「思い出の写真や、その日の様子を残せます」を追加。追加文言の本番反映について
+ユーザーから「本番まで反映して」と明示承認を受領した。
+開始点はmain `19fe347`、作業ブランチは `fix/photo-helper-text`。
+
+- 画面幅761px以上は写真ボタンの横、760px以下はボタンの下へ配置。
+  18px/太さ700/本文と同じ濃色を使用。説明はlabelの外に置き、説明部分ではファイル選択を開かない。
+  読み上げ用に対象者ごとの説明IDをfile inputのaria-describedbyへ接続。
+- 写真選択のaccept/image・multiple・既存attachFiles呼出・選択後のinput初期化は不変。
+  写真/記録の保存処理、保存先、DB/Auth/権限/設定、料金や制限は変更しない。
+- 独立担当が実JSX/実callbackの回帰を追加。2対象者それぞれの写真選択・同写真再選択・cancelの
+  6イベントで対象者ID/FileList参照/入力値clearを確認。説明のlabel外配置とID接続、responsive CSSも検証。
+- source-only回帰32/32 PASS。credential除外/dotenv拒否環境のWeb production build（lint/type含む）PASS。
+  既存img/Hook/Node20警告のみ。依存更新・SQL変更なし。
+- 最終buildをローカル3119で再起動し、幅320/390/760/761/1280pxで横はみ出し0、
+  文言の画面内収容、PC横並び/スマホ縦並びを確認。実文字色rgb(25,55,70)、18px、700、button高さ48px。
+  1280px/390pxの実画面を目視確認。console error/warn 0、viewport override解除済み。
+  ファイル選択/写真upload/保存は実行せず、既存の架空記録1件を保持。
+
+この差分と引き継ぎをcommit/mainへ反映し、exact SHAのCI成功後に限定公開する。
+実機iPhone/Android確認は別。本番公開の完了証跡は次追記に記載する。
+`review_exports/` と未追跡Claude_FULL 2文書は触らず、公開書庫にも含めない。
