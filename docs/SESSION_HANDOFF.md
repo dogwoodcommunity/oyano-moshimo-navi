@@ -12318,3 +12318,33 @@ mainへpushし、そのclean HEADからVercel本番を再deployした。
 
 `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま。削除依頼PATCH、preflight、execute、削除RPC、
 Auth・Storage削除は行っておらず、既存本番データは変更・削除していない。
+
+## 2026-09-05 追記 324 — 本番の削除専用ログインと権限分離を確認
+
+登録済み削除専用実行者へ新しい本番Magic Linkを1通送信し、本人がChromeで開いた。
+公開aliasの `/admin/delete-requests` へ戻り、登録済み本人の認証済み表示、登録済みTOTP factor、
+AAL1からの追加認証案内、削除依頼一覧を確認した。個人メール、実Auth UUID、tokenは記録していない。
+
+- 対象deploymentは `dpl_HjCxNNBgixEqg4qrGPsKjJnzKgBB`。
+- 本人セッションの `/api/admin/delete-requests/auth-status` と削除依頼一覧GETは各200だった。
+  削除依頼は0件で、画面には「削除依頼はまだありません。」と表示された。
+- 同じ本人セッションで、モニター回答、AI利用、本番設定の一般Admin APIは各403だった。
+  削除専用roleが一般Admin権限へ広がっていないことを確認した。
+- 削除依頼PATCH、削除前確認、削除実行POST、DB削除RPC、Auth削除、Storage削除は呼んでいない。
+- Vercel Productionの `ACCOUNT_ERASURE_EXECUTION_ENABLED` は未登録でfail closedのOFFを維持している。
+- ユーザーが続けて確認できるよう、Chromeの本人セッションはログインしたまま残した。
+  ログアウト後401の手動確認は行っていないが、未認証APIの401は既存smokeで確認している。
+- 既存利用者、モニター回答、日記、写真、AI相談、family・対象者・profile・削除依頼・削除jobを
+  作成・変更・削除していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+- `pnpm run test:commercial-release-gates`、`pnpm run test:account-delete-executor`、
+  `pnpm run test:web-account-deletion`、`pnpm run test:delete-operator-mfa-setup`、
+  `pnpm --filter web run typecheck`、`node --check scripts/test-commercial-release-gates.mjs`、
+  `git diff --check` は最終状態ですべて成功した。
+- 独立資料監査はP0/P1/P2なしのGOで、200・403・0件と、破壊操作未実施・スイッチOFFの境界が
+  本番checklist、商用運用手順、公開準備台帳、gateテスト、引継ぎで一致していることを確認した。
+
+削除専用ログインと権限分離の試験は完了した。次はAAL1での削除前確認とAAL2での
+単独テストアカウント完全削除だが、これは破壊的な別工程である。新しい実行時明示承認を得るまで、
+実行スイッチON、preflight、execute、実削除へ進めない。

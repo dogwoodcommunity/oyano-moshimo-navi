@@ -54,7 +54,8 @@
 - [x] `supabase/verify_setup.sql` / `verify_compact.sql` で主要項目trueを確認
 - [x] `supabase/api_grants.sql` を実行
 - [x] Project URL / publishable key / service role keyをローカルenvに設定
-- [ ] Auth Email Magic Linkの本番Redirect URL最終確認
+- [x] Auth Email Magic Linkの本番Redirect URL最終確認
+  - 2026-09-05確認: 登録済み削除専用実行者への本番Magic Linkが公開aliasの `/admin/delete-requests` へ戻り、本人セッションで認証済み表示と一覧GET 200を確認。
 - [x] `home-photos` bucket確認
 
 ## 3. Vercel
@@ -69,7 +70,8 @@
 - [x] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [x] `/admin` を確認
 - [ ] `/admin/delete-requests` で、共有家族ownerは完全削除が停止し、所有権移管後のみ再開できることを2アカウントで確認
-- [ ] 登録済み削除専用実行者本人の個別セッションで `/admin/delete-requests` だけを利用でき、モニター回答・利用状況・本番設定APIは403になることを確認
+- [x] 登録済み削除専用実行者本人の個別セッションで `/admin/delete-requests` だけを利用でき、モニター回答・利用状況・本番設定APIは403になることを確認
+  - 2026-09-05確認: deployment `dpl_HjCxNNBgixEqg4qrGPsKjJnzKgBB` で削除専用auth-statusと一覧GETが200、モニター回答・AI利用・本番設定APIが各403。削除依頼は0件で、PATCH・preflight・executeは未実行。
 - [ ] AAL1では削除前確認だけ、登録済みTOTPでAAL2へ上げた後だけ完全削除が可能なことを確認
 - [ ] 単独テストアカウントでAuth・DB・Storageの削除と再実行時の冪等性を確認後、削除運用を開始
 - [x] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
