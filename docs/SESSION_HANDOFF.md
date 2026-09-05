@@ -12204,3 +12204,28 @@ SESSION_HANDOFFを更新し、許可した5ファイルだけをmainへpushし�
 次の1項目は、登録済み削除実行者本人の個別セッションで `/admin/delete-requests` にログインし、
 削除依頼画面だけ利用でき、モニター回答・利用状況・本番設定APIは403になることを確認することである。
 これはログインと権限分離の確認だけとし、実行スイッチON、削除前確認、完全削除は別承認まで行わない。
+
+## 2026-09-05 追記 320 — 本番有効化の記録をmainへ反映
+
+追記319の本番実績に合わせ、商用運用手順、公開準備台帳、本番checklist、商用gateテスト、
+SESSION_HANDOFFを更新し、対象5ファイルだけをmainへpushした。
+
+- commit: `9a31631b078c3da79552deda239e6b273198c792`
+- `pnpm run test:commercial-release-gates`、`pnpm run test:account-delete-executor`、
+  `pnpm run test:delete-operator-mfa-setup`、`pnpm run test:web-account-deletion`、
+  `node --check scripts/test-commercial-release-gates.mjs`、`git diff --check` はすべて成功した。
+- 限定stageの `git diff --cached --check` とGitleaksが成功し、secret検出は0件だった。
+- 独立最終監査はP0/P1なしのGO。削除専用role有効化と、未完了の本人ログイン・権限分離試験、
+  実行スイッチOFF、単独テスト削除未完了を資料とテストで分離していることを確認した。
+- main CI run `33942778993` は2分27秒で成功した。型検査、monitor、認証、削除専用権限、
+  private台帳を含む削除系PostgreSQL回帰、家族権限、AI記憶、日記・対象者削除、build、smokeを含む。
+- Deploy workflow run `33942778995` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  今回は本番DBのrole有効化と文書・テスト更新だけでWeb runtime byteを変更していないため、
+  このworkflowをVercel本番deployの証拠にはしておらず、CLI deployも行っていない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFF、承認event 1件、private台帳総数2件、
+  executor総数1件・有効1件、削除job 0件の事後確認状態を維持している。
+- 未追跡の `review_exports/` は参照・変更・stage・commitしていない。
+  `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は変更・stage・commitしていない。
+
+次は追記319記載の削除専用ログイン・権限分離試験である。本人の個別セッションが必要であり、
+完全削除スイッチONや削除操作とは分離して進める。
