@@ -69,6 +69,11 @@ jobs:
       - name: Test readable three-entry design
         run: pnpm run test:readable-design-b
 
+      - name: Test diary text preservation and Unicode excerpts
+        run: |
+          pnpm run test:notebook-diary-text
+          pnpm run test:unicode-display-text
+
       - name: Test home overview reachability
         run: pnpm run test:home-overview-reachability
 

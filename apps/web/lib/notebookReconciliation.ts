@@ -10,6 +10,18 @@ export type NotebookReconciliationInput = {
   binding: NotebookCloudBinding | null;
 };
 
+// This is the existing reconciliation RPC limit, NOT a normal diary limit.
+// PostgreSQL length(text) counts Unicode code points rather than UTF-16 units.
+export function reconciliationBodyTooLong(body: string) {
+  let length = 0;
+  for (const _point of body) {
+    if (++length > 10_000) return true;
+  }
+  return false;
+}
+
+export const RECONCILIATION_BODY_LIMIT_MESSAGE = "2つの手帳をまとめる操作は、1件10,000文字までです。長い記録があるため、どちらの手帳も変更せずに止めました。通常の記録・保存にはこの文字数制限はありません。記録を削らず、それぞれの手帳と端末の控えを残してください。";
+
 // Stable across retries, including a lost successful HTTP response. Never reuse
 // a source ID on the destination: two independently created diaries may collide.
 export async function reconciledDiaryId(sourceCaseId: string, sourceDiaryId: string) {
@@ -67,13 +79,16 @@ export async function planNotebookReconciliation(input: NotebookReconciliationIn
   let alreadyPresentCount = 0;
   for (const entry of local.diaryEntries) {
     if (!entry.id || entry.id.length > 200 || sourceCase.id.length > 200 || entry.caseId !== sourceCase.id
-        || hasCloudIdentity(entry) || !entry.body.trim() || entry.body.length > 10_000
+        || hasCloudIdentity(entry) || !entry.body.trim()
         || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date)
         || !Number.isFinite(Date.parse(`${entry.date}T00:00:00.000Z`))
         || new Date(`${entry.date}T00:00:00.000Z`).toISOString().slice(0, 10) !== entry.date
         || !Number.isFinite(Date.parse(entry.createdAt))
         || !Number.isFinite(Date.parse(entry.updatedAt ?? entry.createdAt))) {
       throw new Error("端末の記録を安全に追加できないため、内容は変えずに止めました。");
+    }
+    if (reconciliationBodyTooLong(entry.body)) {
+      throw new Error(RECONCILIATION_BODY_LIMIT_MESSAGE);
     }
     if (!Array.isArray(entry.attachments) || entry.attachments.length > 0) {
       throw new Error("写真付きの日記はまだまとめられません。写真を消さず、端末の手帳を残してください。");

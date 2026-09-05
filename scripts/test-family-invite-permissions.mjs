@@ -330,6 +330,13 @@ acceptRpcCalls = 0;
 }
 
 const familyShare = fs.readFileSync(path.join(repoRoot, "apps/web/components/FamilyShare.tsx"), "utf8");
+const familyPage = fs.readFileSync(path.join(repoRoot, "apps/web/app/family/page.tsx"), "utf8");
+assert.ok(familyPage.indexOf('id="family-sharing-scope-title"') < familyPage.indexOf("<FamilyShare />"), "sharing scope is visible before auth/invitation controls");
+assert.match(familyPage, /書類・鍵の保管場所も共有/);
+assert.match(familyPage, /AIが覚えている要約・重要な変化・家族が補足した情報も共有/);
+assert.match(familyPage, /質問・回答の履歴は、相談した本人だけ/);
+assert.match(familyPage, /この回答を手帳に残す[\s\S]*家族にも見えます/);
+assert.ok(familyShare.indexOf("familyInvitePermission(inviteRole).fullDescription") < familyShare.indexOf("onClick={createInvite}"), "role restrictions are shown before a link can be created");
 const inviteAccept = fs.readFileSync(path.join(repoRoot, "apps/web/components/InviteAccept.tsx"), "utf8");
 const invitePage = fs.readFileSync(path.join(repoRoot, "apps/web/app/invite/[token]/page.tsx"), "utf8");
 

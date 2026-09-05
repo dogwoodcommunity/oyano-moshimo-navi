@@ -292,6 +292,20 @@ assert.equal((await call(payload(maximum))).status, 200);
 assert.equal(scenario.rpcCalls[0].p_diary_entries.length, 100);
 assert.equal(new Set(scenario.rpcCalls[0].p_diary_entries.map((entry) => entry.localDiaryId)).size, 100);
 
+for (const body of ["あ".repeat(9999), "あ".repeat(10000), "🙂".repeat(5001), "🙂".repeat(10000), " \r\n記録🙂\n\n"]) {
+  reset();
+  assert.equal((await call(payload([{ ...original, body }]))).status, 200);
+  assert.equal(scenario.rpcCalls[0].p_diary_entries[0].body, body, "accepted text reaches the RPC unchanged");
+}
+for (const body of ["あ".repeat(10001), "🙂".repeat(10001)]) {
+  reset();
+  const response = await call(payload([{ ...original, body }]));
+  assert.equal(response.status, 400);
+  assert.equal(response.body.error, "reconcile_body_too_long");
+  assert.match(response.body.message, /どちらの手帳も変更せず/);
+  assert.equal(scenario.rpcCalls.length, 0, "oversize reconciliation never writes or truncates");
+}
+
 const routeAst = ts.createSourceFile(routePath, routeSource, ts.ScriptTarget.ES2022, true);
 function checkNoDirectWrites(node) {
   if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {

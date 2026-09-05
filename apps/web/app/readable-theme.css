@@ -392,6 +392,10 @@ html.readable-design-b .entry-advice-body ul { padding: 0 0 0 24px; }
 html.readable-design-b .diary-month-head { background: var(--cover-sub); border-color: var(--line); box-shadow: none; }
 html.readable-design-b .diary-month-head h3 { font-size: 22px; }
 
+html.readable-design-b .history-export-shortcut { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+html.readable-design-b .history-export-shortcut a { display: inline-flex; align-items: center; min-height: 48px; font-size: 18px; font-weight: 700; color: var(--primary-deep); text-decoration: underline; text-underline-offset: 4px; }
+html.readable-design-b .history-export-shortcut p { margin: 4px 0 0; color: var(--ink-sub); font-size: 16px; }
+
 html.readable-design-b .record-calendar-head { grid-template-columns: 48px minmax(0, 1fr) 48px; }
 html.readable-design-b .record-calendar-head button { width: 48px; height: 48px; border-color: var(--line); color: var(--primary-deep); }
 html.readable-design-b .record-calendar-day { border-color: var(--line); color: var(--ink-sub); min-height: 48px; }

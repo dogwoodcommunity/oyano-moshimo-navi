@@ -23,7 +23,9 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 29);
+assert.equal(createPlan({ sourceOnly: true }).length, 31);
+assert.ok(plan.some((step) => step.id === "source:notebook-diary-text"));
+assert.ok(plan.some((step) => step.id === "source:unicode-display-text"));
 assert.ok(plan.some((step) => step.id === "source:readable-design-b"));
 assert.equal(plan.filter((step) => step.id.startsWith("sql:")).length, 10);
 assert.ok(plan.some((step) => step.id === "source:family-role-security"));

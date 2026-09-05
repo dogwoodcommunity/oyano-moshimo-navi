@@ -511,6 +511,14 @@ export function FamilyShare() {
               );
             })}
           </div>
+          {inviteRole ? (
+            <p className="family-note" role="status">
+              {familyInvitePermission(inviteRole).fullDescription}
+              {inviteRole === "member"
+                ? " AI相談と、共有するAIの記憶への補足・訂正もできます。"
+                : " 共有するAIの記憶への補足・訂正もできません。"}
+            </p>
+          ) : null}
           <button
             className="family-primary"
             disabled={busy || !summary || isFull || !inviteEmail.trim() || !inviteRole}

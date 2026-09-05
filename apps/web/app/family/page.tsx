@@ -31,6 +31,13 @@ export default function FamilyPage() {
         </ol>
       </section>
 
+      <section className="family-card family-sharing-scope" aria-labelledby="family-sharing-scope-title">
+        <h2 id="family-sharing-scope-title">招待する前に：家族に見える内容</h2>
+        <p>クラウドに保存した日記・写真・プロフィール・確認リストは、「見るだけ」を選んでも家族に見えます。書類・鍵の保管場所も共有されます。</p>
+        <p>AIが覚えている要約・重要な変化・家族が補足した情報も共有されます。</p>
+        <p>AI相談の質問・回答の履歴は、相談した本人だけが見られます。ただし「この回答を手帳に残す」で記録した内容は、家族にも見えます。</p>
+      </section>
+
       <FamilyShare />
 
       <p className="family-safety">

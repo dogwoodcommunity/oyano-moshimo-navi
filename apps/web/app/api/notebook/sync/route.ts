@@ -722,7 +722,9 @@ function normalizedNotebookDiary(
     cloudHash: safeText(entry.cloudHash) || null,
     date: safeDate(entry.date),
     title: mood === "urgent" ? "急ぎの記録" : mood === "changed" ? "変化の記録" : "日々の記録",
-    body: safeText(entry.body) || "記録",
+    // Validate emptiness without rewriting stored text. Reconciliation and
+    // conflict hashes rely on exact contents, including spaces and newlines.
+    body: typeof entry.body === "string" && entry.body.trim() ? entry.body : "記録",
     mood,
     attachments: attachmentSnapshot(entry.attachments, allowedNotebookPhotoUserIds),
     metadata: {},

@@ -41,6 +41,8 @@
     "test:memory-book-export": "node scripts/test-memory-book-export.mjs",
     "test:free-first-redesign": "node scripts/test-free-first-redesign.mjs",
     "test:readable-design-b": "node scripts/test-readable-design-b.mjs",
+    "test:notebook-diary-text": "node scripts/test-notebook-diary-text.mjs",
+    "test:unicode-display-text": "node scripts/test-unicode-display-text.mjs",
     "test:web-account-deletion": "node scripts/test-web-account-deletion.mjs",
     "test:account-delete-executor": "node scripts/test-account-delete-executor-auth.mjs",
     "test:admin-delete-access-check": "node scripts/test-admin-delete-access-check.mjs",

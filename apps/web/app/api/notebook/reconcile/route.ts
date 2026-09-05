@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
-import { reconciledDiaryId } from "@/lib/notebookReconciliation";
+import { reconciledDiaryId, reconciliationBodyTooLong, RECONCILIATION_BODY_LIMIT_MESSAGE } from "@/lib/notebookReconciliation";
 import { getServerSupabase } from "@/lib/serverSupabase";
 
 type JsonRecord = Record<string, unknown>;
@@ -52,7 +52,7 @@ function unboundDiary(value: unknown, sourceCaseId: string): value is UnboundDia
     && localId(entry.id) && entry.caseId === sourceCaseId
     && validDate(entry.date)
     && (entry.mood === "stable" || entry.mood === "changed" || entry.mood === "urgent")
-    && typeof entry.body === "string" && entry.body.trim().length > 0 && entry.body.length <= 10_000
+    && typeof entry.body === "string" && entry.body.trim().length > 0
     && Array.isArray(entry.attachments) && entry.attachments.length === 0
     && validIso(entry.createdAt)
     && (!("updatedAt" in entry) || validIso(entry.updatedAt)));
@@ -105,6 +105,9 @@ export async function POST(request: Request) {
       || !entries.every((entry): entry is UnboundDiary => unboundDiary(entry, sourceCaseId))
       || new Set(entries.map((entry) => entry.id)).size !== entries.length) {
       return errorResponse("invalid_diary", "端末だけにある文字の記録を1〜100件選んでください。写真付き・保存先確認済み・内容が不正な記録は追加できません。", 400);
+    }
+    if (entries.some((entry) => reconciliationBodyTooLong(entry.body))) {
+      return errorResponse("reconcile_body_too_long", RECONCILIATION_BODY_LIMIT_MESSAGE, 400);
     }
 
     const { data: membership, error: membershipError } = await supabase

@@ -7,6 +7,7 @@ import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { NotebookReconciliation } from "@/components/NotebookReconciliation";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
+import { truncateDisplayText } from "@/lib/displayText";
 import { PREFECTURES } from "@/lib/prefectures";
 import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
@@ -226,8 +227,7 @@ function formatLongDate(dateString?: string) {
 
 function clipText(value: string, maxLength: number) {
   const normalized = value.replace(/\s+/g, " ").trim();
-  if (normalized.length <= maxLength) return normalized;
-  return `${normalized.slice(0, maxLength)}…`;
+  return truncateDisplayText(normalized, maxLength);
 }
 
 function daysUntil(dateString?: string) {
@@ -1455,9 +1455,7 @@ export default function FamilyBoardPage() {
   const savedDiaryEntry = diarySavedId ? activeEntries.find((entry) => entry.id === diarySavedId) : undefined;
   const daysFromLatestEntry = daysSince(latestEntry?.date);
   const latestEntrySummary = latestEntry
-    ? latestEntry.body.length > 92
-      ? `${latestEntry.body.slice(0, 92)}…`
-      : latestEntry.body
+    ? truncateDisplayText(latestEntry.body, 92)
     : "まだ記録はありません。今日の様子を1行だけ残すと、ここに流れが出ます。";
   const latestEntryLabel = latestEntry
     ? daysFromLatestEntry === 0
@@ -2437,7 +2435,7 @@ export default function FamilyBoardPage() {
     }
     const updated = addCaseTask(caseId, {
       title: diaryTaskTitle(entry),
-      description: `${formatLongDate(entry.date)}の記録から追加: ${entry.body.slice(0, 90)}`,
+      description: `${formatLongDate(entry.date)}の記録から追加: ${truncateDisplayText(entry.body, 90, "")}`,
       dueDate: dateInputAfterDays(entry.mood === "urgent" ? 1 : 7),
       priority: entry.mood === "urgent" ? 1 : 2,
       progress: "todo",
@@ -3723,10 +3721,12 @@ export default function FamilyBoardPage() {
               ) : null}
               <details className="diary-voice-help">
                 <summary>声で入力する方法を見る（使わなくても大丈夫）</summary>
+                <p>スマホの音声入力で、話した言葉を文字にできます。</p>
                 <ol>
                   <li>上の白い入力欄を押します。</li>
-                  <li>画面下に出る文字入力画面（キーボード）の「🎤」を押します。</li>
+                  <li>画面下に出る文字入力画面（キーボード）の、マイクの形のボタン（🎤）を押します。</li>
                   <li>残したい内容を話します。</li>
+                  <li>入力された文字を確認し、「この人の手帳に残す」を押して保存します。</li>
                 </ol>
                 <p>「🎤」が見当たらない時は、そのまま文字で入力してください。</p>
               </details>
@@ -3916,6 +3916,10 @@ export default function FamilyBoardPage() {
               <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
             </div>
             <article className="nb-card history-card">
+              <div className="history-export-shortcut">
+                <Link className="quiet-link" href={`/memory-book/${activeCase.id}`}>記録をPDFに保存・印刷する</Link>
+                <p>まとめる期間は、次の画面で選べます。無料です。</p>
+              </div>
               {diaryDeleteNotice ? <p className="diary-delete-notice" role="status">{diaryDeleteNotice}</p> : null}
               {activeEntries.length > 0 ? (
                 <DiaryCalendar

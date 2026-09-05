@@ -60,6 +60,7 @@ export function DisplayThemePicker() {
           <fieldset aria-describedby="display-theme-help">
             <legend>画面の色を選ぶ（10色）</legend>
             <p id="display-theme-help">押すとすぐに変わります。保存できた場合は、同じブラウザで次に開くときも選んだ色になります。記録の内容は変わりません。</p>
+            <p>色は別の端末には引き継がれません。このブラウザを一緒に使う方には、同じ色で表示されます。</p>
             <div className="display-theme-options">
               {displayThemes.map((theme) => (
                 <label className="display-theme-option" key={theme.id} style={{ backgroundColor: theme.action }}>
