@@ -3735,9 +3735,9 @@ export default function FamilyBoardPage() {
                 <div className="mood-choice">
                   <div className="mood-choice-head">
                     <strong>記録の種類を選ぶ</strong>
-                    <span>3つから1つ選択できます</span>
+                    <span>ボタンを押して、3つから1つ選べます</span>
                   </div>
-                  <div className="mood-segment" aria-label="今日の変化">
+                  <div className="mood-segment" role="group" aria-label="今日の変化">
                     {([
                       ["stable", "通常"],
                       ["changed", "変化あり"],
@@ -3750,8 +3750,11 @@ export default function FamilyBoardPage() {
                         type="button"
                         onClick={() => updateForm(activeCase.id, { mood: value })}
                       >
-                        <span>{label}</span>
-                        {activeForm.mood === value ? <small>選択中</small> : null}
+                        <span className="mood-choice-label">
+                          <span className="mood-choice-mark" aria-hidden="true">{activeForm.mood === value ? "✓" : "○"}</span>
+                          <span>{label}</span>
+                        </span>
+                        <small>{activeForm.mood === value ? "選択中" : "押して選ぶ"}</small>
                       </button>
                     ))}
                   </div>
@@ -3819,8 +3822,10 @@ export default function FamilyBoardPage() {
           {latestEntry && notebookInsight ? (
             <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} aria-label="ナビからの次の一歩">
               <article className="kizuki-card">
-                <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                <span className="tag">ナビからのひとこと</span>
+                <div className="kizuki-heading">
+                  <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                  <h2 className="kizuki-title">ナビからのひとこと</h2>
+                </div>
                 <strong>{notebookInsight.patternTitle}</strong>
                 <p>{notebookInsight.patternBody}</p>
                 <div className="kizuki-forecast">
@@ -4013,9 +4018,9 @@ export default function FamilyBoardPage() {
                                     <div className="mood-choice">
                                       <div className="mood-choice-head">
                                         <strong>記録の種類を選ぶ</strong>
-                                        <span>3つから1つ選択できます</span>
+                                        <span>ボタンを押して、3つから1つ選べます</span>
                                       </div>
-                                      <div className="mood-segment" aria-label="記録の種類">
+                                      <div className="mood-segment" role="group" aria-label="記録の種類">
                                         {([
                                           ["stable", "通常"],
                                           ["changed", "変化あり"],
@@ -4028,8 +4033,11 @@ export default function FamilyBoardPage() {
                                             type="button"
                                             onClick={() => updateDiaryEditForm(entry.id, { mood: value })}
                                           >
-                                            <span>{label}</span>
-                                            {editForm.mood === value ? <small>選択中</small> : null}
+                                            <span className="mood-choice-label">
+                                              <span className="mood-choice-mark" aria-hidden="true">{editForm.mood === value ? "✓" : "○"}</span>
+                                              <span>{label}</span>
+                                            </span>
+                                            <small>{editForm.mood === value ? "選択中" : "押して選ぶ"}</small>
                                           </button>
                                         ))}
                                       </div>

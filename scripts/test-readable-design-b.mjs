@@ -180,6 +180,116 @@ assert.equal(noCase.events.length, 0, "AI entry must not navigate using a missin
 const noToday = harness([fixtureEntry], { todayEntry: null });
 assert.ok(text(noToday.entries).includes("今日あったことを1行から"));
 
+// Actual new/edit mood JSX and draft updaters: selecting a mood is not a save.
+const hasClass = (node, name) => typeof node?.props?.className === "string" && node.props.className.split(/\s+/).includes(name);
+const moodNodes = allNodes.filter((node) => ts.isJsxElement(node) &&
+  node.openingElement.attributes.properties.some((attribute) => ts.isJsxAttribute(attribute)
+    && attribute.name.getText(parsed) === "className" && ts.isStringLiteral(attribute.initializer)
+    && attribute.initializer.text === "mood-choice"));
+assert.equal(moodNodes.length, 2, "new and edit diary forms both need the same visible mood choices");
+const newMoodNode = moodNodes.find((node) => node.getText(parsed).includes("activeForm.mood"));
+const editMoodNode = moodNodes.find((node) => node.getText(parsed).includes("editForm.mood"));
+assert.ok(newMoodNode && editMoodNode);
+const newCaseId = "mood-new-case";
+const editedEntryId = "mood-edit-entry";
+const untouchedId = "mood-other-id";
+let draftForms;
+let editDrafts;
+let draftUpdates;
+const moodUi = compile(`${helper("updateForm")}\n${helper("updateDiaryEditForm")}
+  export function newChoices(activeForm: any) { return (${newMoodNode.getText(parsed)}); }
+  export function editChoices(editForm: any) { return (${editMoodNode.getText(parsed)}); }`, {
+  activeCase: { id: newCaseId }, entry: { id: editedEntryId },
+  emptyDiaryForm: { body: "", date: "2026-09-05", mood: "stable", files: [] },
+  todayInputValue: () => "2026-09-05",
+  setForms(updater) { draftUpdates.push("new"); draftForms = updater(draftForms); },
+  setDiaryEditForms(updater) { draftUpdates.push("edit"); editDrafts = updater(editDrafts); },
+  setDiarySavedId(value) { assert.equal(value, null); },
+  setDiaryUpdatedId(value) { assert.equal(value, null); },
+  setDiaryValidationCaseId() { assert.fail("mood selection must not pretend the body validation was resolved"); }
+});
+const moodValues = ["stable", "changed", "urgent"];
+const moodLabels = ["通常", "変化あり", "急ぎ"];
+function assertMoodChoices(tree, selected) {
+  assert.ok(text(tree).includes("ボタンを押して、3つから1つ選べます"));
+  const groups = descendants(tree, (node) => hasClass(node, "mood-segment"));
+  assert.equal(groups.length, 1);
+  assert.equal(groups[0].props.role, "group");
+  assert.ok(groups[0].props["aria-label"]);
+  const buttons = descendants(tree, (node) => node.type === "button");
+  assert.equal(buttons.length, 3);
+  assert.deepEqual(buttons.map((button) => button.props["aria-pressed"]), moodValues.map((value) => value === selected));
+  buttons.forEach((button, index) => {
+    const selectedButton = moodValues[index] === selected;
+    assert.equal(button.props.type, "button", "mood choices must never submit the diary form");
+    assert.equal(typeof button.props.onClick, "function");
+    assert.equal(hasClass(button, "is-active"), selectedButton);
+    assert.ok(text(button).includes(moodLabels[index]));
+    const marks = descendants(button, (node) => hasClass(node, "mood-choice-mark"));
+    assert.equal(marks.length, 1);
+    assert.ok([true, "true"].includes(marks[0].props["aria-hidden"]), "decorative selection marks must not replace aria-pressed");
+    assert.equal(text(marks[0]), selectedButton ? "✓" : "○");
+    const cues = descendants(button, (node) => node.type === "small");
+    assert.equal(cues.length, 1, "every choice must advertise that it can be pressed");
+    assert.equal(text(cues[0]), selectedButton ? "選択中" : "押して選ぶ");
+  });
+  return buttons;
+}
+let moodScenarios = 0;
+for (const kind of ["new", "edit"]) {
+  for (const initialMood of moodValues) {
+    for (const targetMood of moodValues) {
+      const seed = Object.freeze({ body: "  仮の本文🙂\r\n末尾\n", date: "2026-08-23", mood: initialMood,
+        files: Object.freeze([{ id: "preserved-photo-fixture" }]) });
+      const unrelated = Object.freeze({ ...seed, body: "別の記録は変えない" });
+      draftForms = Object.freeze({ [newCaseId]: seed, [untouchedId]: unrelated });
+      editDrafts = Object.freeze({ [editedEntryId]: seed, [untouchedId]: unrelated });
+      draftUpdates = [];
+      const renderChoices = () => kind === "new" ? moodUi.newChoices(draftForms[newCaseId]) : moodUi.editChoices(editDrafts[editedEntryId]);
+      const buttons = assertMoodChoices(renderChoices(), initialMood);
+      buttons[moodValues.indexOf(targetMood)].props.onClick();
+      assert.deepEqual(draftUpdates, [kind], "new/edit buttons must call only their own real draft updater");
+      const changed = kind === "new" ? draftForms[newCaseId] : editDrafts[editedEntryId];
+      assert.deepEqual(JSON.parse(JSON.stringify(changed)), { ...seed, mood: targetMood }, "mood selection preserves the exact body/date/files");
+      assert.deepEqual(Object.keys(draftForms).sort(), [newCaseId, untouchedId].sort());
+      assert.deepEqual(Object.keys(editDrafts).sort(), [editedEntryId, untouchedId].sort());
+      assert.equal(draftForms[untouchedId], unrelated);
+      assert.equal(editDrafts[untouchedId], unrelated);
+      assert.equal(kind === "new" ? editDrafts[editedEntryId] : draftForms[newCaseId], seed, "the other form must remain untouched");
+      assert.equal(seed.mood, initialMood, "selecting another mood must not mutate the source object");
+      assertMoodChoices(renderChoices(), targetMood);
+      moodScenarios++;
+    }
+  }
+}
+assert.equal(moodScenarios, 18);
+
+// The mascot and heading share normal document flow; insight content is intact.
+const kizukiNode = jsxWithClass("kizuki-card");
+const notebookInsight = {
+  patternTitle: "仮の気づき", patternBody: "仮の観察内容を残す",
+  forecastTitle: "仮の次の備え", forecastBody: "備えの説明を残す",
+  questions: ["家族への質問その1", "家族への質問その2", "家族への質問その3"]
+};
+const kizuki = compile(`export const card = (${kizukiNode.getText(parsed)});`, { notebookInsight }).card;
+const cardChildren = [].concat(kizuki.props.children).filter((node) => node && typeof node === "object");
+assert.ok(hasClass(cardChildren[0], "kizuki-heading"), "the mascot/title header must precede the insight body");
+const heading = cardChildren[0];
+const mascots = descendants(kizuki, (node) => hasClass(node, "kizuki-mascot"));
+const titles = descendants(kizuki, (node) => hasClass(node, "kizuki-title"));
+assert.equal(mascots.length, 1); assert.equal(titles.length, 1);
+assert.ok(descendants(heading, (node) => node === mascots[0]).length === 1);
+assert.ok(descendants(heading, (node) => node === titles[0]).length === 1);
+assert.equal(mascots[0].type, "img");
+assert.ok([true, "true"].includes(mascots[0].props["aria-hidden"]));
+assert.equal(titles[0].type, "h2");
+assert.equal(text(titles[0]), "ナビからのひとこと");
+assert.equal(descendants(kizuki, (node) => hasClass(node, "tag")).length, 0, "the old absolute-positioned tag must not remain");
+for (const value of [notebookInsight.patternTitle, notebookInsight.patternBody, notebookInsight.forecastTitle,
+  notebookInsight.forecastBody, ...notebookInsight.questions, "医療・法律・税務の判断はしません。"]) {
+  assert.ok(text(kizuki).includes(value), `insight content must remain present: ${value}`);
+}
+
 const layout = read("apps/web/app/layout.tsx");
 const globalCss = read("apps/web/app/globals.css");
 const theme = read("apps/web/app/readable-theme.css");
@@ -213,6 +323,45 @@ function declaration(selector, property) {
   return value;
 }
 const themeRoot = "html.readable-design-b";
+assert.equal(declaration(`${themeRoot} .kizuki-card`, "padding"), "16px");
+let cardDisplay;
+for (const [sheet, selector] of [[postcss.parse(globalCss), ".kizuki-card"], [css, `${themeRoot} .kizuki-card`]]) {
+  sheet.walkRules(selector, (rule) => {
+    if (rule.parent.type === "root") rule.walkDecls("display", (decl) => { cardDisplay = decl.value; });
+  });
+}
+assert.equal(cardDisplay, "grid", "the B card may retain its existing grid display from globals");
+assert.equal(declaration(`${themeRoot} .kizuki-card`, "gap"), "16px");
+assert.equal(declaration(`${themeRoot} .kizuki-heading`, "display"), "grid");
+assert.match(declaration(`${themeRoot} .kizuki-heading`, "grid-template-columns"), /^48px minmax\(0,\s*1fr\)$/);
+assert.equal(declaration(`${themeRoot} .kizuki-heading`, "gap"), "12px");
+assert.equal(declaration(`${themeRoot} .kizuki-mascot`, "position"), "static");
+assert.equal(declaration(`${themeRoot} .kizuki-title`, "margin"), "0");
+assert.equal(declaration(`${themeRoot} .mood-segment`, "display"), "grid");
+assert.match(declaration(`${themeRoot} .mood-segment`, "grid-template-columns"), /^repeat\(3,\s*minmax\(0,\s*1fr\)\)$/);
+assert.equal(declaration(`${themeRoot} .mood-segment button`, "background"), "#fff");
+assert.equal(declaration(`${themeRoot} .mood-segment button`, "border"), "2px solid var(--primary-deep)");
+assert.ok(parseFloat(declaration(`${themeRoot} .mood-segment button`, "min-height")) >= 72);
+assert.equal(declaration(`${themeRoot} .mood-segment button.is-active`, "background"), "var(--action-bg)");
+function narrowMoodDeclaration(selector, property) {
+  let value;
+  css.walkRules(selector, (rule) => {
+    if (rule.parent.type !== "atrule" || rule.parent.name !== "media"
+        || rule.parent.params !== "(max-width: 480px)") return;
+    rule.walkDecls(property, (decl) => { value = decl.value; });
+  });
+  assert.ok(value, `narrow mood layout must declare ${selector} ${property}`);
+  return value;
+}
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment`, "grid-template-columns"), "1fr");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "flex-direction"), "row");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "flex-wrap"), "wrap");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "justify-content"), "space-between");
+assert.ok(parseFloat(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "min-height")) >= 60);
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "padding"), "10px 12px");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-wrap"), "nowrap");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-shrink"), "0");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button small`, "white-space"), "nowrap");
 const mainNav = read("apps/web/components/MainNav.tsx");
 assert.match(mainNav, /aria-current=\{isActive \? "page" : undefined\}/, "current navigation stays accessible");
 assert.match(mainNav, /className="nav-current-label" aria-hidden=\{!isActive\}/, "inactive status reserves layout without being announced");
@@ -410,4 +559,4 @@ for (const options of [{ denyGet: true }, { denySet: true }, { denyAccess: true 
 paletteUi.cleanups.forEach((cleanup) => cleanup());
 assert.equal(paletteUi.listeners.size, 0);
 
-console.log("B design entry rendering/navigation, ten display colors and source safety contracts: passed (layout/device QA separate)");
+console.log("B design navigation, ten colors, 18 new/edit mood scenarios, insight heading and safety contracts: passed (layout/device QA separate)");

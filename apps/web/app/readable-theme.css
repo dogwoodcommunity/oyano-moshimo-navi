@@ -354,14 +354,28 @@ html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textar
 html.readable-design-b :is(.record-date-row input, .diary-edit-panel input) { min-height: 52px; min-width: 0; max-width: 100%; font-size: 20px; color: var(--ink); }
 html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textarea)::placeholder { color: var(--ink-sub); opacity: 1; font-weight: 500; }
 html.readable-design-b .record-date-row { border: 0; background: transparent; padding: 0; }
+html.readable-design-b .mood-choice { width: 100%; max-width: 520px; min-width: 0; gap: 10px; }
+html.readable-design-b .mood-choice-head { display: grid; gap: 4px; }
+html.readable-design-b .mood-choice-head strong { font-size: 18px; }
 html.readable-design-b .mood-choice-head span { font-size: 16px; color: var(--ink-sub); }
-html.readable-design-b .mood-segment { background: var(--cover-sub); border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
-html.readable-design-b .mood-segment button { min-height: 48px; padding: 8px 12px; border-radius: 9px; }
+html.readable-design-b .mood-segment { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; padding: 0; background: transparent; border: 0; border-radius: 0; }
+html.readable-design-b .mood-segment button { background: #fff; border: 2px solid var(--primary-deep); color: var(--ink); min-width: 0; min-height: 72px; padding: 8px 4px; border-radius: 10px; gap: 4px; }
+html.readable-design-b .mood-choice-label { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 4px; font-size: 18px; line-height: 1.5; }
+html.readable-design-b .mood-choice-mark { font-size: 18px; line-height: 1; }
 html.readable-design-b .mood-segment button small { color: var(--primary-deep); font-size: 16px; line-height: 1.5; }
-html.readable-design-b .mood-segment button.is-active { border: 1px solid var(--primary-deep); box-shadow: none; }
+html.readable-design-b .mood-segment button.is-active { background: var(--action-bg); border: 2px solid var(--primary-deep); box-shadow: inset 0 0 0 1px var(--primary-deep); color: var(--action-ink); }
+html.readable-design-b .mood-segment button:hover { background: var(--cover-sub); }
+html.readable-design-b .mood-segment button.is-active:hover { background: var(--action-bg); }
 html.readable-design-b .record-chip { border-color: var(--line); border-radius: 10px; color: var(--primary-deep); }
 html.readable-design-b .diary-voice-help { background: transparent; border-color: var(--line); }
 html.readable-design-b .diary-voice-help summary { color: var(--primary-deep); font-size: 16px; }
+
+/* Keep the logo and heading in normal flow, including when text wraps or grows. */
+html.readable-design-b .kizuki-card { background: #fff; border-color: var(--line); padding: 16px; gap: 16px; }
+html.readable-design-b .kizuki-heading { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 12px; }
+html.readable-design-b .kizuki-mascot { position: static; width: 48px; height: 48px; background: #fff; }
+html.readable-design-b .kizuki-title { margin: 0; color: var(--primary-deep); font-size: 20px; line-height: 1.5; }
+html.readable-design-b .kizuki-card > strong { font-size: 20px; }
 
 /* One white record surface; advice stays separate without nested coloured boxes. */
 html.readable-design-b :is(.history-card, .history-record-list, .recent-entry-list) { background: var(--paper); }
@@ -456,6 +470,13 @@ html.readable-design-b .display-theme-message:empty { display: none; }
   html.readable-design-b .record-calendar-grid { gap: 3px; }
   html.readable-design-b .diary-edit-actions { grid-template-columns: minmax(0, 1fr); }
   html.readable-design-b .nb-section-head strong { font-size: 24px; }
+}
+
+@media (max-width: 480px) {
+  html.readable-design-b .mood-segment { grid-template-columns: 1fr; }
+  html.readable-design-b .mood-segment button { flex-direction: row; flex-wrap: wrap; justify-content: space-between; min-height: 60px; padding: 10px 12px; }
+  html.readable-design-b .mood-choice-label { flex-wrap: nowrap; flex-shrink: 0; }
+  html.readable-design-b .mood-segment button small { white-space: nowrap; }
 }
 
 @media (max-width: 370px) {
