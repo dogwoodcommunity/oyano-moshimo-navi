@@ -40,6 +40,7 @@
     "test:person-deletion:sql": "bash scripts/test-notebook-person-delete-sql.sh",
     "test:memory-book-export": "node scripts/test-memory-book-export.mjs",
     "test:free-first-redesign": "node scripts/test-free-first-redesign.mjs",
+    "test:readable-design-b": "node scripts/test-readable-design-b.mjs",
     "test:web-account-deletion": "node scripts/test-web-account-deletion.mjs",
     "test:account-delete-executor": "node scripts/test-account-delete-executor-auth.mjs",
     "test:admin-delete-access-check": "node scripts/test-admin-delete-access-check.mjs",

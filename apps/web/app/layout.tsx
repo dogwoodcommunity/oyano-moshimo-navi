@@ -1,14 +1,15 @@
 import type { Metadata, Viewport } from "next";
 import Link from "next/link";
-import { Noto_Serif_JP } from "next/font/google";
+import { Zen_Maru_Gothic } from "next/font/google";
 import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
+import "./readable-theme.css";
 
 const criticalCss = `
   *,*::before,*::after{box-sizing:border-box}
-  html{background:#faf7ee;color:#33424a}
-  body{margin:0;background:#faf7ee;color:#33424a;font-family:var(--font-readable-serif),"Noto Serif JP","Yu Mincho","Hiragino Mincho ProN","Hiragino Mincho Pro",serif;font-size:18px;letter-spacing:0}
+  html{background:#faf7f0;color:#29261f}
+  body{margin:0;background:#faf7f0;color:#29261f;font-family:var(--font-readable-rounded),"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;font-size:20px;font-weight:500;line-height:1.75;letter-spacing:0}
   a{color:inherit;text-decoration:none}
   button,input,select,textarea{font:inherit}
   .shell{min-height:100vh}
@@ -49,11 +50,11 @@ const criticalCss = `
   @media(max-width:640px){.nav{padding:12px 20px}.entry-screen{padding:22px 22px 58px}.title-card .card{justify-content:flex-start;width:100%}.watch-bird-mark{height:54px;max-width:54px;width:54px}.entry-intro-card,.entry-how-card,.entry-plus-card{border-radius:18px;padding:22px}.entry-main-button{font-size:21px}}
 `;
 
-const readableSerif = Noto_Serif_JP({
+const readableRounded = Zen_Maru_Gothic({
   display: "swap",
   subsets: ["latin"],
-  variable: "--font-readable-serif",
-  weight: ["400", "600"]
+  variable: "--font-readable-rounded",
+  weight: ["500", "700"]
 });
 
 export const metadata: Metadata = {
@@ -84,12 +85,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#276447"
+  themeColor: "#60421f"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html className={readableSerif.variable} lang="ja">
+    <html className={`${readableRounded.variable} readable-design-b`} lang="ja">
       <head>
         <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
       </head>

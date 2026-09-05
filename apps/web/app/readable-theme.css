@@ -1,0 +1,426 @@
+/* Selected design B. Keep this small theme separate from legacy screen rules.
+   Typography is shared; structural simplification is scoped to notebook screens.
+   Do not override hidden/inert, permissions, async state or destructive controls. */
+html.readable-design-b {
+  --font-ui: var(--font-readable-rounded), "Zen Maru Gothic", "Hiragino Maru Gothic ProN", sans-serif;
+  --font-body: var(--font-ui);
+  --font-rounded: var(--font-ui);
+  --font-serif: var(--font-ui);
+  --bg-paper: #faf7f0;
+  --paper: #faf7f0;
+  --body-bg: #faf7f0;
+  --ink: #29261f;
+  --ink-sub: #554d3b;
+  --ink-faint: #554d3b;
+  --muted: #554d3b;
+  --primary: #60421f;
+  --primary-deep: #60421f;
+  --primary-tint: #eee5d1;
+  --green: #60421f;
+  --green-dark: #60421f;
+  --cover: #60421f;
+  --cover-sub: #fff5df;
+  --tab-teal: #eee5d1;
+  --tab-teal-ink: #60421f;
+  --tab-sand: #eee5d1;
+  --tab-sand-ink: #60421f;
+  --surface-soft: #faf7f0;
+  --line: #b8a989;
+  --rule-line: #b8a989;
+  --stitch: #b8a989;
+  --leader: #b8a989;
+  --hairline: #d9cfba;
+  --secondary-border: #b8a989;
+  --secondary-shadow: transparent;
+  --card-shadow: none;
+  --shadow: none;
+  background: var(--paper);
+  color: var(--ink);
+}
+
+html.readable-design-b body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 20px;
+  font-weight: 500;
+  line-height: 1.75;
+  letter-spacing: 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html.readable-design-b :is(h1, h2, h3, h4) {
+  font-family: var(--font-ui);
+  font-weight: 700;
+  line-height: 1.5;
+  letter-spacing: 0;
+  overflow-wrap: anywhere;
+}
+
+html.readable-design-b :is(h1, h2) { font-size: 28px; }
+html.readable-design-b :is(h3, h4) { font-size: 22px; }
+
+/* The existing brand/logo retains its own typeface and proportions. */
+html.readable-design-b .app-brand {
+  font-family: var(--font-brand);
+  font-size: 20px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+html.readable-design-b :is(button, input, select, textarea) {
+  font-family: var(--font-ui);
+}
+
+html.readable-design-b :is(button, summary, .button, .secondary, .file-button) {
+  min-height: 48px;
+  max-width: 100%;
+  font-weight: 700;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+  touch-action: manipulation;
+}
+
+html.readable-design-b :is(button, a, input, select, textarea, summary):focus-visible {
+  outline: 3px solid #60421f;
+  outline-offset: 3px;
+}
+
+html.readable-design-b :is(.button, .primary-cta, .entry-main-button, .nb-save) {
+  background: var(--primary-deep);
+  border-color: var(--primary-deep);
+  border-radius: 12px;
+  box-shadow: none;
+  color: #fff;
+  font-size: 20px;
+  min-height: 56px;
+  padding: 12px 18px;
+}
+
+html.readable-design-b :is(.secondary, .file-button) {
+  background: #fff;
+  border-color: var(--line);
+  border-radius: 10px;
+  box-shadow: none;
+  color: var(--primary-deep);
+  font-size: 18px;
+  padding: 8px 14px;
+}
+
+html.readable-design-b .nav {
+  background: #fff;
+  backdrop-filter: none;
+  border-bottom-color: var(--line);
+  gap: 12px;
+  padding: 12px 24px;
+}
+
+html.readable-design-b .navlinks { gap: 6px; }
+html.readable-design-b .nav-link {
+  color: var(--ink-sub);
+  min-height: 48px;
+  padding: 8px 12px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+html.readable-design-b .nav-link.is-active {
+  background: var(--primary-deep);
+  border-color: var(--primary-deep);
+  box-shadow: none;
+  color: #fff;
+}
+
+html.readable-design-b .nav-link.is-active::after {
+  background: var(--primary-deep);
+  bottom: -4px;
+  height: 3px;
+}
+
+html.readable-design-b .nav-current-label {
+  background: #fff;
+  color: var(--primary-deep);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+html.readable-design-b .nav-crisis.is-active { background: #8a2f1f; border-color: #8a2f1f; }
+html.readable-design-b .nav-crisis.is-active::after { background: #8a2f1f; }
+html.readable-design-b .nav-crisis.is-active .nav-current-label { color: #8a2f1f; }
+
+html.readable-design-b .footer { color: var(--ink-sub); font-size: 16px; }
+html.readable-design-b .footer a { min-height: 48px; padding-block: 10px; }
+
+html.readable-design-b .notebook-workspace { min-width: 0; }
+html.readable-design-b .notebook-workspace [role="tabpanel"],
+html.readable-design-b #document-location-note { scroll-margin-top: 110px; }
+html.readable-design-b .notebook-cover.readable-person-switcher {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+  box-shadow: none;
+  min-height: 0;
+  height: auto;
+  margin-bottom: 0;
+  padding: 12px 16px;
+}
+
+html.readable-design-b .readable-person-switcher .cover-tabs { flex: 1 1 150px; margin: 0; gap: 12px; }
+html.readable-design-b .readable-person-switcher .cover-tabs button { color: var(--ink-sub); font-size: 18px; font-weight: 700; min-height: 48px; }
+html.readable-design-b .readable-person-switcher .cover-tabs button.is-active { color: var(--primary-deep); border-bottom: 3px solid var(--primary-deep); }
+html.readable-design-b .readable-person-switcher .cover-profile-link { border-color: var(--line); border-radius: 10px; color: var(--primary-deep); font-size: 16px; min-height: 48px; padding: 8px 12px; }
+html.readable-design-b :is(.nb-card, .notebook-card, .history-card) {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: none;
+}
+
+html.readable-design-b :is(.paper-bg, .record-first-card, .record-calendar-card, .today-record-card, .record-ai-card, .cloud-backup-card) {
+  background: var(--paper);
+  background-image: none;
+  box-shadow: none;
+}
+
+html.readable-design-b .record-first-card {
+  padding: 24px;
+  gap: 24px;
+}
+
+html.readable-design-b .record-first-head { gap: 12px; }
+html.readable-design-b .record-first-head > img {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  width: 44px;
+  height: 44px;
+}
+
+html.readable-design-b .record-first-head h1 { font-size: 28px; line-height: 1.5; }
+html.readable-design-b .record-first-head p:not(.nb-eyebrow) {
+  color: var(--ink-sub);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.75;
+}
+
+html.readable-design-b .record-first-head .nb-eyebrow {
+  color: var(--primary-deep);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+html.readable-design-b .record-first-head .record-first-storage { font-size: 16px; }
+
+html.readable-design-b .readable-entry-list { display: grid; gap: 14px; }
+html.readable-design-b .readable-entry {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 20px;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-width: 0;
+  min-height: 80px;
+  padding: 18px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  box-shadow: none;
+  color: var(--ink);
+  font-size: 24px;
+  font-weight: 700;
+  line-height: 1.5;
+  text-align: left;
+  cursor: pointer;
+}
+
+html.readable-design-b .readable-entry.is-primary {
+  background: var(--primary-deep);
+  border-color: var(--primary-deep);
+  color: #fff;
+}
+
+html.readable-design-b .readable-entry .entry-symbol { font-size: 26px; line-height: 1; }
+html.readable-design-b .readable-entry .entry-symbol svg { width: 28px; height: 28px; }
+html.readable-design-b .readable-entry .entry-copy { display: grid; gap: 3px; min-width: 0; }
+html.readable-design-b .readable-entry .entry-copy strong { color: inherit; font-size: 24px; font-weight: 700; }
+html.readable-design-b .readable-entry .entry-copy small { color: var(--ink-sub); font-size: 16px; font-weight: 500; line-height: 1.6; }
+html.readable-design-b .readable-entry.is-primary .entry-copy small { color: #fff; }
+html.readable-design-b .readable-entry .entry-arrow { font-size: 24px; color: inherit; }
+html.readable-design-b .readable-entry:hover:not(:disabled) { border-color: var(--primary-deep); text-decoration: underline; text-underline-offset: 4px; }
+
+html.readable-design-b .readable-support-links { display: flex; flex-wrap: wrap; gap: 8px 20px; }
+html.readable-design-b .readable-support-links :is(a, button) {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48px;
+  padding: 8px 0;
+  border: 0;
+  background: transparent;
+  color: var(--primary-deep);
+  font-size: 16px;
+  font-weight: 700;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+html.readable-design-b :is(.record-first-latest, .record-first-next) {
+  background: #fff;
+  border-color: var(--line);
+  border-radius: 12px;
+  padding: 18px;
+  gap: 10px;
+}
+
+html.readable-design-b :is(.record-first-latest, .record-first-next) > strong {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.85;
+  overflow-wrap: anywhere;
+}
+
+html.readable-design-b :is(.record-first-latest, .record-first-next) > span {
+  color: var(--ink-sub);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+html.readable-design-b :is(.record-first-latest button, .record-first-next a, .history-preview-action) {
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  box-shadow: none;
+  color: var(--primary-deep);
+  font-size: 16px;
+  font-weight: 700;
+  min-height: 48px;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) {
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: none;
+}
+
+html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) summary { color: var(--ink); }
+html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) summary::after { background: #eee5d1; color: var(--primary-deep); font-size: 16px; }
+html.readable-design-b .cloud-backup-disclosure summary span { color: var(--ink-sub); font-size: 16px; }
+html.readable-design-b .cloud-backup-card p { color: var(--ink-sub); font-size: 18px; font-weight: 500; }
+html.readable-design-b .cloud-backup-card small { color: var(--ink-sub); font-size: 16px; }
+
+html.readable-design-b .nb-section-head { flex-wrap: wrap; }
+html.readable-design-b .nb-section-head strong { flex-shrink: 1; font-size: 24px; line-height: 1.5; }
+html.readable-design-b .nb-section-head :is(.aside, .aside-link) { color: var(--ink-sub); }
+html.readable-design-b .today-record-card { background: #fff; padding: 20px; }
+
+html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textarea, .diary-panel textarea) {
+  background: #fff;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1.85;
+  min-height: 180px;
+  min-width: 0;
+  padding: 14px;
+}
+
+html.readable-design-b :is(.record-date-row input, .diary-edit-panel input) { min-height: 52px; min-width: 0; max-width: 100%; font-size: 20px; color: var(--ink); }
+html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textarea)::placeholder { color: var(--ink-sub); opacity: 1; font-weight: 500; }
+html.readable-design-b .record-date-row { border: 0; background: transparent; padding: 0; }
+html.readable-design-b .mood-choice-head span { font-size: 16px; color: var(--ink-sub); }
+html.readable-design-b .mood-segment { background: #eee5d1; border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
+html.readable-design-b .mood-segment button { min-height: 48px; padding: 8px 12px; border-radius: 9px; }
+html.readable-design-b .mood-segment button small { color: var(--primary-deep); font-size: 16px; line-height: 1.5; }
+html.readable-design-b .mood-segment button.is-active { border: 1px solid var(--primary-deep); box-shadow: none; }
+html.readable-design-b .record-chip { border-color: var(--line); border-radius: 10px; color: var(--primary-deep); }
+html.readable-design-b .diary-voice-help { background: transparent; border-color: var(--line); }
+html.readable-design-b .diary-voice-help summary { color: var(--primary-deep); font-size: 16px; }
+
+/* One white record surface; advice stays separate without nested coloured boxes. */
+html.readable-design-b :is(.history-card, .history-record-list, .recent-entry-list) { background: var(--paper); }
+html.readable-design-b .diary-entry-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; box-shadow: none; padding: 20px; gap: 16px; }
+html.readable-design-b .diary-entry-card.is-editing { border: 2px solid var(--primary-deep); }
+html.readable-design-b .diary-entry-meta { flex-wrap: wrap; }
+html.readable-design-b .diary-entry-body { background: transparent; border: 0; border-radius: 0; padding: 0; gap: 8px; }
+html.readable-design-b .diary-entry-body > span { color: var(--ink-sub); font-size: 16px; }
+html.readable-design-b :is(.diary-entry-body > p, .history-preview-card p, .diary-save-complete-body p) { color: var(--ink); font-size: 20px; font-weight: 700; line-height: 1.85; overflow-wrap: anywhere; }
+html.readable-design-b .diary-entry-tools { border-color: var(--line); }
+html.readable-design-b .diary-entry-tools > span { color: var(--ink-sub); font-size: 16px; font-weight: 500; }
+html.readable-design-b .diary-entry-actions { grid-template-columns: repeat(auto-fit, minmax(min(100%, 120px), 1fr)); gap: 8px; }
+html.readable-design-b .diary-entry-actions :is(button, a) { min-height: 48px; border-color: var(--line); background: #fff; color: var(--primary-deep); box-shadow: none; font-size: 16px; padding: 8px; }
+html.readable-design-b .diary-entry-actions button strong { font-size: 16px; font-weight: 700; }
+html.readable-design-b .diary-entry-actions button.is-delete { color: #8a2f26; border-color: #b98278; }
+html.readable-design-b .diary-edit-panel { background: #fff; border-color: var(--line); padding: 16px; }
+html.readable-design-b .diary-edit-panel-head { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0 0 12px; }
+html.readable-design-b .diary-edit-actions button { min-height: 48px; border-radius: 10px; font-size: 18px; }
+html.readable-design-b .diary-edit-actions button:first-child { min-height: 56px; background: var(--primary-deep); border-color: var(--primary-deep); }
+html.readable-design-b .diary-edit-actions button:last-child { border-color: var(--line); color: var(--primary-deep); }
+html.readable-design-b .entry-advice { background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
+html.readable-design-b .entry-advice > summary { min-height: 48px; padding: 10px 0; }
+html.readable-design-b .entry-advice-body { padding: 8px 0 0; }
+html.readable-design-b .entry-advice-body :is(p, em, li) { color: var(--ink); font-size: 18px; font-weight: 500; line-height: 1.85; }
+html.readable-design-b .entry-advice-body :is(em, ul) { background: transparent; border: 0; border-radius: 0; }
+html.readable-design-b .entry-advice-body em { padding: 0; }
+html.readable-design-b .entry-advice-body ul { padding: 0 0 0 24px; }
+html.readable-design-b .diary-month-head { background: #eee5d1; border-color: var(--line); box-shadow: none; }
+html.readable-design-b .diary-month-head h3 { font-size: 22px; }
+
+html.readable-design-b .record-calendar-head { grid-template-columns: 48px minmax(0, 1fr) 48px; }
+html.readable-design-b .record-calendar-head button { width: 48px; height: 48px; border-color: var(--line); color: var(--primary-deep); }
+html.readable-design-b .record-calendar-day { border-color: var(--line); color: var(--ink-sub); min-height: 48px; }
+html.readable-design-b .record-calendar-day.is-selected { background: var(--primary-deep); border-color: var(--primary-deep); box-shadow: none; color: #fff; }
+html.readable-design-b .record-calendar-day:disabled { background: transparent; border-color: transparent; color: #68604f; opacity: 0.7; cursor: default; }
+html.readable-design-b .record-calendar-day small { height: auto; min-height: 22px; line-height: 1.4; font-size: 16px; padding: 0 2px; }
+
+/* Keep saved/warning/error and unavailable states visibly distinct. */
+html.readable-design-b .diary-save-complete-card { background: #f3f8f2; border-color: #6b8567; box-shadow: none; }
+html.readable-design-b .diary-save-complete-actions button.is-primary { background: var(--primary-deep); border-color: var(--primary-deep); box-shadow: none; }
+html.readable-design-b .diary-input-error { color: #8a2f1f; background: #fff3ef; font-size: 18px; }
+html.readable-design-b .today-record-card textarea[aria-invalid="true"] { border: 2px solid #9f391f; }
+html.readable-design-b .cloud-backup-card.is-error .cloud-message { color: #8a2f1f; }
+html.readable-design-b .cloud-backup-card.is-synced .cloud-message { color: #174d31; }
+html.readable-design-b .diary-entry-actions button:disabled { background: #edeae3; border-color: #b6ae9f; color: #554d3b; opacity: 0.7; cursor: not-allowed; }
+html.readable-design-b .readable-entry:disabled { opacity: 0.65; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+  html.readable-design-b .notebook-workspace [role="tabpanel"],
+  html.readable-design-b #document-location-note { scroll-margin-top: 150px; }
+  html.readable-design-b .nav { padding: 12px 16px; gap: 8px; }
+  html.readable-design-b .navlinks { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr) minmax(0, 1fr); gap: 4px; width: 100%; max-width: 100%; }
+  html.readable-design-b .nav-link { padding: 8px 4px; gap: 5px; font-size: 16px; flex-wrap: wrap; justify-content: center; text-align: center; }
+  html.readable-design-b .nav-current-label { font-size: 16px; padding: 4px 6px; }
+  html.readable-design-b .notebook-workspace { padding: 0 16px; }
+  html.readable-design-b .record-first-card { padding: 20px 16px; }
+  html.readable-design-b .record-first-head { grid-template-columns: 40px minmax(0, 1fr); }
+  html.readable-design-b .record-first-head > img { width: 40px; height: 40px; }
+  html.readable-design-b .readable-entry { padding: 16px 12px; gap: 10px; grid-template-columns: 28px minmax(0, 1fr) 16px; }
+  html.readable-design-b .readable-entry .entry-copy strong { font-size: 22px; }
+  html.readable-design-b .today-record-card { padding: 16px; }
+  html.readable-design-b .diary-entry-card { padding: 16px; }
+  html.readable-design-b .record-calendar-card { padding: 12px; }
+  html.readable-design-b .record-calendar-grid { gap: 3px; }
+  html.readable-design-b .diary-edit-actions { grid-template-columns: minmax(0, 1fr); }
+  html.readable-design-b .nb-section-head strong { font-size: 24px; }
+}
+
+@media (max-width: 370px) {
+  html.readable-design-b .notebook-workspace { padding: 0 12px; }
+  html.readable-design-b .record-first-card { padding: 18px 14px; }
+  html.readable-design-b .readable-entry { grid-template-columns: 24px minmax(0, 1fr) 16px; gap: 8px; }
+  html.readable-design-b .record-first-latest { padding: 14px; }
+  html.readable-design-b .record-chip-grid { grid-template-columns: minmax(0, 1fr); }
+}

@@ -7,7 +7,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 
 const home = read("apps/web/app/home/page.tsx");
-const styles = read("apps/web/app/globals.css");
+const styles = ["apps/web/app/globals.css", "apps/web/app/readable-theme.css"].map(read).join("\n");
 const family = read("apps/web/components/FamilyShare.tsx");
 const familyPage = read("apps/web/app/family/page.tsx");
 const consult = read("apps/web/components/ConsultPanel.tsx");
@@ -18,7 +18,7 @@ const start = read("apps/web/app/start/page.tsx");
 const entry = read("apps/web/components/PwaInstallPanel.tsx");
 const result = read("apps/web/app/result/[caseId]/page.tsx");
 
-for (const label of ["今日の様子を記録する", "AIに相談", "家族と使う", "過去の記録", "書類・鍵の場所"]) {
+for (const label of ["記録を書く", "記録を見返す", "AIに相談する", "家族と使う", "書類・鍵の場所"]) {
   assert.ok(home.includes(label), `home must expose ${label}`);
 }
 
@@ -34,7 +34,8 @@ assert.ok(home.includes('role="tablist"') && home.includes('role="tab"') && home
 assert.doesNotMatch(start, /created=\$\{record\.id\}#person-profile/, "new notebook creation must open at the free home actions, not deep-link into a long profile form");
 
 assert.doesNotMatch(styles, /\.notebook-tab-bar\s*\{\s*display:\s*none;/, "notebook navigation must stay visible");
-assert.ok(styles.includes(".record-first-quick-grid"), "mobile quick actions must be styled");
+assert.ok(styles.includes(".readable-entry-list"), "the three primary entry actions must be styled");
+assert.ok(styles.includes(".readable-support-links"), "family and document actions must remain styled and reachable");
 assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.notebook-tab-bar\s*\{\s*position:\s*static;/, "mobile notebook tabs must not overlap the stacked global header");
 assert.match(styles, /\.cloud-backup-card p\s*\{[\s\S]*?overflow-wrap:\s*anywhere;/, "cloud backup explanation must wrap instead of overflowing narrow screens");
 assert.match(styles, /\.cloud-auto-line\s*\{[\s\S]*?max-width:\s*100%;[\s\S]*?min-width:\s*0;/, "cloud sync status must stay inside the card on narrow screens");

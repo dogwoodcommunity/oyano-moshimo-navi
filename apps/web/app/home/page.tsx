@@ -1502,7 +1502,7 @@ export default function FamilyBoardPage() {
     window.setTimeout(() => {
       window.requestAnimationFrame(() => {
         const target = document.querySelector(hash);
-        target?.scrollIntoView({ block: "center", behavior: "smooth" });
+        target?.scrollIntoView({ block: "start", behavior: "smooth" });
         if (hash === "#document-location-note") {
           (target as HTMLTextAreaElement | null)?.focus({ preventScroll: true });
         }
@@ -3072,38 +3072,11 @@ export default function FamilyBoardPage() {
   return (
     <main ref={notebookInteractionRef} aria-busy={reconciliationBusy} className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
       {activeCase ? (
-        <section className="notebook-cover" aria-label="親のもしもナビの手帳表紙">
-          <span className="ribbon" aria-hidden="true" />
-          <div className="cover-brand">
-            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-            <span>親のもしもナビ</span>
-          </div>
-          <div className="cover-person">
-            <div className="cover-person-photo" aria-hidden="true">
-              <img src="/brand/watch-bird-mark.svg" alt="" />
-            </div>
-            <div className="cover-person-meta">
-              <span>{`${activeRelationship} · ${activeCareStatus}`}</span>
-              <strong>{notebookTitle(activePersonName)}</strong>
-            </div>
-            <a
-              className="cover-profile-link"
-              href="#person-profile"
-              onClick={(event) => {
-                event.preventDefault();
-                openNotebookSection("#person-profile");
-              }}
-            >
-              プロフィール
-            </a>
-          </div>
-          <div className="cover-mascot-line">
-            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-            <span>今日は、まず記録を書けば大丈夫です。必要な確認はあとから開けます。</span>
-          </div>
+        <section className="notebook-cover readable-person-switcher" aria-label="手帳の切り替えとプロフィール">
           <nav className="cover-tabs" aria-label="手帳の切り替え">
             {cases.map((caseRecord) => (
               <button
+                aria-pressed={caseRecord.id === activeCase.id}
                 className={caseRecord.id === activeCase.id ? "is-active" : ""}
                 key={caseRecord.id}
                 type="button"
@@ -3113,6 +3086,16 @@ export default function FamilyBoardPage() {
               </button>
             ))}
           </nav>
+          <a
+            className="cover-profile-link"
+            href="#person-profile"
+            onClick={(event) => {
+              event.preventDefault();
+              openNotebookSection("#person-profile");
+            }}
+          >
+            プロフィール
+          </a>
         </section>
       ) : null}
 
@@ -3200,7 +3183,7 @@ export default function FamilyBoardPage() {
               <div className="record-first-head">
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <div>
-                  <p className="nb-eyebrow">この人の手帳</p>
+                  <p className="nb-eyebrow">{`${activeRelationship} · ${activeCareStatus}`}</p>
                   <h1>{notebookTitle(activePersonName)}</h1>
                   <p className={`record-first-storage ${cloudUserEmail && cloudIdentityStatus === "ready" ? "is-cloud" : "is-device"}`}>
                     {cloudUserEmail && cloudIdentityStatus === "ready"
@@ -3211,31 +3194,36 @@ export default function FamilyBoardPage() {
                   </p>
                 </div>
               </div>
-              <button
-                className="record-first-primary"
-                type="button"
-                onClick={() => openNotebookSection("#today-diary")}
-              >
-                <span>{todayEntry ? "今日の記録は保存済みです" : "今日はまだ記録がありません"}</span>
-                <strong>{todayEntry ? "今日の記録をもう1件追加" : "今日の様子を記録する"}</strong>
-                <small>体調や連絡を1行から残せます</small>
-              </button>
-              <div className="record-first-quick-grid" aria-label="よく使う機能">
-                <button type="button" onClick={openConsultFromDigest}>
-                  <strong>AIに相談</strong>
-                  <small>毎日1回無料</small>
+              <div className="readable-entry-list" aria-label="手帳でできる3つのこと">
+                <button className="readable-entry is-primary" type="button" onClick={() => openNotebookSection("#today-diary")}>
+                  <span className="entry-symbol" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m16 3 5 5-12 12-6 1 1-6Z" /><path d="m13 6 5 5" /></svg>
+                  </span>
+                  <span className="entry-copy">
+                    <strong>記録を書く</strong>
+                    <small>{todayEntry ? "今日の記録あり・もう1件書けます" : "今日あったことを1行から"}</small>
+                  </span>
+                  <span className="entry-arrow" aria-hidden="true">›</span>
                 </button>
-                <Link href="/family">
-                  <strong>家族と使う</strong>
-                  <small>家族1人まで無料</small>
-                </Link>
-                <button type="button" onClick={() => openNotebookSection("#diary-history")}>
-                  <strong>過去の記録</strong>
-                  <small>{activeEntries.length > 0 ? `${activeEntries.length}件を見返す` : "まだ記録なし"}</small>
+                <button className="readable-entry" type="button" onClick={() => openNotebookSection("#diary-history")}>
+                  <span className="entry-symbol" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 3v18m4-12h4m-4 4h4" /></svg>
+                  </span>
+                  <span className="entry-copy">
+                    <strong>記録を見返す</strong>
+                    <small>{activeEntries.length > 0 ? `${activeEntries.length}件の記録を読む・直す` : "日付ごとに読む・直す"}</small>
+                  </span>
+                  <span className="entry-arrow" aria-hidden="true">›</span>
                 </button>
-                <button type="button" onClick={() => openNotebookSection("#document-location-note")}>
-                  <strong>書類・鍵の場所</strong>
-                  <small>{activeProfile?.documentLocationNote?.trim() ? "登録済み・確認する" : "保管場所を登録"}</small>
+                <button className="readable-entry" type="button" onClick={openConsultFromDigest}>
+                  <span className="entry-symbol" aria-hidden="true">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 18 3 22v-6a9 9 0 1 1 4 4" /><path d="M8 10h8m-8 4h5" /></svg>
+                  </span>
+                  <span className="entry-copy">
+                    <strong>AIに相談する</strong>
+                    <small>記録をもとに相談・毎日1回無料</small>
+                  </span>
+                  <span className="entry-arrow" aria-hidden="true">›</span>
                 </button>
               </div>
               <div className={`record-first-latest ${latestEntry ? "has-entry" : "is-empty"}`}>
@@ -3247,6 +3235,10 @@ export default function FamilyBoardPage() {
                 >
                   {latestEntry ? "この記録を開く" : "1行だけ書く"}
                 </button>
+              </div>
+              <div className="readable-support-links" aria-label="ほかにできること">
+                <Link href="/family">家族と使う</Link>
+                <button type="button" onClick={() => openNotebookSection("#document-location-note")}>書類・鍵の場所</button>
               </div>
             </article>
             <nav className="notebook-tab-bar" aria-label={`${activePersonName}の手帳ページ`} role="tablist">

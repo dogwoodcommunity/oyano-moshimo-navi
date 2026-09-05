@@ -8,7 +8,7 @@ const sourceTests = [
   "stage-a-local-runner", "monitor-timeline", "monitor-retention", "monitor-submission-gate",
   "cron-auth", "notebook-sync-safety", "notebook-sync-runtime", "memory-book-export",
   "notebook-reconciliation", "notebook-reconcile-route", "notebook-reconciliation-ui",
-  "free-first-redesign", "home-overview-reachability", "web-account-deletion",
+  "free-first-redesign", "readable-design-b", "home-overview-reachability", "web-account-deletion",
   "account-delete-executor-auth", "delete-operator-mfa-setup", "commercial-release-gates",
   "admin-delete-access-check", "public-operator-disclosure",
   "family-role-security", "family-invite-permissions", "family-context-selection",

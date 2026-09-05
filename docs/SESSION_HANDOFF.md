@@ -13625,3 +13625,46 @@ Git/CI:
 `review_exports/` と未追跡のClaudeレビュー依頼/結果2文書は保持。次は利用者にA/B/Cまたは組み合わせを
 選んでもらい、その後に共通書体・本文/編集導線から段階的に実装する。Stage Aの別端末/写真/家族権限の
 未完了項目は追記361のままであり、デザイン案の完成によって完了にしない。
+
+## 2026-09-05 追記 363 — B案を選択、濃い丸文字と3入口をローカル実装
+
+ユーザーの「B」「続きして」を受け、追記362のB案を実装した。
+開始HEADはmain `3206a6b`。自動で本番へ出さず、専用ブランチ `design/readable-three-entry` で限定commit/pushする。
+**本番UI・DB・Auth・環境設定は変更していない。選択/実装の承認を本番公開の承認とは扱わない。**
+
+実装:
+
+- `apps/web/app/layout.tsx`：Noto Serif JPからZen Maru Gothic 500/700へ。ロゴ字体は維持。
+  `readable-design-b`クラス、新テーマCSSをglobalsの後にimport、critical CSSの基本書体/色も同期。
+- 新規 `apps/web/app/readable-theme.css`：生成り/茶色、白い記録、濃い本文20px/700、見出し28px、
+  入口補足16px。大きすぎる補助操作・色の入れ子・影を整理。主保存56px/補助48pxの高さを基本とする。
+- `home/page.tsx`：3行の「記録を書く」「記録を見返す」「AIに相談する」→最新記録→家族/書類補助リンク。
+  大きな表紙を小さい人物切替/プロフィールに整理。対象者名/関係/状況/6タブは維持。
+  主入口の既存関数はそのまま使い、長いtabpanelへのスクロールだけcenterからstartへ修正。
+  CSSでdesktop110px/mobile150pxのヘッダー余白を設けた。320幅mainnavの「表示中」折返しも調整。
+- 保存/編集/削除/復元/統合の関数、認証・家族権限・送信ガードは変更なし。色でエラーを隠す変更なし。
+- 新 `scripts/test-readable-design-b.mjs` と既存のfree-first/overviewテストを更新。
+  package/CI/local runnerへ登録し、旧CSSや下段の同じ文言だけで偽PASSしない契約へ強化。
+- 設計資料へB採用を追記、詳細は `docs/DESIGN_B_IMPLEMENTATION_2026-09-05.md`。
+
+確認:
+
+- `node scripts/test-stage-a-local.mjs --source-only` は最終bytesで29/29 PASS。
+  同期・統合・記憶・削除・権限の既存回帰を含む。DB実行/本番の受入PASSではない。
+- Web lint/型チェック/production build PASS。既存img/React hook依存警告は残る。git diff --check PASS。
+- 設計担当とテスト担当の独立確認を実施。新3入口のJSX/関数、同名の別対象者切替、
+  latest/6tab/書類focus/AI対象者/null caseをモック実行。CSSは宣言値の代表色7:1以上を確認。
+- CUAでローカルのみ架空登録し、必須空欄エラー→記録→保存→履歴→編集→保存→再読み込みを確認。
+  編集空欄はキーボード選択/削除で無効化を確認し、キャンセルで元本文保持。
+- 手帳幅320/360/390/736/1280pxはscrollWidth=innerWidth。記録本文20px/700/濃色を確認。
+  320/390目視確認。モニター回答プレビュー/特商法は320、家族/AIは360で横はみ出しなし。
+- AI画面への対象者/相談文の引継ぎと、環境未設定時の送信停止を確認。AI回答・メール・家族招待・
+  モニター回答の送信なし。写真/別端末/認証済みクラウドUIの今回の再検証はしていない。
+- devを止めてproduction build後、同じ `127.0.0.1:3119` でNext start。
+  Bホーム/架空の記録保持/最終console error・warn 0件を確認した。
+  起動には既存runnerのallowlist環境とdotenv拒否検査を使い、本番credentialsは渡していない。
+
+確認用のローカルサーバーはユーザーへ見せるためポート3119で起動継続（このパソコン専用、外部listenなし）。
+通常 `http://127.0.0.1:3119/home`、回答プレビュー `http://127.0.0.1:3119/monitor/report?preview=1`。
+実機Safari/200%拡大/全画面全状態/Stage A残項目は未完了。本番反映済みや正式商用版完成とは言わない。
+`review_exports/` と未追跡Claudeレビュー依頼/結果の2文書は今回も変更・addしない。

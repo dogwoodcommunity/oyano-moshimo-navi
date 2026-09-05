@@ -7,7 +7,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const read = (relativePath) => fs.readFileSync(path.join(repoRoot, relativePath), "utf8");
 
 const home = read("apps/web/app/home/page.tsx");
-const styles = read("apps/web/app/globals.css");
+const styles = ["apps/web/app/globals.css", "apps/web/app/readable-theme.css"].map(read).join("\n");
 
 const tabList = home.match(/const notebookTabs:[\s\S]*?= \[([\s\S]*?)\];/)?.[1] ?? "";
 const expectedTabs = ["overview", "record", "history", "profile", "tasks", "media"];
@@ -26,8 +26,9 @@ for (const section of ["今日見るところ", "今日の一手", "記録から
   assert.ok(home.includes(section), `overview must retain ${section}`);
 }
 
-assert.match(styles, /\.notebook-tab-bar\s*\{[\s\S]*?grid-template-columns:\s*repeat\(5, minmax\(0, 1fr\)\);/, "the existing five task tabs must keep their columns");
-assert.match(styles, /\.notebook-tab-bar button\.is-overview\s*\{[\s\S]*?grid-column:\s*1 \/ -1;/, "summary must use its own full-width row");
+// The B design may reflow tabs, but none of the six existing panels may disappear.
+assert.doesNotMatch(styles, /\.notebook-tab-bar(?:\s+button(?:\.is-overview)?)?\s*\{[^}]*?(?:display:\s*none|visibility:\s*hidden)/, "summary and task navigation must remain visible in both stylesheets");
+assert.match(home, /notebookTabs\.map\(\(tab\) => \([\s\S]*?aria-controls=\{hashForNotebookTab\(tab\.id\)\.slice\(1\)\}[\s\S]*?aria-selected=\{activeNotebookTab === tab\.id\}[\s\S]*?onClick=\{\(\) => openNotebookSection\(hashForNotebookTab\(tab\.id\)\)\}/, "every summary/task tab must retain its selected state, panel reference and existing navigation handler");
 assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.notebook-tab-bar\s*\{\s*position:\s*static;/, "mobile notebook tabs must not overlap the fixed header");
 
 console.log("home overview reachability tests passed");

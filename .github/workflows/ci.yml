@@ -66,6 +66,9 @@ jobs:
       - name: Test free-first redesign
         run: pnpm run test:free-first-redesign
 
+      - name: Test readable three-entry design
+        run: pnpm run test:readable-design-b
+
       - name: Test home overview reachability
         run: pnpm run test:home-overview-reachability
 
