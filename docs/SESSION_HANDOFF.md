@@ -12408,3 +12408,27 @@ sourceと使い捨てDBで実装・検証した。この追記時点では本番
 `account_erasure_execution_gate.sql` を1回適用する。これはschema・権限変更なのでRun直前に
 ユーザーの実行時確認を得る。controlは閉じたままにし、read-only ACL確認が成功してから
 対応Webを別commit・deployする。実アカウント削除はさらに別の明示承認まで行わない。
+
+## 2026-09-05 追記 327 — DB-first commit後の旧静的テストを整合
+
+追記326のDB側11ファイルをcommit `3e8e4b79bb9bc50f702716ca873da705379219b7` として
+mainへpushした。限定stageのGitleaksはsecret検出0件だった。本番DB・Web本番にはまだ反映していない。
+
+main CI run `33950712669` は、Web・モバイル型検査と削除以外の前半テストを通過後、
+`Test web account deletion` の旧静的assertion 1件で停止した。旧testは書込freeze条件を
+`account_deletion_pipeline.sql` だけから探していたが、新gateでは期限付きpreparedと
+database-erased後の条件を `account_erasure_execution_gate.sql` へ分けたためであり、
+PostgreSQL回帰やアプリruntimeの失敗ではない。
+
+- DB-first順序を崩さず、既存Web実装のassertionは変えない。
+- 静的testへ新gate SQLの読込みを追加し、liveなprepared期間だけ一時停止、
+  `database_erased` / `completed` 後は恒久停止という新しい条件を確認するassertionへ置換した。
+- ローカルの更新版Web削除テスト、削除実行者認可テスト、商用gate、SQL全回帰、typecheck、buildは
+  すでに成功している。CIはこのtest-only整合commitをpush後に再確認する。
+- この修正はテストだけで、schema、権限、利用者データ、Web runtimeを変更しない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま。削除系API・RPCと本番データは操作していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+CI成功までは本番SQL EditorでRunしない。成功後も、本番DBのschema・権限を変える
+`account_erasure_execution_gate.sql` のRun直前にユーザーの実行時確認を得る。

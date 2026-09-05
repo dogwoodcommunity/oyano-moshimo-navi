@@ -13,6 +13,7 @@ const page = read("apps/web/app/account/delete/page.tsx");
 const client = read("apps/web/components/AccountDeleteRequest.tsx");
 const adminClient = read("apps/web/components/AdminDeleteRequests.tsx");
 const erasureSql = read("supabase/account_deletion_pipeline.sql");
+const executionGateSql = read("supabase/account_erasure_execution_gate.sql");
 const legacyHomeUploadRoute = read("apps/web/app/api/storage/home-photo-upload-url/route.ts");
 const layout = read("apps/web/app/layout.tsx");
 const privacy = read("apps/web/app/legal/privacy/page.tsx");
@@ -66,7 +67,7 @@ assert.ok(adminClient.includes("削除前の安全確認"), "admin UI must expos
 assert.ok(adminClient.includes("Auth・DB・写真を検証して完全削除"), "admin UI must label verified scope explicitly");
 assert.match(erasureSql, /account-erasure-target:/, "storage inventory and delayed writes must share a per-target transaction lock");
 assert.match(erasureSql, /create or replace function inspect_account_erasure_v1[\s\S]*?'reservationCreated', false/, "inspection must not create a durable write freeze");
-assert.match(erasureSql, /job\.status in \('prepared', 'database_erased', 'completed'\)/, "delayed writes must be blocked from confirmed execution preparation onward");
+assert.match(executionGateSql, /job\.status in \('database_erased', 'completed'\)[\s\S]*?job\.status = 'prepared'[\s\S]*?job\.prepared_expires_at > clock_timestamp\(\)/, "ordinary writes must be frozen only during a live preparation and permanently after erasure");
 assert.match(erasureSql, /collect_account_erasure_shared_photo_blockers/, "shared target-owned photos must block erasure until transferred");
 assert.match(erasureSql, /target_email_hash = null/, "completed receipts must clear the guessable email hash");
 assert.match(erasureSql, /delete from public\.notebook_storage_deletion_jobs job/, "verified storage cleanup must not retain raw diary path identities");
