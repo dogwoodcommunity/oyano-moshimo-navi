@@ -12687,3 +12687,31 @@ SELECTだけを実行した。従来の利用者のSQLタブは残し、別の�
 
 既存の利用者データは変更・削除していない。`review_exports/` と未追跡Claudeレビュー文書2件は
 参照・変更・stage・送信の対象外。今回の新しい変更と本追記を限定commitしてGitHubへ保存する。
+
+## 2026-09-05 追記 334 — 最終修正のGitHub/CI成功、DB承認とVercel再ログインが残る
+
+追記333を含む15ファイルを限定stageし、diff検査とGitleaks（redact）で問題なし。
+`539c359cc9d62fb6dbebd1193221d761e0a84644` をmainへcommit/pushした。
+CI `33955341444` は全体success、失敗stepなし。Deploy workflow `33955341499` は
+checkのみ成功しdeploy jobはskip。本番deploy成功と読み替えない。
+
+- `verify_stage_a_release.sql` の最終版はrootが全文読取し、専用の空PostgreSQLで12項目すべて
+  missing/ok=falseになることを確認。さらに最小のダミーtasks/people policyで、正常時compatible=1、
+  USING=true・WITH CHECK=true・RLS無効時それぞれcompatible=0の4ケースがPASS。
+  この限定fixture試験は全12項目の正常系・異常系を網羅したものではなく、CIにも含めていない。
+  検証用 `oyano-stage-a-verifier-local` はstop/自動破棄し、残存なしを確認した。
+- Vercel env一覧で4つの公開設定の存在と、正式施行日/削除/有料スイッチが追加されていないことを再確認。
+  その後のdeployment inspectはCLIログイン更新で権限エラーとなり、公式CLIの通常更新を許可して再試行したが
+  **token invalid** で失敗。新しい認証情報は発行・出力していない。次回Vercelへの通常の再ログインが必要。
+  本番deployment IDの再取得はできておらず、過去のIDを本日再確認済みとして報告しない。
+- 認証不要のGETで本番 `/api/health`、`/legal/terms`、`/legal/privacy` は200。
+  規約・プライバシーに会社名/問い合わせの新表示はまだ存在しない。公開ページへのGETのみで、
+  保存・AI相談・通知・削除などの本番動作を実行していない。
+- 既存本番データ・DB権限・削除制御は変更していない。active control/grant 0は追記333の最新SELECT実測。
+  本番反映に進めていない理由は、実測したDB不足を解消するRun直前承認と、Vercel再ログインである。
+
+次のユーザー確認は追記333の**4ファイルの本番DB適用**。日記・写真・回答・相談履歴は削除しないが、
+家族管理権限と既存role補正（直近0件）を含むことを説明する。承認後、対象件数/前提を再照合して
+DB-first適用・read-only再検査、Vercel再ログイン、承認済みのWeb反映を進める。削除や有料受付は開かない。
+無料正式版の最終GO、実機/backup/問い合わせ/法務の残条件も未完了のまま。今回の修正・CI成功を
+「商用正式版の全工程完了」とは扱わない。この確認記録を追加commitしGitHubへpushする。
