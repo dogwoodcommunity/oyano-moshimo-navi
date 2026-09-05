@@ -12498,3 +12498,32 @@ CIの成功を確認してからclean tracked HEADでVercel本番をdeployした
   本番反映済みを「削除運用・商用正式版の全試験完了」と読み替えない。
 - 次は登録済み本人が管理画面へログインした後の読み取り専用確認。完全削除の試験は、
   専用の破棄可能なテスト対象を明示し、別の実行時承認を得てから進める。
+
+## 2026-09-05 追記 330 — v2本番の本人ログイン・AAL2・管理画面分離を確認
+
+ユーザーの「ログインした」を受け、Chromeの公開alias `/admin/delete-requests` を
+読み取り専用で確認した。対象runtimeは追記329の `c1415b3` deploymentで、コード・DB・
+環境変数の変更や追加deployは行っていない。
+
+- 登録済み削除専用実行者本人の「確認済みです」「多要素認証（AAL2）を確認済みです。」を確認。
+  個人メール、Auth UUID、token、OTP、MFA秘密は文書・Gitへ記録していない。
+- 削除依頼は0件で、列はREQUESTED / USER / STATUS / SLA / OPSだけだった。
+  CONTACT / REASON / HANDLED BYは表示されない。非空依頼の行内容最小化試験とは区別する。
+- 同じ本人セッションで `/admin/monitor-feedback`、`/admin/ai-usage`、`/admin/env` を開き、
+  全て「現在のログインでは管理者権限を確認できませんでした。」とデータ非表示を確認した。
+  前2画面は `Admin authorization is forbidden` も表示された。現行sourceのこの応答は403だが、
+  今回はHTTP statusの数値を通信一覧から直接取得できていないため、厳密な200/403採取と分ける。
+- 通信status確認用に対象タブのDevTools Networkを開いたが、Chrome前面が別作業へ移ったため、
+  前面を取り戻す操作はせず中止した。認証ヘッダー、request payload、response本文、
+  localStorageの認証値は読み出していない。別作業のタブは操作していない。
+- 最後に同じタブを `/admin/delete-requests` へ戻し、本人認証済み・AAL2・0件を再確認した。
+  ログアウト・確認メール再送はしていない。
+- 依頼PATCH、preflight、prepare、grant、control開放、execute、Auth/Storage削除、
+  テスト利用者作成はいずれも未実施。既存記録・写真・AI相談・モニター回答は変更・削除していない。
+  削除実行スイッチは前回確認済みのOFFから変更していない。
+
+本人ログイン・AAL2・画面上の権限分離は確認済み。HTTP数値の直接再採取、非空依頼の最小化、
+別確認者本人のAAL2、専用テスト対象による完全削除E2Eは未完了であり、実削除へ進めない。
+今回の通信権限要求ではnetwork権限が付与されなかったため、確認記録はローカルに保存し、
+GitHubへのpushは未実施。通信許可後にこの記録commitをpushする。未追跡のレビュー資料は
+参照・変更・stage・commitしていない。
