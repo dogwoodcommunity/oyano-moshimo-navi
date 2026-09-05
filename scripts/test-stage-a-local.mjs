@@ -7,6 +7,7 @@ export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 const sourceTests = [
   "stage-a-local-runner", "monitor-timeline", "monitor-retention", "monitor-submission-gate",
   "cron-auth", "notebook-sync-safety", "notebook-sync-runtime", "memory-book-export",
+  "notebook-reconciliation", "notebook-reconcile-route", "notebook-reconciliation-ui",
   "free-first-redesign", "home-overview-reachability", "web-account-deletion",
   "account-delete-executor-auth", "delete-operator-mfa-setup", "commercial-release-gates",
   "admin-delete-access-check", "public-operator-disclosure",
@@ -17,7 +18,7 @@ const sourceTests = [
 const sqlTests = [
   "account-erasure", "family-role-rls", "family-management", "handoff-ownership",
   "ai-consult-memory", "consult-daily-claim", "notebook-diary-delete", "notebook-person-delete",
-  "monthly-checkin"
+  "monthly-checkin", "notebook-reconciliation"
 ];
 
 export function createPlan({ sourceOnly = false, sqlOnly = false } = {}) {

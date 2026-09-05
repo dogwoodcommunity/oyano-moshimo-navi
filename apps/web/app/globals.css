@@ -13042,6 +13042,40 @@ textarea {
   color: #0d5c3e;
 }
 
+.notebook-reconciliation {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border: 2px solid #527568;
+  border-radius: 12px;
+  background: #f3f8f4;
+  color: #253c35;
+}
+.notebook-reconciliation[hidden] { display: none; }
+.notebook-reconciliation-compare {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+  gap: 1rem;
+  margin-block: 1rem;
+}
+.notebook-reconciliation-compare > div {
+  background: white;
+  border: 1px solid #8fa49c;
+  padding: 0.8rem;
+  border-radius: 8px;
+  min-width: 0;
+}
+.notebook-reconciliation-compare ul {
+  max-height: 18rem;
+  overflow-y: auto;
+  padding-left: 1.3rem;
+}
+.notebook-reconciliation-compare li { border-bottom: 1px solid #d6e1db; margin-bottom: 0.6rem; }
+.notebook-reconciliation-compare p { white-space: pre-wrap; overflow-wrap: anywhere; color: #253c35; }
+.notebook-reconciliation fieldset { margin-block: 1rem; padding: 0.8rem; border: 1px solid #8fa49c; }
+.notebook-reconciliation label { display: flex; gap: 0.6rem; align-items: flex-start; padding-block: 0.5rem; }
+.notebook-reconciliation input { width: 1.2rem; height: 1.2rem; flex: 0 0 auto; margin-top: 0.2rem; }
+.notebook-reconciliation button { min-height: 44px; }
+
 .cloud-action-row {
   display: grid;
   gap: 8px;

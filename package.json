@@ -32,6 +32,8 @@
     "test:monthly-checkin:sql": "bash scripts/test-monthly-checkin-sql.sh",
     "test:notebook-sync-safety": "node scripts/test-notebook-sync-safety.mjs",
     "test:notebook-sync-runtime": "node scripts/test-notebook-sync-runtime.mjs",
+    "test:notebook-reconciliation": "node scripts/test-notebook-reconciliation.mjs && node scripts/test-notebook-reconcile-route.mjs && node scripts/test-notebook-reconciliation-ui.mjs",
+    "test:notebook-reconciliation:sql": "bash scripts/test-notebook-reconciliation-sql.sh",
     "test:diary-deletion": "node scripts/test-diary-deletion.mjs",
     "test:diary-deletion:sql": "bash scripts/test-notebook-diary-delete-sql.sh",
     "test:person-deletion": "node scripts/test-notebook-person-deletion.mjs",

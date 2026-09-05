@@ -13366,3 +13366,86 @@ source再確認と次の判断:
 今回、端末控え作成とクラウド存在の独立確認まで完了。どちらの手帳/記録も編集・送信・統合・削除していない。
 保存/復元/家族共有のStage A受入完了ではない。新しい秘密キー露出はなし。
 保護対象の未追跡ファイルを除外し、引き継ぎのみ限定commit/pushする。
+
+## 2026-09-05 追記 359 — 別々のテスト手帳を1冊にまとめる修正版、ソースとローカル試験
+
+ユーザー「ええよ」は、追記358の「端末1件とクラウド1件を同じテスト対象者の記録として1冊に
+まとめる修正」の承認として受領。既存利用者の一括統合、リセット、削除、権限/プラン変更は対象外。
+今回はソース実装と隔離ローカル試験まで。本番に新しいDB関数が必要になったため、適用とデプロイは
+別途確認する。実際のAの2件はまだ統合しておらず、前回Downloadsに保存した原本控えも変更していない。
+
+Gitの所在:
+
+- 開始点は `main` の `c17a8fdce362056e5246d99ba09d4204eb43bbb2`。
+- 今回の修正は **`fix/notebook-reconciliation`** ブランチ。`main` へ未マージ。
+- `deploy-vercel.yml` はmain pushで本番deploy可能なため、ソース保存のpushと本番反映を区別する。
+  直前mainのActions run `33964194571` をread-only確認すると、check成功・deploy jobはskipped。
+  「workflow全体success」を本番反映成功と扱わない。今回はGitHubへの修正ブランチpushまで。
+- `review_exports/` と未追跡のClaudeレビュー依頼/結果文書は変更・追加対象から除外する。
+
+実装:
+
+- homeの別手帳衝突ガードを残し、「両方の記録を確認する」から端末/クラウドの呼び名・日付・本文を比較。
+  同じ人か別の人かは未選択を初期値とし、本人の明示選択と追加の確認チェックを必須にした。
+- 初版は各1人分、端末側がクラウド未同期、文字日記1〜100件に限定。写真付き、別アカウント/家族、
+  viewer、編集中/未保存入力、削除中・削除済みは停止。写真を消して制限回避する誘導はしない。
+- **日記だけをクラウド側の手帳に追加**。クラウドの基本情報・確認リストを送信/上書きしない。
+  端末側の基本情報・確認リストは全文を専用ローカル控えへ残すことを画面に説明し、別途確認する。
+- 端末ケースIDと日記IDからSHA-256で固定のコピーIDを作る。再送時の重複、同一IDの別内容上書き、
+  削除済みIDの復活は既存同期v2のCAS/receipt/削除ガードでも防止する。
+- 新規 `POST /api/notebook/reconcile` は確認済みAuth・現在の家族編集権限・正確な対象者UUIDを検証。
+  任意profile/tasks/photos/CAS値は受け付けず、許可した日記項目だけをサーバーで正規化する。
+- 新規 `supabase/notebook_diary_reconciliation.sql` の `reconcile_notebook_diaries_v1` はservice role限定。
+  通常のAPI事前照合だけでは対象者の直接DB変更との競合が残るため、**同一transaction内**でも確認済み
+  Auth email、家族編集権限、対象者UUID・family・localCaseIdを再照合しrow lockする。
+  v2と同じrequest→profiles→family/member→personのlock順序で、`p_cases=[]` のv2を再利用。
+  JWT claim書換えによる権限昇格は使わない。対象者のprofile/tasksは不変だが、通常同期同様に
+  ログイン利用者のpublic.profiles email/updated_atは更新し得るので「DB書込みが日記だけ」とは言わない。
+- `api_grants.sql` の再適用でも新RPCをanon/authenticatedに公開しない再revokeを追加。
+  新規SQLの前提は同期v2・日記削除・対象者削除等の既存migration。未適用時はエラーで止め、通常syncに迂回しない。
+- POST前に原本をローカル控えへ保存。成功後の全ページGETで元の日記と追加日記の存在を再確認してから端末を切替。
+  prepared/installing/completeのjournalを使い、途中の容量不足でも読込は原本と元のbindingを参照する。
+  全storage writeが失敗していてもread-only getterで原本を読める。処理中は編集を止め、ログイン切替・
+  ページ離脱・未保存入力・同時操作をawait境界で再確認する。
+- 最終レビューで、installing中に対象者削除が重なった場合の原本とbinding混在を修正。
+  表示用の「削除済み控えを隠すgetter」と書込み停止判定を分離し、raw journalで通常書込みを停止。
+  journalを消す前に原本ケース・日記・元bindingを揃えて復旧し、失敗時はjournalを維持する。
+- 控えのダウンロードもクリック時に現Auth/家族と最新データを確認。古いpreviewから削除済みの内容を
+  再出力しない。対象者全体削除・端末全体resetではアプリ内控えも削除する。
+  ダウンロード済みファイルは別管理であり、ブラウザ外のファイルは自動消去しない。
+
+ローカル検証:
+
+- `test-notebook-reconciliation.mjs`: helper・ページング・storage/journal回復 **272 checks PASS**。
+  完了markerだけ失敗した状態からのsource/target削除、復旧時の各キー書込み/削除失敗も含む。
+- `test-notebook-reconcile-route.mjs`: **106 mocked requests PASS**。
+- `test-notebook-reconciliation-ui.mjs`: **91 scenarios PASS**。疑似React/Auth/HTTPで本人確認、二段階同意、
+  連打、失敗/再試行、離脱、認証切替、控えの再確認・削除済みダウンロード拒否を検証。
+- `notebook_reconciliation_regression.sql`: 使い捨てPostgreSQLでRPCの実行を確認。
+  既存person/profile/tasks/日記の全文JSON不変、空白保持、二重送信、UUID/localCaseId/メール不一致、
+  viewer/他家族/不正role/CAS/photos/profile拒否、日記削除後の再送拒否、ACL再適用を検証する。
+- Stage A runnerとCI定義に新規試験を組み込み、SQL試験は9本→10本。
+  認証情報/実行用dotenvを渡さず、DockerのローカルUnix socket・既存イメージ・networkなしDBだけを使用。
+  Docker Desktopを起動したが、有料クラウド資源は作成していない。専用試験containerは停止/削除済み。
+- 最終レビューの追加修正後にも `node scripts/test-stage-a-local.mjs` を全再実行し、**42工程 LOCAL_PASS**。
+  内訳はsource28本・lint1本・Web/Mobile型検査2本・SQL10本・Web build1本。既存のlint警告は残る。
+  実機画面レイアウト・本番通信は未試験。CIは修正ブランチ単独pushでは起動しない定義なので、CI成功とは言わない。
+- `git diff --cached --check` PASS。gitleaksはテスト中の公開localStorageキー名を2箇所誤検知したため、
+  秘密ではないことを確認し、その2行だけ理由付きallowを付記。該当テスト272checksを再実行しPASS、
+  staged gitleaksも **no leaks found**。実際の秘密値を例外登録・転記したものではない。
+- 独立レビューのP1（journal/削除競合と古いpreviewからのdownload）2件を修正し、再レビューで追加P0/P1なし。
+
+未完了と次の手順:
+
+1. 本番DBへの新規RPC追加と、この修正版の本番deployの承認を確認する。
+   適用するのは `notebook_diary_reconciliation.sql`。regression/bootstrap SQLを本番に実行しない。
+   既存の `api_grants.sql` 全体の本番再適用をこの修正の必須手順とはしない。
+2. 承認後、対象project・前提migration・ソースSHAを確認し、新RPC/ACLをread-only確認してから
+   同じSHAをデプロイする。本番DB定義・本番URLでの稼働を別々に確認する。
+3. 既存Chromeシークレットの承認済みAを操作し、プレビューが前回確認した端末1件/クラウド1件であることを
+   再確認。同じ対象者の了承済み範囲に限り、基本情報/確認リストをクラウド側に揃える説明を確認して追加する。
+   2件表示・再読込後の内容一致・重複なしを実画面で確認する。変化があれば上書きせず止める。
+4. Stage Aの別端末復元・写真・Bへの招待/権限の実機受入れは別途残っている。
+
+このターンに本番Auth/DB/Storage/利用者記録/権限/環境変数変更、メール送信、Vercel deploy、
+実機ブラウザ操作はしていない。ソース/ローカル試験の合格を本番統合成功・商用版完成とは扱わない。

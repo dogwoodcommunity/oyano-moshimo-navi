@@ -117,6 +117,7 @@ const PLAN_STORAGE_KEY = "oyano_plan_v01";
 const FAMILY_BILLING_MANAGER_STORAGE_KEY = "oyano_family_billing_manager_v01";
 const DIARY_STORAGE_NAME = "oyano_diary_entries_v01";
 const NOTEBOOK_CLOUD_BINDING_STORAGE_KEY = "oyano_notebook_cloud_binding_v01";
+const NOTEBOOK_RECONCILIATION_ARCHIVE_KEY = "oyano_notebook_reconciliation_archive_v01";
 const PERSON_NOTEBOOK_DELETION_STORAGE_KEY = "oyano_person_notebook_deletions_v01";
 const DIARY_ENTRY_DELETION_STORAGE_KEY = "oyano_diary_entry_deletions_v01";
 let memoryCases: CaseRecord[] = [];
@@ -167,24 +168,30 @@ export function createLocalId(prefix = "local"): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function getLocalStorage(): Storage | null {
-  if (typeof window === "undefined" || !window.localStorage) return null;
+function getReadableLocalStorage(): Storage | null {
+  try { return typeof window === "undefined" ? null : window.localStorage; } catch { return null; }
+}
 
+function getLocalStorage(): Storage | null {
+  const storage = getReadableLocalStorage();
+  if (!storage) return null;
   try {
     const probeKey = "__oyano_storage_probe__";
-    window.localStorage.setItem(probeKey, "1");
-    window.localStorage.removeItem(probeKey);
-    return window.localStorage;
+    storage.setItem(probeKey, "1");
+    storage.removeItem(probeKey);
+    return storage;
   } catch {
     return null;
   }
 }
 
 function readCases(): CaseRecord[] {
-  const storage = getLocalStorage();
+  const storage = getReadableLocalStorage();
   if (!storage) return memoryCases;
 
   try {
+    const archive = reconciliationArchiveFromStorage(storage);
+    if (archive?.status === "installing") return archive.source.cases;
     const raw = storage.getItem(STORAGE_KEY);
     return raw ? JSON.parse(raw) as CaseRecord[] : [];
   } catch {
@@ -193,6 +200,10 @@ function readCases(): CaseRecord[] {
 }
 
 function writeCases(cases: CaseRecord[]): boolean {
+  if (reconciliationInstallInProgress()) {
+    lastNotebookStorageWarning = "手帳をまとめる途中で端末保存が止まりました。控えは残っています。保存先からもう一度確認してください。";
+    return false;
+  }
   memoryCases = [...cases];
   const storage = getLocalStorage();
   if (!storage) {
@@ -225,10 +236,12 @@ export function getLocalCase(caseId: string): CaseRecord | undefined {
 }
 
 function readDiaryEntries(): DiaryEntry[] {
-  const storage = getLocalStorage();
+  const storage = getReadableLocalStorage();
   if (!storage) return memoryDiaryEntries;
 
   try {
+    const archive = reconciliationArchiveFromStorage(storage);
+    if (archive?.status === "installing") return archive.source.diaryEntries;
     const raw = storage.getItem(DIARY_STORAGE_NAME);
     return raw ? JSON.parse(raw) as DiaryEntry[] : [];
   } catch {
@@ -255,6 +268,10 @@ function diaryEntryForNotebookStorage(entry: DiaryEntry): DiaryEntry {
 }
 
 function writeDiaryEntries(entries: DiaryEntry[]): boolean {
+  if (reconciliationInstallInProgress()) {
+    lastNotebookStorageWarning = "手帳をまとめる途中で端末保存が止まりました。控えは残っています。保存先からもう一度確認してください。";
+    return false;
+  }
   memoryDiaryEntries = [...entries];
   const storage = getLocalStorage();
   if (!storage) {
@@ -273,7 +290,7 @@ function writeDiaryEntries(entries: DiaryEntry[]): boolean {
 }
 
 function readDiaryEntryDeletionTombstones(): DiaryEntryDeletionTombstone[] {
-  const storage = getLocalStorage();
+  const storage = getReadableLocalStorage();
   if (!storage) return [];
   try {
     const parsed = JSON.parse(storage.getItem(DIARY_ENTRY_DELETION_STORAGE_KEY) ?? "[]") as unknown;
@@ -408,7 +425,7 @@ export function retryCompletedDiaryEntryLocalDeletions() {
 }
 
 function readPersonNotebookDeletionTombstones(): PersonNotebookDeletionTombstone[] {
-  const storage = getLocalStorage();
+  const storage = getReadableLocalStorage();
   if (!storage) return [];
   try {
     const parsed = JSON.parse(storage.getItem(PERSON_NOTEBOOK_DELETION_STORAGE_KEY) ?? "[]") as unknown;
@@ -516,6 +533,7 @@ export function completePersonNotebookLocalDeletion(input: {
   // cannot be compacted, future restores and auto-sync still cannot resurrect
   // or expose this notebook; the cleanup is retried on the next page load.
   if (!writePersonNotebookDeletionTombstones(tombstones)) return { persisted: false, deleted: false };
+  if (!removeReconciliationArchiveForDeletedCases(new Set([input.localCaseId]))) return { persisted: false, deleted: true };
   const casesPersisted = writeCases(readCases().filter((item) => item.id !== input.localCaseId));
   const diaryPersisted = writeDiaryEntries(readDiaryEntries().filter((item) => item.caseId !== input.localCaseId));
   return { persisted: casesPersisted && diaryPersisted, deleted: true };
@@ -526,16 +544,19 @@ export function retryCompletedPersonNotebookLocalDeletions() {
     .filter((item) => item.status === "deleted")
     .map((item) => item.localCaseId));
   if (deletedIds.size === 0) return true;
+  if (!removeReconciliationArchiveForDeletedCases(deletedIds)) return false;
   const casesPersisted = writeCases(readCases().filter((item) => !deletedIds.has(item.id)));
   const diaryPersisted = writeDiaryEntries(readDiaryEntries().filter((item) => !deletedIds.has(item.caseId)));
   return casesPersisted && diaryPersisted;
 }
 
 export function readNotebookCloudBinding(): NotebookCloudBinding | null {
-  const storage = getLocalStorage();
+  const storage = getReadableLocalStorage();
   if (!storage) return null;
 
   try {
+    const archive = reconciliationArchiveFromStorage(storage);
+    if (archive?.status === "installing") return archive.originalBinding;
     const parsed = JSON.parse(storage.getItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY) ?? "null") as Partial<NotebookCloudBinding> | null;
     if (!parsed || parsed.version !== 1 || typeof parsed.authUserId !== "string" || !parsed.authUserId) return null;
     return {
@@ -552,6 +573,7 @@ export function readNotebookCloudBinding(): NotebookCloudBinding | null {
 export function writeNotebookCloudBinding(binding: NotebookCloudBinding): boolean {
   const storage = getLocalStorage();
   if (!storage) return false;
+  if (reconciliationArchiveFromStorage(storage)?.status === "installing") return false;
   try {
     storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(binding));
     return true;
@@ -608,6 +630,131 @@ export function exportNotebookData(): NotebookExport {
       visibleCaseIds.has(entry.caseId) && !deletedDiaryKeys.has(`${entry.caseId}:${entry.id}`)
     ))
   };
+}
+
+export type NotebookReconciliationArchive = {
+  version: 1;
+  status: "prepared" | "installing" | "complete";
+  source: NotebookExport;
+  originalBinding: NotebookCloudBinding | null;
+  destination: NotebookCloudBinding;
+  targetCaseId?: string;
+};
+
+function removeReconciliationArchiveForDeletedCases(deletedIds: Set<string>) {
+  const storage = getReadableLocalStorage();
+  if (!storage) return false;
+  const archive = reconciliationArchiveFromStorage(storage);
+  if (!archive || !(archive.targetCaseId && deletedIds.has(archive.targetCaseId))
+      && !archive.source.cases.some((item) => deletedIds.has(item.id))) return true;
+  try {
+    if (archive.status === "installing") {
+      // A target deletion may arrive after its binding key was written but
+      // before the commit marker. Roll back ALL keys before removing the
+      // journal; a quota/removal error keeps original reads and binding active.
+      storage.setItem(STORAGE_KEY, JSON.stringify(archive.source.cases.filter((item) => !deletedIds.has(item.id))));
+      storage.setItem(DIARY_STORAGE_NAME, JSON.stringify(archive.source.diaryEntries.filter((item) => !deletedIds.has(item.caseId))));
+      if (archive.originalBinding) storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(archive.originalBinding));
+      else storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
+    }
+    storage.removeItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY);
+    return true;
+  } catch { return false; }
+}
+
+function reconciliationInstallInProgress() {
+  const storage = getReadableLocalStorage();
+  return Boolean(storage && reconciliationArchiveFromStorage(storage)?.status === "installing");
+}
+
+function reconciliationArchiveFromStorage(storage: Storage): NotebookReconciliationArchive | null {
+  try {
+    const value = JSON.parse(storage.getItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY) ?? "null") as NotebookReconciliationArchive | null;
+    return value?.version === 1 && ["prepared", "installing", "complete"].includes(value.status)
+      && Array.isArray(value.source?.cases) && Array.isArray(value.source?.diaryEntries)
+      && Boolean(value.destination?.authUserId) ? value : null;
+  } catch {
+    return null;
+  }
+}
+
+export function readNotebookReconciliationArchive() {
+  const storage = getReadableLocalStorage();
+  const archive = storage ? reconciliationArchiveFromStorage(storage) : null;
+  if (!archive) return null;
+  const relatedCases = new Set(archive.source.cases.map((item) => item.id));
+  if (archive.targetCaseId) relatedCases.add(archive.targetCaseId);
+  // A failed storage cleanup must not make a deleted notebook downloadable.
+  if (readPersonNotebookDeletionTombstones().some((item) => relatedCases.has(item.localCaseId))) return null;
+  if (readDiaryEntryDeletionTombstones().some((item) => relatedCases.has(item.localCaseId))) return null;
+  return archive;
+}
+
+function reconciliationSourceUnchanged(source: NotebookExport) {
+  const current = exportNotebookData();
+  return JSON.stringify(current.cases) === JSON.stringify(source.cases)
+    && JSON.stringify(current.diaryEntries) === JSON.stringify(source.diaryEntries);
+}
+
+// Persist the entire original (including profile/tasks) before any cloud POST.
+// An interrupted multi-key install reads from this archive, never a half-written
+// mixture. The final single-key status change is the local commit point.
+export function archiveNotebookForReconciliation(source: NotebookExport, destination: NotebookCloudBinding) {
+  const storage = getLocalStorage();
+  if (!storage || !reconciliationSourceUnchanged(source)) return false;
+  const previous = reconciliationArchiveFromStorage(storage);
+  if (previous && (previous.source.cases[0]?.id !== source.cases[0]?.id
+      || previous.destination.authUserId !== destination.authUserId
+      || previous.destination.familyId !== destination.familyId)) return false;
+  const originalBinding = readNotebookCloudBinding();
+  if (originalBinding && (originalBinding.authUserId !== destination.authUserId
+      || (originalBinding.familyId && originalBinding.familyId !== destination.familyId))) return false;
+  try {
+    if (previous?.status === "installing") {
+      storage.setItem(STORAGE_KEY, JSON.stringify(previous.source.cases));
+      storage.setItem(DIARY_STORAGE_NAME, JSON.stringify(previous.source.diaryEntries));
+      if (previous.originalBinding) storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(previous.originalBinding));
+      else storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
+    }
+    const archive: NotebookReconciliationArchive = { version: 1, status: "prepared", source, originalBinding, destination };
+    storage.setItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY, JSON.stringify(archive));
+    return true;
+  } catch {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
+}
+
+export function installReconciledNotebook(input: {
+  source: NotebookExport;
+  destination: NotebookCloudBinding;
+  notebook: { cases: CaseRecord[]; diaryEntries: DiaryEntry[] };
+}) {
+  const storage = getLocalStorage();
+  const archive = storage && reconciliationArchiveFromStorage(storage);
+  if (!storage || !archive || !reconciliationSourceUnchanged(input.source)
+      || archive.destination.authUserId !== input.destination.authUserId
+      || archive.destination.familyId !== input.destination.familyId
+      || JSON.stringify(archive.source.cases) !== JSON.stringify(input.source.cases)
+      || JSON.stringify(archive.source.diaryEntries) !== JSON.stringify(input.source.diaryEntries)
+      || input.notebook.cases.length !== 1
+      || input.notebook.diaryEntries.some((entry) => entry.caseId !== input.notebook.cases[0].id)
+      || input.notebook.cases.some((item) => isPersonNotebookCloudSyncBlocked(item.id))
+      || input.notebook.diaryEntries.some((item) => isDiaryEntryCloudSyncBlocked(item.caseId, item.id))) return false;
+  try {
+    const installing = { ...archive, targetCaseId: input.notebook.cases[0].id, status: "installing" };
+    storage.setItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY, JSON.stringify(installing));
+    storage.setItem(STORAGE_KEY, JSON.stringify(input.notebook.cases));
+    storage.setItem(DIARY_STORAGE_NAME, JSON.stringify(input.notebook.diaryEntries.map(diaryEntryForNotebookStorage)));
+    storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(input.destination));
+    storage.setItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY, JSON.stringify({ ...installing, status: "complete" }));
+    memoryCases = [...input.notebook.cases];
+    memoryDiaryEntries = [...input.notebook.diaryEntries];
+    return true;
+  } catch {
+    lastNotebookStorageWarning = storageWarningMessage();
+    return false;
+  }
 }
 
 function diaryEntryTimestamp(entry: DiaryEntry) {
@@ -1009,6 +1156,7 @@ export function resetLocalNotebookData() {
     storage.removeItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY);
     storage.removeItem(PERSON_NOTEBOOK_DELETION_STORAGE_KEY);
     storage.removeItem(DIARY_ENTRY_DELETION_STORAGE_KEY);
+    storage.removeItem(NOTEBOOK_RECONCILIATION_ARCHIVE_KEY);
   } catch {
     // If storage removal is blocked, the in-memory state above still gives
     // the current session a fresh start.

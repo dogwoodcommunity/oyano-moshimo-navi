@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
 import { MonitorTestReminder } from "@/components/MonitorTestReminder";
+import { NotebookReconciliation } from "@/components/NotebookReconciliation";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { PREFECTURES } from "@/lib/prefectures";
@@ -1213,6 +1214,12 @@ export default function FamilyBoardPage() {
   const [cloudFamilies, setCloudFamilies] = useState<CloudFamilyOption[]>([]);
   const [cloudMemberRole, setCloudMemberRole] = useState<CloudFamilyOption["role"] | null>(null);
   const [cloudIdentityStatus, setCloudIdentityStatus] = useState<CloudIdentityStatus>("checking");
+  const [separateNotebookConflict, setSeparateNotebookConflict] = useState(false);
+  const [reconciliationBusy, setReconciliationBusy] = useState(false);
+  const notebookInteractionRef = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    if (notebookInteractionRef.current) notebookInteractionRef.current.inert = reconciliationBusy;
+  }, [reconciliationBusy]);
   const [cloudStatus, setCloudStatus] = useState<CloudStatus>("checking");
   const [cloudMessage, setCloudMessage] = useState("このままでも使えますが、履歴削除や機種変更で消えることがあります。メール確認をするとクラウドにも保存できます。");
   const [cloudAutoStatus, setCloudAutoStatus] = useState<CloudAutoStatus>("idle");
@@ -1307,6 +1314,7 @@ export default function FamilyBoardPage() {
         setCloudFamilyId(null);
         setCloudMemberRole(null);
         setCloudIdentityStatus("checking");
+        setSeparateNotebookConflict(false);
       }
       lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
@@ -1334,6 +1342,7 @@ export default function FamilyBoardPage() {
         setCloudFamilyId(null);
         setCloudMemberRole(null);
         setCloudIdentityStatus("checking");
+        setSeparateNotebookConflict(false);
       }
       lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
@@ -1366,9 +1375,9 @@ export default function FamilyBoardPage() {
   const cloudRoleIsBound = Boolean(
     cloudUserId && cloudIdentityStatus === "ready" && cloudMemberRole
   );
-  const cloudContentReadOnly = cloudRoleIsBound && cloudMemberRole === "viewer";
-  const cloudProfileReadOnly = cloudRoleIsBound
-    && (cloudMemberRole === "member" || cloudMemberRole === "viewer");
+  const cloudContentReadOnly = reconciliationBusy || (cloudRoleIsBound && cloudMemberRole === "viewer");
+  const cloudProfileReadOnly = reconciliationBusy || (cloudRoleIsBound
+    && (cloudMemberRole === "member" || cloudMemberRole === "viewer"));
 
   useEffect(() => {
     setProfileEditorOpen(false);
@@ -2580,6 +2589,7 @@ export default function FamilyBoardPage() {
   }
 
   async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
+    if (reconciliationBusy) return;
     const authGeneration = cloudAuthGenerationRef.current;
     const payload = options.payload ?? notebookSyncPayload();
     if (diaryCloudDeletionInFlightRef.current || personNotebookDeletionInFlightRef.current) {
@@ -2809,6 +2819,8 @@ export default function FamilyBoardPage() {
   }
 
   async function restoreNotebookFromCloud(options: { silent?: boolean; familyId?: string | null; identityOnly?: boolean } = {}) {
+    if (reconciliationBusy) return;
+    setSeparateNotebookConflict(false);
     const authGeneration = cloudAuthGenerationRef.current;
     const token = await getAccessToken({ silent: options.silent });
     if (!token) return;
@@ -2944,10 +2956,11 @@ export default function FamilyBoardPage() {
       });
       if (hasLocalNotebook && !bindingMatches && !canAdoptExistingIdentity) {
         if (hasRemoteNotebook) {
+          setSeparateNotebookConflict(true);
           setCloudIdentityStatus("blocked");
           setCloudAutoStatus("error");
           setCloudStatus("error");
-          setCloudMessage("端末とクラウドの両方に別々の手帳があります。混ぜずに止めています。端末の手帳をダウンロードしてから、どちらを使うか確認してください。");
+          setCloudMessage("端末とクラウドの両方に別々の手帳があります。自動では混ぜません。同じ人の手帳なら、下の「両方の記録を確認する」から日記をまとめられます。");
         } else {
           setCloudIdentityStatus("needs-confirmation");
           setCloudAutoStatus("idle");
@@ -2998,7 +3011,7 @@ export default function FamilyBoardPage() {
   }
 
   useEffect(() => {
-    if (!loaded || !cloudUserEmail || !cloudUserId || firstCloudLoadDoneRef.current) return;
+    if (!loaded || !cloudUserEmail || !cloudUserId || reconciliationBusy || firstCloudLoadDoneRef.current) return;
 
     firstCloudLoadDoneRef.current = true;
     if (skipInitialCloudRestoreRef.current) {
@@ -3014,7 +3027,7 @@ export default function FamilyBoardPage() {
     // Always identify the exact auth user/family and read the cloud first.
     // Local data is never POSTed merely because an auth session exists.
     void restoreNotebookFromCloud({ silent: true });
-  }, [loaded, cloudUserEmail, cloudUserId]);
+  }, [loaded, cloudUserEmail, cloudUserId, reconciliationBusy]);
 
   useEffect(() => {
     if (
@@ -3057,7 +3070,7 @@ export default function FamilyBoardPage() {
   }
 
   return (
-    <main className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
+    <main ref={notebookInteractionRef} aria-busy={reconciliationBusy} className={`container board-page family-notebook-page ${activeCase ? "has-active-case" : "is-empty-case"}`}>
       {activeCase ? (
         <section className="notebook-cover" aria-label="親のもしもナビの手帳表紙">
           <span className="ribbon" aria-hidden="true" />
@@ -3403,16 +3416,38 @@ export default function FamilyBoardPage() {
                 ) : null}
                 <p className="cloud-message">{cloudMessage}</p>
                 <div className="cloud-action-row">
-                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={!cloudUserEmail || cloudIdentityStatus !== "ready" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={reconciliationBusy || !cloudUserEmail || cloudIdentityStatus !== "ready" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     今すぐ保存
                   </button>
-                  <button type="button" onClick={() => restoreNotebookFromCloud({ familyId: cloudFamilyId })} disabled={!cloudUserEmail || cloudIdentityStatus === "different-account" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => restoreNotebookFromCloud({ familyId: cloudFamilyId })} disabled={reconciliationBusy || !cloudUserEmail || cloudIdentityStatus === "different-account" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     復元
                   </button>
                   <button type="button" onClick={downloadNotebookExport}>
                     ダウンロード
                   </button>
                 </div>
+                <NotebookReconciliation
+                  userId={cloudUserId}
+                  email={cloudUserEmail}
+                  familyId={cloudFamilyId}
+                  eligible={separateNotebookConflict && cloudIdentityStatus === "blocked"}
+                  unavailable={Boolean(editingDiaryId || profileEditorOpen || editingTaskKey || taskComposerOpen
+                    || diaryDeleteState || personNotebookDeleteState
+                    || Object.values(forms).some((form) => form.body.trim() || form.files.length)
+                    || cloudStatus === "syncing" || cloudAutoStatus === "saving")}
+                  onBusy={setReconciliationBusy}
+                  onComplete={(notebook) => {
+                    reloadNotebookState(notebook.cases, notebook.diaryEntries);
+                    setCloudMemberRole(notebook.memberRole as CloudFamilyOption["role"]);
+                    lastSyncedPayloadRef.current = notebookPayloadSignature(notebookSyncPayload(notebook.cases, notebook.diaryEntries));
+                    setCloudIdentityStatus("ready");
+                    setSeparateNotebookConflict(false);
+                    setCloudAutoStatus("saved");
+                    setCloudStatus("synced");
+                    setLastCloudSyncedAt(new Date().toISOString());
+                    setCloudMessage(`クラウドに保存しました。対象者1人、記録${notebook.diaryEntries.length}件。まとめる前の端末手帳も控えに残しています。`);
+                  }}
+                />
                 <small>暗証番号・パスワード・マイナンバー画像は保存対象にしないでください。</small>
               </article>
             </details>

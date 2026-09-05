@@ -83,6 +83,11 @@ begin
     execute 'grant execute on function public.sync_notebook_v2(uuid, text, uuid, boolean, jsonb, jsonb, uuid) to service_role';
   end if;
 
+  if to_regprocedure('public.reconcile_notebook_diaries_v1(uuid,text,uuid,uuid,text,jsonb,uuid)') is not null then
+    execute 'revoke all on function public.reconcile_notebook_diaries_v1(uuid, text, uuid, uuid, text, jsonb, uuid) from public, anon, authenticated, service_role';
+    execute 'grant execute on function public.reconcile_notebook_diaries_v1(uuid, text, uuid, uuid, text, jsonb, uuid) to service_role';
+  end if;
+
   if to_regclass('public.ai_consult_daily_claims') is not null then
     execute 'revoke all on table public.ai_consult_daily_claims from public, anon, authenticated, service_role';
   end if;
