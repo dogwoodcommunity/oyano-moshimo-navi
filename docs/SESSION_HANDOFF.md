@@ -12009,3 +12009,40 @@ Auth招待は外部送信・Auth作成となるため、送信直前に別の明
 その後、本番の空のprivate台帳migrationは、作成内容と影響を示して実行直前の明示確認を得てから適用する。
 本番適用後も、正確な実行者Authの画面選択、最小profile＋無効executor登録、別確認者承認＋有効化を別々の操作とし、
 各本番writeの実行直前に確認を得る。完全削除スイッチは引き続きOFFとする。
+
+## 2026-09-05 追記 315 — private本人確認台帳をmainへ反映
+
+追記314の16ファイルを限定stageし、秘密情報検査と2系統の独立レビュー後にGitHubへpushした。
+PR #6を通常mergeし、mainの全CI成功まで確認した。
+
+GitHub・検証:
+
+- 作業commit: `dfb46f8fadc1d755e851f98e731a193e294360d7`。
+- PR #6: `https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/6`。
+- main merge commit: `4e8198239e82708d6135aa44e6fba16eb62a1c4b`。
+- PR CI run `33939330122` は2分30秒で成功した。
+- main CI run `33939465316` も2分30秒で成功した。Web・mobile型検査、モニター、認証、
+  アカウント削除、private台帳のPostgreSQL回帰、家族権限、AI記憶、日記・対象者削除、build、smokeを含む。
+- Deploy workflow run `33939465436` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  成功表示をVercel本番deployの証拠にはしていない。今回Web runtime byteの変更はないためCLI deployも行っていない。
+- 限定stageの `git diff --cached --check` とGitleaksは成功し、secret検出0件だった。
+- 初回独立レビューでowner-only ACL、回帰ROLLBACK、trigger、lock、exact TOTP、証跡の原子性を確認した。
+  別系統レビューで、本番確認SQLの制約定義・生成列・余分なtrigger・executor全ACLと、証跡ID完全一致の
+  検証漏れを検出した。すべて修正し、最終レビューではP0/P1なしとなった。
+
+安全境界:
+
+- GitHub mainへ入ったのは、private台帳migration、運用手順、検証・回帰だけである。
+  本番Supabaseへmigration、profile、executor、本人確認event、承認eventを書き込んでいない。
+- 本番の削除担当roleと有効executorは0件のまま。`ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持し、
+  削除依頼・削除job、DB削除RPC、Auth削除、Storage削除を実行していない。
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データを作成・変更・削除していない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、本番へ空の `account_delete_private` schemaと追記専用台帳を作る
+`supabase/account_delete_identity_ledger.sql` の1回限りの適用である。既存利用者の行は更新・削除せず、
+利用者向け権限も付与しない本番DDLだが、本番書き込みであるため、実行内容と影響を示した直後の明示確認を得てから
+Supabase SQL Editorで実行する。実行後は強化済み確認SQLをread-onlyで実行し、全項目PASSを確認する。
+実行者の最小profile＋無効executor作成と、別確認者承認＋有効化はその後も別操作・別の実行時承認とする。
