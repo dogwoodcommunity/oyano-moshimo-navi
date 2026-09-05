@@ -12066,6 +12066,18 @@ Supabase SQL Editorで実行する。実行後は強化済み確認SQLをread-on
 - migrationは既存のpublic/Auth tableへINSERT・UPDATE・DELETEせず、台帳にも行を作らない。
   適用前の独立監査でもP0/P1なし、途中失敗時はDDLを含めtransaction全体がrollbackされることを確認した。
 
+GitHub・検証:
+
+- 本番適用実績、checklist、適用前状態を固定していた商用gateテストを更新し、commit
+  `7be5fb67f6ab19255f87b7d7539838ba9b13f428` をmainへpushした。
+- `pnpm run test:commercial-release-gates`、`node --check scripts/test-commercial-release-gates.mjs`、
+  `git diff --check`、限定stageの`git diff --cached --check`が成功し、Gitleaksはsecret検出0件だった。
+- main CI run `33940520702` は2分36秒で成功した。型検査、private台帳を含む削除系PostgreSQL回帰、
+  monitor・家族権限・AI記憶・日記/対象者削除、build、smokeを含む全stepが成功した。
+- Deploy workflow run `33940520701` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  今回は本番DB migrationと文書・テスト更新だけでWeb runtime byteを変更していないため、
+  このworkflowをVercel本番deployの証拠にはしていない。
+
 安全境界:
 
 - 今回作ったのは空のprivate schema・台帳・index・保護function/trigger・ACLだけである。
