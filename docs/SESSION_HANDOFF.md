@@ -12046,3 +12046,39 @@ GitHub・検証:
 利用者向け権限も付与しない本番DDLだが、本番書き込みであるため、実行内容と影響を示した直後の明示確認を得てから
 Supabase SQL Editorで実行する。実行後は強化済み確認SQLをread-onlyで実行し、全項目PASSを確認する。
 実行者の最小profile＋無効executor作成と、別確認者承認＋有効化はその後も別操作・別の実行時承認とする。
+
+## 2026-09-05 追記 316 — private本人確認台帳を本番へ空で適用
+
+ユーザーから実行直前の明示確認を得て、mainに反映済みの
+`supabase/account_delete_identity_ledger.sql` をSupabase本番へ1回だけ適用した。
+このmigrationは空のprivate本人確認台帳と保護機構だけを作成し、既存利用者の行や削除権限を変更しない。
+
+本番適用・read-only検証:
+
+- SQL Editorは本番projectのmain環境であることを確認し、空の新規queryへローカルのmigration全文190行を貼り付けた。
+  末尾が`commit;`であり、以前の確認SQLが混在していないことを目視してから1回だけ実行し、
+  `Success. No rows returned`を確認した。
+- 適用後は個人情報を返さないSELECTだけの検査を実行した。集約結果は`all_checks_pass=true`、
+  制約6、列9、非internal trigger 2、private台帳0件、executor総数0件、有効executor 0件だった。
+- schema、table、2つのtrigger functionが存在し、全ownerが`postgres`、RLSとFORCE RLSが有効、
+  owner以外のACLなし、`anon`・`authenticated`・`service_role`にschema・table・function権限なし、
+  生成列と6制約、2 triggerのevent・level・functionが設計どおりであることをread-onlyで確認した。
+- migrationは既存のpublic/Auth tableへINSERT・UPDATE・DELETEせず、台帳にも行を作らない。
+  適用前の独立監査でもP0/P1なし、途中失敗時はDDLを含めtransaction全体がrollbackされることを確認した。
+
+安全境界:
+
+- 今回作ったのは空のprivate schema・台帳・index・保護function/trigger・ACLだけである。
+  最小profile、executor、本人確認event、承認eventは作成しておらず、削除実行者roleは0件のままである。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持した。削除依頼・削除job、DB削除RPC、Auth削除、
+  Storage削除、削除実行者の有効化は行っていない。
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データの本文は参照せず、
+  作成・変更・削除していない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の`review_exports/`と`docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md`は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、画面上で削除実行予定者の正確なAuth行とverified TOTPをread-onlyで再照合すること。
+その後、別の実行時明示確認を得て、最小profile、本人確認event、`active=false`のexecutorを
+同一transactionで作成する。有効化は別確認者の承認eventを伴うさらに別の操作・別承認とし、
+完全削除スイッチは単独テストアカウントの完走までOFFを維持する。

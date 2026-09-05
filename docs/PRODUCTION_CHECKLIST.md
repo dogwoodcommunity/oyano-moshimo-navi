@@ -38,8 +38,8 @@
 - [x] `supabase/admin_auth_hardening.sql` を実行
 - [x] `supabase/account_delete_executor_role.sql` を実行
   - 2026-09-04確認: 本番へ適用し、migration単体ではユーザー作成・権限付与をせず、`account_delete_executors` のRLS/ACL、認可helperを含む読み取り専用13項目を確認。
-- [ ] `supabase/account_delete_identity_ledger.sql` を1回だけ実行し、DB owner専用・追記専用・API role権限なしを確認
-  - ソースと破棄DB回帰は用意済み。本番適用前に同名schemaが存在しないことを確認し、未知の既存schemaを自動採用しない。
+- [x] `supabase/account_delete_identity_ledger.sql` を1回だけ実行し、DB owner専用・追記専用・API role権限なしを確認
+  - 2026-09-05確認: 本番へ1回限り適用。private台帳0件、全ownerが`postgres`、FORCE RLS、owner以外のACLなし、API 3 roleの権限なし、制約6・列9・非internal trigger 2をread-only検査し、全項目PASS。既存データへの変更・削除なし。
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [x] `supabase/account_deletion_pipeline.sql` を実行
   - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。

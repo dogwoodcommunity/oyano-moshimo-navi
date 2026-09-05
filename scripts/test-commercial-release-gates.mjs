@@ -187,6 +187,7 @@ assert.ok(productionChecklist.includes("[x] 一般Admin APIへ広がらない削
 assert.ok(productionChecklist.includes("[x] 本番へ削除専用roleと更新済み削除pipelineをmigration"), "the checklist must record the verified production migration");
 for (const appliedMigrationLabel of [
   "`supabase/account_delete_executor_role.sql` を実行",
+  "`supabase/account_delete_identity_ledger.sql` を1回だけ実行",
   "`supabase/account_deletion_pipeline.sql` を実行",
   "Web更新前に `supabase/notebook_diary_delete.sql` を実行",
   "Web更新前に `supabase/notebook_person_delete.sql` を実行"
@@ -195,7 +196,7 @@ for (const appliedMigrationLabel of [
   assert.ok(!productionChecklist.includes(`- [ ] ${appliedMigrationLabel}`), `the checklist must not also leave ${appliedMigrationLabel} pending`);
 }
 assert.ok(productionChecklist.includes("[x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認"), "the checklist must record the verified operator MFA result");
-assert.ok(productionChecklist.includes("[ ] `supabase/account_delete_identity_ledger.sql` を1回だけ実行"), "the private ledger production migration must remain pending until it is applied and verified");
+assert.ok(productionChecklist.includes("2026-09-05確認: 本番へ1回限り適用。private台帳0件"), "the private ledger production migration must retain its empty-ledger verification evidence");
 assert.ok(productionChecklist.includes("[ ] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成"), "the exact operator subject, minimal profile, and inactive role must remain one pending atomic step");
 assert.ok(productionChecklist.includes("[ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化"), "the named operator must remain inactive until the separate approval step");
 assert.ok(productionChecklist.includes("[x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認（有効化の承認eventは未作成）"), "the separately verified confirmer must be recorded without claiming activation approval");
