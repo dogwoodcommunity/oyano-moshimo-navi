@@ -8,3 +8,6 @@ node_modules
 .expo
 work
 outputs
+review_exports
+docs/CLAUDE_FULL_REVIEW_REQUEST_2026-09-03.md
+docs/CLAUDE_FULL_REVIEW_RESULT_2026-09-03.md

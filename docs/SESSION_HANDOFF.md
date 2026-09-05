@@ -12266,3 +12266,34 @@ Bearerを提示した場合も、未認証と同じ401になる不一致を確�
 次はこの修正をmainへpushしてVercel本番へ反映する。その後、同じブラウザ状態で新しいMagic Linkを
 開き、削除専用auth-statusと一覧GETが200、一般Admin 3 APIが403、ログアウト後が401となることだけを
 確認する。PATCH、preflight、executeは別承認まで呼ばない。
+
+## 2026-09-05 追記 322 — 403修正をmain・Vercel本番へ反映
+
+追記321の一般Admin拒否修正をmainへpushし、Vercel CLIから本番へdeployした。
+
+- commit: `7347ac83db88747fabea6f99b7eecb44e8c80e8a`
+- deployment: `dpl_EhzsPckP4NvDM8dXetRPAr3grSFA`
+- deployment URL: `https://oyano-moshimo-navi-o800t1ex7-dogwoodcommunity1.vercel.app`
+- targetはproduction、statusはReady、公開aliasは
+  `https://oyano-moshimo-navi.vercel.app` であることを `vercel inspect` で確認した。
+- Vercel buildは168ページの生成を含め成功した。
+- 公開aliasに対する `node scripts/smoke-web.mjs` は成功した。公開画面、削除担当画面、health、
+  認証必須APIの401、空相談の400等を確認し、Admin env APIは管理token未指定のため401 skipだった。
+
+deploy後の確認で、`.vercelignore` に未追跡レビュー資料の明示的な除外がなかったことを確認した。
+対象資料は開いていないが、このdeployのアップロード対象一覧を保存・検査しておらず、Vercel CLIが
+未追跡パスを送らなかったとは証明しない。以後のdeployから確実に外すため、`.vercelignore` へ
+`review_exports` と未追跡Claudeレビュー文書2件を明示追加した。これらをstage・commit対象にはしていない。
+
+Chrome側には別の既存管理セッションが残っており、表示メールとTOTP状態が今回の削除専用実行者と
+一致しないため、そのセッションを削除専用試験の証拠には使っていない。ログアウト操作も行っていない。
+削除専用実行者のログイン・200/403/401分離試験は、分離したブラウザ状態で引き続き未完了である。
+
+安全境界:
+
+- 削除依頼の状態変更、削除前確認、削除実行、DB削除RPC、Auth削除、Storage削除は行っていない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま。既存本番データは変更・削除していない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+
+次は `.vercelignore` の除外をmainへpushして本番を再deployし、先のdeploymentを公開aliasから置き換える。
+その後、分離した同一ブラウザで新しいMagic Linkを開き、GETだけの権限分離試験を行う。
