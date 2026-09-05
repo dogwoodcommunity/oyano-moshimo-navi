@@ -491,7 +491,34 @@ await test("retry refuses an already-copied diary whose content changed", async 
   h.remote.diaryEntries[1].body = "あとから修正された仮の記録";
   await h.preview();
   assert.equal(h.posts.length, 1); assert.equal(h.installs.length, 0); unchanged(h, original);
-  assert.match(h.status(), /以前まとめた記録が変更されています/); h.unmount();
+  assert.match(h.status(), /以前まとめた記録の内容が異なっています/); h.unmount();
+});
+
+await test("legacy trimmed copy keeps both notebooks and offers inspection without retrying or overwriting", async () => {
+  const h = harness(); let inspections = 0;
+  h.render({ onOpenLocal: () => { inspections += 1; } });
+  h.local.diaryEntries[0].body = "  仮の記録\r\n\n";
+  const entry = h.local.diaryEntries[0];
+  h.remote.diaryEntries.push({ ...entry,
+    id: await helper.reconciledDiaryId(SOURCE, entry.id), caseId: TARGET,
+    body: entry.body.trim(), cloudRevision: 1, cloudHash: "c".repeat(64)
+  });
+  const original = plain(h.local); const remote = plain(h.remote);
+  await h.preview();
+  assert.match(h.status(), /空白や改行の違い/);
+  assert.match(h.status(), /両方の手帳は残っています/);
+  assert.match(h.status(), /保存し直すだけで統合できるとは限りません/);
+  assert.ok(h.nodes().some((node) => node.type === "a" && node.props.href === "/legal/privacy#contact"));
+  const events = [...h.events];
+  h.click("端末の記録を開く");
+  assert.equal(inspections, 1); assert.deepEqual(h.events, events);
+  assert.equal(h.posts.length, 0); assert.equal(h.installs.length, 0);
+  unchanged(h, original); assert.deepEqual(h.remote, remote);
+  h.render({ unavailable: true });
+  assert.equal(h.button("端末の記録を開く").props.disabled, true);
+  h.render({ userId: B, familyId: "other-family", eligible: false });
+  assert.equal(h.button("端末の記録を開く"), undefined);
+  assert.equal(h.status(), ""); h.unmount();
 });
 
 for (const kind of ["source-person", "source-diary", "saved-person", "saved-diary"]) {

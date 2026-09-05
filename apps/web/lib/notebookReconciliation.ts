@@ -20,7 +20,7 @@ export function reconciliationBodyTooLong(body: string) {
   return false;
 }
 
-export const RECONCILIATION_BODY_LIMIT_MESSAGE = "2つの手帳をまとめる操作は、1件10,000文字までです。長い記録があるため、どちらの手帳も変更せずに止めました。通常の記録・保存にはこの文字数制限はありません。記録を削らず、それぞれの手帳と端末の控えを残してください。";
+export const RECONCILIATION_BODY_LIMIT_MESSAGE = "2つの手帳をまとめる操作は、1件10,000文字までです。絵文字の組み合わせなどは複数文字として数える場合があります。長い記録があるため、どちらの手帳も変更せずに止めました。通常の記録・保存にはこの文字数制限はありません。記録を削らず、それぞれの手帳と端末の控えを残してください。";
 
 // Stable across retries, including a lost successful HTTP response. Never reuse
 // a source ID on the destination: two independently created diaries may collide.
@@ -106,7 +106,7 @@ export async function planNotebookReconciliation(input: NotebookReconciliationIn
     const existing = remoteById.get(copy.id);
     if (existing) {
       if (!reconciliationDiaryMatches(copy, existing)) {
-        throw new Error("以前まとめた記録が変更されています。上書きせずに止めました。");
+        throw new Error("以前まとめた記録の内容が異なっています。空白や改行の違いも確認するため、自動では上書きしません。両方の手帳は残っています。「端末の記録を開く」で内容を確認し、まず控えを残してください。確認に困ったときは「お問い合わせ」からご相談ください。保存し直すだけで統合できるとは限りません。");
       }
       alreadyPresentCount += 1;
     }

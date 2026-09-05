@@ -72,6 +72,7 @@ jobs:
       - name: Test diary text preservation and Unicode excerpts
         run: |
           pnpm run test:notebook-diary-text
+          pnpm run test:notebook-sync-text-retry
           pnpm run test:unicode-display-text
 
       - name: Test home overview reachability

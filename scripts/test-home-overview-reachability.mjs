@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -30,5 +32,36 @@ for (const section of ["今日見るところ", "今日の一手", "記録から
 assert.doesNotMatch(styles, /\.notebook-tab-bar(?:\s+button(?:\.is-overview)?)?\s*\{[^}]*?(?:display:\s*none|visibility:\s*hidden)/, "summary and task navigation must remain visible in both stylesheets");
 assert.match(home, /notebookTabs\.map\(\(tab\) => \([\s\S]*?aria-controls=\{hashForNotebookTab\(tab\.id\)\.slice\(1\)\}[\s\S]*?aria-selected=\{activeNotebookTab === tab\.id\}[\s\S]*?onClick=\{\(\) => openNotebookSection\(hashForNotebookTab\(tab\.id\)\)\}/, "every summary/task tab must retain its selected state, panel reference and existing navigation handler");
 assert.match(styles, /@media \(max-width: 760px\)[\s\S]*?\.notebook-tab-bar\s*\{\s*position:\s*static;/, "mobile notebook tabs must not overlap the fixed header");
+
+// Execute the real reconciliation inspection callback and navigation handlers.
+// Synthetic DOM/timers only; no React rendering, stored records or network.
+const ts = createRequire(path.join(repoRoot, "apps/web/package.json"))("typescript");
+const ast = ts.createSourceFile("home.tsx", home, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TSX);
+const nodes = [];
+function visit(node) { nodes.push(node); ts.forEachChild(node, visit); }
+visit(ast);
+const handlers = ["tabForHash", "openNotebookSection"].map((name) => {
+  const found = nodes.filter((node) => ts.isFunctionDeclaration(node) && node.name?.text === name);
+  assert.equal(found.length, 1);
+  return found[0].getText(ast);
+});
+const component = nodes.filter((node) => ts.isJsxSelfClosingElement(node) && node.tagName.getText(ast) === "NotebookReconciliation");
+assert.equal(component.length, 1);
+const callback = component[0].attributes.properties.find((node) => ts.isJsxAttribute(node) && node.name.text === "onOpenLocal");
+assert.ok(callback?.initializer?.expression, "stopped reconciliation must have a local inspection callback");
+const events = [];
+vm.runInNewContext(ts.transpileModule(`${handlers.join("\n")}\n(${callback.initializer.expression.getText(ast)})();`, {
+  compilerOptions: { target: ts.ScriptTarget.ES2022 }
+}).outputText, {
+  setActiveNotebookTab: (tab) => events.push(["tab", tab]),
+  markMonitorActivity() {}, trackFunnel() {},
+  setProfileEditorOpen() { assert.fail("inspection must not open the profile"); },
+  window: { setTimeout: (run) => run(), requestAnimationFrame: (run) => run() },
+  document: { querySelector(selector) {
+    assert.equal(selector, "#diary-history", "inspection must target a real history panel, not a tab name");
+    return { scrollIntoView: () => events.push(["scroll", selector]) };
+  } }
+});
+assert.deepEqual(events, [["tab", "history"], ["scroll", "#diary-history"]]);
 
 console.log("home overview reachability tests passed");

@@ -3426,6 +3426,7 @@ export default function FamilyBoardPage() {
                     || Object.values(forms).some((form) => form.body.trim() || form.files.length)
                     || cloudStatus === "syncing" || cloudAutoStatus === "saving")}
                   onBusy={setReconciliationBusy}
+                  onOpenLocal={() => openNotebookSection("#diary-history")}
                   onComplete={(notebook) => {
                     reloadNotebookState(notebook.cases, notebook.diaryEntries);
                     setCloudMemberRole(notebook.memberRole as CloudFamilyOption["role"]);

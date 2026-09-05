@@ -24,6 +24,7 @@ type Props = {
   eligible: boolean;
   unavailable: boolean;
   onBusy: (busy: boolean) => void;
+  onOpenLocal?: () => void;
   onComplete: (notebook: CloudNotebook) => void;
 };
 
@@ -49,6 +50,7 @@ export function NotebookReconciliation(props: Props) {
   const [acknowledged, setAcknowledged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
+  const [blocked, setBlocked] = useState(false);
   const [hasArchive, setHasArchive] = useState(false);
   const current = useRef(props);
   const inFlight = useRef(false);
@@ -73,6 +75,7 @@ export function NotebookReconciliation(props: Props) {
     setChoice("");
     setAcknowledged(false);
     setMessage("");
+    setBlocked(false);
     const archive = readNotebookReconciliationArchive();
     setHasArchive(Boolean(archive && archive.destination.authUserId === props.userId
       && archive.destination.familyId === props.familyId));
@@ -82,6 +85,7 @@ export function NotebookReconciliation(props: Props) {
     if (inFlight.current || !props.userId || !props.familyId || !props.eligible || props.unavailable) return;
     if (submit && (!preview || choice !== "same" || !acknowledged)) return;
     inFlight.current = true;
+    setBlocked(false);
     setBusy(true);
     props.onBusy(true);
     setMessage(submit ? "端末の控えを残し、記録を追加しています。" : "両方の手帳を確認しています。まだ変更しません。");
@@ -170,6 +174,7 @@ export function NotebookReconciliation(props: Props) {
       props.onComplete(saved);
     } catch (error) {
       if (mounted.current && operationGeneration === generation.current) {
+        setBlocked(true);
         setMessage(error instanceof Error ? error.message : "まとめる処理を停止しました。元の記録は控えに残しています。");
       }
     } finally {
@@ -244,6 +249,10 @@ export function NotebookReconciliation(props: Props) {
       </div>
     </> : null}
     {message ? <p role="status">{message}</p> : null}
+    {blocked && props.eligible ? <div className="cloud-action-row">
+      {props.onOpenLocal ? <button type="button" disabled={busy || props.unavailable} onClick={props.onOpenLocal}>端末の記録を開く</button> : null}
+      <a href="/legal/privacy#contact">お問い合わせ</a>
+    </div> : null}
     {hasArchive ? <button type="button" disabled={busy} onClick={() => void downloadCheckedSource(true)}>まとめる前の端末手帳をダウンロード</button> : null}
   </section>;
 }
