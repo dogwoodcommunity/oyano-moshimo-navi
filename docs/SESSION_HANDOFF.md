@@ -11756,3 +11756,35 @@ Vercel production:
 次の1項目は、本人が携帯のメールで最も新しい確認リンクを開くこと。setup画面の手順2が表示されたら、
 同じ携帯では `手入力用コード` を認証アプリへ登録し、現在の6桁を本人だけで入力する。
 完了表示後、正確なAuth UUID、verified TOTP、AAL2を読み取り専用で照合する。
+
+## 2026-09-05 追記 309 — 本人のTOTP登録完了と権限付与前の本番照合
+
+本人が携帯1台で手入力用コードを認証アプリへ登録し、本番setup画面へ現在の6桁を入力した。
+本人から `認証アプリの登録と本人確認が完了しました` の表示連絡を受けた後、Supabase本番で
+件数・状態だけを返すSELECTを実行し、権限付与前の状態を読み取り専用で照合した。
+
+照合結果:
+
+- TOTP factor合計1件、verified 1件、unverified 0件。
+- verified TOTPに紐づくAuth userは1件で、メール確認済みAuthとの紐づきも1件。
+- verified TOTPに紐づく `profiles` は0件。一般利用者profileを新規作成していない。
+- verified TOTPに紐づく `app_admins` は0件。
+- verified TOTPに紐づく `account_delete_executors` は0件。全体でもexecutor 0件、有効executor 0件。
+- `account_delete_requests` は0件、`account_erasure_jobs` は0件。
+
+安全境界:
+
+- setup完了表示は、同一factorの確認成功と同一tokenのcurrent AAL2を実装側で確認した場合だけ出る。
+  本人のBearer/JWT、QR、手入力用秘密キー、6桁コードは取得・表示・保存していない。
+- SQLで確認できるのはfactorの永続状態であり、本人ブラウザのAAL2セッションを外部へ取り出していない。
+  AAL2だったことは本人が到達したアプリの完了gateで確認し、継続中セッションとは区別する。
+- 今回はSELECTだけで、Supabase DB/Auth/Storageへの作成・更新・削除は行っていない。
+- 削除担当role、一般Admin roleは未付与。完全削除スイッチはOFFを維持し、削除処理は実行していない。
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データは参照・変更・削除していない。
+- 個人メール、Auth UUID、factor ID、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は、Auth画面とverified factorの正確なuser IDを権限付与直前に再照合し、実行者とは別の確認者の
+承認を得たうえで、当該1 UUIDだけを `account_delete_executors` へ初期値 `active=false` で登録する。
+権限変更は別途の実行時確認なしに行わず、完全削除スイッチは引き続きOFFを維持する。
