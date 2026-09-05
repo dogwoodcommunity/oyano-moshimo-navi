@@ -11850,3 +11850,42 @@ executorだけを `auth.users` 参照へ変える部分修正は、実処理・�
 次は、最終差分レビューと限定stage・secret検査後に作業branchをGitHubへpushし、CI成功後に
 通常mergeする。実際の最小profile・無効executor作成や権限有効化は、正確なUUIDを権限付与直前に
 再照合し、実行者とは別の確認者を確定して、各操作時の明示確認を得るまで行わない。
+
+## 2026-09-05 追記 311 — 安全な削除担当者登録手順をmainへ反映
+
+追記310の7ファイルを限定stageし、秘密情報検査と最終独立レビュー後にGitHubへpushした。
+PR #5を通常mergeし、mainの全CI成功まで確認した。
+
+GitHub・検証:
+
+- 作業commit: `ea0b903145cca25c703e8e8b39ce1c0c8b0f7c7a`。
+- PR #5: `https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/5`。
+- main merge commit: `fd30031892cd5a722342b1265a71f44344201b33`。
+- PR CI run `33935032194` は、初回だけ使い捨てPostgreSQLが起動待ち時間内にreadyにならず
+  `test:consult-memory:sql` の開始前に停止した。失敗jobを再実行すると同じSHAで2分26秒ですべて成功し、
+  型検査、全静的・PostgreSQL回帰、production build、smokeが通過した。
+- main CI run `33935294928` も2分12秒ですべて成功した。
+- GitHubのDeploy workflow run `33935294962` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  成功表示をVercel本番deployの証拠にはしていない。今回の差分は文書と静的回帰のみであり、
+  Web runtimeのbyte変更はないためVercel CLIによる再deployは行っていない。
+- 限定stageの `git diff --cached --check` とGitleaksは成功し、secret検出0件だった。
+- 最終独立レビューは、古い本番migration状態を含む文書間矛盾とテスト不足を修正後、残存指摘なし。
+
+現在の安全境界:
+
+- 本番の本人用Authはメール確認済み、TOTP factorはverified 1件・unverified 0件。
+  setup完了時の本人セッションでAAL2を確認済み。
+- 正確なAuth UUIDの制限付き運用台帳記録、最小profile、無効executor、別確認者、権限有効化は未実施。
+  `account_delete_executors` と有効executorは0件のままで、削除依頼画面の権限はまだ付いていない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFF。削除依頼・削除job、DB削除RPC、Auth削除、
+  Storage削除を実行していない。
+- 本番Supabase DB/Auth/Storage、既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データを
+  今回の作業で作成・変更・削除していない。
+- QR、手入力用秘密キー、6桁コード、Bearer/JWT、個人メール、Auth UUIDはGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、削除実行者とは別の確認者を確定すること。候補を実名だけで推測せず、本人用の
+確認済みAuthと一致するprofileを照合する。確認者が未登録なら先に安全な本人確認手順を設計する。
+その後も、最小profile・無効executor作成と権限有効化は別操作とし、それぞれ実行直前の明示確認なしに
+本番へ書き込まない。完全削除スイッチは単独テストアカウント完走までOFFを維持する。
