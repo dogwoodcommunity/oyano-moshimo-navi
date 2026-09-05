@@ -13449,3 +13449,75 @@ Gitの所在:
 
 このターンに本番Auth/DB/Storage/利用者記録/権限/環境変数変更、メール送信、Vercel deploy、
 実機ブラウザ操作はしていない。ソース/ローカル試験の合格を本番統合成功・商用版完成とは扱わない。
+
+## 2026-09-05 追記 360 — 本番RPC/修正版を反映、比較で別の呼び名が判明し統合のみ保留
+
+ユーザー「ええよ」は、直前の「本番のデータベース機能追加・反映と、テスト2件をまとめる操作」の
+承認として受領。ただし実画面で初めてクラウド側の呼び名を確認すると、端末は「はは」、クラウドは
+「ちち」だった。前回の同一テスト対象者という判断にはこの情報が含まれていなかったため、
+**同じ人の手帳という選択・日記の送信/統合は実行していない**。両方が仮のテスト手帳で、呼び名が
+違っても1冊にまとめてよいかを最終確認する。単に件数が各1件だから同一人物とは扱わない。
+
+Git/CI:
+
+- `origin/main` をfetchして `c17a8fd` からの分岐がないことを確認後、
+  `fix/notebook-reconciliation` の `4dad54363ecbcc607b30ec60cb93912942e6e5b5` をmainへfast-forwardしpush済み。
+- GitHub CI run `33966328016` はsuccess/completed。
+  Deploy to Vercel run `33966328015` はcheck成功だが **deploy job skipped**。
+  このため下記の承認済みCLIデプロイを実施した。workflow successだけを本番反映の証拠にしない。
+- この追記は後続のdocs-only commit。公開アプリのソースSHAは引き続き `4dad543`。
+  `review_exports/`、未追跡のClaudeレビュー依頼/結果2文書は変更・追加対象から除外。
+
+本番Supabase:
+
+- 対象projectを確認し、同期v2・日記削除guard・対象者削除guard・必要unique制約の存在と
+  新RPC未登録をread-onlyで確認した。
+- 適用したのは `supabase/notebook_diary_reconciliation.sql` のみ。
+  ファイルSHA-256: `c91f7b7ae6183b8fd19e7f3c68c5189cb421bd3803e953cb1f37f54154c141dd`。
+  SQL UIの長文がAXで省略されたため、自分が投入して選択したSQLだけをcopyし、全文9695文字の
+  一致をメモリ内比較で確認してからRun selectedを1回実行。clipboard全文は出力していない。
+- 実行結果 `Success. No rows returned`。新RPCの関数本体MD5はローカルと一致:
+  `882e28cbd8f63c23d55ee65d73d5e5ae`。
+  SECURITY DEFINER=true、service_role実行可、authenticated/anon実行不可、
+  search_path=`pg_catalog, extensions, public, pg_temp` をread-onlyで検証。
+- 全体api_grants・bootstrap・regression SQLは本番で実行していない。既存記録のDML、
+  新RPCの直接実行、Auth/plan/既存family権限変更、削除実行ONへの変更はなし。
+- A所属内に対象者1人・日記1件であること、既存personと既存diaryの比較用ハッシュだけを取得。
+  本文/メール/Auth UUIDはSQL結果へ出していない。統合未実行のため統合後ハッシュ一致の検証は未実施。
+- SQL editorは元の `select 'test_alias_registration_checked' as status;` に戻した。Save未押下。
+
+本番Vercel:
+
+- CLI 59.11.7、既存project/scopeを指定し、コミット `4dad543` のクリーンなarchiveから反映。
+  tracked outputs、review_exports、dotenv、.vercel、未追跡レビュー文書を除外した一時フォルダを使用。
+  dry-runの430ファイル/9,152,925 bytesを確認。認証情報・生の手帳控え・privateレビューを同梱していない。
+- 新production deployment: `dpl_6VgHqjwPQMCR3E8XzqqdGzWndBVp`、**Ready**。
+  URL: `https://oyano-moshimo-navi-dmw20mc9z-dogwoodcommunity1.vercel.app`。
+  `https://oyano-moshimo-navi.vercel.app` のinspectでも同じID/Ready/aliasを確認済み。
+  deploy時metadataにreleaseSha=`4dad54363ecbcc607b30ec60cb93912942e6e5b5`を指定した。
+- 本番 `POST /api/notebook/reconcile` に認証なし・空JSONを送った結果は **401 unauthorized**。
+  routeの配信と認証拒否を確認しただけで、成功系本番書込みの受入完了ではない。
+- 変更前deployment `dpl_3dnyJRVqXaRiJ8Uc1svJLcSa18Wv` をrollback候補として確認済み。
+  rollbackは実行していない。旧版に戻す場合も追加済みRPCや手帳データを削除しない。
+
+実Chromeシークレットでの確認と停止点:
+
+- 既存nativeハンドルからウィンドウメニューで本件を前面に出し、A・シークレット・既知の仮の日記1件を照合。
+  `/home?fresh=4dad543#cloud-backup` を開いて新版の比較ボタンが出ることを確認。
+  freshはSW/cache更新で、reset・履歴削除・localStorage手修正はしていない。
+- 「両方の記録を確認する」で端末「はは」/9月5日の保存テスト1件と、クラウド「ちち」/
+  8月24日の既存記録1件を初めて同じ比較画面で確認。既存記録の内容も異なっていた。
+  新しい呼び名の相違を確認せず同一人物のラジオを選ぶことはしなかった。
+- 「別の人・わからない」を選ぶと「日記を1冊にまとめる」がdisabledのままであることを実画面で確認。
+  「変更せず閉じる」のあと端末1件が残ることを確認し、最後に比較画面だけを再表示した。
+- 既存Downloadsの原本控えは3944 bytes・更新時刻20:38:59 JSTのまま。
+  `oyano-moshimo-test-a-local-backup-20260905-2039.json` の内容は読出し/上書き/削除していない。
+  統合POST前のアプリ内専用控えはまだ作られていない。
+- このターンに作ったabout:blankタブ1枚だけをURL一致確認後に閉じた。利用者のメール・手帳・Supabase
+  タブは閉じていない。新たな秘密キーの露出なし。
+
+次回: 「はは」「ちち」でも同じ仮のテスト手帳としてまとめてよいという確認が取れたら、最新比較を
+再取得し、日記のみ追加・クラウド側profile/tasks採用・端末原本控え保持の同意を確認して実行する。
+成功表示、対象者1人/日記2件、両本文と日付、再読込後重複なし、元person/diaryハッシュ不変を検証する。
+別人なら統合しない。別端末復元・写真・Bへの招待/権限のStage A実機受入も引き続き未完了。
+**本番機能反映は完了、テスト2件の統合/保存成功と商用版全体の完成は未完了**。
