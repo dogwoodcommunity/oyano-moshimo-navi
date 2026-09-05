@@ -3,12 +3,12 @@
 ## 2026-09-05 終了条件の再整理
 
 無料Web正式版（Stage A）を先に完成させる。有料受付（Stage B）・ストア公開（Stage C）は別段階。
-この日のローカル修正を本番反映済みとは扱わない。最新の実行記録は `SESSION_HANDOFF.md` 追記334を参照。
+DBの4件は本番適用・構造検査済み。Web更新と正式公開の残条件は別。最新の実行記録は `SESSION_HANDOFF.md` 追記335を参照。
 
 - [x] 前回の限定commit `35bc7a9` をGitHubへpushしCI成功を確認（run `33954325618`）。deploy workflowのdeploy jobはskipであり、本番反映ではない
 - [x] 本番照合で判明した月次ACL/相談UUID修正とlint設定を含む `539c359` をpushしCI成功を確認（run `33955341444`）。対応deploy jobもskip。Vercel CLI再ログインも必要
-- [ ] 本番の家族権限・家族管理RPC・原子的な1日1回相談RPCをread-onlyで検査し、**不足を確認したものだけ**承認後にDB-first適用。過去の未チェックだけを根拠に再実行しない
-- [ ] 月次通知関数の現行定義をread-onlyで照合し、今回の修正版が必要か判定。回帰用SQLを本番へ実行しない
+- [x] 本番の家族権限・家族管理RPC・原子的な1日1回相談RPCをread-onlyで検査し、**不足を確認したものだけ**承認後にDB-first適用。2026-09-05、適用直前の再照合・家族role補正0件guard・適用後検査を実施
+- [x] 月次通知関数の旧alias/明示EXECUTE残存を確認して修正版を適用。関数本文のソース一致とservice-onlyを読み取り確認。通知生成・送信の試験実行はしていない
 - [ ] 確定済みの運営者・責任者・問い合わせ先・返信目安4値を本番へ設定してWebを反映。施行日は公開日確定まで未設定のまま、準備中と表示
 - [ ] 新しい読み取り専用「アクセス権限を確認する」で本人sessionの5 API応答を確認。コード・疑似テストのPASSを本人認証の実測に代用しない
 - [ ] 専用テストアカウントで保存・別端末復元・家族の閲覧/編集境界・写真・削除を実機で完走
@@ -17,8 +17,9 @@
 
 `node scripts/test-stage-a-local.mjs` はソース/runtime・lint・型・隔離DB・buildをまとめて検査する。
 ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目のLOCAL_PASSを確認した。
-本番DBのread-only検査では家族権限helper・家族管理5 RPC・日次相談3 RPCの欠落と、
-月次通知の旧alias・authenticated実行権限残存が見つかった。DB変更の直前承認を得るまでWeb反映を保留する。
+本番DBで不足していた家族権限helper・家族管理5 RPC・日次相談3 RPCと月次通知修正は、
+2026-09-05の直前承認後に適用した。10関数の正規化本文が承認済みソースと一致し、
+`verify_stage_a_release.sql` の12項目がすべてok。Web反映はVercel再ログイン待ち。
 このローカル合格や `--source-only` / `--sql-only` の
 部分PASSや、2つの疑似端末による同期試験だけで正式公開・実機復元を完了扱いにしない。
 
@@ -41,6 +42,7 @@ ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目
   - 履歴整合: 2026-07-09の `SESSION_HANDOFF.md` 追記35でtrueを確認済み。現在の配信成功・メール実受信の証明とは別。
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
+  - 2026-09-05: profiles.idへの相関修正とanon/authenticatedの明示EXECUTE剥奪版をtransaction内で適用。service-only・unique index・本文一致を確認。通知の生成/送信は未実行。
 - [ ] `supabase/notification_email_delivery.sql` を実行
 - [x] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
   - 履歴整合: 2026-07-09の引き継ぎ追記34で成功、追記35で主要項目true。現在の新規migrationまで適用済みという意味ではない。
@@ -59,6 +61,10 @@ ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行
 - [x] `supabase/family_invite_rpc.sql` を実行
+- [x] `supabase/family_role_hardening_20260904.sql` を実行
+  - 2026-09-05: editor helper・public 6 policy・Storage 2 policyを適用し、USING/WITH CHECK・RLSの構造照合を含む本番verifierでokを確認。実機の家族権限操作試験は別の未完了条件。
+- [x] `supabase/family_management_rpc.sql` を実行
+  - 2026-09-05: 5 RPC・直接書込権限閉鎖を適用。補正対象0件をlock/guard下で再確認。初回は転送不一致をsource guardが検知してROLLBACKし、未反映確認後に承認済み本文へ修正して成功。5関数の本文一致・ACLを再確認。
 - [x] `supabase/admin_auth_hardening.sql` を実行
 - [x] `supabase/account_delete_executor_role.sql` を実行
   - 2026-09-04確認: 本番へ適用し、migration単体ではユーザー作成・権限付与をせず、`account_delete_executors` のRLS/ACL、認可helperを含む読み取り専用13項目を確認。
@@ -74,7 +80,8 @@ ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目
   - 対応Webより先に適用し、private `account_erasure_execution_control` / grant表と `open_account_erasure_execution_control_v1` / `close_account_erasure_execution_control_v1` がDB owner専用、`verify_account_delete_operator_v2` / `inspect_account_erasure_v2` / `prepare_account_erasure_v2` / `update_account_delete_request_status_v2` / `issue_account_erasure_execution_grant_v1` / `inspect_account_erasure_execution_grant_v1` / `execute_account_erasure_database_v2` がservice-only、`account_delete_executors` 生tableのSELECTと旧 `inspect_account_erasure_v1` / `prepare_account_erasure_v1` / `update_account_delete_request_status_v1` / 3引数 `execute_account_erasure_database_v1` がservice role実行不可であることをread-onlyで確認する。
   - v2 inspect/prepareはblockerを正規化codeと数値件数だけで返し、`familyId`、`familyName`、Storage object/prefixの生pathを応答に含めないことを破棄DBで確認する。
   - migration直後のcontrolがclosed、DB ownerだけが60〜900秒で開け、service/Web roleから開閉できないことを確認する。durable prepareは1時間で失効し、別確認者のgrantはrequest/target/job/hash/operatorとcontrol epochに固定した最大10分・1回限りで、grant期限がcontrol残時間を超えないことを確認する。
-- [ ] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_compact.sql` で台帳・3 RPC・service-only ACLを確認
+- [x] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_stage_a_release.sql` で台帳・3 RPC・service-only ACLを確認
+  - 2026-09-05: native UUID対応版を適用し、3関数の本文一致も確認。本番で相談RPCを試験実行しておらず、実AI回答/保存の端末E2Eは未完了。
 - [x] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [x] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [x] `supabase/public_api_rate_limits.sql` を実行

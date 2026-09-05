@@ -12715,3 +12715,63 @@ checkのみ成功しdeploy jobはskip。本番deploy成功と読み替えない�
 DB-first適用・read-only再検査、Vercel再ログイン、承認済みのWeb反映を進める。削除や有料受付は開かない。
 無料正式版の最終GO、実機/backup/問い合わせ/法務の残条件も未完了のまま。今回の修正・CI成功を
 「商用正式版の全工程完了」とは扱わない。この確認記録を追加commitしGitHubへpushする。
+
+## 2026-09-05 追記 335 — 承認済み4件の本番DB適用成功、12項目ok、Webは認証待ち
+
+ユーザーの直近「ええよ」は、前回答で対象と影響を説明した4 SQLの本番適用への承認として受領。
+本番project `ypnuxyfirlvbsqujocuy` の専用SQLタブ `b7498551-dd8d-4c09-a0ec-6b0ee32d2311` で
+適用前の件数・前提を再検査した。家族の主owner補正0、legacy owner降格0、active control/grant各0。
+前提4 RPC・13テーブル・10列・native UUID関数の存在も確認した。既存のユーザーSQLタブは変更していない。
+
+適用元は `17bbc7bd43c26ecbde45eb56657f72fc0f33eeaa`（コードはCI成功の `539c359` と同じ）。
+以下の順でtransactionごとに成功を確認した。lock timeout 5秒、statement timeout 60秒を設定。
+
+1. `family_role_hardening_20260904.sql`: `family_role_hardening_applied` を確認。
+2. `family_management_rpc.sql`: `family_management_applied_source_matched` を確認。
+   familyテーブルをlockしてrole補正候補が0件のままであることをguardし、範囲の拡大時は例外停止する形で適用。
+3. `consult_daily_claim.sql`: `daily_consult_applied_source_matched` を確認。
+4. `monthly_checkin_notifications.sql`: transaction wrapperを付け、`monthly_checkin_applied_source_matched` を確認。
+
+SQL Editorへの入力は承認済みSQLのコメント/整形を省いた転送版であり、元ファイルのbyte完全一致とは扱わない。
+家族管理・日次相談・月次通知には、正規化した関数本文のMD5が承認済みソースに一致しなければ
+COMMIT前に例外停止するguardを追加した。家族管理の初回入力は招待一覧sortの `, invite.id` が欠け、
+このguardが不一致を検知して停止。明示ROLLBACK後に家族管理RPC 0件を確認し、正しいsortへ修正して再実行した。
+guardを外したり無視したりして進めていない。失敗した試行を適用成功とは数えていない。
+
+本番の事後read-only確認（2026-09-05 17時台JST）:
+
+- editor helper 1・家族管理5・日次相談3・月次通知1の計10関数について、正規化した本文hashが
+  承認済みソースと **10/10一致**。関数本文・個人行・秘密値は結果に返さず件数のみ取得。
+- `verify_stage_a_release.sql` のコメント/外側空白だけを圧縮した版を実行。
+  元と圧縮版の2,928 SQL token一致、ブラウザへの転送は19,553文字/FNV一致、editor全文一致を確認。
+  圧縮版SHA256: `a367b5d08d565617bf1aeecdef63529bf02bb0395b98392a830ca57cb6704781`。
+- **全12項目がstate=ok / ok=true**:
+  consult ledger、consult 3 RPC、erasure control OFF、private control ACL、家族直接書込閉鎖、
+  家族管理5 RPC、editor helper、public 6 policy、Storage 2 policy、月次RPC、月次unique index、API 3 role。
+- 最後に主owner補正候補0、legacy owner降格候補0、active control 0、active grant 0を再確認。
+  owner controlを開いたりgrantを作成したりしていない。環境の有料/削除スイッチも変更していない。
+- これは構造/ACL・承認済みソース一致の検査。実機2アカウント、全アプリ操作、実AI応答、
+  メール/Pushの実受信、backup復元、独立したセキュリティ保証を代替するものではない。
+
+今回の4 SQL適用で既存の日記・写真・AI相談履歴・モニター回答の削除/書換はしていない。
+家族role補正も対象0件。アプリRPCの試験呼出、通知生成、メール送信、実削除は実行していない。
+`PRODUCTION_CHECKLIST.md` の対応するDB項目だけをこの証拠で完了へ更新した。
+
+Web反映の準備と残り:
+
+- CI成功済みコードを持つ `17bbc7b` のclean Git archiveを
+  `/private/tmp/oyano-web-release-17bbc7b.hdDu3y` へ準備。423ファイルのGit blob一致を確認済み。
+  tracked outputs 3ファイルは展開前に除外。未追跡レビュー資料、`review_exports/`、実行用env、
+  `.vercel`、依存/build出力は含めていない。転送前にVercel dry inventoryでも再確認する。
+- 公式Vercel CLI 59.11.7の通常device loginを開始し、ユーザーにブラウザ認証を依頼。
+  **この追記時点では認証完了待ちで、新しいWeb deployはまだ行っていない。** 認証コードは台帳へ保存しない。
+  device flowが失効した場合は正規loginを再開する。auth tokenの抽出・別アカウントへの切替はしない。
+- 認証後は既知project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope `dogwoodcommunity1` を照合し、
+  上記の検証済みarchiveだけを本番deploy。公開aliasと4つの運営情報、本人sessionの手動5 API診断を確認する。
+  この追記を含むdocs-onlyの新HEADを無検査で別リリースに読み替えない。
+- 正式版の残条件は追記332/334の実機2アカウント・DB/Auth/Storageのbackupと隔離復元・受信試験・
+  別確認者AAL2と正確な破棄アカウントの削除E2E・運用当番/連絡・法務/正式公開日。
+  テスト専用メールと毎営業日の共有受信箱確認について未回答の点は引き続き未確定。
+
+今回のソース変更はなし。チェックリストとこの引き継ぎのみを限定commit/pushする。
+`review_exports/` と未追跡Claudeレビュー文書2件は参照・変更・stage・送信の対象外。
