@@ -7,7 +7,7 @@ SQL Editorで以下の順に実行する。
 既に初期セットアップ済みの本番DBへ後追いhardeningだけ入れる場合は、まず `production_pending_hardening.sql` と `admin_auth_hardening.sql` を実行する。`production_pending_hardening.sql` だけでは新しい匿名診断RPCは作成されない。匿名診断・アプリ引き継ぎの権限境界を更新する場合は、Webをデプロイする前に、`production_pending_hardening.sql`（未適用の場合）、更新済み `handoff_consume_rpc.sql`、`anonymous_diagnosis_rpc.sql` の3ファイルをこの順で実行し、`verify_compact.sql` で両関数を確認する。`production_pending_hardening.sql` を過去に適用済みの場合も、今回更新した後ろ2ファイルは必ず再実行する。先に `handoff_consume_rpc.sql` を入れることで、Web更新までの間も変換済みcaseから別アカウントをowner追加する経路を閉じる。
 既存DBへ対象者ごとの長期AI記憶と安全な手帳同期を追加する場合は、既存の `is_family_member` 関数と従来RLSが入っていることを確認し、短時間のメンテナンス枠で `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql`、`verify_compact.sql` の順に実行する。先にDB移行を完了し、`verify_compact.sql` がすべて `ok=true` になってから対応するWebをデプロイする。`notebook_atomic_sync_v2.sql` は古いDBに不足する手帳用・都道府県用の最小列も同じトランザクションで追加し、既存IDを補完する。重複を検出した場合は削除せず、列追加を含む全体をロールバックする。この手順では `person_notebook_hardening.sql` や `regional_sponsor_data.sql` 全体を先に実行しない。`ai_consult_memory.sql` は新テーブルのgrant/revokeとRLSを含み、既存の手帳記録を変更・削除しない。`consult_daily_claim.sql` は無料AI相談を外部API呼出前に家族・日本時間の日単位で予約し、成功後だけ確定するserver-only RPCを追加する。既存DBでは現行の `api_grants.sql` や `production_rls.sql` 全体を再実行しない。従来ポリシーを含む全体SQLは既存DBへの再適用を前提としておらず、途中の既存ポリシーで停止するためである。
 
-既存DBへ個別削除と検証済みアカウント削除を追加する場合は、先に `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql` が適用済みであることを確認し、`notebook_diary_delete.sql`、`notebook_person_delete.sql`、`admin_auth_hardening.sql`、`account_delete_executor_role.sql`、`account_deletion_pipeline.sql`、`verify_compact.sql` の順に実行する。`account_delete_executor_role.sql` は削除専用の空の許可表と非公開認可helperだけを作り、ユーザー作成・権限付与・既存記録変更は行わない。日記削除と対象者の手帳全体削除は、削除receiptとStorage cleanup jobを同じトランザクションで残し、古い端末からの再同期でも復活させない。アカウント削除は `account_erasure_jobs` に途中状態を残し、再実行できる。対象者が所有する家族に別メンバーがいる場合は所有権移管まで停止する。本人名義の写真が退会後も共有家族に残る場合も、家族側へ写真を引き継ぐ仕組みができるまでは安全停止し、完了扱いにしない。DB・Supabase Auth・Storageの全確認が揃うまで依頼は `completed` にならない。migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` のままとし、破棄DB回帰試験、個別実行者のTOTP/AAL2、別確認者、単独テストアカウントの実運用試験後だけ明示的に開く。
+既存DBへ個別削除と検証済みアカウント削除を追加する場合は、先に `notebook_atomic_sync_v2.sql`、`ai_consult_memory.sql`、`consult_daily_claim.sql` が適用済みであることを確認し、`notebook_diary_delete.sql`、`notebook_person_delete.sql`、`admin_auth_hardening.sql`、`account_delete_executor_role.sql`、`account_delete_identity_ledger.sql`、`account_deletion_pipeline.sql`、`verify_compact.sql` の順に実行する。`account_delete_executor_role.sql` は削除専用の空の許可表と非公開認可helperだけを作り、ユーザー作成・権限付与・既存記録変更は行わない。`account_delete_identity_ledger.sql` はメール・氏名・OTP・tokenを保存せず、DB ownerだけが扱う追記専用の本人確認台帳をprivate schemaへ作る。一度適用した同名schemaを自動で受容せず、安全境界の確認なしに再実行しない。日記削除と対象者の手帳全体削除は、削除receiptとStorage cleanup jobを同じトランザクションで残し、古い端末からの再同期でも復活させない。アカウント削除は `account_erasure_jobs` に途中状態を残し、再実行できる。対象者が所有する家族に別メンバーがいる場合は所有権移管まで停止する。本人名義の写真が退会後も共有家族に残る場合も、家族側へ写真を引き継ぐ仕組みができるまでは安全停止し、完了扱いにしない。DB・Supabase Auth・Storageの全確認が揃うまで依頼は `completed` にならない。migration直後は `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` のままとし、破棄DB回帰試験、個別実行者のTOTP/AAL2、別確認者、単独テストアカウントの実運用試験後だけ明示的に開く。
 
 1. `schema.sql`
 2. `task_template_seed.sql`
@@ -33,13 +33,14 @@ SQL Editorで以下の順に実行する。
 22. `family_invite_rpc.sql`
 23. `admin_auth_hardening.sql`
 24. `account_delete_executor_role.sql`
-25. `family_owner_succession.sql`
-26. `family_management_rpc.sql`
-27. `account_deletion_pipeline.sql`
-28. `public_api_rate_limits.sql`
-29. `anonymous_case_retention.sql`
-30. `storage_setup.sql`
-31. `regional_sponsor_data.sql`
+25. `account_delete_identity_ledger.sql`
+26. `family_owner_succession.sql`
+27. `family_management_rpc.sql`
+28. `account_deletion_pipeline.sql`
+29. `public_api_rate_limits.sql`
+30. `anonymous_case_retention.sql`
+31. `storage_setup.sql`
+32. `regional_sponsor_data.sql`
 
 既存DBで個別hardeningする場合のみ:
 
@@ -54,8 +55,8 @@ SQL Editorで以下の順に実行する。
 
 任意確認:
 
-32. `verify_setup.sql`
-33. `verify_compact.sql`
+33. `verify_setup.sql`
+34. `verify_compact.sql`
 
 `notebook_atomic_sync_v2_regression.sql`、`ai_consult_memory_regression.sql`、`consult_daily_claim_regression.sql`、
 `notebook_diary_delete_regression.sql`、`notebook_person_delete_regression.sql`、

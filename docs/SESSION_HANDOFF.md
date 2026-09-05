@@ -11956,3 +11956,56 @@ Auth招待は外部送信・Auth作成となるため、送信直前に別の明
 その操作は正確なAuth/TOTP状態の直前再照合と実行時の明示確認を得てから行う。作成後も削除画面へは入れず、
 別確認者本人の承認記録を制限付き運用台帳へ残したうえで、有効化を別操作・別承認として行う。
 完全削除スイッチは単独テストアカウントのAuth・DB・Storage削除を完走するまでOFFを維持する。
+
+## 2026-09-05 追記 314 — 削除実行者の本人確認・承認証跡をprivate台帳化
+
+削除実行予定者の正確なAuth UUIDを一般文書・公開Git・一般チャットへ残さず、本人確認と別確認者の承認を
+本番DB内で安全に結び付けるため、owner専用の追記型台帳と、無効executor登録・有効化の手順を実装した。
+この追記時点ではソースと破棄DB回帰までであり、本番DBへの新migration・profile・executor・承認eventの
+書き込みは行っていない。
+
+実装:
+
+- `supabase/account_delete_identity_ledger.sql` を追加した。未知の同名schemaがあれば停止し、
+  `account_delete_private.operator_identity_events` をDB owner専用・FORCE RLS・policyなしで作る。
+  API roleはschema/table/sequence/functionの全権限を持たず、非owner ACLが残ればmigration全体をrollbackする。
+- 台帳はAuth UUID、`identity_verified` / `activation_approved`、非秘密の証跡参照、DBが付与する時刻・実行roleだけを
+  保存する。メール、氏名、自由記述、OTP、TOTP秘密、tokenは保存しない。承認eventは同じ実行者の本人確認eventだけを
+  参照でき、実行者本人を確認者にできない。UPDATE・DELETE・TRUNCATEはtriggerで拒否する。
+- `ADMIN_AUTH_POLICY.md` の手順を、画面で本人確認した正確な実行者UUIDと別確認者UUIDを使い、本人確認event、
+  最小profile、`active=false` のexecutorを同一transactionで作る形へ更新した。family所有・所属、一般Admin、
+  既存profile/executor、TOTP総数・状態が想定外なら何も作らず停止する。
+- 有効化は、同じ本人確認event、別確認者の確認済みAuth・一致profile、実行者のTOTP状態を再確認し、
+  承認event作成とexactな無効executor 1件の有効化を同一transactionで行う。対象が0件なら承認eventもrollbackする。
+- 文書中の実SQL blockをsynthetic UUID・`.invalid` メールだけの破棄DBでそのまま実行するrendererと回帰を追加した。
+  回帰SQL自体も、本番と異なる最小Auth shimでなければ開始せず、外側ROLLBACKと短いlock timeoutで保護した。
+- `api_grants.sql`、`verify_compact.sql`、Supabase適用順、商用運用文書・本番checklist・静的gateを新しいprivate境界へ
+  揃えた。将来private schemaへ関数を追加する場合は、PostgreSQLの既定PUBLIC EXECUTEを同じtransaction内で
+  個別REVOKEする必要があることもmigrationへ明記した。
+
+検証:
+
+- `pnpm run test:account-erasure:sql`: PostgreSQL 16の破棄DBで成功。private台帳のACL・追記専用性、
+  文書どおりの本人確認event＋最小profile＋無効executor、別確認者承認event＋有効化を実行して確認した。
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run test:account-delete-executor`: 成功。
+- `pnpm --filter web run typecheck`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `git diff --check`: 成功。
+- 最新差分の独立SQLレビューでP0/P1なし。owner-only ACL、外側ROLLBACK、trigger種別、lock、exact TOTP、
+  証跡・profile・executorの原子性を確認した。
+
+安全境界:
+
+- 本番Supabase DB/Auth/StorageへINSERT・UPDATE・DELETE・DDLを行っていない。既存profile、family、Admin、executor、
+  利用者、モニター回答、日記、写真、AI相談、家族・対象者データを作成・変更・削除していない。
+- 削除担当roleと有効executorは0件のまま。`ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持し、削除依頼・
+  削除job、DB削除RPC、Auth削除、Storage削除を実行していない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はソース・Git・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は、許可された差分だけを限定stage・秘密情報検査し、作業branchをGitHubへpushしてCI成功後に通常mergeする。
+その後、本番の空のprivate台帳migrationは、作成内容と影響を示して実行直前の明示確認を得てから適用する。
+本番適用後も、正確な実行者Authの画面選択、最小profile＋無効executor登録、別確認者承認＋有効化を別々の操作とし、
+各本番writeの実行直前に確認を得る。完全削除スイッチは引き続きOFFとする。

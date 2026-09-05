@@ -5,6 +5,7 @@ with checks as (
   select 'table_exists' as check_type, 'profiles' as target, to_regclass('public.profiles') is not null as ok
   union all select 'table_exists', 'app_admins', to_regclass('public.app_admins') is not null
   union all select 'table_exists', 'account_delete_executors', to_regclass('public.account_delete_executors') is not null
+  union all select 'table_exists', 'account_delete_private.operator_identity_events', to_regclass('account_delete_private.operator_identity_events') is not null
   union all select 'table_exists', 'families', to_regclass('public.families') is not null
   union all select 'table_exists', 'family_members', to_regclass('public.family_members') is not null
   union all select 'table_exists', 'family_invites', to_regclass('public.family_invites') is not null
@@ -156,15 +157,231 @@ with checks as (
     and not has_function_privilege('anon', 'public.sync_notebook_v2(uuid,text,uuid,boolean,jsonb,jsonb,uuid)', 'EXECUTE')
   union all select 'security_check', 'account_delete_executor_acl',
     has_table_privilege('service_role', 'public.account_delete_executors', 'SELECT')
-    and not has_table_privilege('service_role', 'public.account_delete_executors', 'INSERT,UPDATE,DELETE')
-    and not has_table_privilege('authenticated', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
-    and not has_table_privilege('anon', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE')
+    and not has_table_privilege('service_role', 'public.account_delete_executors', 'INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+    and not has_table_privilege('authenticated', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
+    and not has_table_privilege('anon', 'public.account_delete_executors', 'SELECT,INSERT,UPDATE,DELETE,TRUNCATE,REFERENCES,TRIGGER')
     and not has_function_privilege('service_role', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.account_erasure_operator_method(uuid)', 'EXECUTE')
     and has_function_privilege('service_role', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
     and not has_function_privilege('authenticated', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
     and not has_function_privilege('anon', 'public.update_account_delete_request_status_v1(uuid,text,text,uuid)', 'EXECUTE')
+  union all select 'security_check', 'account_delete_identity_ledger_private_append_only',
+    coalesce((
+      select
+        pg_get_userbyid(namespace.nspowner) = 'postgres'
+        and pg_get_userbyid(relation.relowner) = 'postgres'
+        and relation.relrowsecurity
+        and relation.relforcerowsecurity
+        and not exists (
+          select 1
+          from aclexplode(coalesce(namespace.nspacl, acldefault('n', namespace.nspowner))) privilege
+          where privilege.grantee <> namespace.nspowner
+        )
+        and not exists (
+          select 1
+          from aclexplode(coalesce(relation.relacl, acldefault('r', relation.relowner))) privilege
+          where privilege.grantee <> relation.relowner
+        )
+        and not exists (
+          select 1
+          from pg_proc procedure_info
+          cross join lateral aclexplode(
+            coalesce(procedure_info.proacl, acldefault('f', procedure_info.proowner))
+          ) privilege
+          where procedure_info.pronamespace = namespace.oid
+            and privilege.grantee <> procedure_info.proowner
+        )
+        and not exists (
+          select 1
+          from pg_default_acl default_acl
+          cross join lateral aclexplode(default_acl.defaclacl) privilege
+          where default_acl.defaclrole = namespace.nspowner
+            and default_acl.defaclobjtype in ('r', 'S', 'f')
+            and default_acl.defaclnamespace in (0, namespace.oid)
+            and privilege.grantee <> namespace.nspowner
+        )
+        and not has_schema_privilege('anon', namespace.oid, 'USAGE')
+        and not has_schema_privilege('anon', namespace.oid, 'CREATE')
+        and not has_schema_privilege('authenticated', namespace.oid, 'USAGE')
+        and not has_schema_privilege('authenticated', namespace.oid, 'CREATE')
+        and not has_schema_privilege('service_role', namespace.oid, 'USAGE')
+        and not has_schema_privilege('service_role', namespace.oid, 'CREATE')
+        and not has_table_privilege('anon', relation.oid, 'SELECT')
+        and not has_table_privilege('anon', relation.oid, 'INSERT')
+        and not has_table_privilege('anon', relation.oid, 'UPDATE')
+        and not has_table_privilege('anon', relation.oid, 'DELETE')
+        and not has_table_privilege('anon', relation.oid, 'TRUNCATE')
+        and not has_table_privilege('anon', relation.oid, 'REFERENCES')
+        and not has_table_privilege('anon', relation.oid, 'TRIGGER')
+        and not has_table_privilege('authenticated', relation.oid, 'SELECT')
+        and not has_table_privilege('authenticated', relation.oid, 'INSERT')
+        and not has_table_privilege('authenticated', relation.oid, 'UPDATE')
+        and not has_table_privilege('authenticated', relation.oid, 'DELETE')
+        and not has_table_privilege('authenticated', relation.oid, 'TRUNCATE')
+        and not has_table_privilege('authenticated', relation.oid, 'REFERENCES')
+        and not has_table_privilege('authenticated', relation.oid, 'TRIGGER')
+        and not has_table_privilege('service_role', relation.oid, 'SELECT')
+        and not has_table_privilege('service_role', relation.oid, 'INSERT')
+        and not has_table_privilege('service_role', relation.oid, 'UPDATE')
+        and not has_table_privilege('service_role', relation.oid, 'DELETE')
+        and not has_table_privilege('service_role', relation.oid, 'TRUNCATE')
+        and not has_table_privilege('service_role', relation.oid, 'REFERENCES')
+        and not has_table_privilege('service_role', relation.oid, 'TRIGGER')
+        and to_regprocedure('account_delete_private.stamp_operator_identity_event()') is not null
+        and to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()') is not null
+        and (
+          select pg_get_userbyid(procedure_info.proowner) = 'postgres'
+            and procedure_info.prosrc like '%new.recorded_at := clock_timestamp();%'
+            and procedure_info.prosrc like '%new.recorded_by := session_user;%'
+          from pg_proc procedure_info
+          where procedure_info.oid = to_regprocedure('account_delete_private.stamp_operator_identity_event()')
+        )
+        and (
+          select pg_get_userbyid(procedure_info.proowner) = 'postgres'
+            and procedure_info.prosrc like '%errcode = ''55000''%'
+            and procedure_info.prosrc like '%operator identity events are append-only%'
+          from pg_proc procedure_info
+          where procedure_info.oid = to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()')
+        )
+        and not coalesce(has_function_privilege('anon', to_regprocedure('account_delete_private.stamp_operator_identity_event()'), 'EXECUTE'), false)
+        and not coalesce(has_function_privilege('authenticated', to_regprocedure('account_delete_private.stamp_operator_identity_event()'), 'EXECUTE'), false)
+        and not coalesce(has_function_privilege('service_role', to_regprocedure('account_delete_private.stamp_operator_identity_event()'), 'EXECUTE'), false)
+        and not coalesce(has_function_privilege('anon', to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()'), 'EXECUTE'), false)
+        and not coalesce(has_function_privilege('authenticated', to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()'), 'EXECUTE'), false)
+        and not coalesce(has_function_privilege('service_role', to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()'), 'EXECUTE'), false)
+        and (
+          select count(*) = 6
+            and bool_and(
+              constraint_info.convalidated
+              and case constraint_info.conname
+                when 'operator_identity_events_actor_shape' then
+                  constraint_info.contype = 'c'
+                  and pg_get_constraintdef(constraint_info.oid, false) =
+                    'CHECK ((((record_kind = ''identity_verified''::text) AND (approver_user_id IS NULL) AND (identity_record_id IS NULL)) OR ((record_kind = ''activation_approved''::text) AND (approver_user_id IS NOT NULL) AND (approver_user_id <> operator_user_id) AND (identity_record_id IS NOT NULL))))'
+                when 'operator_identity_events_evidence_ref_safe' then
+                  constraint_info.contype = 'c'
+                  and pg_get_constraintdef(constraint_info.oid, false) =
+                    'CHECK ((((char_length(evidence_ref) >= 1) AND (char_length(evidence_ref) <= 200)) AND (evidence_ref ~ ''^[A-Za-z0-9][A-Za-z0-9._:/-]*$''::text)))'
+                when 'operator_identity_events_identity_reference' then
+                  constraint_info.contype = 'f'
+                  and pg_get_constraintdef(constraint_info.oid, false) =
+                    'FOREIGN KEY (identity_record_id, operator_user_id, identity_record_kind) REFERENCES account_delete_private.operator_identity_events(record_id, operator_user_id, record_kind) ON DELETE RESTRICT'
+                when 'operator_identity_events_kind_allowed' then
+                  constraint_info.contype = 'c'
+                  and pg_get_constraintdef(constraint_info.oid, false) =
+                    'CHECK ((record_kind = ANY (ARRAY[''identity_verified''::text, ''activation_approved''::text])))'
+                when 'operator_identity_events_pkey' then
+                  constraint_info.contype = 'p'
+                  and pg_get_constraintdef(constraint_info.oid, false) = 'PRIMARY KEY (record_id)'
+                when 'operator_identity_events_reference_key' then
+                  constraint_info.contype = 'u'
+                  and pg_get_constraintdef(constraint_info.oid, false) =
+                    'UNIQUE (record_id, operator_user_id, record_kind)'
+                else false
+              end
+            )
+          from pg_constraint constraint_info
+          where constraint_info.conrelid = relation.oid
+        )
+        and (
+          select count(*) = 9
+          from pg_attribute attribute
+          where attribute.attrelid = relation.oid
+            and attribute.attnum > 0
+            and not attribute.attisdropped
+            and attribute.attname in (
+              'record_id',
+              'record_kind',
+              'operator_user_id',
+              'approver_user_id',
+              'identity_record_id',
+              'identity_record_kind',
+              'evidence_ref',
+              'recorded_at',
+              'recorded_by'
+            )
+        )
+        and not exists (
+          select 1
+          from pg_attribute attribute
+          where attribute.attrelid = relation.oid
+            and attribute.attnum > 0
+            and not attribute.attisdropped
+            and attribute.attname not in (
+              'record_id',
+              'record_kind',
+              'operator_user_id',
+              'approver_user_id',
+              'identity_record_id',
+              'identity_record_kind',
+              'evidence_ref',
+              'recorded_at',
+              'recorded_by'
+            )
+        )
+        and exists (
+          select 1
+          from pg_attribute attribute
+          join pg_attrdef attribute_default
+            on attribute_default.adrelid = attribute.attrelid
+           and attribute_default.adnum = attribute.attnum
+          where attribute.attrelid = relation.oid
+            and attribute.attname = 'identity_record_kind'
+            and attribute.atttypid = 'text'::regtype
+            and not attribute.attnotnull
+            and attribute.attgenerated = 's'
+            and btrim(
+              regexp_replace(
+                pg_get_expr(
+                  attribute_default.adbin,
+                  attribute_default.adrelid,
+                  false
+                ),
+                '[[:space:]]+',
+                ' ',
+                'g'
+              )
+            ) = 'CASE WHEN (record_kind = ''activation_approved''::text) THEN ''identity_verified''::text ELSE NULL::text END'
+        )
+        and (
+          select count(*) = 2
+          from pg_trigger trigger
+          where trigger.tgrelid = relation.oid
+            and not trigger.tgisinternal
+        )
+        and exists (
+          select 1
+          from pg_trigger trigger
+          where trigger.tgrelid = relation.oid
+            and trigger.tgname = 'operator_identity_events_stamp_insert'
+            and not trigger.tgisinternal
+            and trigger.tgenabled in ('O', 'A')
+            and trigger.tgfoid = to_regprocedure('account_delete_private.stamp_operator_identity_event()')
+            and (trigger.tgtype::integer & 1) = 1
+            and (trigger.tgtype::integer & 2) = 2
+            and (trigger.tgtype::integer & 4) = 4
+            and (trigger.tgtype::integer & (8 + 16 + 32)) = 0
+        )
+        and exists (
+          select 1
+          from pg_trigger trigger
+          where trigger.tgrelid = relation.oid
+            and trigger.tgname = 'operator_identity_events_reject_mutation'
+            and not trigger.tgisinternal
+            and trigger.tgenabled in ('O', 'A')
+            and trigger.tgfoid = to_regprocedure('account_delete_private.reject_operator_identity_event_mutation()')
+            and (trigger.tgtype::integer & 1) = 0
+            and (trigger.tgtype::integer & 2) = 2
+            and (trigger.tgtype::integer & 4) = 0
+            and (trigger.tgtype::integer & (8 + 16 + 32)) = (8 + 16 + 32)
+        )
+      from pg_namespace namespace
+      join pg_class relation on relation.relnamespace = namespace.oid
+      where namespace.nspname = 'account_delete_private'
+        and relation.relname = 'operator_identity_events'
+        and relation.relkind = 'r'
+    ), false)
   union all select 'security_check', 'consult_daily_claim_service_only',
     has_function_privilege('service_role', 'public.claim_daily_free_consult(uuid,uuid,uuid,uuid)', 'EXECUTE')
     and has_function_privilege('service_role', 'public.persist_and_finalize_daily_free_consult(uuid,uuid,uuid,uuid,uuid,text,jsonb,uuid[],integer,text)', 'EXECUTE')

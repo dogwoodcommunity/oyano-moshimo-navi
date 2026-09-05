@@ -233,4 +233,17 @@ begin
 end;
 $server_only_rpc_acl$;
 
+-- A later broad grant bootstrap must never expose the owner-only deletion
+-- identity ledger. It is intentionally unavailable even to service_role.
+do $private_operator_ledger_acl$
+begin
+  if to_regnamespace('account_delete_private') is not null then
+    execute 'revoke all on schema account_delete_private from public, anon, authenticated, service_role';
+    execute 'revoke all on all tables in schema account_delete_private from public, anon, authenticated, service_role';
+    execute 'revoke all on all sequences in schema account_delete_private from public, anon, authenticated, service_role';
+    execute 'revoke all on all functions in schema account_delete_private from public, anon, authenticated, service_role';
+  end if;
+end;
+$private_operator_ledger_acl$;
+
 commit;

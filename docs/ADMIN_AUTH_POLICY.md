@@ -51,25 +51,57 @@ do update set note = excluded.note;
 本人識別の正本はAuth UUIDであり、profileのemailは監査表示用の複製にすぎない。有効化時には
 profileのemailだけを信用せず、同じUUIDの確認済みAuth emailと一致することを毎回再確認する。
 
-最初に、正確なAuth user ID、メール確認、verified TOTP 1件、unverified TOTP 0件、既存profile・
-一般Admin・削除担当roleが0件であることを二者で照合する。次の初回登録は、Authのemailだけを監査用
-profileへ複製し、表示名・電話・家族・対象者を作らず、削除担当も `active=false` で停止させる。
-`<delete_operator_user_id>` と記録識別子は制限付き運用台帳の実値へ置き換える。
+先に `supabase/account_delete_identity_ledger.sql` を1回だけ適用し、DB owner以外にはschema使用権もない
+追記専用台帳を作る。この台帳はAuth UUID、確認・承認の種別、時刻、DB実行role、非秘密の証跡参照だけを
+保持し、メール、氏名、自由記述、OTP、TOTP秘密、tokenを保存しない。Authやprofileへの外部キーを付けず、
+退職者や削除対象のAuthを消した後も証跡を残す。UPDATE、DELETE、TRUNCATEはtriggerで拒否するが、DB ownerが
+DDLで防御を外せるため外部署名された絶対的な非改ざん証跡ではない。
+
+最初に、本人がSupabase Auth画面で示した正確な実行者Auth user IDと別確認者Auth user IDを用意し、メール確認、
+verified TOTP 1件、unverified TOTP 0件、既存profile・family所属・一般Admin・削除担当roleが0件であることを
+二者で照合する。TOTPが唯一のユーザーを検索して本人と推測せず、画面で確定した実行者UUIDと完全一致させる。
+DB全体でverified TOTPを持つユーザーが1人だけという件数は事前調査の補助情報に限り、本人識別条件にはしない。
+ほかの利用者が将来MFAを使っても、画面で確定した実行者UUID自身のTOTP総数・状態だけを厳密に検査する。
+次の初回登録は、本人確認event、Authのemailだけを持つ監査用profile、`active=false` の削除担当を同一transactionで
+作る。表示名・電話・家族・対象者は作らない。`<delete_operator_user_id>`、`<approver_user_id>`、証跡参照は
+画面と制限付き台帳で扱う実値へ置き換え、公開Gitや一般チャットへ実値を残さない。
 
 ```sql
 begin;
 
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
+set local idle_in_transaction_session_timeout = '30s';
+
+-- The locks make every absence check below stable until commit. Keep this
+-- transaction short and run it only from the owner-capable SQL console.
+lock table auth.mfa_factors,
+  public.profiles,
+  public.families,
+  public.family_members,
+  public.app_admins,
+  public.account_delete_executors
+in share row exclusive mode;
+
 do $provision$
 declare
   v_operator_user_id uuid := '<delete_operator_user_id>';
-  v_identity_record text := '<本人確認記録の識別子・未有効>';
+  v_approver_user_id uuid := '<approver_user_id>';
+  v_identity_evidence_ref text := '<本人確認証跡の非秘密参照>';
+  v_identity_record_id uuid;
   v_operator_email text;
+  v_totp_total integer;
+  v_totp_verified integer;
+  v_totp_unverified integer;
 begin
-  if v_identity_record is null
-     or btrim(v_identity_record) = ''
-     or position('<' in v_identity_record) > 0
-     or position('>' in v_identity_record) > 0 then
-    raise exception 'a real identity-verification record identifier is required';
+  if v_identity_evidence_ref is null
+     or btrim(v_identity_evidence_ref) = ''
+     or position('<' in v_identity_evidence_ref) > 0
+     or position('>' in v_identity_evidence_ref) > 0 then
+    raise exception 'a real identity-verification evidence reference is required';
+  end if;
+  if v_operator_user_id = v_approver_user_id then
+    raise exception 'operator and approver must be different people';
   end if;
 
   select auth_user.email
@@ -77,31 +109,58 @@ begin
   from auth.users auth_user
   where auth_user.id = v_operator_user_id
     and auth_user.email is not null
-    and auth_user.email_confirmed_at is not null;
+    and auth_user.email_confirmed_at is not null
+  for update;
 
   if v_operator_email is null then
     raise exception 'confirmed Auth user was not found';
   end if;
-  if (
-    select count(*)
-    from auth.mfa_factors factor
-    where factor.user_id = v_operator_user_id
-      and factor.factor_type = 'totp'
-      and factor.status = 'verified'
-  ) <> 1 or exists (
-    select 1
-    from auth.mfa_factors factor
-    where factor.user_id = v_operator_user_id
-      and factor.factor_type = 'totp'
-      and factor.status = 'unverified'
-  ) then
+  select
+    count(*),
+    count(*) filter (where factor.status = 'verified'),
+    count(*) filter (where factor.status = 'unverified')
+  into v_totp_total, v_totp_verified, v_totp_unverified
+  from auth.mfa_factors factor
+  where factor.user_id = v_operator_user_id
+    and factor.factor_type = 'totp';
+
+  if v_totp_total <> 1
+     or v_totp_verified <> 1
+     or v_totp_unverified <> 0 then
     raise exception 'exactly one verified TOTP and no unfinished TOTP are required';
   end if;
   if exists (select 1 from public.profiles where id = v_operator_user_id)
+     or exists (select 1 from public.families where owner_user_id = v_operator_user_id)
+     or exists (select 1 from public.family_members where user_id = v_operator_user_id)
      or exists (select 1 from public.app_admins where user_id = v_operator_user_id)
      or exists (select 1 from public.account_delete_executors where user_id = v_operator_user_id) then
     raise exception 'operator identity already exists; review without overwriting it';
   end if;
+
+  perform auth_user.id
+    from auth.users auth_user
+    join public.profiles profile on profile.id = auth_user.id
+    where auth_user.id = v_approver_user_id
+      and auth_user.email is not null
+      and auth_user.email_confirmed_at is not null
+      and profile.email is not null
+      and lower(profile.email) = lower(auth_user.email)
+  for update of auth_user;
+
+  if not found then
+    raise exception 'confirmed approver Auth identity and matching profile were not found';
+  end if;
+
+  insert into account_delete_private.operator_identity_events (
+    record_kind,
+    operator_user_id,
+    evidence_ref
+  ) values (
+    'identity_verified',
+    v_operator_user_id,
+    btrim(v_identity_evidence_ref)
+  )
+  returning record_id into v_identity_record_id;
 
   insert into public.profiles (id, email)
   values (v_operator_user_id, v_operator_email);
@@ -109,16 +168,54 @@ begin
   insert into public.account_delete_executors (
     user_id, created_by, note, active, activated_at, revoked_at
   ) values (
-    v_operator_user_id, null, 'identity=' || btrim(v_identity_record), false, null, null
+    v_operator_user_id,
+    null,
+    'identity=ledger:' || v_identity_record_id::text,
+    false,
+    null,
+    null
   );
+
+  if (
+    select count(*)
+    from account_delete_private.operator_identity_events event
+    where event.record_id = v_identity_record_id
+      and event.record_kind = 'identity_verified'
+      and event.operator_user_id = v_operator_user_id
+      and event.evidence_ref = btrim(v_identity_evidence_ref)
+  ) <> 1
+     or (
+       select count(*)
+       from public.profiles profile
+       where profile.id = v_operator_user_id
+         and profile.email is not null
+         and lower(profile.email) = lower(v_operator_email)
+         and profile.display_name is null
+         and profile.phone is null
+     ) <> 1
+     or exists (select 1 from public.families where owner_user_id = v_operator_user_id)
+     or exists (select 1 from public.family_members where user_id = v_operator_user_id)
+     or exists (select 1 from public.app_admins where user_id = v_operator_user_id)
+     or (
+       select count(*)
+       from public.account_delete_executors executor
+       where executor.user_id = v_operator_user_id
+         and executor.created_by is null
+         and executor.note = 'identity=ledger:' || v_identity_record_id::text
+         and not executor.active
+         and executor.activated_at is null
+         and executor.revoked_at is null
+     ) <> 1 then
+    raise exception 'operator identity provisioning postcondition failed';
+  end if;
 end;
 $provision$;
 
 commit;
 ```
 
-初回登録後は、対象profile 1件、`family_members` 0件、`app_admins` 0件、無効なexecutor 1件、
-有効executor 0件をSELECTで確認する。ここまででは削除依頼画面へ入れない。
+初回登録後は、本人確認event 1件、対象profile 1件、所有family 0件、`family_members` 0件、`app_admins` 0件、
+無効なexecutor 1件、有効executor 0件を識別子を表示しないSELECTで確認する。ここまででは削除依頼画面へ入れない。
 
 実行者とは別の確認者についても、正確なAuth user IDと `profiles` 行を制限付き運用台帳で照合する。
 確認者本人の承認記録ができた後だけ、次のように未有効・未失効の初回行を1件に限定して有効化する。
@@ -127,18 +224,36 @@ commit;
 ```sql
 begin;
 
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
+set local idle_in_transaction_session_timeout = '30s';
+
+-- Recheck against a stable point-in-time view before granting authority.
+lock table auth.mfa_factors,
+  public.profiles,
+  public.families,
+  public.family_members,
+  public.app_admins,
+  public.account_delete_executors
+in share row exclusive mode;
+
 do $activate$
 declare
   v_operator_user_id uuid := '<delete_operator_user_id>';
   v_approver_user_id uuid := '<approver_user_id>';
-  v_approval_record text := '<承認記録の識別子>';
+  v_identity_record_id uuid := '<identity_ledger_record_id>';
+  v_approval_evidence_ref text := '<別確認者承認証跡の非秘密参照>';
+  v_approval_record_id uuid;
   v_operator_email text;
+  v_totp_total integer;
+  v_totp_verified integer;
+  v_totp_unverified integer;
 begin
-  if v_approval_record is null
-     or btrim(v_approval_record) = ''
-     or position('<' in v_approval_record) > 0
-     or position('>' in v_approval_record) > 0 then
-    raise exception 'a real approval record identifier is required';
+  if v_approval_evidence_ref is null
+     or btrim(v_approval_evidence_ref) = ''
+     or position('<' in v_approval_evidence_ref) > 0
+     or position('>' in v_approval_evidence_ref) > 0 then
+    raise exception 'a real approval evidence reference is required';
   end if;
   if v_operator_user_id = v_approver_user_id then
     raise exception 'operator and approver must be different people';
@@ -155,19 +270,18 @@ begin
   if v_operator_email is null then
     raise exception 'confirmed operator Auth user was not found';
   end if;
-  if (
-    select count(*)
-    from auth.mfa_factors factor
-    where factor.user_id = v_operator_user_id
-      and factor.factor_type = 'totp'
-      and factor.status = 'verified'
-  ) <> 1 or exists (
-    select 1
-    from auth.mfa_factors factor
-    where factor.user_id = v_operator_user_id
-      and factor.factor_type = 'totp'
-      and factor.status = 'unverified'
-  ) then
+  select
+    count(*),
+    count(*) filter (where factor.status = 'verified'),
+    count(*) filter (where factor.status = 'unverified')
+  into v_totp_total, v_totp_verified, v_totp_unverified
+  from auth.mfa_factors factor
+  where factor.user_id = v_operator_user_id
+    and factor.factor_type = 'totp';
+
+  if v_totp_total <> 1
+     or v_totp_verified <> 1
+     or v_totp_unverified <> 0 then
     raise exception 'operator still requires exactly one verified TOTP and no unfinished TOTP';
   end if;
   if not exists (
@@ -179,14 +293,14 @@ begin
   ) then
     raise exception 'operator profile no longer matches the confirmed Auth identity';
   end if;
-  if exists (select 1 from public.family_members where user_id = v_operator_user_id) then
+  if exists (select 1 from public.families where owner_user_id = v_operator_user_id)
+     or exists (select 1 from public.family_members where user_id = v_operator_user_id) then
     raise exception 'operator unexpectedly belongs to an application family';
   end if;
   if exists (select 1 from public.app_admins where user_id = v_operator_user_id) then
     raise exception 'operator unexpectedly has broader app-admin authority';
   end if;
-  if not exists (
-    select 1
+  perform auth_user.id
     from auth.users auth_user
     join public.profiles profile on profile.id = auth_user.id
     where auth_user.id = v_approver_user_id
@@ -194,22 +308,51 @@ begin
       and auth_user.email_confirmed_at is not null
       and profile.email is not null
       and lower(profile.email) = lower(auth_user.email)
-  ) then
+  for update of auth_user;
+
+  if not found then
     raise exception 'confirmed approver Auth identity and matching profile were not found';
   end if;
+
+  if not exists (
+    select 1
+    from account_delete_private.operator_identity_events event
+    where event.record_id = v_identity_record_id
+      and event.record_kind = 'identity_verified'
+      and event.operator_user_id = v_operator_user_id
+      and event.approver_user_id is null
+      and event.identity_record_id is null
+  ) then
+    raise exception 'the operator identity ledger record was not found';
+  end if;
+
+  insert into account_delete_private.operator_identity_events (
+    record_kind,
+    operator_user_id,
+    approver_user_id,
+    identity_record_id,
+    evidence_ref
+  ) values (
+    'activation_approved',
+    v_operator_user_id,
+    v_approver_user_id,
+    v_identity_record_id,
+    btrim(v_approval_evidence_ref)
+  )
+  returning record_id into v_approval_record_id;
 
   update public.account_delete_executors
   set created_by = v_approver_user_id,
       note = concat_ws(
         ' | ',
         nullif(btrim(note), ''),
-        'approval=' || btrim(v_approval_record)
+        'approval=ledger:' || v_approval_record_id::text
       ),
       active = true,
       activated_at = now()
   where user_id = v_operator_user_id
     and created_by is null
-    and note like 'identity=%'
+    and note = 'identity=ledger:' || v_identity_record_id::text
     and active = false
     and activated_at is null
     and revoked_at is null
@@ -223,19 +366,11 @@ begin
         and profile.email is not null
         and lower(profile.email) = lower(auth_user.email)
     )
-    and (
-      select count(*)
-      from auth.mfa_factors factor
-      where factor.user_id = v_operator_user_id
-        and factor.factor_type = 'totp'
-        and factor.status = 'verified'
-    ) = 1
+    and v_totp_total = 1
+    and v_totp_verified = 1
+    and v_totp_unverified = 0
     and not exists (
-      select 1
-      from auth.mfa_factors factor
-      where factor.user_id = v_operator_user_id
-        and factor.factor_type = 'totp'
-        and factor.status = 'unverified'
+      select 1 from public.families where owner_user_id = v_operator_user_id
     )
     and not exists (
       select 1 from public.family_members where user_id = v_operator_user_id
@@ -257,14 +392,42 @@ begin
   if not found then
     raise exception 'one new inactive operator row was not found';
   end if;
+
+  if not exists (
+    select 1
+    from account_delete_private.operator_identity_events event
+    where event.record_id = v_approval_record_id
+      and event.record_kind = 'activation_approved'
+      and event.operator_user_id = v_operator_user_id
+      and event.approver_user_id = v_approver_user_id
+      and event.identity_record_id = v_identity_record_id
+      and event.evidence_ref = btrim(v_approval_evidence_ref)
+  ) or not exists (
+    select 1
+    from public.account_delete_executors executor
+    where executor.user_id = v_operator_user_id
+      and executor.created_by = v_approver_user_id
+      and executor.note = concat_ws(
+        ' | ',
+        'identity=ledger:' || v_identity_record_id::text,
+        'approval=ledger:' || v_approval_record_id::text
+      )
+      and executor.active
+      and executor.activated_at is not null
+      and executor.revoked_at is null
+  ) then
+    raise exception 'operator activation postcondition failed';
+  end if;
 end;
 $activate$;
 
 commit;
 ```
 
-有効化後のexecutor行には、`identity=<本人確認記録>` と `approval=<別確認者の承認記録>` の
-両方を残す。後者で前者を上書きせず、詳細な証跡そのものは制限付き運用台帳で保管する。
+有効化後のexecutor行には、`identity=ledger:<本人確認event ID>` と
+`approval=ledger:<別確認者承認event ID>` の両方を残す。後者で前者を上書きせず、詳細な証跡は
+private schemaの追記専用台帳で保管する。承認eventは有効化と同じtransactionでのみ作り、
+有効化が0件ならeventも含めてロールバックする。
 
 退任・権限停止時は、有効化済み・未失効の1行だけを次のように即時失効させる。すでに失効済みの
 時刻は上書きせず、未有効行をCHECK制約違反にしない。実行後は削除専用auth-statusが403になることを確認する。

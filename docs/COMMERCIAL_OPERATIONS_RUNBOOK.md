@@ -26,7 +26,7 @@
 | 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |
 | リリース担当 | **要指定** | **要指定** |
 | Supabase・個人情報削除担当 | **代表取締役 池田哲也**（メール依頼：`info@bee-ch.co.jp`。アプリ内依頼：`/admin/delete-requests`。両名への通知方針は確定、実際の権限・通知設定・2経路の試験は要確認） | **システム責任者 池田知也**（責任範囲：主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施。受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認） |
-| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。本人用個別Supabase Auth、メール確認、本人端末のTOTP・AAL2確認済み。正確なuser IDの制限付き台帳記録、最小profile、`account_delete_executors` 登録は未実施） | **代替実行者：要指定** |
+| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。本人用個別Supabase Auth、メール確認、本人端末のTOTP・AAL2確認済み。別確認者は代表取締役 池田哲也でAuth・profile一致を読み取り確認済み。private台帳の本番適用、正確な実行者user IDの記録、最小profile、`account_delete_executors` 登録は未実施） | **代替実行者：要指定** |
 | 問い合わせ一次受付 | **要指定** | **要指定** |
 | セキュリティ・法務連絡先 | **要指定** | **要指定** |
 
@@ -34,7 +34,7 @@
 
 ただし、`LEGAL_CONTACT` と `LEGAL_CONTACT_RESPONSE_TARGET` の本番設定、両名の共有受信権限、双方通知のメールルール、DBキューの監視・通知方法、外部からの実受信・返信、公開画面の表示は未確認である。共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う。共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない。通知メール用の `NOTIFICATION_EMAIL_REPLY_TO` は別用途のため未確定のままとする。[環境変数マトリクス](ENVIRONMENT_MATRIX.md)と公開画面を照合する。
 
-削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み実行者と別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の実行予定者は `システム責任者 池田知也` と確定し、本人用の個別Supabase Auth招待受諾・メール確認と、本人端末でのverified TOTP 1件・現在のAAL2確認まで完了した。これは本人確認の完了だけであり、最小profile、`account_delete_executors`、Vercel・Supabase等の本番操作権限はまだ付与していない。QR、手入力用コード、6桁の数字は運営者へ送らず、正確なuser IDは制限付き運用台帳だけで扱う。削除専用roleと本番migrationは実装・適用済みで、一般Admin APIへは広がらず、緊急用管理キーも受け付けない。最小profileは監査上の本人識別子であり、それだけでは家族所属・一般Admin・削除権限を付与しない。本人確認後も、実行者とは別の確認者とその正確なprofileを確定し、無効なexecutor登録と有効化を分けて実施する。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、実行者登録、別確認者、本番での完走試験が未確認の間は、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持して削除実行の正式運用を開始しない。
+削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み実行者と別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の実行予定者は `システム責任者 池田知也` と確定し、本人用の個別Supabase Auth招待受諾・メール確認と、本人端末でのverified TOTP 1件・現在のAAL2確認まで完了した。別確認者は `代表取締役 池田哲也` とし、確認済みAuthと同一UUIDのprofile・メール一致を本番で読み取り確認したが、これは有効化承認そのものではない。private本人確認台帳はソースと破棄DB回帰だけが完成し、本番適用、実行者の正確なuser IDの台帳記録、最小profile、`account_delete_executors`、Vercel・Supabase等の本番操作権限はまだ作成・付与していない。QR、手入力用コード、6桁の数字は運営者へ送らず、正確なuser IDはprivate台帳だけで扱う。削除専用roleと削除pipelineの本番migrationは実装・適用済みで、一般Admin APIへは広がらず、緊急用管理キーも受け付けない。最小profileは監査上の本人識別子であり、それだけではfamily所有・所属・一般Admin・削除権限を付与しない。無効なexecutor登録と別確認者による承認event・有効化を分けて実施する。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。メール共有受信箱と双方通知の方針は確定したが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、private台帳の本番適用、実行者登録・有効化、本番での完走試験が未確認の間は、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持して削除実行の正式運用を開始しない。
 
 障害対応の主責任者・代行者の氏名と役職、代行者の責任範囲「主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施」は確定した。これは全般的な運用責任者の指名や、Vercel・Supabase・GitHub・Resend・DNS等の実行権限付与を意味しない。両名の内部連絡手段、アラート通知先とエスカレーション経路、平日・夜間・休日の当番体制、各サービスの権限とMFA・緊急時アクセス回復方法が未確定の間は、障害対応の正式運用を開始しない。秘密情報、個人電話番号、MFA、復旧コードはGitへ記録せず、制限付き運用台帳または承認済みのパスワード管理基盤で管理する。
 
@@ -47,7 +47,7 @@
 | 写真 | Supabase Storage `home-photos` | 実装あり。独立バックアップ・versioning・復元実績は未確認 |
 | メール | Resendを使う期限・月1確認メール | 任意機能。`RESEND_API_KEY` と認証済み送信元が不足するとメールだけ停止する。設定済みとは扱わない |
 | Cron | Vercel Cronから通知、匿名データ削除、日記・対象者Storage cleanup | 設定ファイルあり。本番での登録、直近成功、失敗通知は外部要確認 |
-| アカウント削除 | 本人確認済み受付、削除専用role、Bearer限定管理一覧、TOTP初回設定、実削除時AAL2、再開可能なDB証跡RPC | 実装あり。本番migrationと個別実行者のverified TOTP確認済み、実行スイッチは既定OFF。正確なuser IDの制限付き台帳記録、最小profile・role登録、別確認者、単独テストアカウント完走は外部要確認 |
+| アカウント削除 | 本人確認済み受付、削除専用role、Bearer限定管理一覧、TOTP初回設定、実削除時AAL2、再開可能なDB証跡RPC | 実装あり。削除role・pipelineの本番migration、実行者のverified TOTP、別確認者のAuth・profile一致は確認済み。実行スイッチは既定OFF。private台帳の本番適用、正確な実行者user IDの台帳記録、最小profile・無効role登録、承認・有効化、単独テストアカウント完走は外部要確認 |
 | 監視 | `/api/health`、Vercel/Supabase/Resendのログ | `/api/health` はWebプロセスだけの浅い確認。外部uptime・error alertは確認できず、未設定扱い |
 
 `/api/health` の200だけでDB、Auth、Storage、Cron、Resendの正常を宣言してはいけない。`/admin/env` も環境変数の「存在」だけを確認し、値の正しさや外部疎通は確認しない。
@@ -289,12 +289,12 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - 管理者は `/admin/delete-requests` で `reviewing` / `needs_followup` を更新できる。
 - 管理画面のstatus PATCHは `completed` を拒否する。完了は `account_deletion_pipeline.sql` の検証済み処理だけで記録する。
 - `/api/admin/delete-requests` と `/api/admin/delete-requests/execute` は、登録済み `app_admin` または有効な `account_delete_executors` のSupabase Bearer認証だけを受け付ける。静的な緊急用管理キーでは一覧・状態変更・事前確認・完全削除のすべてを拒否する。削除専用実行者はほかのAdmin APIを利用できない。
-- 実行予定者は `システム責任者 池田知也` とする方針を確定し、本人用個別Supabase Authの招待受諾・メール確認、本人端末でのverified TOTP 1件・現在のAAL2確認まで完了した。正確なuser IDの制限付き運用台帳への記録、監査用の最小profile、`account_delete_executors` の行、本番操作権限は未作成・未付与である。
+- 実行予定者は `システム責任者 池田知也` とする方針を確定し、本人用個別Supabase Authの招待受諾・メール確認、本人端末でのverified TOTP 1件・現在のAAL2確認まで完了した。別確認者 `代表取締役 池田哲也` の確認済みAuthとprofile一致は読み取り確認済みだが、有効化承認eventは未作成である。private台帳の本番適用、実行者の正確なuser IDの台帳記録、監査用の最小profile、`account_delete_executors` の行、本番操作権限は未作成・未付与である。
 - 本人は `/admin/delete-requests/setup` で個別Magic Linkと認証アプリを設定する。この画面は本人確認だけを行い、profile、家族、対象者、削除専用roleを作らない。登録・中断処理は開始時の同一AAL1 token、Auth user ID、この画面が作ったfactor IDに限定し、過去の未完了factorやverified factorを自動削除しない。verified TOTPが1件かつ現在のAAL2を確認できた場合だけ設定完了と表示する。
 - 削除前確認は実行スイッチOFFかつAAL1でも行える。実削除は追加認証済みAAL2、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true`、完全なrequest ID・user ID、確認文 `完全削除 <REQUEST_ID>` が揃った時だけ開始する。
 - 「確認中」「要確認」の変更は `update_account_delete_request_status_v1` が依頼行と監査ログを1トランザクションで更新する。手動の完了、処理中・完了済み依頼の巻き戻しは拒否する。
 - 実行APIは、DB削除RPC、Supabase Auth userのhard delete、許可された `home-photos` objectの削除と不在確認、最終化RPCの順に進む。途中失敗では `completed` にせず、同じ依頼を再実行できる。
-- 本番migrationと担当者のverified TOTPは確認済みだが、環境変数の実行スイッチ、最小profile・role、別確認者、実アカウント完走を確認するまで「削除運用開始済み」と扱わない。
+- 削除role・pipelineの本番migration、担当者のverified TOTP、別確認者のAuth・profile一致は確認済みだが、private台帳の本番適用、最小profile・無効role、別確認者の承認event・有効化、環境変数の実行スイッチ、実アカウント完走を確認するまで「削除運用開始済み」と扱わない。
 
 ### 8.2 事前条件
 
@@ -302,11 +302,14 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - [x] migration後も `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持した。
 - [x] 実行予定者 `システム責任者 池田知也` の本人用個別Supabase Auth招待受諾・メール確認を本番で確認した。
 - [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認した。
-- [ ] 正確なAuth user IDを制限付き運用台帳へ記録し、最小profileと `active=false` のexecutor行を家族所属・一般Adminなしで同一transactionにより作成した。
+- [x] 実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認した（有効化承認eventは未作成）。
+- [ ] `account_delete_identity_ledger.sql` を本番へ1回だけ適用し、DB owner専用・追記専用・API role権限なしを確認した。
+- [ ] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成した。
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査をソース実装し、ローカル回帰を通した。
 - [x] 本番へ `account_delete_executor_role.sql` と更新済み削除pipelineを適用し、読み取り専用検証を確認した。
 - [ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化し、削除対象本人とは別人であることを確認した。
-- [ ] 実行者とは別の確認者を指名し、削除ごとの二者確認手順を記録した。
+- [x] 初回の削除実行権限有効化では、実行者の本人確認eventと別確認者の `activation_approved` eventを分離して記録する手順を確定した。
+- [x] 実際の削除1件ごとに、request ID・target user ID・operator user IDを二人で照合し、確認者を運用台帳へ残す手順を確定した（初回有効化eventとは別の確認）。
 - [ ] 最後のapp adminと最後の有効な削除専用実行者を削除しない。
 - [ ] familyに他メンバーがいるownerは、Webの家族管理で所有権移管を完了した。
 - [ ] 最新backup、削除後に古いbackupを復元する場合の再削除手順、障害連絡先を確認した。
@@ -523,8 +526,8 @@ git diff --check
 1. [Supabaseセットアップ](../supabase/README.md)を基に、そのreleaseだけのmigration manifestを作る。回帰用 `*_regression.sql` は本番で実行しない。
 2. 単一日記削除は `notebook_atomic_sync_v2.sql` と `ai_consult_memory.sql` の後に `notebook_diary_delete.sql` を適用する。
 3. 対象者全体削除は `notebook_diary_delete.sql` と `consult_daily_claim.sql` の後に `notebook_person_delete.sql` を適用する。
-4. アカウント削除は上記と `admin_auth_hardening.sql` 等の前提後に `account_deletion_pipeline.sql` を適用する。
-5. `verify_compact.sql` でaccount erasure、単一日記削除、対象者全体削除のtable、service-only RPC、再作成・Storage race guard、internal helper非公開、完了証跡の最小化を確認する。念のため次もread-onlyで存在を確認する。
+4. アカウント削除は上記と `admin_auth_hardening.sql` 等の前提後に `account_delete_executor_role.sql`、`account_deletion_pipeline.sql` を適用する。実行者を登録する前に `account_delete_identity_ledger.sql` を1回だけ適用する。
+5. `verify_compact.sql` でaccount erasure、private本人確認台帳、単一日記削除、対象者全体削除のtable、service-only RPC、再作成・Storage race guard、internal helper非公開、完了証跡の最小化を確認する。念のため次もread-onlyで存在を確認する。
 
    ```sql
    select to_regclass('public.account_erasure_jobs') is not null as account_erasure_jobs,

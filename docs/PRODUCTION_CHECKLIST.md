@@ -38,6 +38,8 @@
 - [x] `supabase/admin_auth_hardening.sql` を実行
 - [x] `supabase/account_delete_executor_role.sql` を実行
   - 2026-09-04確認: 本番へ適用し、migration単体ではユーザー作成・権限付与をせず、`account_delete_executors` のRLS/ACL、認可helperを含む読み取り専用13項目を確認。
+- [ ] `supabase/account_delete_identity_ledger.sql` を1回だけ実行し、DB owner専用・追記専用・API role権限なしを確認
+  - ソースと破棄DB回帰は用意済み。本番適用前に同名schemaが存在しないことを確認し、未知の既存schemaを自動採用しない。
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [x] `supabase/account_deletion_pipeline.sql` を実行
   - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。
@@ -145,11 +147,13 @@
 - [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）
 - [x] 池田知也本人用の個別Supabase Auth招待を受諾し、メール確認済みであることを本番で確認（個人メール・user IDはGitへ記録しない）
 - [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認
-- [ ] 正確なAuth user IDを制限付き運用台帳へ記録し、監査用の最小profileと `active=false` のexecutor行を家族所属・一般Adminなしで同一transactionにより作成
+- [ ] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証
 - [x] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、読み取り専用13項目を確認
 - [ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化して削除専用ログインを確認
-- [ ] 削除実行者とは別の確認者を指名し、削除ごとの二者確認手順を確定
+- [x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認（有効化の承認eventは未作成）
+- [x] 初回の削除実行権限有効化では、実行者の本人確認eventと別確認者の `activation_approved` eventを分離して記録する手順を確定
+- [x] 実際の削除1件ごとに、request ID・target user ID・operator user IDを二人で照合し、確認者を運用台帳へ残す手順を確定（初回有効化eventとは別）
 - [ ] verified TOTP・実行者role・別確認者・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認
 - [x] 障害対応の主責任者を `代表取締役 池田哲也` と確定
 - [x] 障害対応の代行者名を `池田知也` と確定
