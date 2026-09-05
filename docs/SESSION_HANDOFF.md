@@ -11684,3 +11684,51 @@ Supabase本番からAuth招待メールを1通送信した。個人連絡先そ�
 次は、明示済みの本番反映指示に従い、このbranchを限定stage・secret検査後にGitHubへpushし、CI成功を確認して
 mainへ通常mergeする。同じmain SHAをVercel productionへ反映し、本番setup URLとfail-closed境界を確認する。
 本人は公開後のsetup URLでTOTPを自身の端末だけに登録し、完了表示後もrole付与は別確認まで保留する。
+
+## 2026-09-05 追記 307 — 削除担当者のTOTP初回設定導線を本番反映
+
+追記306の実装を限定stage・secret検査後にGitHubへpushし、PR #4を通常mergeして、
+同じアプリ実装をVercel productionへ反映した。
+
+GitHub・CI:
+
+- 実装commitは `8588881`、callback timeout時のfail-closed補強commitは `8464fda`。
+- PR #4 `https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/4` を通常mergeした。
+- main merge commitは `71ce946bbbcd136682485a02255a8a9262490da8`。
+- GitHub Actions run `33932251653` の `web-and-mobile` は2分17秒で成功した。
+  型検査、回帰テスト、production build、smokeを含むCIが通過している。
+- branchの最終stageに対する `git diff --cached --check` とGitleaksは成功し、secret検出0件だった。
+
+Vercel production:
+
+- 最初の `npx vercel --prod --yes` はteam scopeを省略したため `Not authorized` で停止し、
+  本番変更は成立しなかった。既存設定から正しいteam scopeを指定して再実行し、正常完了した。
+- deployment IDは `dpl_AX5oKa7QMYbEo7fqLBi4cqvXN75d`、targetは `production`、
+  readyStateは `READY`。
+- deployment URLは
+  `https://oyano-moshimo-navi-h6v9hopes-dogwoodcommunity1.vercel.app`。
+- 正式alias `https://oyano-moshimo-navi.vercel.app` への割当を確認した。
+- 本番のTOTP初回設定画面は
+  `https://oyano-moshimo-navi.vercel.app/admin/delete-requests/setup` でHTTP 200を確認した。
+- 本番 `smoke:web` は主要画面・APIの期待値をすべて通過した。削除担当者用
+  `/api/admin/delete-requests/auth-status` はBearerなしで401となり、認証なしには開かない。
+- 本番画面でも空欄送信は日本語の必須エラー、不正なメール形式をEnterで送信すると
+  日本語の形式エラーを表示し、いずれもメール入力欄へfocusが戻ることを実操作確認した。
+
+安全境界:
+
+- 今回の本番反映はWebアプリのコード公開だけである。Supabase DB/Auth/Storage、`profiles`、家族、
+  対象者、`app_admins`、`account_delete_executors` を作成・変更していない。
+- TOTPのQR、手入力用秘密キー、6桁コードを取得・保存・記録していない。本人だけが本番設定画面で
+  登録する。設定完了だけでは削除担当roleは付与されない。
+- `account_delete_executors` は0件、完全削除の実行スイッチはOFFを維持している。
+  削除依頼・削除ジョブ、DB削除RPC、Auth削除、Storage削除は実行していない。
+- 既存利用者、進行中モニター、日記、写真、AI相談、家族・対象者データは今回の作業対象外で、
+  参照・変更・削除していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、本人が本番setup URLを開き、招待済みの個別メールで最新の確認メールを同じ端末から開き、
+認証アプリへTOTPを登録して現在の6桁コードを入力すること。QR、秘密キー、6桁コードは共有しない。
+「初回設定が完了しました」の表示後、正確なAuth UUID、verified TOTP、AAL2を読み取り専用で照合する。
+削除担当roleの付与はその照合後も別確認まで行わず、完全削除スイッチはOFFを維持する。
