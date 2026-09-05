@@ -143,12 +143,13 @@
 - [ ] `info@bee-ch.co.jp` を共有パスワード方式にせず両名へ委任・転送し、外部テストメールの受信と返信を確認
 - [ ] テスト用アプリ内削除依頼がDBキューへ表示され、割り当てた監視・通知方法で両名が認知できることを確認
 - [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）
-- [ ] 池田知也の本人確認済み個別Supabase Auth・verified TOTP・正確なuser IDを制限付き運用台帳で確認
+- [x] 池田知也本人用の個別Supabase Auth招待を受諾し、メール確認済みであることを本番で確認（個人メール・user IDはGitへ記録しない）
+- [ ] `/admin/delete-requests/setup` でverified TOTPと現在のAAL2を確認し、正確なuser IDを制限付き運用台帳で照合
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証
-- [ ] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、`verify_compact.sql` を確認
+- [x] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、読み取り専用13項目を確認
 - [ ] 上記確認後に `account_delete_executors` へ有効登録し、削除専用ログインを確認
 - [ ] 削除実行者とは別の確認者を指名し、削除ごとの二者確認手順を確定
-- [ ] 本番migration・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認
+- [ ] verified TOTP・実行者role・別確認者・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認
 - [x] 障害対応の主責任者を `代表取締役 池田哲也` と確定
 - [x] 障害対応の代行者名を `池田知也` と確定
 - [x] 障害対応代行者の責任範囲を「主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施」と確定

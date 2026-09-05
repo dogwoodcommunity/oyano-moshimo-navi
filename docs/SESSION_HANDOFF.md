@@ -11633,3 +11633,52 @@ Supabase本番からAuth招待メールを1通送信した。個人連絡先そ�
 次の1項目は、本人が招待メールを受諾してメール確認を完了すること。
 その後、本人セッションで安全にTOTPを登録・確認できる初回設定導線を実装・検証し、
 正確なAuth UUIDとverified MFAを確認してから削除専用roleを付与する。
+
+## 2026-09-05 追記 306 — 削除担当者のTOTP初回設定導線を実装・公開前検証
+
+本人から招待メールの受諾完了連絡を受け、本番の読み取り専用確認でも個別Authユーザー1件、
+メール確認済み1件であることを確認した。profile、MFA factor、verified MFA、削除専用roleは0件のままで、
+実行スイッチはOFFを維持している。その状態から、本人だけが認証アプリを登録・確認できる
+`/admin/delete-requests/setup` を作業branch `codex/delete-operator-mfa-setup` に実装した。
+
+実装:
+
+- 既存Authユーザー限定の個別Magic Linkでログインし、メール確認済みの正確なAuth subjectを再検証する。
+- 別端末ではQRコード、同じスマホでは手入力用コードを使える。アカウント名
+  `親のもしもナビ 削除担当`、キーの種類 `時間ベース`、約30秒ごとに変わる6桁の数字を日本語で説明した。
+- 登録開始は開始時に取得した同一AAL1 token、同一Auth user ID、TOTP種別へ固定する。
+  中断・古い応答のcleanupもそのtokenと、この画面が作った正確なfactor IDだけへ限定し、
+  verified化済み、別ユーザー、別factorは削除しない。過去の未完了factorは自動・一括削除しない。
+- 確認完了は、同じfactorが唯一のverified TOTPであり、確認処理が返した同一token自身の
+  current AALがAAL2で、並行するAuth変更がない場合だけ成立する。QR、手入力用コード、6桁入力は
+  localStorage、sessionStorage、ログ、DBへ保存しない。
+- callback失敗、ログインsubject変更、同一subjectのAuth状態変更、別タブのBearer変更時は、古いBearerと
+  設定情報を破棄する。削除依頼画面側も一覧、対象UUID、確認文、メモ、事前確認を直ちに隠し、古い応答を無効化する。
+- 初期callbackと本人状態確認は12秒で安全にerrorへ移り、再試行ボタンを出す。メール入力はEnter・スマホの
+  送信キー、必須・形式エラー、入力欄へのfocus、読み上げへ対応した。手入力用コードのコピー失敗時は
+  コードを表示し、その欄へfocusを戻す。
+- 設定画面は本人確認だけを行い、`profiles`、家族、対象者、`app_admins`、
+  `account_delete_executors` を作成・変更しない。完了画面にも「まだ削除担当権限は付いていない」と表示する。
+
+検証:
+
+- `test:delete-operator-mfa-setup`、`test:account-delete-executor`、`test:web-account-deletion`、
+  `test:commercial-release-gates`、`doctor:local`: 成功。
+- Web/Mobile TypeScript: 成功。
+- Web production build: 成功、静的ページ168/168。既知のSupabase Node 20将来廃止warningだけ。
+- production buildをローカル起動し、`smoke:web` が成功。新しい削除担当ログイン画面で、空欄送信と
+  不正なメール形式をEnterで送信した際に、日本語エラーが表示されメール欄へfocusが戻ることを実操作確認した。
+- セキュリティ、race/fail-closed、UI・アクセシビリティの独立レビューを行い、最終P0/P1なし。
+- `git diff --check`: 成功。
+
+公開前の安全境界:
+
+- この追記時点ではbranch上のソースだけであり、main merge、Vercel本番deploy、Supabase DB/Auth/Storage、
+  profile作成、TOTP登録、削除専用role付与、削除スイッチ変更、削除処理は行っていない。
+- 既存利用者、モニター回答、日記、写真、AI相談、削除依頼、家族データは参照・変更・削除していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしない。
+
+次は、明示済みの本番反映指示に従い、このbranchを限定stage・secret検査後にGitHubへpushし、CI成功を確認して
+mainへ通常mergeする。同じmain SHAをVercel productionへ反映し、本番setup URLとfail-closed境界を確認する。
+本人は公開後のsetup URLでTOTPを自身の端末だけに登録し、完了表示後もrole付与は別確認まで保留する。

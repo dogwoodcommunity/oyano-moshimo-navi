@@ -18,6 +18,16 @@ Admin APIは `SUPABASE_SERVICE_ROLE_KEY` を使うため、RLSではなくAPI側
 - 削除前確認は有効なBearer認証（AAL1以上）、実削除は登録済みTOTPで追加認証したAAL2を必須にする。
 - 削除対象本人、実行者、実行者とは別の確認者を分離し、個人の連絡手段やuser IDは公開Gitではなく制限付き運用台帳で管理する。
 
+## 削除担当者の初回本人確認
+
+- 本人だけが `/admin/delete-requests/setup` を開き、招待を受けた個別メールのMagic Linkと認証アプリの6桁の数字で確認する。
+- Magic Linkは既存Authユーザーだけを許可し、この画面から新規ユーザー、`profiles`、家族、対象者、削除専用roleを作らない。
+- QRコード、手入力用コード、6桁の数字は運営者へ送らず、Git、ログ、localStorageにも保存しない。
+- 登録開始と中断時のcleanupは、開始時に取得した同一のAAL1 token、同一Auth user ID、この画面が作った正確なfactor IDへ結合する。中断時はそのtokenで対象が `unverified` の場合だけ削除し、verified化済み・別ユーザー・別factorは削除せずfail closedにする。過去に残った未完了factorは一括・自動削除しない。
+- verified TOTPが1件でも、現在のセッションがAAL2になるまで設定完了と扱わない。複数ある場合は権限付与を停止して手動確認する。
+- 認証callback失敗やログインユーザー変更時は古いBearer、QR、手入力用コード、6桁入力を破棄し、別ユーザーの状態へ戻らない。
+- 設定完了は本人確認の完了だけを意味する。正確なAuth user ID、`profiles` の限定作成、別確認者の承認後に限り、別操作で `account_delete_executors` を有効化する。
+
 ## app_adminの作り方
 
 Supabase Authで管理者ユーザーを作成し、profilesに行がある状態で、SQL Editorから以下を実行する。

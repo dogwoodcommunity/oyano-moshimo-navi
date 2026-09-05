@@ -95,6 +95,7 @@ assert.match(adminClientAuth, /export function adminBearerHeaders/, "a Bearer-on
 assert.match(deleteClient, /adminBearerHeaders\(\)/, "delete operations must send only the Bearer token");
 assert.doesNotMatch(deleteClient, /\badminHeaders\(/, "delete operations must never fall back to the static token");
 assert.match(deleteClient, /addEventListener\("admin-auth-changed"/, "delete requests must reload after auth changes");
+assert.match(deleteClient, /hasPendingAuthCallback\(\)[\s\S]*?loadDeleteRequests\(\)/, "delete-request PII must wait while an auth callback is being validated");
 assert.match(deleteClient, /setErasureChecks\(\{\}\)/, "auth changes must invalidate prior preflight approval");
 assert.match(deleteClient, /loadRequestId\.current \+= 1/, "auth changes must invalidate in-flight PII responses");
 
@@ -105,7 +106,16 @@ assert.match(tokenControl, /mfa\.listFactors\(\)/, "dedicated auth must list enr
 assert.match(tokenControl, /factor\.status === "verified"/, "only verified TOTP factors may be offered");
 assert.match(tokenControl, /mfa\.challengeAndVerify/, "an enrolled TOTP factor must support AAL2 step-up");
 assert.match(tokenControl, /const requestId = \+\+verifyRequestId\.current;[\s\S]*?mfa\.challengeAndVerify[\s\S]*?requestId !== verifyRequestId\.current/, "logout or a newer auth check must invalidate an in-flight MFA response");
-assert.match(tokenControl, /event === "TOKEN_REFRESHED" && session\?\.access_token/, "only an expected refresh event may replace the stored Bearer outside explicit MFA verification");
+assert.match(tokenControl, /hasSupabaseAuthCallbackInLocation\(\)[\s\S]*?invalidateDisplayedAccess\("checking"\)[\s\S]*?completeBrowserSupabaseAuthFromUrl\(\)/, "a callback must hide old operator data and remove its bearer before async validation");
+assert.match(tokenControl, /event === "SIGNED_OUT" \|\| !session\?\.access_token[\s\S]*?invalidateDisplayedAccess\("signed-out"\)/, "signed-out and empty auth events must invalidate shown PII");
+assert.match(tokenControl, /mfaChallengePending\.current[\s\S]*?MFA_CHALLENGE_VERIFIED[\s\S]*?TOKEN_REFRESHED/, "the local MFA challenge must own its token publication path");
+assert.match(tokenControl, /invalidateDisplayedAccess\("checking"\)[\s\S]*?setItem\(ADMIN_BEARER_TOKEN_STORAGE_KEY, session\.access_token\)[\s\S]*?verifyStoredAccess\(\)/, "all external signed-in or refreshed sessions must clear stale UI and pass server authorization again");
+assert.match(tokenControl, /addEventListener\("storage", handleBearerStorageChange\)/, "cross-tab bearer changes must invalidate stale deletion data");
+assert.match(tokenControl, /<form[\s\S]*?className="admin-auth-form"[\s\S]*?onSubmit=[\s\S]*?void sendLink\(\)/, "the initial email flow must submit as a form for Enter and mobile keyboard completion");
+assert.match(tokenControl, /id="admin-email"[\s\S]*?type="email"[\s\S]*?enterKeyHint="send"[\s\S]*?aria-describedby=\{emailError \? "admin-email-error" : undefined\}[\s\S]*?aria-invalid=\{Boolean\(emailError\) \|\| undefined\}[\s\S]*?ref=\{emailInputRef\}[\s\S]*?required/, "the email field must expose mobile completion, required email semantics, and its error relationship");
+assert.match(tokenControl, /showEmailError[\s\S]*?emailInputRef\.current\?\.focus/, "email validation and send errors must return focus to the email field");
+assert.match(tokenControl, /id=\{emailError \? "admin-email-error" : undefined\}[\s\S]*?role=\{emailError \? "alert" : undefined\}/, "email errors must be announced as an alert");
+assert.match(tokenControl, /<button className="button" type="submit" disabled=\{sending\}>/, "the email action must be the form submit button");
 assert.match(tokenControl, /\^\\d\{6\}\$/, "TOTP input must require exactly six digits");
 assert.match(tokenControl, /localStorage\.setItem\(ADMIN_BEARER_TOKEN_STORAGE_KEY, data\.access_token\)/, "the AAL2 JWT must replace the client Bearer token");
 const verifyStoredAccess = tokenControl.match(
@@ -125,8 +135,14 @@ const signOutControl = tokenControl.slice(
   tokenControl.indexOf("async function verifyMfaCode")
 );
 assert.ok(
-  signOutControl.indexOf("verifyRequestId.current += 1") < signOutControl.indexOf("await getBrowserSupabase"),
+  signOutControl.indexOf("verifyRequestId.current += 1") < signOutControl.indexOf("await client.auth.signOut"),
   "sign-out must invalidate in-flight auth-status responses before awaiting network work"
+);
+assert.match(signOutControl, /auth\.signOut\(\{ scope: "local" \}\)/, "operator logout must not revoke unrelated sessions");
+assert.match(signOutControl, /signOutFailed[\s\S]*?ログアウト完了を確認できませんでした[\s\S]*?return;/, "a failed sign-out must never claim success");
+assert.ok(
+  signOutControl.indexOf("removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY)") < signOutControl.indexOf("await client.auth.signOut"),
+  "operator PII access must be removed before waiting for sign-out"
 );
 assert.doesNotMatch(tokenControl, /mfa\.enroll|recovery/i, "this surface must not enroll factors or expose recovery material");
 
@@ -137,6 +153,6 @@ assert.match(deletePage, /showEmergencyToken=\{false\}/, "the deletion page must
 assert.match(deletePage, /enableMfaStepUp/, "the deletion page must allow enrolled-factor AAL2 step-up");
 assert.match(browserSupabase, /redirectPath = "\/admin\/monitor-feedback"/, "generic magic-link behavior must remain the default");
 assert.match(browserSupabase, /window\.location\.origin\}\$\{safeRedirectPath\}/, "the configured same-origin redirect must be used");
-assert.match(adminNav, /deletionOnly \? \[deleteRequestItem\] : items/, "the deletion page must expose only its own navigation section");
+assert.match(adminNav, /deletionSetup[\s\S]*?\? \[deleteRequestSetupItem\][\s\S]*?: deletionOnly[\s\S]*?\? \[deleteRequestItem\][\s\S]*?: items/, "deletion and setup pages must each expose only their own navigation section");
 
 console.log(`account delete executor auth tests passed (${scopedRoutes.length} scoped routes, ${genericRoutes.length} generic routes)`);

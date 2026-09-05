@@ -4,6 +4,22 @@ import { useEffect, useRef, useState } from "react";
 import type { AdminDeleteRequestRow } from "@/app/api/admin/delete-requests/route";
 import { adminBearerHeaders } from "@/lib/adminClientAuth";
 
+function hasPendingAuthCallback() {
+  const url = new URL(window.location.href);
+  const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
+  return Boolean(
+    url.searchParams.get("code")
+    || url.searchParams.get("error")
+    || url.searchParams.get("error_code")
+    || url.searchParams.get("error_description")
+    || hashParams.get("access_token")
+    || hashParams.get("refresh_token")
+    || hashParams.get("error")
+    || hashParams.get("error_code")
+    || hashParams.get("error_description")
+  );
+}
+
 export function AdminDeleteRequests() {
   const loadRequestId = useRef(0);
   const [deleteRequests, setDeleteRequests] = useState<AdminDeleteRequestRow[] | null>(null);
@@ -38,7 +54,9 @@ export function AdminDeleteRequests() {
   }
 
   useEffect(() => {
-    loadDeleteRequests();
+    // Do not render data from a previous operator while a new or failed
+    // Supabase callback is still being validated by AdminTokenControl.
+    if (!hasPendingAuthCallback()) loadDeleteRequests();
     const reloadAfterAuthChange = () => {
       // Authentication changes invalidate PII, preflight decisions, and exact
       // confirmations from the previous operator/session immediately.
