@@ -12348,3 +12348,24 @@ AAL1からの追加認証案内、削除依頼一覧を確認した。個人メ�
 削除専用ログインと権限分離の試験は完了した。次はAAL1での削除前確認とAAL2での
 単独テストアカウント完全削除だが、これは破壊的な別工程である。新しい実行時明示承認を得るまで、
 実行スイッチON、preflight、execute、実削除へ進めない。
+
+## 2026-09-05 追記 325 — 削除専用権限分離の記録をmainへ反映
+
+追記324の本番確認に合わせ、本番checklist、商用運用手順、公開準備台帳、商用gateテスト、
+SESSION_HANDOFFを更新し、対象5ファイルだけをmainへpushした。
+
+- commit: `ee9c8dc48acaa2719511bd5f51e50811b9b9a6f9`
+- ローカルの削除担当権限、MFA設定、Web削除、商用gate、型検査、構文検査、diff検査は成功した。
+  限定stageのGitleaksはsecret検出0件だった。
+- 独立資料監査はP0/P1/P2なしのGOだった。
+- main CI run `33944414158` は2分35秒で成功した。Web・モバイル型検査、monitor、削除担当権限、
+  MFA、削除系PostgreSQL回帰、家族権限、AI記憶、日記・対象者削除、build、smokeを含む。
+- Deploy workflow run `33944414224` はsecret存在checkだけ成功し、deploy jobはskipされた。
+  今回のcommitは資料と回帰テストだけで本番runtime byteを変更していないため、追加deployは不要である。
+  本番runtimeは追記323のReadyなdeploymentを維持している。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFで、PATCH、preflight、execute、実削除は未実行。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は単独テストアカウントを用意し、別の実行時承認のもとでAAL1 preflightとAAL2完全削除を
+確認する工程である。現在の本人セッションや既存利用者をテスト削除対象にしてはならない。
