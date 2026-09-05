@@ -13983,3 +13983,49 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 写真/招待/AI送信は触らず、保存済み記録の編集/削除/リセットもしていない。
 引き継ぎと上記の限定差分だけをこの修正ブランチへcommit/pushする。
 `review_exports/` と未追跡Claude_FULL 2文書は保持。
+
+## 2026-09-06 追記 371 — ロゴ重なり・種類ボタンの修正を本番公開し、実表示を確認
+
+前回は確認版だけの修正だったため、本番を見ているユーザーから「解消していない」と指摘を受けた。
+本番未反映であることを説明し、今回の「ええよ」をこの2点の本番反映承認として受領した。
+`fix/navi-heading-mood-choices` の `6c6deb8d8c4837d45701916b8d2448c76252d2aa` を
+最新origin/mainの祖先確認後、mainへfast-forwardしてpush。今回アプリコードの追加変更なし。
+
+公開証跡：
+
+- 独立read-only差分確認：`f734df6..6c6deb8` はhome JSX/CSS/回帰テスト/引き継ぎの4ファイルのみ。
+  保存・同期・復元・権限・API・Auth・DB・migration・env・課金/削除スイッチに変更なし。
+- exact SHAのCI `33973759430` がsuccess/completed（web-and-mobile 2分53秒）。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/33973759430
+  lint/Web・mobile型/ソース回帰/隔離SQL/build/smokeを通過。既存警告のみ。
+  Deploy workflow `33973759439` はcheck成功/deploy skippedなので、CI通過後に既存Vercel CLIで公開。
+- クリーンなGit書庫 `/private/tmp/oyano-navi-release-6c6deb8.PZBvNy`：444ファイル、
+  blob不一致0・想定外0。inventory SHA256 `2dfd6245beb29a5c5c9fc5da785ae902e39bcae3cb02092517679edf612cce9b`。
+  outputs/review_exports/env/git/node_modules/未追跡Claude_FULLは含めない。
+  dry-runはNext.js/443 uploadファイル/9,372,440 bytes、禁止対象混入0、.gitignoreだけupload対象外。
+- 既存project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope dogwoodcommunity1 へ
+  CLI 59.11.7の `deploy --prod --yes`、metadata `releaseSha=6c6deb8d8c4837d45701916b8d2448c76252d2aa` で公開成功。
+- 新deployment：`dpl_AxgPEfQC8uwVFrHFf3oTevtn57t6`（2026-09-06 00:09:24 JST作成）。
+  https://oyano-moshimo-navi-obo713gxf-dogwoodcommunity1.vercel.app
+  公開alias https://oyano-moshimo-navi.vercel.app を別途inspectし、同deployment/production/Readyを確認。
+  直前のrollback候補は `dpl_FATDrYm527bz7QNqW5soU6Rpqos2`。rollbackは未実行。
+
+本番確認：
+
+- 公開前に同じ本番タブで旧tagとロゴの5px重なり、未選択buttonの枠0、入力欄が空であることを確認。
+  公開後に普通のreloadを行い、旧tagがなくなり、新h2「ナビからのひとこと」が表示されることを確認。
+- 幅320/390/481/709/1280pxでロゴと見出しの矩形重なり0、ページ/種類ボタンの横はみ出し0。
+  ロゴはposition:static。小画面の3ボタンは縦並び・各高さ60px、広い画面は3列・高さ75px。
+  全buttonに濃い2px枠。通常幅の見出しと390pxの選択欄をスクリーンショットで目視確認した。
+- 新規入力の3種類を押し、aria-pressed/「✓ 選択中」が常に1つだけ切り替わることを確認。
+  入力欄は空のまま、最後に通常へ戻した。保存は押していない。既存の端末内テスト記録3件も表示された。
+  モニター共有同意は操作せず、色も変更なし。最終console error/warn 0件、viewport override解除済み。
+- 独立GET確認は `/home` `/start` `/monitor` `/monitor/report?preview=1` `/family` `/guides`
+  `/crisis` `/legal/tokushoho` `/api/health` の9件がすべて200。
+  homeから実参照された同一originのCSS4件も200で、通常フローの見出し/480px単列/語句単位折返しが配信済み。
+  認証header/Cookie・POST・実データ出力なし。
+
+今回は本番への修正反映まで完了。記録の保存/編集/削除/リセット/統合/復元、DB/Auth/設定変更、
+メール/招待/AI/回答送信は行っていない。全利用者データの完全一致監査や実iPhone/Android受入とは別。
+本番タブは修正箇所を表示して残し、ローカル3119も維持。文書だけを追加commit/pushする。
+公開アプリsourceは上記6c6deb8のまま。`review_exports/` と未追跡Claude_FULL 2文書は触らない。
