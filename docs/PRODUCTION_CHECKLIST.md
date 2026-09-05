@@ -3,14 +3,14 @@
 ## 2026-09-05 終了条件の再整理
 
 無料Web正式版（Stage A）を先に完成させる。有料受付（Stage B）・ストア公開（Stage C）は別段階。
-DBの4件は本番適用・構造検査済み。Web更新と正式公開の残条件は別。最新の実行記録は `SESSION_HANDOFF.md` 追記335を参照。
+DBの4件と対応Webは本番反映・確認済み。実機・復旧・運用・法務等の正式公開条件は別。最新の実行記録は `SESSION_HANDOFF.md` 追記336を参照。
 
 - [x] 前回の限定commit `35bc7a9` をGitHubへpushしCI成功を確認（run `33954325618`）。deploy workflowのdeploy jobはskipであり、本番反映ではない
-- [x] 本番照合で判明した月次ACL/相談UUID修正とlint設定を含む `539c359` をpushしCI成功を確認（run `33955341444`）。対応deploy jobもskip。Vercel CLI再ログインも必要
+- [x] 本番照合で判明した月次ACL/相談UUID修正とlint設定を含む `539c359` をpushしCI成功を確認（run `33955341444`）。対応deploy jobはskip。後続 `17bbc7b` もCI成功（run `33955524419`）、CLI再ログイン後に手動本番反映済み
 - [x] 本番の家族権限・家族管理RPC・原子的な1日1回相談RPCをread-onlyで検査し、**不足を確認したものだけ**承認後にDB-first適用。2026-09-05、適用直前の再照合・家族role補正0件guard・適用後検査を実施
 - [x] 月次通知関数の旧alias/明示EXECUTE残存を確認して修正版を適用。関数本文のソース一致とservice-onlyを読み取り確認。通知生成・送信の試験実行はしていない
-- [ ] 確定済みの運営者・責任者・問い合わせ先・返信目安4値を本番へ設定してWebを反映。施行日は公開日確定まで未設定のまま、準備中と表示
-- [ ] 新しい読み取り専用「アクセス権限を確認する」で本人sessionの5 API応答を確認。コード・疑似テストのPASSを本人認証の実測に代用しない
+- [x] 確定済みの運営者・責任者・問い合わせ先・返信目安4値を本番へ設定してWebを反映。2026-09-05、規約/プライバシー両ページで4値とmailtoリンクを確認。施行日は未設定のまま、準備中の表示も確認
+- [x] 新しい読み取り専用「アクセス権限を確認する」で本人sessionの5 API応答を確認。2026-09-05、更新後の削除専用実行者のChrome/AAL2で200・200・403・403・403を画面上で実測。回答/設定本文は読まず、削除状態も変更していない
 - [ ] 専用テストアカウントで保存・別端末復元・家族の閲覧/編集境界・写真・削除を実機で完走
 - [ ] DB/Auth・Storage別バックアップと隔離復旧、問い合わせ受信/返信、障害通知の実受信を確認
 - [ ] 法務最終確認、正式公開日、運用担当・連絡方法を確定して最終判定
@@ -19,7 +19,8 @@ DBの4件は本番適用・構造検査済み。Web更新と正式公開の残�
 ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目のLOCAL_PASSを確認した。
 本番DBで不足していた家族権限helper・家族管理5 RPC・日次相談3 RPCと月次通知修正は、
 2026-09-05の直前承認後に適用した。10関数の正規化本文が承認済みソースと一致し、
-`verify_stage_a_release.sql` の12項目がすべてok。Web反映はVercel再ログイン待ち。
+`verify_stage_a_release.sql` の12項目がすべてok。Webも `17bbc7b` から本番へ反映し、
+deployment `dpl_3dnyJRVqXaRiJ8Uc1svJLcSa18Wv` のReady・公開alias・運営情報・本人5 API応答を確認済み。
 このローカル合格や `--source-only` / `--sql-only` の
 部分PASSや、2つの疑似端末による同期試験だけで正式公開・実機復元を完了扱いにしない。
 
@@ -113,7 +114,9 @@ ESLint設定と依存、pnpm 9.15.9固定を追加し、2026-09-05に全38項目
 - [x] 対応Webを本番に反映し、deployment Ready・公開alias・smokeを確認
   - 2026-09-05確認: release `c1415b3b036fbdfa9977f0d870a808bb633c6467`、CI `33952555663` PASS（2分24秒）、deploy workflow `33952555613` skip後、CLIで `dpl_Hx7V71Pd9voYiMYgfmFFRxmo7MnA` を本番へ反映。公開alias `https://oyano-moshimo-navi.vercel.app` とReadyを確認。smokeは検査対象すべてPASS（Admin envは未認証401でskip）。削除APIの未認証401、未ログイン画面にCONTACT/REASON/HANDLED BY列がないこと、Vercel productionの実行スイッチ未登録（OFF）を確認。本人ログイン後のChrome画面確認は次項に記録し、HTTP数値の直接再採取・非空依頼の応答検証・別確認者のAAL2・削除E2Eは未確認。
 - [x] 更新後の登録済み削除専用実行者のChrome画面で、本人認証済み・AAL2確認済み・削除依頼0件・CONTACT/REASON/HANDLED BY列なしを確認。同じ本人sessionのモニター回答・AI利用・env画面で管理権限拒否とデータ非表示を確認した。前2画面は `Admin authorization is forbidden` を表示し、ソース上の403応答と一致するが、HTTP数値は直接採取していない。token・request headerは参照していない。
-- [ ] 本人sessionの削除専用auth-status・一覧200と一般Admin API 403のHTTP数値を直接再採取し、非空の依頼で削除専用実行者の一覧クエリがSELECT段階から連絡先・自由記載の理由・処理メモ・担当者メール/user IDを取得せず、対応日時と非識別の認証方式名だけを状態証跡として返すことを確認
+- [x] 本人sessionの削除専用auth-status・一覧200と一般Admin 3 API 403のHTTP数値を直接再採取
+  - 2026-09-05: `dpl_3dnyJRVqXaRiJ8Uc1svJLcSa18Wv` の更新後、登録済み削除専用実行者のChrome/AAL2で手動診断を実行し、5応答すべて想定一致。token/headerは抽出せず、診断は応答本文を破棄する。削除依頼は0件のまま。
+- [ ] 非空の依頼で削除専用実行者の一覧クエリがSELECT段階から連絡先・自由記載の理由・処理メモ・担当者メール/user IDを取得せず、対応日時と非識別の認証方式名だけを状態証跡として返すことを確認
 - [ ] 対応Webの削除認可が `verify_account_delete_operator_v2` だけを呼び、生の `account_delete_executors` をSELECTしないこと、旧deploymentは認可時点でfail closedになり一覧・実行handlerへ進まないことを確認
 - [ ] 一覧が `requested` / `reviewing` / `needs_followup` をページ取得で全件含め、`completed` だけを作成日の新しい順の直近100件に限ることを、未完了1,000件超・完了100件超の破棄データで確認
 - [ ] 依頼状態と処理メモのPATCHが現routeのAAL2 app_admin確認後に `update_account_delete_request_status_v2` だけを呼び、DBでも正確なoperator user IDをapp adminとして再確認することを確認する。AAL1 app_adminとAAL2削除専用実行者は403、旧v1を呼ぶAAL1の旧deploymentはDB権限拒否になることも確認

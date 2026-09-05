@@ -12775,3 +12775,63 @@ Web反映の準備と残り:
 
 今回のソース変更はなし。チェックリストとこの引き継ぎのみを限定commit/pushする。
 `review_exports/` と未追跡Claudeレビュー文書2件は参照・変更・stage・送信の対象外。
+
+## 2026-09-05 追記 336 — Vercel再ログイン成功、Web本番反映と本人5 API診断が完了
+
+ユーザーの「ログインした」「続けて」を受け、前ターンのVercel device loginが
+`Congratulations! You are now signed in.` / exit 0で完了したことを確認。
+通常の認証更新だけで、token抽出・新しい外部連携・権限拡大はしていない。
+本番DB4件は追記335で適用/検査済みのため再実行せず、承認済みWeb反映へ進んだ。
+
+反映対象・事前確認:
+
+- repo HEADは引き継ぎのみの `2a44f779c20d33f1826c073d370df5bd38f483c7`。
+  リリース元は予定どおり `17bbc7bd43c26ecbde45eb56657f72fc0f33eeaa` に固定。
+  `539c359` からの差は引き継ぎ/チェックリスト2件のみ。17bbc7b自体のCI `33955524419` もsuccessを確認。
+  Deploy workflow `33955524440` はcheck成功/deploy skipで、今回も手動CLI反映とは区別する。
+- clean archive `/private/tmp/oyano-web-release-17bbc7b.hdDu3y` の423ファイルをrootが再検査。
+  Git blob不一致0、余分なファイル0、保護対象/実行用env/依存/build出力0。
+  Vercel dry-runは420ファイル/8,953,461 bytes、禁止対象0、Next.js。
+  inventory SHA256は `524266fc766e90c16a6b96c0a20de00198f546310ea2823ce3b08fd28deb0923`。
+- project inspectで `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H`、scope `dogwoodcommunity1`、root `.`、
+  Next.js・既存build/output/install設定を照合。既存aliasは `dpl_Hx7V71Pd9voYiMYgfmFFRxmo7MnA` のReadyだった。
+- Production env一覧で公開4値の存在、施行日2値/有料/削除実行スイッチが未登録であることを再確認。
+  既存envは変更していない。認証用/AI/DBの秘密値は出力・転送資料へ保存していない。
+
+本番反映（2026-09-05 18時台JST）:
+
+- 公式Vercel CLI 59.11.7を使い、上記archiveだけを既存projectへ `--prod` で送信。
+  metadata `releaseSha=17bbc7bd43c26ecbde45eb56657f72fc0f33eeaa` を付けた。
+- pnpm 9.15.9/frozen lockfile、Next 14.2.35でbuild成功。既知のimg/React依存配列lint warningは残るがerrorなし。
+- deployment **`dpl_3dnyJRVqXaRiJ8Uc1svJLcSa18Wv`** / **READY**。
+- direct URL: `https://oyano-moshimo-navi-mrx0wyohv-dogwoodcommunity1.vercel.app`
+- 公開alias: `https://oyano-moshimo-navi.vercel.app`
+- CLIのalias成功後に改めてinspectし、公開aliasがこのdeploymentを指すことを確認した。
+
+更新後の確認:
+
+- `smoke-web.mjs` をADMIN_ACCESS_TOKENなしで実行し、40項目OK・Admin env 1項目は未認証401でskip。
+  空質問AI相談400、未認証削除依頼/家族/通知設定/Push登録401、有料checkout503を確認。
+  有効な利用者tokenや実データを送っておらず、AI呼出・決済・通知送信・削除依頼作成は起こしていない。
+- `/legal/terms` と `/legal/privacy` は200。両ページに株式会社BEECH、代表取締役 池田哲也、
+  info@bee-ch.co.jp、メール受付：24時間／原則3営業日以内に返信、正しいmailtoリンクを確認。
+  「正式公開に向けて準備中」の表示も存在し、未確定の施行日を捏造していない。
+- 登録済み削除専用実行者の既存Chrome個別sessionを再読込し、本人認証済み・AAL2確認済み、
+  新しい「ログイン後のアクセス権限を確認する（読み取り専用）」の表示を確認。
+  再読込/クリックでブラウザ操作のtimeoutがあったが、状態を再取得して新UIを確認し、
+  展開操作を経て診断ボタンを1回実行した。認証情報抽出や裏口API呼出はしていない。
+- 診断の実測は **削除auth-status 200 / 削除一覧200 / モニター回答403 / AI利用403 / 本番設定403**。
+  「すべて想定どおりの応答でした」を画面で確認。診断はHTTP数値だけを使い本文を破棄する。
+  削除依頼0件・CONTACT/REASON/HANDLED BY列なし。PATCH/preflight/executeは未実行。
+
+本番DBのDDL/DML・利用者の日記/写真/相談/回答の変更や削除、env変更、課金、送信、
+owner control/grantの有効化はこのターンではしていない。日記や既存利用者データを消す更新ではない。
+ローカルソース変更もなく、この引き継ぎとチェックリストだけを限定commit/pushする。
+`review_exports/` と未追跡Claudeレビュー文書2件は参照・変更・stage・送信の対象外。
+
+**今回のDB/対応Web本番反映は完了。無料正式版全体の最終GOとは分ける。**
+次に残るのは専用受信メールを使う2アカウント/2端末での保存・復元・家族権限・写真、
+DB/AuthとStorage別のbackup/隔離復旧、通知/問い合わせの実受信・返信と担当運用、
+別確認者AAL2および別途承認する正確な破棄アカウントの削除E2E、非空一覧の最小化確認、法務/正式公開日。
+管理者・既存モニターを破棄テスト対象へ流用しない。テスト専用メールと毎営業日の受信箱確認の
+未回答事項は引き続き未確定。有料/削除実行スイッチはOFFを維持する。
