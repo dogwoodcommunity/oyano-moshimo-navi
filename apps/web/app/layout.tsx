@@ -3,6 +3,8 @@ import Link from "next/link";
 import { Zen_Maru_Gothic } from "next/font/google";
 import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
+import { DisplayThemePicker } from "@/components/DisplayThemePicker";
+import { displayThemeCss } from "@/lib/display-theme";
 import "./globals.css";
 import "./readable-theme.css";
 
@@ -18,7 +20,7 @@ const criticalCss = `
   .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
   .app-brand-logo{display:block;height:44px;width:44px}
   .navlinks{align-items:center;color:#6f7974;display:flex;flex-wrap:wrap;font-size:17px;font-weight:800;gap:10px}
-  .nav-link{align-content:center;justify-items:center;border:1px solid transparent;border-radius:12px;color:#365562;display:grid;grid-template-rows:24px 24px;gap:2px;min-height:64px;padding:6px 14px;position:relative}
+  .nav-link{align-content:center;justify-items:center;border:1px solid transparent;border-radius:12px;color:#2b4652;display:grid;grid-template-rows:24px 24px;gap:2px;min-height:64px;padding:6px 14px;position:relative}
   .nav-link.is-active{background:#d6f1ff;border-color:#8ebdd0;box-shadow:none;color:#173c50}
   .nav-link.is-active::after{content:none}
   .nav-current-label{background:transparent;color:inherit;font-size:16px;font-weight:700;line-height:24px;padding:0;white-space:nowrap}
@@ -89,7 +91,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html className={`${readableRounded.variable} readable-design-b`} lang="ja">
       <head>
-        <style dangerouslySetInnerHTML={{ __html: criticalCss }} />
+        <style dangerouslySetInnerHTML={{ __html: criticalCss + displayThemeCss }} />
       </head>
       <body>
         <div className="shell">
@@ -102,6 +104,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </Link>
             <MainNav />
           </header>
+          <DisplayThemePicker />
           {children}
           <footer className="footer">
             <Link href="/safety">安全方針</Link>

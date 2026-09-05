@@ -292,4 +292,122 @@ assert.match(home, /この記録はまだ保存できていません/);
 assert.match(home, /今はこの端末に保存/);
 assert.match(home, /ナビからのヒントを見る/);
 
-console.log("B design entry rendering/navigation and source safety contracts: passed (layout/device QA separate)");
+// Execute the real preference code with isolated storage and DOM-shaped fakes.
+const preferenceSource = read("apps/web/lib/display-theme.ts");
+const preferences = compile(preferenceSource);
+const { displayThemes, displayTheme, readDisplayTheme, saveDisplayTheme, DISPLAY_THEME_KEY, displayThemeCss } = preferences;
+assert.equal(displayThemes.length, 10);
+assert.equal(new Set(displayThemes.map((item) => item.id)).size, 10);
+assert.equal(displayTheme("not-a-theme").id, "sky");
+assert.equal(displayTheme(null).id, "sky");
+assert.equal(readDisplayTheme({ getItem() { throw new Error("unavailable"); } }).id, "sky");
+assert.equal(saveDisplayTheme({ setItem() { throw new Error("quota"); } }, "mint"), false);
+const paletteCss = postcss.parse(displayThemeCss);
+for (const item of displayThemes) {
+  assert.match(item.id, /^[a-z]+$/);
+  for (const color of [item.paper, item.action, item.soft, item.line]) assert.match(color, /^#[\da-f]{6}$/i);
+  for (const background of [item.paper, item.action, item.soft, "#ffffff"]) {
+    for (const foreground of ["var(--ink)", "var(--ink-sub)", "var(--action-ink)", "var(--primary-deep)"]) {
+      assert.ok(contrast(foreground, background) >= 7, `${item.id} ${foreground}/${background} >= 7:1`);
+    }
+  }
+  let rules = 0;
+  paletteCss.walkRules(`${themeRoot}[data-display-color="${item.id}"]`, (rule) => {
+    rules++;
+    assert.ok(rule.nodes.some((node) => node.prop === "--action-bg" && node.value === item.action));
+    assert.ok(rule.nodes.some((node) => node.prop === "--paper" && node.value === item.paper));
+  });
+  assert.equal(rules, 1);
+}
+const pickerSource = read("apps/web/components/DisplayThemePicker.tsx");
+assert.match(layout, /<DisplayThemePicker\s*\/>/);
+assert.match(layout, /__html: criticalCss \+ displayThemeCss/);
+assert.doesNotMatch(`${preferenceSource}\n${pickerSource}`, /(?:fetch\(|supabase|from ["'].*store["']|\.clear\(|\.removeItem\()/,
+  "display preference must not call services or erase any existing browser data");
+assert.match(pickerSource, /<fieldset aria-describedby="display-theme-help">/);
+assert.match(pickerSource, /role="status"/);
+
+function pickerHarness({ saved = "sakura", denyGet = false, denySet = false, denyAccess = false } = {}) {
+  const data = new Map([[DISPLAY_THEME_KEY, saved], ["notebook-fixture", "must remain untouched"]]);
+  const writes = [];
+  const effects = [];
+  const states = [];
+  const listeners = new Map();
+  const attributes = {};
+  const dataset = {};
+  let cursor = 0;
+  let mounted = false;
+  const storage = {
+    getItem(key) { if (denyGet) throw new Error("denied"); return data.get(key) ?? null; },
+    setItem(key, value) { if (denySet) throw new Error("full"); writes.push([key, value]); data.set(key, value); }
+  };
+  const windowFake = {
+    get localStorage() { if (denyAccess) throw new Error("denied"); return storage; },
+    addEventListener(name, handler) { listeners.set(name, handler); },
+    removeEventListener(name, handler) { assert.equal(listeners.get(name), handler); listeners.delete(name); }
+  };
+  const react = {
+    useState(initial) { const index = cursor++; if (!(index in states)) states[index] = initial; return [states[index], (next) => { states[index] = next; }]; },
+    useEffect(effect) { if (!mounted) effects.push(effect); }
+  };
+  const module = { exports: {} };
+  const output = ts.transpileModule(pickerSource, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX }
+  }).outputText;
+  vm.runInNewContext(output, {
+    module, exports: module.exports, window: windowFake,
+    document: { documentElement: { dataset }, querySelector(selector) {
+      assert.equal(selector, 'meta[name="theme-color"]');
+      return { setAttribute(key, value) { attributes[key] = value; } };
+    } },
+    require(name) {
+      if (name === "react") return react;
+      if (name === "@/lib/display-theme") return preferences;
+      assert.equal(name, "react/jsx-runtime");
+      return { jsx: (type, props) => ({ type, props }), jsxs: (type, props) => ({ type, props }) };
+    }
+  });
+  const render = () => { cursor = 0; return module.exports.DisplayThemePicker(); };
+  const initial = render();
+  assert.equal(writes.length, 0, "SSR/first render must not overwrite a saved choice");
+  const initialRadios = descendants(initial, (node) => node.type === "input");
+  assert.equal(initialRadios.filter((radio) => radio.props.checked)[0].props.value, "sky");
+  mounted = true;
+  const cleanups = effects.map((effect) => effect());
+  return { render, dataset, attributes, data, writes, listeners, cleanups };
+}
+const paletteUi = pickerHarness();
+assert.equal(paletteUi.dataset.displayColor, "sakura", "saved preference applies on mount");
+assert.equal(paletteUi.writes.length, 0, "loading preference never writes over it");
+for (const item of displayThemes) {
+  const radios = descendants(paletteUi.render(), (node) => node.type === "input");
+  assert.equal(radios.length, 10);
+  assert.ok(radios.every((radio) => radio.props.type === "radio" && radio.props.name === "display-color"));
+  radios.find((radio) => radio.props.value === item.id).props.onChange();
+  assert.equal(paletteUi.dataset.displayColor, item.id);
+  assert.equal(paletteUi.attributes.content, item.action);
+  assert.equal(paletteUi.data.get(DISPLAY_THEME_KEY), item.id);
+  const rendered = paletteUi.render();
+  assert.equal(descendants(rendered, (node) => node.type === "input" && node.props.checked).length, 1);
+  assert.ok(text(rendered).includes(`${item.name}に変更しました。このブラウザに保存しました。`));
+  assert.equal(pickerHarness({ saved: item.id }).dataset.displayColor, item.id, "next mount restores each of ten choices");
+}
+assert.equal(paletteUi.data.get("notebook-fixture"), "must remain untouched");
+assert.ok(paletteUi.writes.every(([key]) => key === DISPLAY_THEME_KEY));
+paletteUi.listeners.get("storage")({ key: "notebook-fixture", newValue: "sky" });
+assert.equal(paletteUi.dataset.displayColor, "gray", "unrelated storage events do not change the theme");
+paletteUi.listeners.get("storage")({ key: DISPLAY_THEME_KEY, newValue: "mint" });
+assert.equal(paletteUi.dataset.displayColor, "mint");
+paletteUi.listeners.get("storage")({ key: DISPLAY_THEME_KEY, newValue: "invalid" });
+assert.equal(paletteUi.dataset.displayColor, "sky");
+for (const options of [{ denyGet: true }, { denySet: true }, { denyAccess: true }, { saved: "invalid" }]) {
+  const ui = pickerHarness(options);
+  if (!options.denySet) assert.equal(ui.dataset.displayColor, "sky");
+  descendants(ui.render(), (node) => node.type === "input" && node.props.value === "lemon")[0].props.onChange();
+  assert.equal(ui.dataset.displayColor, "lemon", "temporary selection works even without storage");
+  if (options.denySet || options.denyAccess) assert.ok(text(ui.render()).includes("保存できませんでした"));
+}
+paletteUi.cleanups.forEach((cleanup) => cleanup());
+assert.equal(paletteUi.listeners.size, 0);
+
+console.log("B design entry rendering/navigation, ten display colors and source safety contracts: passed (layout/device QA separate)");

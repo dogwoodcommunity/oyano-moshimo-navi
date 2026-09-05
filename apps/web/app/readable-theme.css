@@ -10,22 +10,22 @@ html.readable-design-b {
   --paper: #f4fbff;
   --body-bg: #f4fbff;
   --ink: #193746;
-  --ink-sub: #365562;
-  --ink-faint: #365562;
-  --muted: #365562;
-  --primary: #14526b;
-  --primary-deep: #14526b;
+  --ink-sub: #2b4652;
+  --ink-faint: #2b4652;
+  --muted: #2b4652;
+  --primary: #12455b;
+  --primary-deep: #12455b;
   --primary-tint: #d6f1ff;
   --action-bg: #d6f1ff;
   --action-ink: #173c50;
-  --green: #14526b;
-  --green-dark: #14526b;
-  --cover: #14526b;
+  --green: #12455b;
+  --green-dark: #12455b;
+  --cover: #12455b;
   --cover-sub: #eaf8ff;
   --tab-teal: #d6f1ff;
-  --tab-teal-ink: #14526b;
+  --tab-teal-ink: #12455b;
   --tab-sand: #eaf8ff;
-  --tab-sand-ink: #14526b;
+  --tab-sand-ink: #12455b;
   --surface-soft: #f4fbff;
   --line: #8ebdd0;
   --rule-line: #8ebdd0;
@@ -85,7 +85,7 @@ html.readable-design-b :is(button, summary, .button, .secondary, .file-button) {
 }
 
 html.readable-design-b :is(button, a, input, select, textarea, summary):focus-visible {
-  outline: 3px solid #14526b;
+  outline: 3px solid var(--primary-deep);
   outline-offset: 3px;
 }
 
@@ -158,7 +158,7 @@ html.readable-design-b .nav-link .nav-current-label {
 }
 
 html.readable-design-b .nav-link:not(.is-active) .nav-current-label { visibility: hidden; }
-html.readable-design-b .nav-link:hover { background: #eaf8ff; border-color: var(--line); }
+html.readable-design-b .nav-link:hover { background: var(--cover-sub); border-color: var(--line); }
 html.readable-design-b .nav-link.is-active:hover { background: var(--action-bg); }
 html.readable-design-b .nav-link:focus-visible { outline: 3px solid var(--primary-deep); outline-offset: 2px; }
 
@@ -355,7 +355,7 @@ html.readable-design-b :is(.record-date-row input, .diary-edit-panel input) { mi
 html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textarea)::placeholder { color: var(--ink-sub); opacity: 1; font-weight: 500; }
 html.readable-design-b .record-date-row { border: 0; background: transparent; padding: 0; }
 html.readable-design-b .mood-choice-head span { font-size: 16px; color: var(--ink-sub); }
-html.readable-design-b .mood-segment { background: #eaf8ff; border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
+html.readable-design-b .mood-segment { background: var(--cover-sub); border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
 html.readable-design-b .mood-segment button { min-height: 48px; padding: 8px 12px; border-radius: 9px; }
 html.readable-design-b .mood-segment button small { color: var(--primary-deep); font-size: 16px; line-height: 1.5; }
 html.readable-design-b .mood-segment button.is-active { border: 1px solid var(--primary-deep); box-shadow: none; }
@@ -389,7 +389,7 @@ html.readable-design-b .entry-advice-body :is(p, em, li) { color: var(--ink); fo
 html.readable-design-b .entry-advice-body :is(em, ul) { background: transparent; border: 0; border-radius: 0; }
 html.readable-design-b .entry-advice-body em { padding: 0; }
 html.readable-design-b .entry-advice-body ul { padding: 0 0 0 24px; }
-html.readable-design-b .diary-month-head { background: #eaf8ff; border-color: var(--line); box-shadow: none; }
+html.readable-design-b .diary-month-head { background: var(--cover-sub); border-color: var(--line); box-shadow: none; }
 html.readable-design-b .diary-month-head h3 { font-size: 22px; }
 
 html.readable-design-b .record-calendar-head { grid-template-columns: 48px minmax(0, 1fr) 48px; }
@@ -408,6 +408,31 @@ html.readable-design-b .cloud-backup-card.is-error .cloud-message { color: #8a2f
 html.readable-design-b .cloud-backup-card.is-synced .cloud-message { color: #174d31; }
 html.readable-design-b .diary-entry-actions button:disabled { background: #eaf0f3; border-color: #a1b5bd; color: var(--ink-sub); opacity: 0.7; cursor: not-allowed; }
 html.readable-design-b .readable-entry:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* Non-sticky disclosure: changing colors does not obscure notebook controls. */
+html.readable-design-b .display-theme-bar { width: 100%; max-width: 800px; margin: 0 auto; padding: 8px 16px; }
+html.readable-design-b .display-theme-picker { background: #fff; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); }
+html.readable-design-b .display-theme-picker > summary { cursor: pointer; padding: 10px 14px; font-size: 16px; }
+html.readable-design-b .display-theme-current { display: inline-flex; align-items: center; gap: 8px; margin-left: 16px; color: var(--ink-sub); }
+html.readable-design-b .display-theme-picker i { display: inline-block; width: 20px; height: 20px; border: 1px solid #536875; border-radius: 50%; }
+html.readable-design-b .display-theme-panel { padding: 4px 14px 14px; }
+html.readable-design-b .display-theme-panel fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+html.readable-design-b .display-theme-panel legend { font-size: 20px; font-weight: 700; padding: 0; }
+html.readable-design-b .display-theme-panel p { font-size: 16px; color: var(--ink-sub); line-height: 1.7; }
+html.readable-design-b .display-theme-options { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+html.readable-design-b .display-theme-option { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); align-content: end; gap: 2px; padding: 32px 8px 8px; min-height: 94px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); font-size: 16px; font-weight: 700; line-height: 1.5; text-align: center; cursor: pointer; overflow-wrap: anywhere; }
+html.readable-design-b .display-theme-option:has(:checked) { border: 2px solid var(--primary-deep); padding: 31px 7px 7px; }
+html.readable-design-b .display-theme-option:focus-within { outline: 3px solid var(--primary-deep); outline-offset: 2px; }
+html.readable-design-b .display-theme-option input { position: absolute; top: 8px; left: 8px; margin: 0; width: 18px; height: 18px; min-height: 0; accent-color: var(--primary-deep); }
+html.readable-design-b .display-theme-option small { font-size: 16px; min-height: 24px; color: var(--ink); }
+html.readable-design-b .display-theme-message { margin: 12px 0 0; }
+html.readable-design-b .display-theme-message:empty { display: none; }
+@media (max-width: 600px) {
+  html.readable-design-b .display-theme-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media print {
+  html.readable-design-b .display-theme-bar { display: none; }
+}
 
 @media (max-width: 760px) {
   html.readable-design-b .notebook-workspace [role="tabpanel"],
