@@ -18,29 +18,37 @@ function safeTokenEqual(actualToken: string, expectedToken: string) {
   return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
 }
 
-async function verifySupabaseAppAdmin(request: Request): Promise<AdminAuthContext | null> {
+type SupabaseAppAdminVerification =
+  | { status: "not_present" | "invalid" | "not_admin" | "unavailable" }
+  | { status: "authorized"; admin: AdminAuthContext };
+
+async function verifySupabaseAppAdmin(request: Request): Promise<SupabaseAppAdminVerification> {
   const bearerToken = request.headers.get("authorization")?.match(/^Bearer\s+(.+)$/i)?.[1];
-  if (!bearerToken) return null;
+  if (!bearerToken) return { status: "not_present" };
 
   const supabase = getServerSupabase();
-  if (!supabase) return null;
+  if (!supabase) return { status: "unavailable" };
 
   const { data: userResult, error: userError } = await supabase.auth.getUser(bearerToken);
-  if (userError || !userResult.user) return null;
+  if (userError || !userResult.user) return { status: "invalid" };
 
-  const { data: member } = await supabase
+  const { data: member, error: memberError } = await supabase
     .from("app_admins")
     .select("id")
     .eq("user_id", userResult.user.id)
     .limit(1)
     .maybeSingle();
 
-  if (!member) return null;
+  if (memberError) return { status: "unavailable" };
+  if (!member) return { status: "not_admin" };
 
   return {
-    userId: userResult.user.id,
-    email: userResult.user.email ?? undefined,
-    method: "supabase_app_admin"
+    status: "authorized",
+    admin: {
+      userId: userResult.user.id,
+      email: userResult.user.email ?? undefined,
+      method: "supabase_app_admin"
+    }
   };
 }
 
@@ -57,10 +65,27 @@ function verifyStaticAdminToken(request: Request): AdminAuthContext | null {
 
 export async function verifyAdminRequest(request: Request): Promise<AdminAuthResult> {
   const appAdmin = await verifySupabaseAppAdmin(request);
-  if (appAdmin) return { ok: true, admin: appAdmin };
+  if (appAdmin.status === "authorized") return { ok: true, admin: appAdmin.admin };
 
   const staticAdmin = verifyStaticAdminToken(request);
   if (staticAdmin) return { ok: true, admin: staticAdmin };
+
+  if (appAdmin.status === "not_admin") {
+    return {
+      ok: false,
+      response: NextResponse.json({ error: "Admin authorization is forbidden" }, { status: 403 })
+    };
+  }
+
+  if (appAdmin.status === "unavailable") {
+    return {
+      ok: false,
+      response: NextResponse.json(
+        { error: "Admin authorization could not be verified" },
+        { status: 503 }
+      )
+    };
+  }
 
   return {
     ok: false,

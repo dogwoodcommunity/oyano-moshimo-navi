@@ -15,6 +15,7 @@ function routeFiles(directory) {
 }
 
 const adminAuth = read("apps/web/lib/adminAuth.ts");
+const adminAuthPolicy = read("docs/ADMIN_AUTH_POLICY.md");
 const genericVerifier = adminAuth.slice(
   adminAuth.indexOf("export async function verifyAdminRequest"),
   adminAuth.indexOf("export type VerifiedJwtAal")
@@ -26,6 +27,31 @@ const scopedVerifier = adminAuth.slice(
 assert.match(genericVerifier, /verifySupabaseAppAdmin/, "generic Admin auth must retain app_admin verification");
 assert.match(genericVerifier, /verifyStaticAdminToken/, "generic Admin auth must retain its emergency-token fallback");
 assert.doesNotMatch(genericVerifier, /account_delete_executors/, "delete-only authority must not widen generic Admin auth");
+assert.match(
+  genericVerifier,
+  /appAdmin\.status === "not_admin"[\s\S]*?status: 403/,
+  "a valid authenticated non-admin must be forbidden rather than reported as unauthenticated"
+);
+assert.match(
+  genericVerifier,
+  /appAdmin\.status === "unavailable"[\s\S]*?status: 503/,
+  "an unavailable role check must fail closed without misreporting credentials"
+);
+assert.match(
+  genericVerifier,
+  /Admin authorization is required[\s\S]*?status: 401/,
+  "missing or invalid credentials must remain unauthorized"
+);
+assert.ok(
+  genericVerifier.indexOf("verifyStaticAdminToken(request)")
+    < genericVerifier.indexOf('appAdmin.status === "not_admin"'),
+  "a valid emergency token must remain usable even when an unrelated Bearer is not app_admin"
+);
+assert.match(
+  adminAuthPolicy,
+  /認証情報なし・無効な認証情報を401、本人確認済みだが `app_admins` にいないユーザーを403、role照合不能を503/,
+  "the documented generic Admin response semantics must distinguish unauthenticated, forbidden, and unavailable checks"
+);
 
 assert.match(scopedVerifier, /authorization.*Bearer\\s\+/s, "delete-operator auth must require a Bearer header");
 assert.match(scopedVerifier, /auth\.getUser\(bearerToken\)/, "the exact Bearer JWT must be validated by Supabase Auth");

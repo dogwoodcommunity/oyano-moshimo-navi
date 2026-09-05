@@ -12229,3 +12229,40 @@ SESSION_HANDOFFを更新し、対象5ファイルだけをmainへpushした。
 
 次は追記319記載の削除専用ログイン・権限分離試験である。本人の個別セッションが必要であり、
 完全削除スイッチONや削除操作とは分離して進める。
+
+## 2026-09-05 追記 321 — 一般Admin拒否を401と403へ正しく分離
+
+削除専用ログイン・権限分離試験の事前監査で、有効な削除専用実行者が一般Admin APIへ
+Bearerを提示した場合も、未認証と同じ401になる不一致を確認した。アクセス自体は拒否できていたが、
+本番checklistが求める「本人確認済みだが一般Adminではないため403」を証明できないため修正した。
+
+- `verifyAdminRequest` のSupabase Auth判定を、認証情報なし、無効、本人確認済み非Admin、
+  認可済みAdmin、role照合不能へ分離した。
+- 一般Admin APIは、認証情報なし・無効を401、本人確認済み非Adminを403、role照合不能を503で
+  fail closedにする。正しい `app_admin` と既存の有効な緊急用管理キーは従来どおり利用できる。
+- 削除専用roleを一般Adminへ追加しておらず、`account_delete_executors` を一般Admin認可に使わない。
+  削除専用API側のBearer限定・AAL境界・実行スイッチには変更を加えていない。
+- 静的回帰へ401・403・503の区別と緊急用管理キーfallback順序を追加し、
+  `pnpm run test:account-delete-executor`、`pnpm run test:commercial-release-gates`、
+  `pnpm run test:web-account-deletion`、`pnpm run test:delete-operator-mfa-setup`、
+  `pnpm --filter web run typecheck`、production build、`git diff --check` は成功した。
+- `pnpm --filter web run lint` は既存リポジトリにESLint設定がなく対話式初期設定で停止するため、
+  lint結果としては扱っていない。build内の型検査は成功している。
+
+同じブラウザ状態から削除担当者のMagic Linkを1通送信したが、ユーザーがリンクを開いた後も
+この検証用ブラウザにはcallback/sessionが戻らず、再読込後も未ログイン表示だった。別ブラウザで
+リンクを開いた場合はそのブラウザのlocalStorageへsessionが保存されるため、ログイン成功とは記録していない。
+削除一覧の認証済みGET、一般Admin APIの403、ログアウト後401は未確認のままである。
+
+安全境界:
+
+- 削除依頼の状態変更、削除前確認、削除実行、DB削除RPC、Auth削除、Storage削除は行っていない。
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのまま。既存利用者、モニター回答、日記、写真、
+  AI相談、family・対象者・削除依頼・削除jobを作成・変更・削除していない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次はこの修正をmainへpushしてVercel本番へ反映する。その後、同じブラウザ状態で新しいMagic Linkを
+開き、削除専用auth-statusと一覧GETが200、一般Admin 3 APIが403、ログアウト後が401となることだけを
+確認する。PATCH、preflight、executeは別承認まで呼ばない。
