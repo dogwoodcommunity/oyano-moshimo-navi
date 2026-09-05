@@ -14054,3 +14054,46 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 この差分と引き継ぎをcommit/mainへ反映し、exact SHAのCI成功後に限定公開する。
 実機iPhone/Android確認は別。本番公開の完了証跡は次追記に記載する。
 `review_exports/` と未追跡Claude_FULL 2文書は触らず、公開書庫にも含めない。
+
+## 2026-09-06 追記 373 — 写真の説明文を本番へ公開し、実表示を確認
+
+追記372の明示承認に基づき、アプリsource `744b68edb76991b9cab0c4e55f3d8906f6883d1b` を公開。
+修正ブランチpush後、origin/mainが祖先であることを確認してmainへfast-forward/pushした。
+独立差分確認も実施し、限定4ファイル以外の変更なし、保存/写真処理の不変、blocking issueなしを確認。
+
+公開証跡：
+
+- CI `33974415182` のattempt 2がsuccess/completed、web-and-mobile 2分52秒。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/33974415182
+  attempt 1は隔離SQLテストのPostgreSQL起動時に `the database system is shutting down` で接続失敗。
+  スクリプトを確認してコード不変のまま再実行し、同SQLを含む全工程/build/smokeが成功した。
+  本番DBの障害ではない。socket pg_isreadyが初期化中の一時サーバーを検出しうる待機方式は
+  将来のCI安定化候補として残す（今回変更していない）。
+- Deploy workflow `33974415233` はcheck成功/deploy skippedのため、CI成功後に既存CLIで公開。
+- クリーン書庫 `/private/tmp/oyano-photo-release-744b68e.dYwaKc`：444ファイル、Git blob不一致0/想定外0。
+  inventory SHA256 `28b9f90705289788fe47c1365049d76c039646922edd36fd1df7a8b3ed669bae`。
+  CLI dry-runはNext.js/443ファイル/9,384,869 bytes。env/git/node_modules/outputs/review_exports/
+  未追跡Claude_FULLの混入0。作業ツリーを直接uploadしない。
+- 既存project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope dogwoodcommunity1 へ
+  CLI 59.11.7のprod deploy、metadata releaseShaを上記SHAとして公開成功。
+  deployment `dpl_3SMVQpuRWfSnpbdvy3i7Zr6eLhDY`、2026-09-06 00:24:37 JST作成。
+  https://oyano-moshimo-navi-pl91zc794-dogwoodcommunity1.vercel.app
+  公開alias https://oyano-moshimo-navi.vercel.app を別途inspectし、同deployment/production/Readyを確認。
+  直前のrollback候補は `dpl_AxgPEfQC8uwVFrHFf3oTevtn57t6`。rollback未実行。
+
+本番確認：
+
+- 公開前helperなし→同じ本番タブを通常reload後、追加文言とhelperの表示を確認。新規記録入力は空のまま。
+- 幅320/390/760/761/1280pxで横はみ出し0、説明は画面内に収まり、760px以下は下/761px以上は横。
+  18px/700/濃色rgb(25,55,70)、写真button高さ48px。1280px/390pxの実画面を目視確認。
+  全幅でロゴ/ナビ見出しの矩形重なり0、種類ボタンの2px枠と1つだけの選択表示も維持。
+- console error/warn 0、viewport override解除済み。本番タブを説明部分で残した。
+- 独立GETは `/home` `/start` `/monitor` `/monitor/report?preview=1` `/family` `/guides`
+  `/crisis` `/legal/tokushoho` `/api/health` の9件がすべて200。
+  homeが実参照するCSS4件も200、新しい配置と文字の濃さ/サイズ/太さの配信を確認。
+
+今回の承認済み修正は本番まで完了。写真選択/アップロード、記録の保存/編集/削除/リセット/統合/復元、
+モニター共有同意、メール/招待/AI/回答送信、DB/Auth/環境/価格/削除スイッチ変更はしていない。
+全利用者データの監査や実iPhone/Androidでの写真選択受入とは別。
+ローカル3119も維持。この公開後の追記だけをmainへcommit/pushし、文書だけでは再deployしない。
+`review_exports/` と未追跡Claude_FULL 2文書は引き続き触らず保持する。
