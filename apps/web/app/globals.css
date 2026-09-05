@@ -2504,13 +2504,6 @@ textarea {
   padding-inline: 13px;
 }
 
-.nav-link.nav-crisis:not(.is-active) {
-  background: transparent !important;
-  border-color: transparent !important;
-  box-shadow: none !important;
-  color: #68736d !important;
-}
-
 .nav-crisis.is-active {
   background: #b4562e;
   border-color: #b4562e;

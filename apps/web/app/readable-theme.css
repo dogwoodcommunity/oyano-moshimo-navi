@@ -6,31 +6,33 @@ html.readable-design-b {
   --font-body: var(--font-ui);
   --font-rounded: var(--font-ui);
   --font-serif: var(--font-ui);
-  --bg-paper: #faf7f0;
-  --paper: #faf7f0;
-  --body-bg: #faf7f0;
-  --ink: #29261f;
-  --ink-sub: #554d3b;
-  --ink-faint: #554d3b;
-  --muted: #554d3b;
-  --primary: #60421f;
-  --primary-deep: #60421f;
-  --primary-tint: #eee5d1;
-  --green: #60421f;
-  --green-dark: #60421f;
-  --cover: #60421f;
-  --cover-sub: #fff5df;
-  --tab-teal: #eee5d1;
-  --tab-teal-ink: #60421f;
-  --tab-sand: #eee5d1;
-  --tab-sand-ink: #60421f;
-  --surface-soft: #faf7f0;
-  --line: #b8a989;
-  --rule-line: #b8a989;
-  --stitch: #b8a989;
-  --leader: #b8a989;
-  --hairline: #d9cfba;
-  --secondary-border: #b8a989;
+  --bg-paper: #f4fbff;
+  --paper: #f4fbff;
+  --body-bg: #f4fbff;
+  --ink: #193746;
+  --ink-sub: #365562;
+  --ink-faint: #365562;
+  --muted: #365562;
+  --primary: #14526b;
+  --primary-deep: #14526b;
+  --primary-tint: #d6f1ff;
+  --action-bg: #d6f1ff;
+  --action-ink: #173c50;
+  --green: #14526b;
+  --green-dark: #14526b;
+  --cover: #14526b;
+  --cover-sub: #eaf8ff;
+  --tab-teal: #d6f1ff;
+  --tab-teal-ink: #14526b;
+  --tab-sand: #eaf8ff;
+  --tab-sand-ink: #14526b;
+  --surface-soft: #f4fbff;
+  --line: #8ebdd0;
+  --rule-line: #8ebdd0;
+  --stitch: #8ebdd0;
+  --leader: #8ebdd0;
+  --hairline: #c9e2ed;
+  --secondary-border: #8ebdd0;
   --secondary-shadow: transparent;
   --card-shadow: none;
   --shadow: none;
@@ -83,16 +85,16 @@ html.readable-design-b :is(button, summary, .button, .secondary, .file-button) {
 }
 
 html.readable-design-b :is(button, a, input, select, textarea, summary):focus-visible {
-  outline: 3px solid #60421f;
+  outline: 3px solid #14526b;
   outline-offset: 3px;
 }
 
 html.readable-design-b :is(.button, .primary-cta, .entry-main-button, .nb-save) {
-  background: var(--primary-deep);
-  border-color: var(--primary-deep);
+  background: var(--action-bg);
+  border-color: var(--line);
   border-radius: 12px;
   box-shadow: none;
-  color: #fff;
+  color: var(--action-ink);
   font-size: 20px;
   min-height: 56px;
   padding: 12px 18px;
@@ -117,37 +119,48 @@ html.readable-design-b .nav {
 }
 
 html.readable-design-b .navlinks { gap: 6px; }
-html.readable-design-b .nav-link {
+html.readable-design-b .navlinks .nav-link {
+  display: grid;
+  grid-template-rows: 24px 24px;
+  justify-items: center;
+  align-content: center;
+  gap: 2px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
   color: var(--ink-sub);
-  min-height: 48px;
-  padding: 8px 12px;
+  min-height: 64px;
+  padding: 6px 14px;
   font-size: 18px;
   font-weight: 700;
 }
 
 html.readable-design-b .nav-link.is-active {
-  background: var(--primary-deep);
-  border-color: var(--primary-deep);
+  background: var(--action-bg);
+  border-color: var(--line);
   box-shadow: none;
-  color: #fff;
+  color: var(--action-ink);
 }
 
 html.readable-design-b .nav-link.is-active::after {
-  background: var(--primary-deep);
-  bottom: -4px;
-  height: 3px;
+  content: none;
 }
 
-html.readable-design-b .nav-current-label {
-  background: #fff;
-  color: var(--primary-deep);
+html.readable-design-b .nav-link .nav-current-label {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+  border-radius: 0;
+  line-height: 24px;
+  white-space: nowrap;
   font-size: 16px;
   font-weight: 700;
 }
 
-html.readable-design-b .nav-crisis.is-active { background: #8a2f1f; border-color: #8a2f1f; }
-html.readable-design-b .nav-crisis.is-active::after { background: #8a2f1f; }
-html.readable-design-b .nav-crisis.is-active .nav-current-label { color: #8a2f1f; }
+html.readable-design-b .nav-link:not(.is-active) .nav-current-label { visibility: hidden; }
+html.readable-design-b .nav-link:hover { background: #eaf8ff; border-color: var(--line); }
+html.readable-design-b .nav-link.is-active:hover { background: var(--action-bg); }
+html.readable-design-b .nav-link:focus-visible { outline: 3px solid var(--primary-deep); outline-offset: 2px; }
 
 html.readable-design-b .footer { color: var(--ink-sub); font-size: 16px; }
 html.readable-design-b .footer a { min-height: 48px; padding-block: 10px; }
@@ -242,9 +255,9 @@ html.readable-design-b .readable-entry {
 }
 
 html.readable-design-b .readable-entry.is-primary {
-  background: var(--primary-deep);
-  border-color: var(--primary-deep);
-  color: #fff;
+  background: var(--action-bg);
+  border-color: var(--line);
+  color: var(--action-ink);
 }
 
 html.readable-design-b .readable-entry .entry-symbol { font-size: 26px; line-height: 1; }
@@ -252,7 +265,7 @@ html.readable-design-b .readable-entry .entry-symbol svg { width: 28px; height: 
 html.readable-design-b .readable-entry .entry-copy { display: grid; gap: 3px; min-width: 0; }
 html.readable-design-b .readable-entry .entry-copy strong { color: inherit; font-size: 24px; font-weight: 700; }
 html.readable-design-b .readable-entry .entry-copy small { color: var(--ink-sub); font-size: 16px; font-weight: 500; line-height: 1.6; }
-html.readable-design-b .readable-entry.is-primary .entry-copy small { color: #fff; }
+html.readable-design-b .readable-entry.is-primary .entry-copy small { color: var(--action-ink); }
 html.readable-design-b .readable-entry .entry-arrow { font-size: 24px; color: inherit; }
 html.readable-design-b .readable-entry:hover:not(:disabled) { border-color: var(--primary-deep); text-decoration: underline; text-underline-offset: 4px; }
 
@@ -315,7 +328,7 @@ html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) {
 }
 
 html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) summary { color: var(--ink); }
-html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) summary::after { background: #eee5d1; color: var(--primary-deep); font-size: 16px; }
+html.readable-design-b :is(.record-first-drawer, .cloud-backup-disclosure) summary::after { background: var(--action-bg); color: var(--primary-deep); font-size: 16px; }
 html.readable-design-b .cloud-backup-disclosure summary span { color: var(--ink-sub); font-size: 16px; }
 html.readable-design-b .cloud-backup-card p { color: var(--ink-sub); font-size: 18px; font-weight: 500; }
 html.readable-design-b .cloud-backup-card small { color: var(--ink-sub); font-size: 16px; }
@@ -342,7 +355,7 @@ html.readable-design-b :is(.record-date-row input, .diary-edit-panel input) { mi
 html.readable-design-b :is(.today-record-card textarea, .diary-edit-panel textarea)::placeholder { color: var(--ink-sub); opacity: 1; font-weight: 500; }
 html.readable-design-b .record-date-row { border: 0; background: transparent; padding: 0; }
 html.readable-design-b .mood-choice-head span { font-size: 16px; color: var(--ink-sub); }
-html.readable-design-b .mood-segment { background: #eee5d1; border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
+html.readable-design-b .mood-segment { background: #eaf8ff; border-color: var(--line); border-radius: 12px; flex-wrap: wrap; }
 html.readable-design-b .mood-segment button { min-height: 48px; padding: 8px 12px; border-radius: 9px; }
 html.readable-design-b .mood-segment button small { color: var(--primary-deep); font-size: 16px; line-height: 1.5; }
 html.readable-design-b .mood-segment button.is-active { border: 1px solid var(--primary-deep); box-shadow: none; }
@@ -367,7 +380,7 @@ html.readable-design-b .diary-entry-actions button.is-delete { color: #8a2f26; b
 html.readable-design-b .diary-edit-panel { background: #fff; border-color: var(--line); padding: 16px; }
 html.readable-design-b .diary-edit-panel-head { background: transparent; border: 0; border-bottom: 1px solid var(--line); border-radius: 0; padding: 0 0 12px; }
 html.readable-design-b .diary-edit-actions button { min-height: 48px; border-radius: 10px; font-size: 18px; }
-html.readable-design-b .diary-edit-actions button:first-child { min-height: 56px; background: var(--primary-deep); border-color: var(--primary-deep); }
+html.readable-design-b .diary-edit-actions button:first-child { min-height: 56px; background: var(--action-bg); border-color: var(--line); color: var(--action-ink); }
 html.readable-design-b .diary-edit-actions button:last-child { border-color: var(--line); color: var(--primary-deep); }
 html.readable-design-b .entry-advice { background: transparent; border: 0; border-top: 1px solid var(--line); border-radius: 0; }
 html.readable-design-b .entry-advice > summary { min-height: 48px; padding: 10px 0; }
@@ -376,33 +389,32 @@ html.readable-design-b .entry-advice-body :is(p, em, li) { color: var(--ink); fo
 html.readable-design-b .entry-advice-body :is(em, ul) { background: transparent; border: 0; border-radius: 0; }
 html.readable-design-b .entry-advice-body em { padding: 0; }
 html.readable-design-b .entry-advice-body ul { padding: 0 0 0 24px; }
-html.readable-design-b .diary-month-head { background: #eee5d1; border-color: var(--line); box-shadow: none; }
+html.readable-design-b .diary-month-head { background: #eaf8ff; border-color: var(--line); box-shadow: none; }
 html.readable-design-b .diary-month-head h3 { font-size: 22px; }
 
 html.readable-design-b .record-calendar-head { grid-template-columns: 48px minmax(0, 1fr) 48px; }
 html.readable-design-b .record-calendar-head button { width: 48px; height: 48px; border-color: var(--line); color: var(--primary-deep); }
 html.readable-design-b .record-calendar-day { border-color: var(--line); color: var(--ink-sub); min-height: 48px; }
-html.readable-design-b .record-calendar-day.is-selected { background: var(--primary-deep); border-color: var(--primary-deep); box-shadow: none; color: #fff; }
-html.readable-design-b .record-calendar-day:disabled { background: transparent; border-color: transparent; color: #68604f; opacity: 0.7; cursor: default; }
+html.readable-design-b .record-calendar-day.is-selected { background: var(--action-bg); border-color: var(--primary-deep); box-shadow: none; color: var(--action-ink); }
+html.readable-design-b .record-calendar-day:disabled { background: transparent; border-color: transparent; color: #536875; opacity: 0.7; cursor: default; }
 html.readable-design-b .record-calendar-day small { height: auto; min-height: 22px; line-height: 1.4; font-size: 16px; padding: 0 2px; }
 
 /* Keep saved/warning/error and unavailable states visibly distinct. */
 html.readable-design-b .diary-save-complete-card { background: #f3f8f2; border-color: #6b8567; box-shadow: none; }
-html.readable-design-b .diary-save-complete-actions button.is-primary { background: var(--primary-deep); border-color: var(--primary-deep); box-shadow: none; }
+html.readable-design-b .diary-save-complete-actions button.is-primary { background: var(--action-bg); border-color: var(--line); color: var(--action-ink); box-shadow: none; }
 html.readable-design-b .diary-input-error { color: #8a2f1f; background: #fff3ef; font-size: 18px; }
 html.readable-design-b .today-record-card textarea[aria-invalid="true"] { border: 2px solid #9f391f; }
 html.readable-design-b .cloud-backup-card.is-error .cloud-message { color: #8a2f1f; }
 html.readable-design-b .cloud-backup-card.is-synced .cloud-message { color: #174d31; }
-html.readable-design-b .diary-entry-actions button:disabled { background: #edeae3; border-color: #b6ae9f; color: #554d3b; opacity: 0.7; cursor: not-allowed; }
+html.readable-design-b .diary-entry-actions button:disabled { background: #eaf0f3; border-color: #a1b5bd; color: var(--ink-sub); opacity: 0.7; cursor: not-allowed; }
 html.readable-design-b .readable-entry:disabled { opacity: 0.65; cursor: not-allowed; }
 
 @media (max-width: 760px) {
   html.readable-design-b .notebook-workspace [role="tabpanel"],
   html.readable-design-b #document-location-note { scroll-margin-top: 150px; }
   html.readable-design-b .nav { padding: 12px 16px; gap: 8px; }
-  html.readable-design-b .navlinks { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr) minmax(0, 1fr); gap: 4px; width: 100%; max-width: 100%; }
-  html.readable-design-b .nav-link { padding: 8px 4px; gap: 5px; font-size: 16px; flex-wrap: wrap; justify-content: center; text-align: center; }
-  html.readable-design-b .nav-current-label { font-size: 16px; padding: 4px 6px; }
+  html.readable-design-b .navlinks { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; width: 100%; max-width: 100%; }
+  html.readable-design-b .navlinks .nav-link { padding: 6px 4px; font-size: 16px; justify-content: center; text-align: center; }
   html.readable-design-b .notebook-workspace { padding: 0 16px; }
   html.readable-design-b .record-first-card { padding: 20px 16px; }
   html.readable-design-b .record-first-head { grid-template-columns: 40px minmax(0, 1fr); }

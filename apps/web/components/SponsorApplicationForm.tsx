@@ -111,7 +111,7 @@ export function SponsorApplicationForm() {
         <span>営業連絡のため、入力内容を保存して連絡を受けることに同意します。</span>
       </label>
       <button className="primary-cta" disabled={status === "sending"} type="submit">
-        {status === "sending" ? "送信中..." : "スポンサー枠を申請する"}
+        {status === "sending" ? "送信中..." : "広告掲載を申請する"}
       </button>
       {message ? <p className={`sponsor-form-message ${status}`}>{message}</p> : null}
     </form>

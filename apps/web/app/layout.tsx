@@ -8,8 +8,8 @@ import "./readable-theme.css";
 
 const criticalCss = `
   *,*::before,*::after{box-sizing:border-box}
-  html{background:#faf7f0;color:#29261f}
-  body{margin:0;background:#faf7f0;color:#29261f;font-family:var(--font-readable-rounded),"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;font-size:20px;font-weight:500;line-height:1.75;letter-spacing:0}
+  html{background:#f4fbff;color:#193746}
+  body{margin:0;background:#f4fbff;color:#193746;font-family:var(--font-readable-rounded),"Zen Maru Gothic","Hiragino Maru Gothic ProN",sans-serif;font-size:20px;font-weight:500;line-height:1.75;letter-spacing:0}
   a{color:inherit;text-decoration:none}
   button,input,select,textarea{font:inherit}
   .shell{min-height:100vh}
@@ -18,14 +18,11 @@ const criticalCss = `
   .app-brand-mark{align-items:center;background:transparent;border:0;border-radius:999px;box-shadow:none;display:inline-flex;height:46px;justify-content:center;overflow:visible;width:46px}
   .app-brand-logo{display:block;height:44px;width:44px}
   .navlinks{align-items:center;color:#6f7974;display:flex;flex-wrap:wrap;font-size:17px;font-weight:800;gap:10px}
-  .nav-link{align-items:center;border:1px solid transparent;border-radius:999px;color:#68736d;display:inline-flex;gap:7px;min-height:34px;padding:6px 11px;position:relative}
-  .nav-link.is-active{background:#0d4f34;border-color:#0d4f34;box-shadow:0 8px 20px rgba(13,79,52,.22);color:#fffdf6}
-  .nav-link.is-active::after{background:#0d4f34;border-radius:999px;bottom:-9px;content:"";height:4px;left:18px;position:absolute;right:18px}
-  .nav-current-label{background:rgba(255,253,246,.92);border-radius:999px;color:#0d4f34;font-size:16px;font-weight:900;line-height:1;padding:6px 9px}
-  .nav-crisis{background:transparent;border-color:transparent;color:#68736d;padding-inline:13px}
-  .nav-crisis.is-active{background:#b4562e;border-color:#b4562e;color:#fffdf6}
-  .nav-crisis.is-active::after{background:#b4562e}
-  .nav-crisis.is-active .nav-current-label{color:#934f2f}
+  .nav-link{align-content:center;justify-items:center;border:1px solid transparent;border-radius:12px;color:#365562;display:grid;grid-template-rows:24px 24px;gap:2px;min-height:64px;padding:6px 14px;position:relative}
+  .nav-link.is-active{background:#d6f1ff;border-color:#8ebdd0;box-shadow:none;color:#173c50}
+  .nav-link.is-active::after{content:none}
+  .nav-current-label{background:transparent;color:inherit;font-size:16px;font-weight:700;line-height:24px;padding:0;white-space:nowrap}
+  .nav-link:not(.is-active) .nav-current-label{visibility:hidden}
   .entry-screen{display:grid;gap:22px;margin:0 auto;max-width:760px;padding:28px 24px 64px}
   .shell:has(.entry-screen) .nav{justify-content:center}
   .shell:has(.entry-screen) .navlinks{display:none}
@@ -85,7 +82,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#60421f"
+  themeColor: "#d6f1ff"
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -114,7 +111,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <Link href="/legal/tokushoho">特商法</Link>
             <Link href="/legal/disclaimer">免責</Link>
             <Link href="/account/delete">アカウント・データ削除</Link>
-            <Link href="/sponsors">スポンサー枠</Link>
+            <Link href="/sponsors">広告掲載</Link>
             <Link href="/home">手帳</Link>
           </footer>
         </div>

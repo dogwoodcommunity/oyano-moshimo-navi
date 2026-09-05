@@ -4,8 +4,8 @@ import { SponsorApplicationForm } from "@/components/SponsorApplicationForm";
 import { publicPrefectureUsageThreshold } from "@/lib/prefectures";
 
 export const metadata: Metadata = {
-  title: "スポンサー枠の申請",
-  description: "親のもしもナビの地域スポンサー枠について、都道府県と分野を指定して申請できます。"
+  title: "広告掲載の申請",
+  description: "親のもしもナビへの広告掲載について、都道府県と分野を指定して申請できます。"
 };
 
 const fields = [
@@ -23,11 +23,11 @@ export default function SponsorsPage() {
   return (
     <main className="container sponsors-page">
       <section className="sponsor-hero">
-        <p className="pill">Local sponsor</p>
-        <h1>親御さんの地域ごとのスポンサー枠を、先に申請できます。</h1>
+        <p className="pill">広告掲載</p>
+        <h1>親御さんの地域ごとの広告掲載を、先に申請できます。</h1>
         <p>
           親のもしもナビは、家族が親の状況を記録し、次に確認することを整理する手帳です。
-          スポンサー枠は、利用者本人の住所ではなく、親御さんの居住都道府県を基準に扱います。
+          広告の掲載枠は、利用者本人の住所ではなく、親御さんの居住都道府県を基準に扱います。
           利用者の記録画面に広告を出すものではなく、地域ガイド、相談先一覧、印刷物など、
           家族が明示的に相談先を探す場面だけで、協賛/PRとして明示して扱います。
         </p>
@@ -95,7 +95,7 @@ export default function SponsorsPage() {
         <div className="section-head">
           <div>
             <p className="eyebrow">Apply</p>
-            <h2>スポンサー枠を申請する</h2>
+            <h2>広告掲載を申請する</h2>
           </div>
           <span className="hint">審査後に個別連絡</span>
         </div>

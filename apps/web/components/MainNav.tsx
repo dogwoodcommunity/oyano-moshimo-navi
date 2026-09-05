@@ -68,7 +68,7 @@ export function MainNav() {
             key={item.href}
           >
             <span>{item.label}</span>
-            {isActive ? <span className="nav-current-label">表示中</span> : null}
+            <span className="nav-current-label" aria-hidden={!isActive}>{isActive ? "表示中" : "\u00a0"}</span>
           </Link>
         );
       })}

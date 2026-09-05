@@ -213,6 +213,21 @@ function declaration(selector, property) {
   return value;
 }
 const themeRoot = "html.readable-design-b";
+const mainNav = read("apps/web/components/MainNav.tsx");
+assert.match(mainNav, /aria-current=\{isActive \? "page" : undefined\}/, "current navigation stays accessible");
+assert.match(mainNav, /className="nav-current-label" aria-hidden=\{!isActive\}/, "inactive status reserves layout without being announced");
+assert.equal(declaration(`${themeRoot} .nav-link.is-active`, "background"), "var(--action-bg)");
+assert.equal(declaration(`${themeRoot} .nav-link.is-active`, "color"), "var(--action-ink)");
+assert.equal(declaration(`${themeRoot} .nav-link .nav-current-label`, "color"), "inherit");
+assert.equal(declaration(`${themeRoot} .nav-link.is-active::after`, "content"), "none");
+assert.doesNotMatch(theme, /\.nav-crisis\.is-active/, "urgent navigation must not override the shared current-page colors");
+assert.doesNotMatch(globalCss, /\.nav-link\.nav-crisis:not\(\.is-active\)\s*\{[^}]*!important/, "legacy urgent-nav exception must not force a different hover or text color");
+assert.doesNotMatch(theme, /#(?:60421f|faf7f0|eee5d1|554d3b|b8a989)\b/i, "selected brown palette must not return");
+assert.match(layout, /<Link href="\/sponsors">広告掲載<\/Link>/);
+for (const file of ["apps/web/app/sponsors/page.tsx", "apps/web/components/SponsorApplicationForm.tsx"]) {
+  assert.ok(read(file).includes("広告掲載"));
+  assert.ok(!read(file).includes("スポンサー枠"), "public advertising entry and destination use the same wording");
+}
 const resolveColor = (value) => {
   const variable = /^var\((--[\w-]+)\)$/.exec(value);
   return variable ? resolveColor(declaration(themeRoot, variable[1])) : value;
@@ -234,7 +249,9 @@ for (const [label, foreground, background] of [
   ["body", "var(--ink)", "var(--paper)"], ["secondary", "var(--ink-sub)", "var(--paper)"],
   ["faint information", "var(--ink-faint)", "#fff"], ["record", "var(--ink)", "#fff"],
   ["primary entry", declaration(`${themeRoot} .readable-entry.is-primary`, "color"),
-    declaration(`${themeRoot} .readable-entry.is-primary`, "background")]
+    declaration(`${themeRoot} .readable-entry.is-primary`, "background")],
+  ["selected navigation", "var(--action-ink)", "var(--action-bg)"],
+  ["primary entry explanation", declaration(`${themeRoot} .readable-entry.is-primary .entry-copy small`, "color"), "var(--action-bg)"]
 ]) {
   assert.ok(contrast(foreground, background) >= 7, `${label} declared colors must meet the selected 7:1 target`);
 }
