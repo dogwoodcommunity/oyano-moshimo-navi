@@ -3825,38 +3825,54 @@ export default function FamilyBoardPage() {
 
           {latestEntry && notebookInsight ? (
             <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} aria-label="ナビからの次の一歩">
-              <article className="kizuki-card">
-                <div className="kizuki-heading">
+              <details className="kizuki-card notebook-disclosure" key={activeCase.id}>
+                <summary className="kizuki-heading notebook-disclosure-summary">
                   <img className="kizuki-mascot" src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                  <h2 className="kizuki-title">ナビからのひとこと</h2>
+                  <div className="notebook-disclosure-copy">
+                    <span className="notebook-disclosure-label">ナビからのひとこと</span>
+                    <h2 className="kizuki-title">{notebookInsight.patternTitle}</h2>
+                  </div>
+                  <span className="notebook-disclosure-toggle">
+                    <span className="when-closed">＋ 開く</span>
+                    <span className="when-open">− 閉じる</span>
+                  </span>
+                </summary>
+                <div className="notebook-disclosure-body">
+                  <p>{notebookInsight.patternBody}</p>
+                  <div className="kizuki-forecast">
+                    <span>次に備えること</span>
+                    <b>{notebookInsight.forecastTitle}</b>
+                    <p>{notebookInsight.forecastBody}</p>
+                  </div>
+                  <div className="kizuki-question">
+                    <span>次に家族で聞くこと</span>
+                    <b>{notebookInsight.questions[0]}</b>
+                    {notebookInsight.questions.length > 1 ? (
+                      <ul className="kizuki-question-list">
+                        {notebookInsight.questions.slice(1).map((question) => <li key={question}>{question}</li>)}
+                      </ul>
+                    ) : null}
+                  </div>
+                  <small>記録から見る観点の整理です。医療・法律・税務の判断はしません。</small>
                 </div>
-                <strong>{notebookInsight.patternTitle}</strong>
-                <p>{notebookInsight.patternBody}</p>
-                <div className="kizuki-forecast">
-                  <span>次に備えること</span>
-                  <b>{notebookInsight.forecastTitle}</b>
-                  <p>{notebookInsight.forecastBody}</p>
-                </div>
-                <div className="kizuki-question">
-                  <span>次に家族で聞くこと</span>
-                  <b>{notebookInsight.questions[0]}</b>
-                  {notebookInsight.questions.length > 1 ? (
-                    <ul className="kizuki-question-list">
-                      {notebookInsight.questions.slice(1).map((question) => <li key={question}>{question}</li>)}
-                    </ul>
-                  ) : null}
-                </div>
-                <small>記録から見る観点の整理です。医療・法律・税務の判断はしません。</small>
-              </article>
+              </details>
             </section>
           ) : null}
 
           <section className={`nb-section ${activeNotebookTab === "record" ? "" : "is-hidden-tab"}`} aria-label="AI相談チャットの使い方">
-            <article className="nb-card record-ai-card">
-              <div className="record-ai-head">
-                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-                <div>
-                  <span>AI相談チャット</span>
+            <details className="nb-card record-ai-card notebook-disclosure" key={activeCase.id}>
+              <summary className="notebook-disclosure-summary">
+                <span className="notebook-disclosure-ai-icon" aria-hidden="true">AI</span>
+                <div className="notebook-disclosure-copy">
+                  <span className="notebook-disclosure-label">AI相談</span>
+                  <h2>気になることを、一緒に整理</h2>
+                </div>
+                <span className="notebook-disclosure-toggle">
+                  <span className="when-closed">＋ 開く</span>
+                  <span className="when-open">− 閉じる</span>
+                </span>
+              </summary>
+              <div className="notebook-disclosure-body">
                   <strong>
                     {latestEntry ? "記録を書いたら、その内容でそのまま相談できます。" : "記録が1件あると、相談が具体的になります。"}
                   </strong>
@@ -3866,22 +3882,21 @@ export default function FamilyBoardPage() {
                   <p className="record-ai-storage-note">
                     クラウド手帳では相談履歴を自分専用に保存し、次の相談へ引き継ぎます。家族も見る「過去の手帳」へ残す時だけ、回答の「この回答を手帳に残す」を押してください。
                   </p>
+                <div className="record-ai-actions">
+                  <button type="button" onClick={openConsultFromDigest}>最近の記録でAI相談する</button>
+                  <a
+                    href="#diary-history"
+                    onClick={(event) => {
+                      event.preventDefault();
+                      openNotebookSection("#diary-history");
+                    }}
+                  >
+                    過去の記録を見る
+                  </a>
                 </div>
+                <small>相談内容は医療・法律・税務の判断ではありません。必要な判断は主治医や専門家に確認してください。</small>
               </div>
-              <div className="record-ai-actions">
-                <button type="button" onClick={openConsultFromDigest}>最近の記録でAI相談する</button>
-                <a
-                  href="#diary-history"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    openNotebookSection("#diary-history");
-                  }}
-                >
-                  過去の記録を見る
-                </a>
-              </div>
-              <small>相談内容は医療・法律・税務の判断ではありません。必要な判断は主治医や専門家に確認してください。</small>
-            </article>
+            </details>
           </section>
 
           {journeyCards.length > 0 ? (

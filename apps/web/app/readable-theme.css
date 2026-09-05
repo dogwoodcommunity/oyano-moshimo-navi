@@ -375,11 +375,35 @@ html.readable-design-b .diary-photo-choice .file-button { width: auto; white-spa
 html.readable-design-b .diary-photo-help { margin: 0; font-size: 18px; font-weight: 700; color: var(--ink); line-height: 1.6; overflow-wrap: anywhere; }
 
 /* Keep the logo and heading in normal flow, including when text wraps or grows. */
-html.readable-design-b .kizuki-card { background: #fff; border-color: var(--line); padding: 16px; gap: 16px; }
-html.readable-design-b .kizuki-heading { display: grid; grid-template-columns: 48px minmax(0, 1fr); align-items: center; gap: 12px; }
+html.readable-design-b .kizuki-card { background: #fff; border-color: var(--line); padding: 0; }
 html.readable-design-b .kizuki-mascot { position: static; width: 48px; height: 48px; background: #fff; }
 html.readable-design-b .kizuki-title { margin: 0; color: var(--primary-deep); font-size: 20px; line-height: 1.5; }
-html.readable-design-b .kizuki-card > strong { font-size: 20px; }
+
+/* Two short entry points: read a hint, or choose to start a conversation. */
+html.readable-design-b .notebook-disclosure { display: block; min-width: 0; padding: 0; margin-top: 0; border: 1px solid var(--line); border-radius: 12px; box-shadow: none; }
+html.readable-design-b .record-ai-card.notebook-disclosure { background: var(--cover-sub); border-left: 4px solid var(--primary-deep); }
+html.readable-design-b .notebook-disclosure-summary { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 18px 16px; min-height: 88px; cursor: pointer; list-style: none; border-radius: 12px; }
+html.readable-design-b .notebook-disclosure-summary::-webkit-details-marker { display: none; }
+html.readable-design-b .notebook-disclosure-summary::marker { content: ""; }
+html.readable-design-b .notebook-disclosure-summary:hover { background: var(--cover-sub); }
+html.readable-design-b .notebook-disclosure-copy { display: grid; gap: 4px; min-width: 0; }
+html.readable-design-b .notebook-disclosure-label { color: var(--ink-sub); font-size: 16px; font-weight: 700; }
+html.readable-design-b .notebook-disclosure-copy h2 { color: var(--ink); font-size: 22px; line-height: 1.5; margin: 0; }
+html.readable-design-b .notebook-disclosure-toggle { color: var(--primary-deep); background: #fff; border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 16px; white-space: nowrap; }
+html.readable-design-b .notebook-disclosure .when-open { display: none; }
+html.readable-design-b .notebook-disclosure[open] .when-closed { display: none; }
+html.readable-design-b .notebook-disclosure[open] .when-open { display: inline; }
+html.readable-design-b .notebook-disclosure-ai-icon { display: grid; place-items: center; width: 48px; height: 48px; background: var(--primary-deep); color: #fff; font-size: 20px; font-weight: 700; border-radius: 14px 14px 14px 3px; }
+html.readable-design-b .notebook-disclosure-body { display: grid; gap: 16px; padding: 20px 16px; border-top: 1px solid var(--line); background: #fff; border-radius: 0 0 12px 12px; }
+html.readable-design-b .notebook-disclosure-body :is(p, li, small) { color: var(--ink); font-size: 18px; font-weight: 500; line-height: 1.8; margin: 0; }
+html.readable-design-b .notebook-disclosure-body .record-ai-storage-note { padding: 12px; background: var(--cover-sub); border-left: 3px solid var(--primary-deep); }
+html.readable-design-b .notebook-disclosure .record-ai-actions button { background: var(--action-bg); color: var(--action-ink); border: 1px solid var(--primary-deep); border-radius: 10px; }
+@media (max-width: 480px) {
+  html.readable-design-b .notebook-disclosure-summary { grid-template-columns: 40px minmax(0, 1fr); gap: 10px; padding: 14px; }
+  html.readable-design-b .notebook-disclosure-summary :is(.kizuki-mascot, .notebook-disclosure-ai-icon) { width: 40px; height: 40px; }
+  html.readable-design-b .notebook-disclosure-toggle { grid-column: 2; justify-self: start; }
+  html.readable-design-b .notebook-disclosure-copy h2 { font-size: 20px; }
+}
 
 /* One white record surface; advice stays separate without nested coloured boxes. */
 html.readable-design-b :is(.history-card, .history-record-list, .recent-entry-list) { background: var(--paper); }

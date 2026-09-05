@@ -320,31 +320,112 @@ for (const caseId of ["photo-case-one", "photo-case-two"]) {
 }
 assert.equal(photoHelpIds.size, 2, "description IDs must follow the active notebook, not a hard-coded person");
 
-// The mascot and heading share normal document flow; insight content is intact.
+// Native details start closed, but their explanatory text/actions stay mounted.
+// Opening a summary needs no React event handler, storage write or AI request.
 const kizukiNode = jsxWithClass("kizuki-card");
+const aiCardNode = jsxWithClass("record-ai-card");
 const notebookInsight = {
   patternTitle: "仮の気づき", patternBody: "仮の観察内容を残す",
   forecastTitle: "仮の次の備え", forecastBody: "備えの説明を残す",
   questions: ["家族への質問その1", "家族への質問その2", "家族への質問その3"]
 };
-const kizuki = compile(`export const card = (${kizukiNode.getText(parsed)});`, { notebookInsight }).card;
-const cardChildren = [].concat(kizuki.props.children).filter((node) => node && typeof node === "object");
-assert.ok(hasClass(cardChildren[0], "kizuki-heading"), "the mascot/title header must precede the insight body");
-const heading = cardChildren[0];
-const mascots = descendants(kizuki, (node) => hasClass(node, "kizuki-mascot"));
-const titles = descendants(kizuki, (node) => hasClass(node, "kizuki-title"));
-assert.equal(mascots.length, 1); assert.equal(titles.length, 1);
-assert.ok(descendants(heading, (node) => node === mascots[0]).length === 1);
-assert.ok(descendants(heading, (node) => node === titles[0]).length === 1);
-assert.equal(mascots[0].type, "img");
-assert.ok([true, "true"].includes(mascots[0].props["aria-hidden"]));
-assert.equal(titles[0].type, "h2");
-assert.equal(text(titles[0]), "ナビからのひとこと");
-assert.equal(descendants(kizuki, (node) => hasClass(node, "tag")).length, 0, "the old absolute-positioned tag must not remain");
-for (const value of [notebookInsight.patternTitle, notebookInsight.patternBody, notebookInsight.forecastTitle,
-  notebookInsight.forecastBody, ...notebookInsight.questions, "医療・法律・税務の判断はしません。"]) {
-  assert.ok(text(kizuki).includes(value), `insight content must remain present: ${value}`);
+let disclosureScenarios = 0;
+for (const [kind, node] of [["insight", kizukiNode], ["ai", aiCardNode]]) {
+  const keyAttribute = node.openingElement.attributes.properties.find((attribute) =>
+    ts.isJsxAttribute(attribute) && attribute.name.getText(parsed) === "key");
+  assert.ok(keyAttribute?.initializer?.expression, "changing the target notebook must reset native disclosure state");
+  const keys = new Set();
+  for (const caseId of ["disclosure-case-one", "disclosure-case-two"]) {
+    for (const latestEntry of kind === "ai" ? [fixtureEntry, null] : [fixtureEntry]) {
+      const events = [];
+      const rendered = compile(`export const card = (${node.getText(parsed)});
+        export const targetKey = (${keyAttribute.initializer.expression.getText(parsed)});`, {
+        activeCase: { id: caseId }, notebookInsight, latestEntry,
+        openConsultFromDigest: () => events.push(["consult"]),
+        openNotebookSection: (hash) => events.push(["history", hash])
+      });
+      assert.equal(typeof rendered.targetKey, "string");
+      assert.equal(rendered.targetKey, caseId, "React key must track the exact active notebook ID");
+      keys.add(rendered.targetKey);
+      const card = rendered.card;
+      assert.equal(card.type, "details");
+      assert.ok(hasClass(card, "notebook-disclosure"));
+      assert.ok(!Object.hasOwn(card.props, "open") && !Object.hasOwn(card.props, "defaultOpen"), "both disclosures must initially be closed");
+      assert.ok(!Object.keys(card.props).some((name) => /^on[A-Z]/.test(name)), "native details must not run work on opening/closing");
+      const cardChildren = [].concat(card.props.children).filter((child) => child && typeof child === "object");
+      assert.equal(cardChildren.length, 2, "keep one summary and one permanently mounted content wrapper");
+      const [summary, body] = cardChildren;
+      assert.equal(summary.type, "summary");
+      assert.ok(hasClass(summary, "notebook-disclosure-summary"));
+      assert.equal(summary.props.role, undefined, "keep the native disclosure semantics");
+      assert.equal(summary.props.tabIndex, undefined, "keep native keyboard focus and activation");
+      assert.equal(descendants(summary, (child) => Object.keys(child.props).some((name) => /^on[A-Z]/.test(name))).length, 0,
+        "summary and its children must use the native browser behavior without event side effects");
+      assert.equal(descendants(summary, (child) => ["a", "button", "input", "select", "textarea", "details"].includes(child.type)).length, 0,
+        "summary must not nest other interactive controls");
+      assert.equal(descendants(summary.props.children, (child) => ["button", "link"].includes(child.props.role)
+        || child.props.tabIndex !== undefined).length, 0, "summary children must not add competing keyboard targets");
+      assert.equal(body.type, "div");
+      assert.ok(hasClass(body, "notebook-disclosure-body"));
+      assert.ok(!body.props.hidden && body.props["aria-hidden"] !== true && body.props["aria-hidden"] !== "true");
+      assert.equal(descendants(card, (child) => child.type === "summary").length, 1);
+      for (const [state, action] of [["when-closed", "＋ 開く"], ["when-open", "− 閉じる"]]) {
+        assert.equal(descendants(summary, (child) => child.type === "span" && hasClass(child, state) && text(child) === action).length, 1,
+          `summary must contain one state-specific ${action} visual cue`);
+      }
+      const icons = descendants(summary, (child) => ["img", "svg"].includes(child.type) || hasClass(child, "notebook-disclosure-ai-icon"));
+      assert.equal(icons.length, 1);
+      assert.ok([true, "true"].includes(icons[0].props["aria-hidden"]));
+      const titles = descendants(summary, (child) => child.type === "h2");
+      assert.equal(titles.length, 1);
+      const labels = descendants(summary, (child) => hasClass(child, "notebook-disclosure-label"));
+      assert.equal(labels.length, 1);
+      assert.equal(text(labels[0]), kind === "insight" ? "ナビからのひとこと" : "AI相談");
+      assert.deepEqual(events, [], "rendering closed content must not invoke its actions");
+      if (kind === "insight") {
+        assert.ok(hasClass(summary, "kizuki-heading"));
+        assert.ok(hasClass(icons[0], "kizuki-mascot"));
+        assert.ok(hasClass(titles[0], "kizuki-title"));
+        assert.equal(text(titles[0]), notebookInsight.patternTitle);
+        assert.ok(text(summary).includes("ナビからのひとこと"));
+        assert.equal(descendants(card, (child) => hasClass(child, "tag")).length, 0);
+        for (const value of [notebookInsight.patternBody, notebookInsight.forecastTitle,
+          notebookInsight.forecastBody, ...notebookInsight.questions, "医療・法律・税務の判断はしません。"]) {
+          assert.ok(text(body).includes(value), `insight content must remain mounted: ${value}`);
+        }
+        assert.equal(descendants(body, (child) => hasClass(child, "kizuki-forecast")).length, 1);
+        assert.equal(descendants(body, (child) => hasClass(child, "kizuki-question")).length, 1);
+      } else {
+        assert.ok(text(summary).includes("AI相談"));
+        assert.equal(text(titles[0]), "気になることを、一緒に整理");
+        for (const value of [
+          latestEntry ? "記録を書いたら、その内容でそのまま相談できます。" : "記録が1件あると、相談が具体的になります。",
+          "保存後に出る「この記録でAI相談する」から、質問文が入ったチャットへ進みます。毎回ゼロから説明しなくてよくなります。",
+          "クラウド手帳では相談履歴を自分専用に保存し、次の相談へ引き継ぎます。家族も見る「過去の手帳」へ残す時だけ、回答の「この回答を手帳に残す」を押してください。",
+          "相談内容は医療・法律・税務の判断ではありません。必要な判断は主治医や専門家に確認してください。"
+        ]) assert.ok(text(body).includes(value), `AI guidance must remain mounted: ${value}`);
+        assert.equal(descendants(body, (child) => hasClass(child, "record-ai-storage-note")).length, 1);
+        const actions = descendants(body, (child) => hasClass(child, "record-ai-actions"));
+        assert.equal(actions.length, 1);
+        const buttons = descendants(actions[0], (child) => child.type === "button");
+        const links = descendants(actions[0], (child) => child.type === "a");
+        assert.equal(buttons.length, 1); assert.equal(links.length, 1);
+        assert.equal(buttons[0].props.type, "button");
+        assert.equal(text(buttons[0]), "最近の記録でAI相談する");
+        assert.equal(links[0].props.href, "#diary-history");
+        assert.equal(text(links[0]), "過去の記録を見る");
+        assert.deepEqual(events, []);
+        buttons[0].props.onClick();
+        assert.deepEqual(events.splice(0), [["consult"]]);
+        links[0].props.onClick({ preventDefault: () => events.push(["preventDefault"]) });
+        assert.deepEqual(events.splice(0), [["preventDefault"], ["history", "#diary-history"]]);
+      }
+      disclosureScenarios++;
+    }
+  }
+  assert.equal(keys.size, 2, "different notebooks must not inherit one another's open disclosure state");
 }
+assert.equal(disclosureScenarios, 6);
 
 const layout = read("apps/web/app/layout.tsx");
 const globalCss = read("apps/web/app/globals.css");
@@ -379,18 +460,20 @@ function declaration(selector, property) {
   return value;
 }
 const themeRoot = "html.readable-design-b";
-assert.equal(declaration(`${themeRoot} .kizuki-card`, "padding"), "16px");
-let cardDisplay;
-for (const [sheet, selector] of [[postcss.parse(globalCss), ".kizuki-card"], [css, `${themeRoot} .kizuki-card`]]) {
-  sheet.walkRules(selector, (rule) => {
-    if (rule.parent.type === "root") rule.walkDecls("display", (decl) => { cardDisplay = decl.value; });
-  });
-}
-assert.equal(cardDisplay, "grid", "the B card may retain its existing grid display from globals");
-assert.equal(declaration(`${themeRoot} .kizuki-card`, "gap"), "16px");
-assert.equal(declaration(`${themeRoot} .kizuki-heading`, "display"), "grid");
-assert.match(declaration(`${themeRoot} .kizuki-heading`, "grid-template-columns"), /^48px minmax\(0,\s*1fr\)$/);
-assert.equal(declaration(`${themeRoot} .kizuki-heading`, "gap"), "12px");
+assert.equal(declaration(`${themeRoot} .kizuki-card`, "padding"), "0");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure`, "display"), "block", "native details must override the legacy grid card layout");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure`, "padding"), "0");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure-summary`, "display"), "grid");
+assert.match(declaration(`${themeRoot} .notebook-disclosure-summary`, "grid-template-columns"), /^48px minmax\(0,\s*1fr\) auto$/);
+assert.equal(declaration(`${themeRoot} .notebook-disclosure-summary`, "gap"), "12px");
+assert.ok(parseFloat(declaration(`${themeRoot} .notebook-disclosure-summary`, "min-height")) >= 88);
+assert.equal(declaration(`${themeRoot} .notebook-disclosure-summary`, "cursor"), "pointer");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure-body`, "display"), "grid");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure-body`, "gap"), "16px");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure .when-open`, "display"), "none");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure[open] .when-closed`, "display"), "none");
+assert.equal(declaration(`${themeRoot} .notebook-disclosure[open] .when-open`, "display"), "inline");
+assert.equal(declaration(`${themeRoot} :is(button, a, input, select, textarea, summary):focus-visible`, "outline"), "3px solid var(--primary-deep)");
 assert.equal(declaration(`${themeRoot} .kizuki-mascot`, "position"), "static");
 assert.equal(declaration(`${themeRoot} .kizuki-title`, "margin"), "0");
 assert.equal(declaration(`${themeRoot} .mood-segment`, "display"), "grid");
@@ -418,6 +501,9 @@ assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button`, "padding
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-wrap"), "nowrap");
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-choice-label`, "flex-shrink"), "0");
 assert.equal(narrowMoodDeclaration(`${themeRoot} .mood-segment button small`, "white-space"), "nowrap");
+assert.match(narrowMoodDeclaration(`${themeRoot} .notebook-disclosure-summary`, "grid-template-columns"), /^40px minmax\(0,\s*1fr\)$/);
+assert.equal(narrowMoodDeclaration(`${themeRoot} .notebook-disclosure-toggle`, "grid-column"), "2");
+assert.equal(narrowMoodDeclaration(`${themeRoot} .notebook-disclosure-toggle`, "justify-self"), "start");
 assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "display"), "grid");
 assert.match(declaration(`${themeRoot} .diary-photo-choice`, "grid-template-columns"), /^auto minmax\(0,\s*1fr\)$/);
 assert.equal(declaration(`${themeRoot} .diary-photo-choice`, "align-items"), "center");
@@ -636,4 +722,4 @@ for (const options of [{ denyGet: true }, { denySet: true }, { denyAccess: true 
 paletteUi.cleanups.forEach((cleanup) => cleanup());
 assert.equal(paletteUi.listeners.size, 0);
 
-console.log("B design navigation, ten colors, 18 mood scenarios, photo help/input, insight heading and safety contracts: passed (layout/device QA separate)");
+console.log("B design navigation, ten colors, 18 mood scenarios, photo help/input, 6 native disclosure scenarios and safety contracts: passed (layout/device QA separate)");
