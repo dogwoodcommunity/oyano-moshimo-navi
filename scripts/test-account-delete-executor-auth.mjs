@@ -59,11 +59,26 @@ assert.ok(
   scopedVerifier.indexOf("auth.getUser(bearerToken)") < scopedVerifier.indexOf("verifiedJwtAal(bearerToken)"),
   "AAL may only be read after the exact JWT is verified"
 );
-assert.match(scopedVerifier, /from\("app_admins"\)/, "existing app_admins must retain delete access");
-assert.match(scopedVerifier, /from\("account_delete_executors"\)/, "the dedicated allowlist must be checked");
-assert.match(scopedVerifier, /\.eq\("active", true\)/, "inactive delete executors must be rejected");
-assert.match(scopedVerifier, /\.not\("activated_at", "is", null\)/, "unactivated delete executors must be rejected");
-assert.match(scopedVerifier, /\.is\("revoked_at", null\)/, "revoked delete executors must be rejected");
+assert.match(
+  scopedVerifier,
+  /rpc\(\s*"verify_account_delete_operator_v2"/,
+  "the current deployment must use the privacy-safe operator verifier"
+);
+assert.doesNotMatch(
+  scopedVerifier,
+  /from\("app_admins"\)|from\("account_delete_executors"\)/,
+  "the Web verifier must not read raw authorization tables"
+);
+assert.match(
+  scopedVerifier,
+  /operator\?\.result === "authorized" && operator\.method === "supabase_app_admin"/,
+  "existing app_admins must retain delete access only through an exact RPC result"
+);
+assert.match(
+  scopedVerifier,
+  /operator\?\.result === "authorized" && operator\.method === "supabase_account_delete_executor"/,
+  "dedicated executors must be accepted only through an exact RPC result"
+);
 assert.match(scopedVerifier, /supabase_account_delete_executor/, "the dedicated operator method must be explicit");
 assert.doesNotMatch(scopedVerifier, /verifyStaticAdminToken|ADMIN_ACCESS_TOKEN|x-admin-token/, "static tokens must never enter scoped auth");
 
@@ -91,20 +106,162 @@ for (const routePath of genericRoutes) {
 const deleteRoute = read("apps/web/app/api/admin/delete-requests/route.ts");
 const executeRoute = read("apps/web/app/api/admin/delete-requests/execute/route.ts");
 const authStatusRoute = read("apps/web/app/api/admin/delete-requests/auth-status/route.ts");
+const executionGateSql = read("supabase/account_erasure_execution_gate.sql");
+const erasurePipelineSql = read("supabase/account_deletion_pipeline.sql");
 assert.match(deleteRoute, /"reviewing",\s*"needs_followup"/s, "PATCH must allow only operational non-completion statuses");
 assert.doesNotMatch(deleteRoute.match(/const allowedStatuses[\s\S]*?\]\);/)?.[0] ?? "", /requested|completed/, "PATCH must not reopen or falsely complete a request");
-assert.match(deleteRoute, /rpc\("update_account_delete_request_status_v1"/, "PATCH must use the atomic authorization/audit RPC");
+assert.match(deleteRoute, /rpc\("update_account_delete_request_status_v2"/, "PATCH must use the current atomic authorization/audit RPC");
+assert.doesNotMatch(deleteRoute, /rpc\("update_account_delete_request_status_v1"/, "the Web route must not leave the legacy AAL1 deployment write surface usable");
 assert.doesNotMatch(deleteRoute, /\.from\("audit_logs"\)|\.update\(\{/, "PATCH must not split direct DML from its audit event");
 assert.match(deleteRoute, /Cache-Control": "no-store"/, "delete-request PII responses must not be cached");
+assert.match(deleteRoute, /operatorMethod: auth\.admin\.method/, "the scoped list must tell the UI which narrow role is active");
+assert.match(
+  deleteRoute,
+  /includeRequestDetails = auth\.admin\.method === "supabase_app_admin"[\s\S]*?const requestColumns = includeRequestDetails[\s\S]*?contact_email[\s\S]*?: "id, user_id, status, due_at, handled_at, handled_by_method, created_at"/,
+  "the deletion-only executor query must omit contact, reason, and handling-note PII"
+);
+assert.match(
+  deleteRoute,
+  /openStatuses[\s\S]*?"requested"[\s\S]*?"reviewing"[\s\S]*?"needs_followup"[\s\S]*?for \(let from = 0; ; from \+= openPageSize\)[\s\S]*?\.range\(from, from \+ openPageSize - 1\)/,
+  "every unfinished deletion-request page must be loaded instead of being displaced by a fixed newest-100 cap"
+);
+assert.match(
+  deleteRoute,
+  /\.eq\("status", "completed"\)[\s\S]*?\.limit\(100\)/,
+  "only completed deletion history may be limited to the newest 100 rows"
+);
+assert.match(
+  deleteRoute,
+  /\.\.\.\(includeRequestDetails \? \{[\s\S]*?contactEmail:[\s\S]*?reason:[\s\S]*?\} : \{\}\)/,
+  "request contact details must only be serialized for app_admin"
+);
 assert.match(deleteRoute, /uuidPattern\.test\(body\.id\)/, "PATCH must reject malformed request ids before invoking PostgREST");
 assert.match(deleteRoute, /note\.length > 2000/, "PATCH must reject oversized notes before invoking the RPC");
-
-assert.match(executeRoute, /action === "execute"[\s\S]*?auth\.admin\.aal !== "aal2"/, "only actual execution must require AAL2");
-assert.ok(
-  executeRoute.indexOf('auth.admin.aal !== "aal2"') < executeRoute.indexOf('"prepare_account_erasure_v1"'),
-  "AAL2 must be enforced before execution creates a durable prepared job"
+const patchHandler = deleteRoute.slice(deleteRoute.indexOf("export async function PATCH"));
+assert.match(
+  patchHandler,
+  /auth\.admin\.aal !== "aal2"[\s\S]*?account_delete_status_aal2_required[\s\S]*?status: 403/,
+  "status and handling-note writes must require AAL2"
 );
-assert.match(executeRoute, /action === "preflight"\s*\? "inspect_account_erasure_v1"/, "AAL1 must retain read-only preflight");
+assert.match(
+  patchHandler,
+  /auth\.admin\.method !== "supabase_app_admin"[\s\S]*?account_delete_status_app_admin_required[\s\S]*?status: 403/,
+  "the deletion-only executor must not write request status or handling notes"
+);
+
+assert.match(
+  executeRoute,
+  /new Set\(\["preflight", "prepare", "approve", "grant-status", "execute"\]\)/,
+  "the erasure API must expose the complete five-action workflow"
+);
+assert.match(
+  executeRoute,
+  /execution_control_already_granted[\s\S]*?別の削除依頼[\s\S]*?execution_control_already_granted/,
+  "a one-shot control already bound to another request must produce a recoverable 409 explanation"
+);
+assert.match(
+  executeRoute,
+  /if \(action !== "preflight"\)[\s\S]*?auth\.admin\.aal !== "aal2"/,
+  "only the read-only preflight may run at AAL1"
+);
+assert.match(
+  executeRoute,
+  /action !== "approve" && auth\.admin\.method !== "supabase_account_delete_executor"/,
+  "durable preparation, grant checks, and execution must stay deletion-executor-only"
+);
+assert.match(
+  executeRoute,
+  /if \(action === "approve"\)[\s\S]*?auth\.admin\.method !== "supabase_app_admin"/,
+  "approval must require a separately authenticated app_admin"
+);
+assert.match(
+  executeRoute,
+  /p_approver_user_id: auth\.admin\.userId/,
+  "the approver identity must come from the verified Bearer JWT"
+);
+assert.match(
+  executionGateSql,
+  /p_operator_user_id = p_approver_user_id[\s\S]*?separate_approver_required/,
+  "the database must reject self-approval"
+);
+assert.match(
+  executionGateSql,
+  /record_kind = 'activation_approved'[\s\S]*?operator_user_id = p_operator_user_id[\s\S]*?approver_user_id = p_approver_user_id/,
+  "approval must be limited to the registered separate checker"
+);
+assert.match(
+  executionGateSql,
+  /create table if not exists account_delete_private\.account_erasure_execution_control[\s\S]*?enabled_until <= opened_at \+ interval '15 minutes'/,
+  "the immutable deployment switch must be backed by a maximum-15-minute database control"
+);
+assert.match(
+  executionGateSql,
+  /account_erasure_execution_grants[\s\S]*?control_epoch uuid not null/,
+  "every grant must be bound to the current database-control epoch"
+);
+assert.match(
+  executionGateSql,
+  /alter table account_delete_private\.account_erasure_execution_control enable row level security;[\s\S]*?force row level security;/,
+  "the owner-only execution control must force RLS"
+);
+assert.match(
+  executionGateSql,
+  /v_control\.enabled_until <= v_now[\s\S]*?execution_control_disabled/,
+  "a closed or expired database control must reject approval and execution"
+);
+assert.match(
+  executionGateSql,
+  /approval\.control_epoch = v_control\.epoch[\s\S]*?approval\.expires_at > clock_timestamp\(\)/,
+  "execution must use an unexpired grant from the currently locked control epoch"
+);
+assert.match(
+  executionGateSql,
+  /set consumed_at = v_now,[\s\S]*?consumed_by_hash = v_operator_hash[\s\S]*?account_erasure_execution_control control[\s\S]*?set consumed_at = v_now/,
+  "one successful database erasure must consume both its grant and one-shot control"
+);
+assert.match(
+  executionGateSql,
+  /revoke all on function public\.execute_account_erasure_database_v1\(uuid, uuid, uuid\)[\s\S]*?grant execute on function public\.execute_account_erasure_database_v2/,
+  "old ON deployments must lose direct v1 authority before v2 is granted"
+);
+assert.doesNotMatch(
+  erasurePipelineSql,
+  /grant execute on function (?:inspect|prepare)_account_erasure_v1\(uuid, uuid, uuid\) to service_role/,
+  "reapplying the base pipeline must not reopen privacy-unsafe v1 operator responses"
+);
+
+const preflightStart = executeRoute.indexOf('if (action === "preflight")');
+const prepareStart = executeRoute.indexOf('if (action === "prepare") {', preflightStart + 1);
+const destructiveStart = executeRoute.indexOf('const { data: databaseData');
+assert.ok(preflightStart >= 0 && prepareStart > preflightStart && destructiveStart > prepareStart, "the route must keep inspection, preparation, and destructive execution as ordered branches");
+const preflightPath = executeRoute.slice(preflightStart, prepareStart);
+const preparePath = executeRoute.slice(prepareStart, destructiveStart);
+const executePath = executeRoute.slice(destructiveStart);
+assert.match(preflightPath, /rpc\("inspect_account_erasure_v2"/, "AAL1 preflight must use the privacy-safe read-only inspection RPC");
+assert.doesNotMatch(preflightPath, /inspect_account_erasure_v1|prepare_account_erasure_v[12]|execute_account_erasure_database|deleteUser|removeAndVerifyStorage/, "preflight must not use legacy raw responses, reserve, delete, or alter the target account");
+assert.match(preparePath, /rpc\("prepare_account_erasure_v2"/, "AAL2 preparation must use the privacy-safe durable job RPC");
+assert.doesNotMatch(preparePath, /execute_account_erasure_database|deleteUser|removeAndVerifyStorage/, "preparation must return before any irreversible deletion");
+assert.doesNotMatch(executePath, /prepare_account_erasure_v[12]/, "execution must never silently refresh the reviewed job");
+assert.match(
+  executeRoute,
+  /\(action === "approve" \|\| action === "grant-status" \|\| action === "execute"\)[\s\S]*?uuidPattern\.test\(expectedJobId\)[\s\S]*?manifestPattern\.test\(expectedManifestHash\)/,
+  "approval, grant checks, and execution must require the exact durable job and manifest"
+);
+assert.match(executeRoute, /rpc\("issue_account_erasure_execution_grant_v1"/, "approval must issue the short-lived database grant");
+assert.match(executeRoute, /rpc\("inspect_account_erasure_execution_grant_v1"/, "the executor must be able to check the exact grant without deleting");
+assert.match(executeRoute, /rpc\("execute_account_erasure_database_v2"/, "execution must use the exact-job, exact-manifest v2 gate");
+assert.doesNotMatch(executeRoute, /rpc\("execute_account_erasure_database_v1"/, "the Web route must not bypass v2 with the legacy destructive RPC");
+assert.match(executeRoute, /function clientRpcResult[\s\S]*?const safe:[\s\S]*?result: result\.result/, "all database results must pass through a client-safe allowlist");
+assert.match(executeRoute, /firstBlockedCode[\s\S]*?safe\.code = code/, "blocker responses may expose only a normalized reason code");
+assert.doesNotMatch(
+  executeRoute,
+  /return jsonError\([\s\S]{0,500}?\{ result \}\s*\)/,
+  "failure responses must not return raw blocker details, family names, or storage paths"
+);
+assert.ok(
+  (executeRoute.match(/result: clientRpcResult\(/g) ?? []).length >= 7,
+  "every success, retry, grant, and failure result returned to the browser must be sanitized"
+);
 assert.match(executeRoute, /requiresAal2: auth\.admin\.aal !== "aal2"/, "preflight must tell the UI when step-up is required");
 assert.doesNotMatch(executeRoute, /nextLevel/, "next possible AAL must never authorize destructive execution");
 assert.match(authStatusRoute, /aal: auth\.admin\.aal/, "dedicated auth status must report the verified JWT AAL");
@@ -123,6 +280,38 @@ assert.doesNotMatch(deleteClient, /\badminHeaders\(/, "delete operations must ne
 assert.match(deleteClient, /addEventListener\("admin-auth-changed"/, "delete requests must reload after auth changes");
 assert.match(deleteClient, /hasPendingAuthCallback\(\)[\s\S]*?loadDeleteRequests\(\)/, "delete-request PII must wait while an auth callback is being validated");
 assert.match(deleteClient, /setErasureChecks\(\{\}\)/, "auth changes must invalidate prior preflight approval");
+for (const setter of [
+  "setErasureUserIds",
+  "setErasurePreparePhrases",
+  "setErasurePhrases",
+  "setApprovalJobIds",
+  "setApprovalManifestHashes",
+  "setApprovalPhrases"
+]) {
+  assert.match(
+    deleteClient,
+    new RegExp(`${setter}\\(\\{\\}\\)`),
+    `${setter} must be cleared when the authenticated operator changes`
+  );
+}
+assert.match(
+  deleteClient,
+  /action: "preflight" \| "prepare" \| "approve" \| "grant-status" \| "execute"/,
+  "the UI must model the same five actions as the server"
+);
+assert.match(deleteClient, /expectedJobId,\s*expectedManifestHash/, "the UI must send the exact durable evidence for review and execution");
+assert.match(deleteClient, /operatorMethod === "supabase_account_delete_executor"[\s\S]*?2\. 削除対象を確定する/, "only the dedicated executor UI may offer durable preparation");
+assert.match(deleteClient, /operatorMethod === "supabase_app_admin" && isLivePreparedJob[\s\S]*?3\. 別担当者が実行を許可/, "only the separate app_admin UI may offer approval");
+assert.match(
+  deleteClient,
+  /operatorMethod === "supabase_app_admin" \? <th>contact<\/th>[\s\S]*?operatorMethod === "supabase_app_admin" \? <th>reason<\/th>/,
+  "the deletion-only executor UI must not render contact or reason columns"
+);
+assert.match(
+  deleteClient,
+  /operatorMethod === "supabase_app_admin" \? \([\s\S]*?aria-label="処理メモ"[\s\S]*?updateStatus\(item\.id, "reviewing"\)/,
+  "handling notes and status controls must remain hidden from the deletion-only executor UI"
+);
 assert.match(deleteClient, /loadRequestId\.current \+= 1/, "auth changes must invalidate in-flight PII responses");
 
 assert.match(tokenControl, /authEndpoint = "\/api\/admin\/auth-status"/, "generic Admin auth endpoint must remain the default");

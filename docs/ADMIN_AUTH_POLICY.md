@@ -9,7 +9,7 @@ Admin APIは `SUPABASE_SERVICE_ROLE_KEY` を使うため、RLSではなくAPI側
 - 現行の `app_admin` は削除専用roleではなく、全Admin APIに共通する管理者権限である。
 - 運用担当として氏名を指名しただけではAdmin権限を付与しない。本人確認済みSupabase Authユーザーを別途 `app_admins.user_id` に登録する。
 - 削除実行予定者の指名だけでは、Supabase Authユーザー、MFA、`account_delete_executors` 行、Vercel・Supabase等の本番権限を作成・付与しない。
-- 削除専用roleは `account_delete_executors` で管理し、有効化済み・未失効の個別ユーザーだけを受け付ける。一般Admin APIへは権限を広げない。
+- 削除専用roleは `account_delete_executors` で管理し、有効化済み・未失効の個別ユーザーだけを受け付ける。一般Admin APIへは権限を広げない。Webはservice-onlyの `verify_account_delete_operator_v2` で認可結果だけを受け取り、service roleへ表の直接SELECTを許さない。これにより旧deploymentの削除専用実行者は認可段階でfail closedになる。
 - 一般Admin APIは、認証情報なし・無効な認証情報を401、本人確認済みだが `app_admins` にいないユーザーを403、role照合不能を503でfail closedにする。これにより削除専用実行者が一般Adminではないことを、本番の403で区別して確認できる。
 - `family_members` の `admin` は家族内の管理者であり、運営Admin権限には使わない。
 - 既存運用のため、`ADMIN_ACCESS_TOKEN` + `x-admin-token` は一般Admin APIの暫定fallbackとして残す。削除依頼の一覧・状態変更・事前確認・実行では一切受け付けない。

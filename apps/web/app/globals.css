@@ -5528,6 +5528,56 @@ textarea {
   padding: 7px 10px;
 }
 
+.admin-erasure-control {
+  flex: 1 0 100%;
+}
+
+.admin-erasure-control[open] {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-erasure-control label,
+.admin-erasure-evidence,
+.admin-erasure-approval,
+.admin-erasure-final {
+  display: grid;
+  gap: 7px;
+}
+
+.admin-erasure-evidence,
+.admin-erasure-approval,
+.admin-erasure-final {
+  background: #fbfdf9;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.admin-erasure-evidence code {
+  overflow-wrap: anywhere;
+}
+
+.admin-erasure-danger {
+  align-items: center;
+  background: #8d3f1e;
+  border: 1px solid #6f2f16;
+  border-radius: 8px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 13px;
+}
+
+.admin-erasure-danger:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 .actions {
   display: flex;
   flex-wrap: wrap;

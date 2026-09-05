@@ -173,14 +173,11 @@ export async function verifyAccountDeleteOperatorRequest(
   }
 
   const userId = userResult.user.id;
-  const { data: appAdmin, error: appAdminError } = await supabase
-    .from("app_admins")
-    .select("user_id")
-    .eq("user_id", userId)
-    .limit(1)
-    .maybeSingle();
-
-  if (appAdminError) {
+  const { data: operatorData, error: operatorError } = await supabase.rpc(
+    "verify_account_delete_operator_v2",
+    { p_operator_user_id: userId }
+  );
+  if (operatorError) {
     return {
       ok: false,
       response: NextResponse.json(
@@ -190,35 +187,18 @@ export async function verifyAccountDeleteOperatorRequest(
     };
   }
 
+  const operator = operatorData && typeof operatorData === "object" && !Array.isArray(operatorData)
+    ? operatorData as { result?: unknown; method?: unknown }
+    : null;
   const common = {
     userId,
     email: userResult.user.email ?? undefined,
     aal
   };
-  if (appAdmin) {
+  if (operator?.result === "authorized" && operator.method === "supabase_app_admin") {
     return { ok: true, admin: { ...common, method: "supabase_app_admin" } };
   }
-
-  const { data: deleteExecutor, error: deleteExecutorError } = await supabase
-    .from("account_delete_executors")
-    .select("user_id")
-    .eq("user_id", userId)
-    .eq("active", true)
-    .not("activated_at", "is", null)
-    .is("revoked_at", null)
-    .limit(1)
-    .maybeSingle();
-
-  if (deleteExecutorError) {
-    return {
-      ok: false,
-      response: NextResponse.json(
-        { error: "Account deletion operator authorization could not be verified" },
-        { status: 503 }
-      )
-    };
-  }
-  if (deleteExecutor) {
+  if (operator?.result === "authorized" && operator.method === "supabase_account_delete_executor") {
     return {
       ok: true,
       admin: { ...common, method: "supabase_account_delete_executor" }

@@ -12432,3 +12432,27 @@ PostgreSQL回帰やアプリruntimeの失敗ではない。
 
 CI成功までは本番SQL EditorでRunしない。成功後も、本番DBのschema・権限を変える
 `account_erasure_execution_gate.sql` のRun直前にユーザーの実行時確認を得る。
+
+## 2026-09-05 追記 328 — 本番DBのone-shot gateを承認後に適用・停止確認
+
+test-only整合commit `b2daa06ec6303bc227277cefb41004e743705b73` のCI run
+`33950868597` は2分34秒で成功した。ユーザーのRun直前の「ええよ」を受け、
+本番SQL Editorで `supabase/account_erasure_execution_gate.sql` を1回実行し、
+`Success. No rows returned` を確認した。
+
+- 対象SQLは1,740行・64,689 bytes、SHA256
+  `003b2b843d3d801415020d0ff2024504302b428313850a065ea45e303b88289e`。
+  実行前にeditor全文とcommit済みSQLの一致を確認した。migrationの再実行はしていない。
+- 続いて個人識別子を返さないread-only SQLで12項目を確認した。
+  v2の7 RPC存在・service-only、旧v1のservice EXECUTE失効、生executor表のAPI role拒否、
+  control開閉RPCとprivate control/grant表のAPI role拒否、private表のFORCE RLSはすべてtrue。
+- controlは1行でactive 0件、grant 0件、削除依頼0件、削除job 0件、active executor 1件だった。
+  DB ownerのcontrol開放、grant発行、preflight、prepare、execute、Auth/Storage削除はしていない。
+- 既存利用者の手帳・日記・写真・AI相談・モニター回答を変更・削除していない。
+  `ACCOUNT_ERASURE_EXECUTION_ENABLED` の設定は変更せず、OFFを維持する。
+- 対応Webの独立再確認で追加migration依存はなく、Web削除・専用実行者テストとdiff検査が成功。
+  画面には別担当者の許可前にDB ownerの最大15分の実行時間帯が必要である旨も明記した。
+- この追記時点では対応Webはまだ未deploy。DB-firstの間は旧Webの削除認可がfail closedになる。
+  次は対応Webを限定commit・CI・本番deployし、読み取り専用で表示とAPIを確認する。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。実アカウントの完全削除E2Eは別の明示承認まで未実施とする。

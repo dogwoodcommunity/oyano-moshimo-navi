@@ -5,12 +5,24 @@ import { getServerSupabase } from "@/lib/serverSupabase";
 type JsonObject = Record<string, unknown>;
 type StorageObject = { bucket: "home-photos"; path: string };
 type StoragePrefix = { bucket: "home-photos"; prefix: string };
+type PreparedJobRow = {
+  id: string;
+  request_id: string;
+  target_user_id: string | null;
+  status: "prepared" | "blocked" | "database_erased" | "completed";
+  storage_manifest_hash: string;
+  prepared_at: string | null;
+  prepared_expires_at: string | null;
+  database_erased_at: string | null;
+};
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const manifestPattern = /^[0-9a-f]{64}$/;
 const allowedBucket = "home-photos" as const;
+const noStoreHeaders = { "Cache-Control": "no-store" };
 
 function jsonError(error: string, message: string, status: number, extra: JsonObject = {}) {
-  return NextResponse.json({ error, message, ...extra }, { status });
+  return NextResponse.json({ error, message, ...extra }, { status, headers: noStoreHeaders });
 }
 
 function asObject(value: unknown): JsonObject {
@@ -72,10 +84,36 @@ function rpcResult(value: unknown): JsonObject & { result: string } {
   };
 }
 
+function clientRpcResult(result: ReturnType<typeof rpcResult>) {
+  const safe: JsonObject & { result: string } = { result: result.result };
+  const blockedDetails = Array.isArray(result.blockedDetails) ? result.blockedDetails : [];
+  const firstBlockedCode = blockedDetails
+    .map((detail) => asObject(detail).code)
+    .find((code): code is string => typeof code === "string");
+  const code = typeof result.code === "string" ? result.code : firstBlockedCode;
+  if (code && /^[a-z0-9_]{1,80}$/.test(code)) safe.code = code;
+
+  for (const key of ["ownedFamilyCount", "storageObjectCount", "storagePrefixCount"] as const) {
+    if (typeof result[key] === "number" && Number.isSafeInteger(result[key]) && result[key] >= 0) {
+      safe[key] = result[key];
+    }
+  }
+  if (typeof result.jobId === "string" && uuidPattern.test(result.jobId)) safe.jobId = result.jobId;
+  for (const key of ["completedAt", "databaseErasedAt", "expiresAt"] as const) {
+    if (typeof result[key] === "string" && !Number.isNaN(Date.parse(result[key]))) {
+      safe[key] = result[key];
+    }
+  }
+  if (typeof result.reservationCreated === "boolean") {
+    safe.reservationCreated = result.reservationCreated;
+  }
+  return safe;
+}
+
 function rpcFailure(result: ReturnType<typeof rpcResult>) {
   const blocked = result.result === "blocked";
   const notFound = result.result === "request_not_found";
-  const forbidden = result.result === "operator_forbidden";
+  const forbidden = result.result === "operator_forbidden" || result.result === "approver_forbidden";
   const mismatch = result.result === "target_mismatch";
   const blockedDetails = Array.isArray(result.blockedDetails) ? result.blockedDetails : [];
   const blockCodes = new Set([
@@ -93,6 +131,27 @@ function rpcFailure(result: ReturnType<typeof rpcResult>) {
         ? "削除対象の写真が安全な一括処理上限を超えています。担当者が分割手順を確認するまで完全削除を停止します。"
         : blockCodes.has("unsafe_storage_manifest")
           ? "削除対象写真の保存場所を安全に確認できないため、完全削除を停止します。"
+      : result.result === "prepared_job_expired"
+        ? "削除対象の確定から1時間を過ぎました。もう一度、安全確認と対象確定を行ってください。"
+      : result.result === "prepared_scope_changed" || result.result === "manifest_mismatch"
+        ? "確定後に削除対象が変わりました。削除は行っていません。もう一度、対象確定と別担当者の承認を行ってください。"
+      : result.result === "prepared_job_required" || result.result === "prepared_identity_mismatch"
+        ? "確定済みの削除対象と一致しません。削除は行っていません。"
+      : result.result === "execution_grant_required"
+        ? "別担当者による実行許可がないか、有効期限が切れています。削除は行っていません。"
+      : result.result === "execution_control_disabled"
+        ? "データベース側の1回限りの実行許可が閉じているか、有効期限が切れています。システム責任者が15分以内の実行枠を開いてから、もう一度承認してください。"
+      : result.result === "grant_exceeds_execution_window"
+        ? "データベース側の実行枠の残り時間が10分未満です。実行枠を閉じて開き直し、もう一度承認してください。"
+      : result.result === "execution_control_already_granted"
+        ? "この1回限りの実行枠は、別の削除依頼の承認に使用中です。処理を混ぜず、システム責任者が実行枠を閉じて開き直してから承認してください。"
+      : result.result === "consumed_execution_grant_required"
+        ? "この途中処理に対応する使用済み実行許可を確認できません。手作業で続けず、システム責任者へ連絡してください。"
+      : result.result === "separate_approver_required"
+        || result.result === "registered_separate_approver_required"
+        ? "実行担当者とは別の、事前登録済み管理者による確認が必要です。"
+      : result.result === "grant_exceeds_prepared_window"
+        ? "対象確定の残り時間が短いため許可を作れません。もう一度、対象確定から行ってください。"
       : blocked
         ? "安全確認が必要なため、完全削除を停止しました。"
         : notFound
@@ -105,9 +164,52 @@ function rpcFailure(result: ReturnType<typeof rpcResult>) {
   return jsonError(
     `account_erasure_${result.result}`,
     message,
-    blocked || mismatch ? 409 : forbidden ? 403 : notFound ? 404 : 500,
-    { result }
+    blocked
+      || mismatch
+      || new Set([
+        "prepared_job_expired",
+        "prepared_scope_changed",
+        "manifest_mismatch",
+        "prepared_job_required",
+        "prepared_identity_mismatch",
+        "execution_grant_required",
+        "execution_control_disabled",
+        "consumed_execution_grant_required",
+        "separate_approver_required",
+        "registered_separate_approver_required",
+        "grant_exceeds_prepared_window",
+        "grant_exceeds_execution_window",
+        "execution_control_already_granted"
+      ]).has(result.result)
+      ? 409
+      : forbidden ? 403 : notFound ? 404 : 500,
+    { result: clientRpcResult(result) }
   );
+}
+
+async function loadPreparedJob(
+  supabase: NonNullable<ReturnType<typeof getServerSupabase>>,
+  requestId: string,
+  targetUserId: string
+) {
+  const { data, error } = await supabase
+    .from("account_erasure_jobs")
+    .select("id, request_id, target_user_id, status, storage_manifest_hash, prepared_at, prepared_expires_at, database_erased_at")
+    .eq("request_id", requestId)
+    .maybeSingle();
+  if (error) throw error;
+  const job = data as PreparedJobRow | null;
+  if (!job || job.target_user_id !== targetUserId || !manifestPattern.test(job.storage_manifest_hash)) {
+    return null;
+  }
+  return {
+    id: job.id,
+    status: job.status,
+    manifestHash: job.storage_manifest_hash,
+    preparedAt: job.prepared_at,
+    preparedExpiresAt: job.prepared_expires_at,
+    databaseErasedAt: job.database_erased_at
+  };
 }
 
 function isAuthUserNotFound(error: unknown) {
@@ -231,29 +333,143 @@ export async function POST(request: Request) {
   }
 
   const body = asObject(await request.json().catch(() => ({})));
-  const action = body.action === "preflight" ? "preflight" : body.action === "execute" ? "execute" : "";
+  const action = typeof body.action === "string"
+    && new Set(["preflight", "prepare", "approve", "grant-status", "execute"]).has(body.action)
+    ? body.action as "preflight" | "prepare" | "approve" | "grant-status" | "execute"
+    : "";
   const requestId = typeof body.requestId === "string" ? body.requestId.trim() : "";
   const targetUserId = typeof body.targetUserId === "string" ? body.targetUserId.trim() : "";
   if (!action || !uuidPattern.test(requestId) || !uuidPattern.test(targetUserId)) {
     return jsonError("invalid_erasure_identity", "削除依頼IDと利用者IDを正しく指定してください。", 400);
   }
 
-  if (action === "execute") {
+  if (action !== "preflight") {
     if (auth.admin.aal !== "aal2") {
       return jsonError(
         "account_erasure_aal2_required",
-        "完全削除には、多要素認証を完了したログイン（AAL2）が必要です。",
+        "削除対象の確定・承認・実行には、多要素認証を完了したログイン（AAL2）が必要です。",
         403
       );
     }
-    if (process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED !== "true") {
+    if (action !== "approve" && auth.admin.method !== "supabase_account_delete_executor") {
       return jsonError(
-        "account_erasure_execution_disabled",
-        "完全削除の安全スイッチはOFFです。担当者が環境設定と移行確認を終えるまで実行できません。",
-        503
+        "account_erasure_dedicated_executor_required",
+        "削除対象の確定と実行は、登録済みの削除専用実行者が行ってください。",
+        403
       );
     }
-    const confirmation = typeof body.confirmation === "string" ? body.confirmation.trim() : "";
+  }
+
+  const confirmation = typeof body.confirmation === "string" ? body.confirmation.trim() : "";
+  if (action === "prepare" && confirmation !== `削除対象を確定 ${requestId}`) {
+    return jsonError(
+      "exact_erasure_preparation_confirmation_required",
+      "画面に表示された対象確定の確認文を省略せず入力してください。",
+      422
+    );
+  }
+
+  const expectedJobId = typeof body.expectedJobId === "string" ? body.expectedJobId.trim() : "";
+  const expectedManifestHash = typeof body.expectedManifestHash === "string"
+    ? body.expectedManifestHash.trim()
+    : "";
+  if (
+    (action === "approve" || action === "grant-status" || action === "execute")
+    && (!uuidPattern.test(expectedJobId) || !manifestPattern.test(expectedManifestHash))
+  ) {
+    return jsonError(
+      "invalid_prepared_erasure_identity",
+      "確定済みjob IDとmanifest hashを正しく指定してください。",
+      400
+    );
+  }
+
+  if (action === "approve") {
+    if (auth.admin.method !== "supabase_app_admin") {
+      return jsonError(
+        "account_erasure_app_admin_approval_required",
+        "実行担当者とは別の登録済み管理者が承認してください。",
+        403
+      );
+    }
+    if (confirmation !== `実行許可 ${expectedJobId}`) {
+      return jsonError(
+        "exact_erasure_approval_confirmation_required",
+        "画面に表示された実行許可の確認文を省略せず入力してください。",
+        422
+      );
+    }
+    const { data, error } = await supabase.rpc("issue_account_erasure_execution_grant_v1", {
+      p_request_id: requestId,
+      p_target_user_id: targetUserId,
+      p_approver_user_id: auth.admin.userId,
+      p_expected_job_id: expectedJobId,
+      p_expected_manifest_hash: expectedManifestHash,
+      p_valid_for_seconds: 600
+    });
+    if (error) {
+      return jsonError("account_erasure_approval_failed", "実行許可を記録できませんでした。削除は行っていません。", 500);
+    }
+    const approval = rpcResult(data);
+    if (approval.result !== "execution_grant_ready") return rpcFailure(approval);
+    return NextResponse.json(
+      { approved: true, result: clientRpcResult(approval) },
+      { headers: noStoreHeaders }
+    );
+  }
+
+  if (action === "grant-status") {
+    const { data, error } = await supabase.rpc("inspect_account_erasure_execution_grant_v1", {
+      p_request_id: requestId,
+      p_target_user_id: targetUserId,
+      p_operator_user_id: auth.admin.userId,
+      p_expected_job_id: expectedJobId,
+      p_expected_manifest_hash: expectedManifestHash
+    });
+    if (error) {
+      return jsonError("account_erasure_grant_check_failed", "実行許可を確認できませんでした。削除は行っていません。", 500);
+    }
+    const grant = rpcResult(data);
+    const grantReady = new Set(["execution_grant_ready", "database_erased_resume_allowed"]).has(grant.result);
+    const databaseErasedResumeAllowed = grant.result === "database_erased_resume_allowed";
+    if (!grantReady && grant.result !== "execution_grant_required") return rpcFailure(grant);
+    return NextResponse.json(
+      {
+        checked: true,
+        executionEnabled:
+          databaseErasedResumeAllowed
+          || (process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true" && auth.admin.aal === "aal2"),
+        grantReady,
+        result: clientRpcResult(grant)
+      },
+      { headers: noStoreHeaders }
+    );
+  }
+
+  if (action === "execute") {
+    if (process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED !== "true") {
+      // Once the database phase has committed, stopping here would strand a
+      // partially erased account if the ordinary execution window closes.
+      // Permit only the exact persisted database-erased job to reach the v2
+      // RPC, which independently requires the matching consumed grant before
+      // it releases the already-reviewed Storage manifest for recovery.
+      let recoveryJob: Awaited<ReturnType<typeof loadPreparedJob>>;
+      try {
+        recoveryJob = await loadPreparedJob(supabase, requestId, targetUserId);
+      } catch {
+        return jsonError("account_erasure_job_lookup_failed", "途中状態を安全に確認できませんでした。", 500);
+      }
+      const canResumeDatabaseErasedJob = recoveryJob?.status === "database_erased"
+        && recoveryJob.id === expectedJobId
+        && recoveryJob.manifestHash === expectedManifestHash;
+      if (!canResumeDatabaseErasedJob) {
+        return jsonError(
+          "account_erasure_execution_disabled",
+          "完全削除の安全スイッチはOFFです。担当者が環境設定と移行確認を終えるまで実行できません。",
+          503
+        );
+      }
+    }
     if (confirmation !== `完全削除 ${requestId}`) {
       return jsonError(
         "exact_erasure_confirmation_required",
@@ -263,49 +479,93 @@ export async function POST(request: Request) {
     }
   }
 
-  // A read-only safety check must not reserve/freeze the account. Only the
-  // explicitly confirmed execute action creates the durable prepared job.
-  const preflightRpc = action === "preflight"
-    ? "inspect_account_erasure_v1"
-    : "prepare_account_erasure_v1";
-  const { data: preparedData, error: preparedError } = await supabase.rpc(preflightRpc, {
-    p_request_id: requestId,
-    p_target_user_id: targetUserId,
-    p_operator_user_id: auth.admin.userId
-  });
-  if (preparedError) {
-    return jsonError("account_erasure_preflight_failed", "削除前確認を完了できませんでした。利用中の機能は停止していません。", 500);
-  }
-  const prepared = rpcResult(preparedData);
-  const acceptablePreflight = new Set(["ready", "database_erased", "already_completed"]);
-  if (!acceptablePreflight.has(prepared.result)) return rpcFailure(prepared);
-
   if (action === "preflight") {
+    const { data, error } = await supabase.rpc("inspect_account_erasure_v2", {
+      p_request_id: requestId,
+      p_target_user_id: targetUserId,
+      p_operator_user_id: auth.admin.userId
+    });
+    if (error) {
+      return jsonError("account_erasure_preflight_failed", "削除前確認を完了できませんでした。利用中の機能は停止していません。", 500);
+    }
+    const inspected = rpcResult(data);
+    if (!new Set(["ready", "database_erased", "already_completed"]).has(inspected.result)) {
+      return rpcFailure(inspected);
+    }
     let authState: "exists" | "absent" | "unverified" = "unverified";
     try {
       authState = await authUserExists(supabase, targetUserId) ? "exists" : "absent";
     } catch {
       authState = "unverified";
     }
-    return NextResponse.json({
-      checked: true,
-      executionEnabled:
-        process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true" && auth.admin.aal === "aal2",
-      requiresAal2: auth.admin.aal !== "aal2",
-      assuranceLevel: auth.admin.aal,
-      authState,
-      result: prepared
+    let job = null;
+    if (inspected.result === "database_erased") {
+      try {
+        job = await loadPreparedJob(supabase, requestId, targetUserId);
+      } catch {
+        return jsonError("account_erasure_job_lookup_failed", "途中状態を安全に確認できませんでした。", 500);
+      }
+    }
+    return NextResponse.json(
+      {
+        checked: true,
+        executionEnabled:
+          process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true" && auth.admin.aal === "aal2",
+        requiresAal2: auth.admin.aal !== "aal2",
+        assuranceLevel: auth.admin.aal,
+        authState,
+        job,
+        result: clientRpcResult(inspected)
+      },
+      { headers: noStoreHeaders }
+    );
+  }
+
+  if (action === "prepare") {
+    const { data, error } = await supabase.rpc("prepare_account_erasure_v2", {
+      p_request_id: requestId,
+      p_target_user_id: targetUserId,
+      p_operator_user_id: auth.admin.userId
     });
+    if (error) {
+      return jsonError("account_erasure_prepare_failed", "削除対象を確定できませんでした。削除は行っていません。", 500);
+    }
+    const prepared = rpcResult(data);
+    if (!new Set(["ready", "database_erased", "already_completed"]).has(prepared.result)) {
+      return rpcFailure(prepared);
+    }
+    if (prepared.result === "already_completed") {
+      return NextResponse.json(
+        { completed: true, idempotent: true, result: clientRpcResult(prepared) },
+        { headers: noStoreHeaders }
+      );
+    }
+    let job;
+    try {
+      job = await loadPreparedJob(supabase, requestId, targetUserId);
+    } catch {
+      return jsonError("account_erasure_job_lookup_failed", "確定した対象の証跡を確認できませんでした。削除は行っていません。", 500);
+    }
+    if (!job) {
+      return jsonError("account_erasure_job_missing", "確定した対象の証跡がありません。削除は行っていません。", 500);
+    }
+    return NextResponse.json(
+      {
+        prepared: true,
+        executionEnabled: process.env.ACCOUNT_ERASURE_EXECUTION_ENABLED === "true",
+        job,
+        result: clientRpcResult(prepared)
+      },
+      { headers: noStoreHeaders }
+    );
   }
 
-  if (prepared.result === "already_completed") {
-    return NextResponse.json({ completed: true, idempotent: true, result: prepared });
-  }
-
-  const { data: databaseData, error: databaseError } = await supabase.rpc("execute_account_erasure_database_v1", {
+  const { data: databaseData, error: databaseError } = await supabase.rpc("execute_account_erasure_database_v2", {
     p_request_id: requestId,
     p_target_user_id: targetUserId,
-    p_operator_user_id: auth.admin.userId
+    p_operator_user_id: auth.admin.userId,
+    p_expected_job_id: expectedJobId,
+    p_expected_manifest_hash: expectedManifestHash
   });
   if (databaseError) {
     return jsonError("account_erasure_database_failed", "データベース削除を完了できませんでした。安全に停止しました。", 500);
@@ -313,7 +573,10 @@ export async function POST(request: Request) {
   const database = rpcResult(databaseData);
   if (!new Set(["database_erased", "already_completed"]).has(database.result)) return rpcFailure(database);
   if (database.result === "already_completed") {
-    return NextResponse.json({ completed: true, idempotent: true, result: database });
+    return NextResponse.json(
+      { completed: true, idempotent: true, result: clientRpcResult(database) },
+      { headers: noStoreHeaders }
+    );
   }
 
   const storageObjects = safeStorageObjects(database.storageObjects);
@@ -378,16 +641,19 @@ export async function POST(request: Request) {
   const finalized = rpcResult(finalizedData);
   if (!new Set(["completed", "already_completed"]).has(finalized.result)) return rpcFailure(finalized);
 
-  return NextResponse.json({
-    completed: true,
-    idempotent: finalized.result === "already_completed",
-    verified: {
-      authUserAbsent: true,
-      databaseReferencesAbsent: true,
-      storageObjectsAbsent: true,
-      storageObjectCount: storageObjects.length,
-      storagePrefixCount: storagePrefixes.length
+  return NextResponse.json(
+    {
+      completed: true,
+      idempotent: finalized.result === "already_completed",
+      verified: {
+        authUserAbsent: true,
+        databaseReferencesAbsent: true,
+        storageObjectsAbsent: true,
+        storageObjectCount: storageObjects.length,
+        storagePrefixCount: storagePrefixes.length
+      },
+      result: clientRpcResult(finalized)
     },
-    result: finalized
-  });
+    { headers: noStoreHeaders }
+  );
 }

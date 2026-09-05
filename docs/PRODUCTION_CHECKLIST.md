@@ -42,9 +42,14 @@
   - 2026-09-05確認: 本番へ1回限り適用。migration適用直後はprivate台帳0件、全ownerが`postgres`、FORCE RLS、owner以外のACLなし、API 3 roleの権限なし、制約6・列9・非internal trigger 2をread-only検査し、全項目PASS。既存データへの変更・削除なし。
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [x] `supabase/account_deletion_pipeline.sql` を実行
-  - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。
+  - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。ここまでは既存pipelineの適用実績であり、DB owner one-shot control・1回限りgrantの本番適用実績ではない。
   - 共有家族に対象user名義の写真pathが残る依頼は `shared_photo_transfer_required` で停止する。自動引継ぎ機能が完成するまでは手動で完了にしない。
   - 破棄DBの `pnpm run test:account-erasure:sql`、削除専用認可回帰、個別メール/TOTPログイン、所有権移管の運用確認が終わるまで `ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する。
+- [x] `supabase/account_erasure_execution_gate.sql` を既存pipelineの後にDB-firstで1回適用
+  - 2026-09-05確認: 本番適用後の読み取り専用12項目PASS。v2 RPC存在/service-only、旧v1 service role権限失効、executor生table・private control/grant表・control開閉関数の全API role権限なし、private表FORCE RLSを確認。controlは1行・active 0件、grant・削除依頼・削除jobは各0件、有効な削除専用実行者は1件。対応Webの本番反映と完全削除E2Eは未完了で、実行スイッチはOFFを維持する。
+  - 対応Webより先に適用し、private `account_erasure_execution_control` / grant表と `open_account_erasure_execution_control_v1` / `close_account_erasure_execution_control_v1` がDB owner専用、`verify_account_delete_operator_v2` / `inspect_account_erasure_v2` / `prepare_account_erasure_v2` / `update_account_delete_request_status_v2` / `issue_account_erasure_execution_grant_v1` / `inspect_account_erasure_execution_grant_v1` / `execute_account_erasure_database_v2` がservice-only、`account_delete_executors` 生tableのSELECTと旧 `inspect_account_erasure_v1` / `prepare_account_erasure_v1` / `update_account_delete_request_status_v1` / 3引数 `execute_account_erasure_database_v1` がservice role実行不可であることをread-onlyで確認する。
+  - v2 inspect/prepareはblockerを正規化codeと数値件数だけで返し、`familyId`、`familyName`、Storage object/prefixの生pathを応答に含めないことを破棄DBで確認する。
+  - migration直後のcontrolがclosed、DB ownerだけが60〜900秒で開け、service/Web roleから開閉できないことを確認する。durable prepareは1時間で失効し、別確認者のgrantはrequest/target/job/hash/operatorとcontrol epochに固定した最大10分・1回限りで、grant期限がcontrol残時間を超えないことを確認する。
 - [ ] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_compact.sql` で台帳・3 RPC・service-only ACLを確認
 - [x] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [x] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
@@ -72,8 +77,19 @@
 - [ ] `/admin/delete-requests` で、共有家族ownerは完全削除が停止し、所有権移管後のみ再開できることを2アカウントで確認
 - [x] 登録済み削除専用実行者本人の個別セッションで `/admin/delete-requests` だけを利用でき、モニター回答・利用状況・本番設定APIは403になることを確認
   - 2026-09-05確認: deployment `dpl_HjCxNNBgixEqg4qrGPsKjJnzKgBB` で削除専用auth-statusと一覧GETが200、モニター回答・AI利用・本番設定APIが各403。削除依頼は0件で、PATCH・preflight・executeは未実行。
-- [ ] AAL1では削除前確認だけ、登録済みTOTPでAAL2へ上げた後だけ完全削除が可能なことを確認
-- [ ] 単独テストアカウントでAuth・DB・Storageの削除と再実行時の冪等性を確認後、削除運用を開始
+- [ ] 対応Webを本番に反映し、削除専用実行者の一覧クエリがSELECT段階で連絡先・自由記載の理由・処理メモ・担当者メール/user IDを取得せず、対応日時と非識別の認証方式名だけを状態証跡として返すことを確認
+- [ ] 対応Webの削除認可が `verify_account_delete_operator_v2` だけを呼び、生の `account_delete_executors` をSELECTしないこと、旧deploymentは認可時点でfail closedになり一覧・実行handlerへ進まないことを確認
+- [ ] 一覧が `requested` / `reviewing` / `needs_followup` をページ取得で全件含め、`completed` だけを作成日の新しい順の直近100件に限ることを、未完了1,000件超・完了100件超の破棄データで確認
+- [ ] 依頼状態と処理メモのPATCHが現routeのAAL2 app_admin確認後に `update_account_delete_request_status_v2` だけを呼び、DBでも正確なoperator user IDをapp adminとして再確認することを確認する。AAL1 app_adminとAAL2削除専用実行者は403、旧v1を呼ぶAAL1の旧deploymentはDB権限拒否になることも確認
+- [ ] Webのpreflight/prepareが `inspect_account_erasure_v2` / `prepare_account_erasure_v2` だけを呼び、blocker応答がcode/数値件数に限られ、`familyId` / `familyName` / Storage生pathがブラウザへ返らないことを確認
+- [ ] AAL1ではread-onlyの削除前確認だけ、削除専用実行者のAAL2でだけdurable prepareと実行、当該実行者の `activation_approved` eventに登録された別のAAL2 app adminでだけ10分間grant発行が可能なことを確認
+- [ ] 対象確定後、実行前にjob ID・manifest hash・object/prefix件数・1時間の期限が表示され、別確認者が同じ値を再入力できることを確認
+- [ ] DB ownerがprepare後に最大15分のone-shot controlを開き、別AAL2 app adminのgrant期限がcontrol残時間内となり、executorのgrant-status/executeだけが同じepochを使用することを確認
+- [ ] controlなし・closed・期限切れ・消費済み、grantなし・期限切れ・使用済み・別epoch、異なるrequest/target/job/hash/operator、未登録の別app admin、prepare後の範囲変化がDB削除前に停止することを確認
+- [ ] 単独テストアカウントでpreflight→AAL2 prepare→DB owner control open→別AAL2 app admin承認→executor grant-status/execute→Auth/DB/Storage不在確認を完走し、DB削除成功と同じtransactionでgrant/controlが両方consumeされ、2件目を実行できないことを確認
+- [ ] 放棄時にDB ownerが `close_account_erasure_execution_control_v1` を実行すると同epochの未使用grantが取消されることを確認
+- [ ] DB削除済みの `database_erased` だけは、env OFFへ戻した後も、最初のDB削除を実行した本人と同じ削除専用実行者が現在も有効かつAAL2で、正確なrequest/target/job/manifest hash、同じjobの消費済み・未取消しgrant、現在の実行者hash＝grantの `operator_user_hash` をDB v2が検証した場合だけAuth/Storage不在確認と最終化を再開できることを確認する。DB未削除、値不一致、grant未消費・取消済み、無効な実行者、AAL1、別の有効な削除専用実行者は拒否され、新規削除のenv OFF bypassにならないことも確認
+- [ ] 本番ON deploymentと公開aliasを記録し、処理後にactive control/grant 0件、`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` deploymentへのalias移動、ON deploymentの削除または保護を確認する。旧ON直接URLでもDB controlなしで新規のexecute v2が拒否され、旧v1 inspect/prepare/status update/executeもservice role権限なしであることを確認する。DB削除済みの途中回復は前項の限定条件だけで扱う
 - [x] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
   - 2026-07-09監査対応: Admin判定は `family_members` から `app_admins` 専用テーブルへ変更。
   - 2026-07-09再確認: `scripts/smoke-admin-bearer.mjs` で一時 `app_admins` 行を作成し、`/api/admin/env-check` がBearer認証を受け付けることを確認。確認後、一時データは削除済み。
@@ -158,7 +174,8 @@
 - [x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認し、別操作で `activation_approved` eventを作成
 - [x] 初回の削除実行権限有効化では、実行者の本人確認eventと別確認者の `activation_approved` eventを分離して記録する手順を確定
 - [x] 実際の削除1件ごとに、request ID・target user ID・operator user IDを二人で照合し、確認者を運用台帳へ残す手順を確定（初回有効化eventとは別）
-- [ ] verified TOTP・実行者role・別確認者・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認
+- [ ] verified TOTP・実行者role・別のAAL2 app admin・execution gateの本番適用・単独テストアカウント完走後だけ、削除1件の実行時間帯に限定して `ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認し、prepare後にDB ownerが最大15分のone-shot controlを開く
+- [ ] 処理成功時はcontrol/grantの同時consume、放棄時はowner close、期限切れ時はactiveでないことを確認し、active control/grantを0件にする。環境変数OFFだけでなく過去のON deployment直接URLも閉じる
 - [x] 障害対応の主責任者を `代表取締役 池田哲也` と確定
 - [x] 障害対応の代行者名を `池田知也` と確定
 - [x] 障害対応代行者の責任範囲を「主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施」と確定

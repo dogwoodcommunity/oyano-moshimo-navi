@@ -215,7 +215,9 @@ assert.ok(releaseInputs.includes("削除専用ログイン試験は確認済み�
 assert.ok(envExample.includes("ACCOUNT_ERASURE_EXECUTION_ENABLED=false"), "the destructive account-erasure execution switch must remain disabled by default");
 assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する"), "production account erasure must remain disabled until its external prerequisites pass");
 assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認"), "the destructive execution switch must remain behind production migration and end-to-end checks");
-assert.ok(operationsRunbook.includes("二者確認は運用手順であり、実行APIが技術的に二人の承認を強制するものではない"), "the release gate must retain the limitation that dual control is operational rather than API-enforced");
+assert.ok(operationsRunbook.includes("request/job/hash/operator/control epochへの固定"), "the release gate must describe the DB-enforced exact execution approval binding");
+assert.ok(operationsRunbook.includes("別確認者が表示された対象を実際に照合したことは運用証跡で補完する"), "technical dual control must not be confused with proof of human review");
+assert.ok(operationsRunbook.includes("削除運用はまだ開始しない"), "production migration must not bypass the pending real-world deletion trial");
 assert.ok(releaseInputs.includes("| 障害対応責任者・代行者 | **主責任者：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed incident-response assignees and titles");
 assert.ok(operationsRunbook.includes("| 障害対応主責任者 / Incident Commander | **代表取締役 池田哲也**（内部連絡手段は要指定。指定後は制限付き運用台帳に記録） | **システム責任者 池田知也**（責任範囲：主責任者不在時の連絡・初動判断の代行。本番操作は別途権限を持つ担当者が実施。内部連絡手段は要指定） |"), "the operations runbook must retain both assignees, titles, and confirmed delegate scope without inventing contact details");
 assert.doesNotMatch(envExample, /LEGAL_RESPONSIBLE_PERSON=システム責任者 池田知也/, "the system title must not replace the confirmed public legal responsible person");
