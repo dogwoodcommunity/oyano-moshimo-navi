@@ -44,11 +44,12 @@ assert.ok(callbackFailureIndex >= 0 && callbackFailureEnd > callbackFailureIndex
 assert.match(callbackFailureBranch, /removeItem\(ADMIN_BEARER_TOKEN_STORAGE_KEY\)/, "failed callbacks must clear the old admin bearer");
 assert.match(callbackFailureBranch, /return;/, "failed callbacks must stop before identity fallback");
 const initializeStart = setup.indexOf("async function initialize()");
-const callbackAwait = setup.indexOf("await withSetupTimeout(completeBrowserSupabaseAuthFromUrl())", initializeStart);
+const callbackAwait = setup.indexOf("const callbackOperation = completeBrowserSupabaseAuthFromUrl()", initializeStart);
 const initializeBeforeCallback = setup.slice(initializeStart, callbackAwait);
 assert.match(initializeBeforeCallback, /removeItem\(ADMIN_BEARER_TOKEN_STORAGE_KEY\)/, "mount must synchronously clear any old operator bearer before callback work");
 assert.match(setup, /const setupOperationTimeoutMs = 12_000/, "setup auth operations must have a finite wait limit");
-assert.match(setup, /withSetupTimeout\(completeBrowserSupabaseAuthFromUrl\(\)\)[\s\S]*?catch[\s\S]*?確認リンクの読み込みに時間がかかっています/, "callback timeout or rejection must leave checking state with a retryable error");
+assert.match(setup, /const callbackWasPresent = hasAuthCallbackInLocation\(\)[\s\S]*?const callbackOperation = completeBrowserSupabaseAuthFromUrl\(\)[\s\S]*?withSetupTimeout\(callbackOperation\)/, "callback detection and timeout must bind to the same in-flight callback operation");
+assert.match(setup, /catch[\s\S]*?if \(callbackWasPresent\)[\s\S]*?setItem\(callbackFailureStorageKey, "1"\)[\s\S]*?discardBrowserSupabaseAuthCallback\(\)[\s\S]*?callbackOperation\.then[\s\S]*?discardBrowserSupabaseAuthCallback\(\)[\s\S]*?showSignedOut\(\)[\s\S]*?古いログイン情報は使わず、新しい確認メール/, "callback timeout must synchronously reject old-session fallback and clean any late completion");
 assert.match(setup, /withSetupTimeout\(loadIdentityAndFactors\(initialMessage\)\)[\s\S]*?catch[\s\S]*?本人確認の状態確認に時間がかかっています/, "identity loading must leave checking state after a finite timeout");
 
 const subjectSwitchStart = setup.indexOf("if (nextUserId !== activeUserId.current)");
@@ -104,7 +105,8 @@ assert.match(setup, /id="operator-mfa-secret"[\s\S]*?ref=\{manualSecretInputRef\
 assert.match(setup, /このスマホだけで設定する場合/, "same-phone setup must be explained");
 assert.match(setup, /アカウント名[\s\S]*?親のもしもナビ 削除担当[\s\S]*?キーの種類[\s\S]*?時間ベース/, "manual setup must name the account and time-based key type");
 assert.match(setup, /約30秒ごとに変わります/, "the changing six-digit code must be explained");
-assert.match(setup, /<form[\s\S]*?type="email"[\s\S]*?required[\s\S]*?type="submit"/, "email entry must support browser validation and Enter submission");
+assert.match(setup, /<form[\s\S]*?noValidate[\s\S]*?type="email"[\s\S]*?enterKeyHint="send"[\s\S]*?required[\s\S]*?type="submit"/, "email entry must support consistent Japanese validation and Enter submission");
+assert.match(setup, /emailInputRef\.current\.validity\.valid[\s\S]*?メールアドレスを正しい形式で入力してください/, "email format errors must use the Japanese focus-managed error path");
 assert.equal((setup.match(/onSubmit=/g) ?? []).length, 3, "email, existing-factor, and enrollment verification must all support Enter submission");
 assert.match(setup, /ref=\{emailInputRef\}/, "email errors must return focus to the email input");
 assert.match(setup, /ref=\{existingCodeInputRef\}/, "existing-factor errors must return focus to the code input");
@@ -137,6 +139,7 @@ assert.match(tokenControl, /id="admin-mfa-error" role="alert"/, "operational MFA
 assert.match(browserSupabase, /callbackError \|\| callbackErrorCode \|\| callbackErrorDescription[\s\S]*?stripAuthParamsFromUrl\(url\)/, "error callbacks must be rejected and stripped");
 assert.match(browserSupabase, /function clearBrowserSupabaseLocalSession[\s\S]*?localStorage\.removeItem\(storageKey\)/, "failed callbacks must synchronously remove the stored Supabase session");
 assert.match(browserSupabase, /async function clearSessionAfterAuthCallbackFailure[\s\S]*?signOut\(\{ scope: "local" \}\)/, "failed callbacks must also stop the active local auth session");
+assert.match(browserSupabase, /export async function discardBrowserSupabaseAuthCallback[\s\S]*?stripAuthParamsFromUrl\(url\)[\s\S]*?clearBrowserSupabaseLocalSession\(\)[\s\S]*?clearSessionAfterAuthCallbackFailure\(client\)/, "callback timeout cleanup must synchronously strip URL credentials and clear the local Supabase session before async sign-out");
 assert.match(browserSupabase, /url\.searchParams\.delete\("error_description"\)/, "error descriptions must not remain in browser history");
 assert.match(browserSupabase, /if \(!accessToken \|\| !refreshToken\)[\s\S]*?stripAuthParamsFromUrl\(url\)/, "partial implicit callbacks must be rejected and stripped");
 const cleanupStart = browserSupabase.indexOf("export async function removeUnverifiedTotpFactorUsingAal1Token");

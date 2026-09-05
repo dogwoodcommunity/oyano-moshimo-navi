@@ -28,6 +28,23 @@ async function clearSessionAfterAuthCallbackFailure(client: SupabaseClient) {
   }
 }
 
+export async function discardBrowserSupabaseAuthCallback(): Promise<void> {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  stripAuthParamsFromUrl(url);
+  clearBrowserSupabaseLocalSession();
+  let client: SupabaseClient | null;
+  try {
+    client = getBrowserSupabase();
+  } catch {
+    return;
+  }
+  if (!client) {
+    return;
+  }
+  await clearSessionAfterAuthCallbackFailure(client);
+}
+
 export function getBrowserSupabase(): SupabaseClient | null {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

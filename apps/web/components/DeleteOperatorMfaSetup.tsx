@@ -5,6 +5,7 @@ import { ADMIN_BEARER_TOKEN_STORAGE_KEY } from "@/lib/adminClientAuth";
 import {
   beginTotpEnrollmentUsingAal1Token,
   completeBrowserSupabaseAuthFromUrl,
+  discardBrowserSupabaseAuthCallback,
   getBrowserSupabase,
   removeUnverifiedTotpFactorUsingAal1Token,
   sendAdminMagicLink
@@ -44,6 +45,23 @@ const setupRedirectPath = "/admin/delete-requests/setup";
 const callbackFailureStorageKey = "oyano.admin.mfa_setup_callback_failed.v1";
 const operatorFactorLabel = "親のもしもナビ 削除担当";
 const setupOperationTimeoutMs = 12_000;
+
+function hasAuthCallbackInLocation() {
+  if (typeof window === "undefined") return false;
+  const url = new URL(window.location.href);
+  const hashParams = new URLSearchParams(url.hash.startsWith("#") ? url.hash.slice(1) : url.hash);
+  return Boolean(
+    url.searchParams.get("code")
+    || url.searchParams.get("error")
+    || url.searchParams.get("error_code")
+    || url.searchParams.get("error_description")
+    || hashParams.get("access_token")
+    || hashParams.get("refresh_token")
+    || hashParams.get("error")
+    || hashParams.get("error_code")
+    || hashParams.get("error_description")
+  );
+}
 
 async function withSetupTimeout<T>(operation: Promise<T>): Promise<T> {
   return await new Promise<T>((resolve, reject) => {
@@ -263,9 +281,11 @@ export function DeleteOperatorMfaSetup() {
 
     async function initialize() {
       window.localStorage.removeItem(ADMIN_BEARER_TOKEN_STORAGE_KEY);
+      const callbackWasPresent = hasAuthCallbackInLocation();
+      const callbackOperation = completeBrowserSupabaseAuthFromUrl();
       let result: Awaited<ReturnType<typeof completeBrowserSupabaseAuthFromUrl>>;
       try {
-        result = await withSetupTimeout(completeBrowserSupabaseAuthFromUrl());
+        result = await withSetupTimeout(callbackOperation);
       } catch {
         if (cancelled) return;
         requestGeneration.current += 1;
@@ -273,11 +293,25 @@ export function DeleteOperatorMfaSetup() {
         clearSensitiveState();
         authInitializationPending.current = false;
         setWorking(false);
-        setSetupState("error");
-        showMessage(
-          "確認リンクの読み込みに時間がかかっています。通信を確認し、「状態をもう一度確認する」を押してください。",
-          "error"
-        );
+        if (callbackWasPresent) {
+          window.localStorage.setItem(callbackFailureStorageKey, "1");
+          void discardBrowserSupabaseAuthCallback();
+          void callbackOperation.then(
+            () => discardBrowserSupabaseAuthCallback(),
+            () => discardBrowserSupabaseAuthCallback()
+          );
+          showSignedOut();
+          showMessage(
+            "確認リンクの読み込みを完了できませんでした。古いログイン情報は使わず、新しい確認メールを送り、この端末で最新のリンクを開いてください。",
+            "error"
+          );
+        } else {
+          setSetupState("error");
+          showMessage(
+            "本人確認の読み込みに時間がかかっています。通信を確認し、「状態をもう一度確認する」を押してください。",
+            "error"
+          );
+        }
         return;
       }
       if (cancelled) return;
@@ -367,6 +401,10 @@ export function DeleteOperatorMfaSetup() {
     const nextEmail = loginEmail.trim();
     if (!nextEmail) {
       showMessage("招待を受け取った個別メールアドレスを入力してください。", "error", "email");
+      return;
+    }
+    if (emailInputRef.current && !emailInputRef.current.validity.valid) {
+      showMessage("メールアドレスを正しい形式で入力してください。", "error", "email");
       return;
     }
 
@@ -643,6 +681,7 @@ export function DeleteOperatorMfaSetup() {
         </div>
         <form
           className="admin-auth-form"
+          noValidate
           onSubmit={(event) => {
             event.preventDefault();
             void sendLoginLink();
@@ -654,12 +693,16 @@ export function DeleteOperatorMfaSetup() {
             className="input"
             type="email"
             autoComplete="email"
+            enterKeyHint="send"
             aria-describedby={message ? "operator-setup-status" : undefined}
             aria-invalid={messageTone === "error" && messageField === "email" || undefined}
             ref={emailInputRef}
             required
             value={loginEmail}
-            onChange={(event) => setLoginEmail(event.target.value)}
+            onChange={(event) => {
+              setLoginEmail(event.target.value);
+              if (messageTone === "error" && messageField === "email") showMessage("");
+            }}
             placeholder="name@example.com"
           />
           <button className="button" type="submit" disabled={working}>

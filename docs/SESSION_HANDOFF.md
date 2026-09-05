@@ -11652,11 +11652,13 @@ Supabase本番からAuth招待メールを1通送信した。個人連絡先そ�
 - 確認完了は、同じfactorが唯一のverified TOTPであり、確認処理が返した同一token自身の
   current AALがAAL2で、並行するAuth変更がない場合だけ成立する。QR、手入力用コード、6桁入力は
   localStorage、sessionStorage、ログ、DBへ保存しない。
-- callback失敗、ログインsubject変更、同一subjectのAuth状態変更、別タブのBearer変更時は、古いBearerと
-  設定情報を破棄する。削除依頼画面側も一覧、対象UUID、確認文、メモ、事前確認を直ちに隠し、古い応答を無効化する。
-- 初期callbackと本人状態確認は12秒で安全にerrorへ移り、再試行ボタンを出す。メール入力はEnter・スマホの
-  送信キー、必須・形式エラー、入力欄へのfocus、読み上げへ対応した。手入力用コードのコピー失敗時は
-  コードを表示し、その欄へfocusを戻す。
+- callback失敗・timeout時、ログインsubject変更、同一subjectのAuth状態変更、別タブのBearer変更時は、古いBearerと
+  設定情報を破棄する。callback timeout時はURLの認証情報と古いSupabase local sessionも破棄し、遅れて完了した
+  callbackも再度破棄して、必ず新しい確認メールからやり直す。削除依頼画面側も一覧、対象UUID、確認文、メモ、
+  事前確認を直ちに隠し、古い応答を無効化する。
+- 初期callbackは12秒で安全停止し、新しい確認メールを送る画面へ移る。callbackがない本人状態確認は
+  12秒でerrorと再試行ボタンを出す。メール入力はEnter・スマホの送信キー、必須・形式エラー、入力欄への
+  focus、読み上げへ対応した。手入力用コードのコピー失敗時はコードを表示し、その欄へfocusを戻す。
 - 設定画面は本人確認だけを行い、`profiles`、家族、対象者、`app_admins`、
   `account_delete_executors` を作成・変更しない。完了画面にも「まだ削除担当権限は付いていない」と表示する。
 
