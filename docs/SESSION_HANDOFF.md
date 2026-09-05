@@ -12456,3 +12456,45 @@ test-only整合commit `b2daa06ec6303bc227277cefb41004e743705b73` のCI run
   次は対応Webを限定commit・CI・本番deployし、読み取り専用で表示とAPIを確認する。
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
   参照・変更・stage・commitしていない。実アカウントの完全削除E2Eは別の明示承認まで未実施とする。
+
+## 2026-09-05 追記 329 — DB-first対応の管理画面を本番反映、削除OFFを維持
+
+追記328の本番DB検証後、対応Web/API/UI、回帰テスト、運用資料を限定commitしてmainへpushし、
+CIの成功を確認してからclean tracked HEADでVercel本番をdeployした。
+
+- release commit: `c1415b3b036fbdfa9977f0d870a808bb633c6467`
+- CI run `33952555663`: 2分24秒で成功。Web/モバイル型検査、削除専用認可、
+  PostgreSQL削除gate/家族権限/AI記憶/日記/対象者削除回帰、build、smokeを含む。
+- Deploy workflow `33952555613`: secret存在check成功、deploy jobはskip。
+  本番反映は既存ログイン済みVercel CLI 59.11.7から実施した。
+- deployment: `dpl_Hx7V71Pd9voYiMYgfmFFRxmo7MnA`
+- direct URL: `https://oyano-moshimo-navi-oamhlgdrr-dogwoodcommunity1.vercel.app`
+- `vercel inspect` でproduction / Readyと公開alias
+  `https://oyano-moshimo-navi.vercel.app` を確認した。buildは168ページを生成して成功した。
+- `.vercelignore` は引き続き `review_exports`、未追跡Claude文書2件、`.env*` 等を除外する。
+  対象外ファイルは参照・変更・stage・commitしていない。
+- 公開aliasの `node scripts/smoke-web.mjs` は成功した。公開ページと管理画面200、
+  health200、未認証の利用者向けAPI401、空相談400、有料Checkout503を確認した。
+  Admin env APIはtoken未指定のため401 skipであり、認証済み設定検査が通ったとは扱わない。
+- 削除担当auth-status・一覧、モニター回答、AI利用、本番設定の5 APIを未認証GETし、全て401。
+- 本番管理画面をreloadし、削除担当者ログイン案内と最小化された一覧列を確認した。
+  現在のCodex内ブラウザは未ログイン。旧版での本人200/一般Admin403の記録は追記324にあるが、
+  今回のv2移行後の認証済み再確認とは区別する。確認メールの再送や新規ログインは行っていない。
+- Vercel Productionの環境変数名一覧で `ACCOUNT_ERASURE_EXECUTION_ENABLED` が未登録のまま、
+  fail closedのOFFであることを再確認した。値・secretは読み出し・記録していない。
+- Web反映後に追記328と同じread-only 12項目を再実行し、全項目PASS、control active 0件、
+  grant・削除依頼・削除job各0件、有効実行者1件のままであることを確認した。
+- ローカルの実行者認可・Web削除・商用gate・typecheck・production build・diff検査は成功。
+  限定stageのGitleaksはsecret検出0件。商用gateの旧「二者確認は技術的に強制しない」という
+  assertionは、DBのexact grant bindingと人による照合証跡の必要性を確認するものへ更新した。
+
+残りと安全境界:
+
+- v2本番での登録済み実行者の本人ログイン後200/403再確認、別確認者のAAL2確認、
+  単独テストアカウントでの完全削除E2E、通知・運用の未確認事項は残る。
+- テスト対象の作成・削除、依頼PATCH、preflight、prepare、grant発行、DB control開放、
+  execute、Auth/Storage削除、実行スイッチONは行っていない。
+- 既存利用者の手帳・日記・写真・AI相談・モニター回答は変更・削除していない。
+  本番反映済みを「削除運用・商用正式版の全試験完了」と読み替えない。
+- 次は登録済み本人が管理画面へログインした後の読み取り専用確認。完全削除の試験は、
+  専用の破棄可能なテスト対象を明示し、別の実行時承認を得てから進める。
