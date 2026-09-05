@@ -11921,3 +11921,38 @@ GitHub・検証:
 既存ならメールやUUIDをチャットへ書かず画面上で本人確認して読み取り照合する。未作成なら、本人専用メールへの
 Auth招待は外部送信・Auth作成となるため、送信直前に別の明示確認を得る。確認者profile作成、operatorの
 最小profile＋無効executor作成、権限有効化も、それぞれ別操作・別の実行時確認とする。
+
+## 2026-09-05 追記 313 — 別確認者の既存本人Authを正確に照合
+
+本人がSupabase AuthenticationのUsers一覧から自分だけが使う既存アカウントを画面上で選び、
+`代表取締役 池田哲也` 本人のアカウントであることを確認した。新規Auth招待や確認メール再送は行わず、
+選択された正確なAuth UUIDを画面内だけで使って本番を読み取り照合した。
+
+読み取り照合:
+
+- メール確認済みAuthは1件だった。
+- 同じUUIDの `profiles` は1件で、profileのemailと確認済みAuth emailの一致も1件だった。
+- 既存のfamily membershipは1件、`app_admins` は1件だった。どちらも既存状態を読み取っただけで、
+  今回作成・更新していない。別確認者の照合は一般Admin権限に依存しない。
+- `account_delete_executors` は0件だった。別確認者には削除実行者roleを付与しない。
+- 選択した本人Authのverified TOTPとunverified TOTPはいずれも0件だった。同時点で、選択した本人Authとは
+  別のAuthにverified TOTPが1件あることを件数だけで確認し、TOTP設定済みの削除実行予定者と同一アカウント
+  ではないことを確認した。別確認者には現行仕様上TOTPを要求しない。
+- 以上により、この既存Authと一致済みprofileを、削除実行予定者とは別の確認者本人識別として再利用できる。
+  Authやprofileを重複作成する必要はない。
+
+安全境界:
+
+- 実行したSQLはSELECTだけである。確認後、SQL Editorの内容を個人識別子を含まない確認済みコメントへ
+  置き換えた。個人メール、Auth UUID、token、MFA秘密情報はGit・引継ぎへ記録していない。
+- 本番DB/Auth/Storage、profile、family、`app_admins`、`account_delete_executors` を作成・更新・削除していない。
+- 削除担当roleと有効executorは0件のまま。`ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持し、
+  削除依頼・削除job、DB削除RPC、Auth削除、Storage削除を実行していない。
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データの本文を参照・変更・削除していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は、削除実行予定者について最小profileと `active=false` のexecutor行を同一transactionで作る本番writeである。
+その操作は正確なAuth/TOTP状態の直前再照合と実行時の明示確認を得てから行う。作成後も削除画面へは入れず、
+別確認者本人の承認記録を制限付き運用台帳へ残したうえで、有効化を別操作・別承認として行う。
+完全削除スイッチは単独テストアカウントのAuth・DB・Storage削除を完走するまでOFFを維持する。
