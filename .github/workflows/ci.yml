@@ -33,6 +33,9 @@ jobs:
       - name: Typecheck mobile
         run: pnpm --filter mobile run typecheck
 
+      - name: Test local qualification runner safety
+        run: pnpm run test:stage-a-local-runner
+
       - name: Test monitor timeline
         run: pnpm run test:monitor-timeline
 
@@ -69,11 +72,23 @@ jobs:
       - name: Test deletion operator MFA setup
         run: pnpm run test:delete-operator-mfa-setup
 
+      - name: Test read-only deletion operator access diagnostics
+        run: pnpm run test:admin-delete-access-check
+
+      - name: Prepare PostgreSQL image for isolated SQL tests
+        run: docker pull docker.io/library/postgres:16-bookworm
+
+      - name: Test monthly reminder scheduling PostgreSQL runtime
+        run: pnpm run test:monthly-checkin:sql
+
       - name: Test verified account erasure PostgreSQL pipeline
         run: pnpm run test:account-erasure:sql
 
       - name: Test commercial release gates
         run: pnpm run test:commercial-release-gates
+
+      - name: Test public operator contact and effective-date separation
+        run: pnpm run test:public-operator-disclosure
 
       - name: Test family roles and signed upload authorization
         run: pnpm run test:family-role-security

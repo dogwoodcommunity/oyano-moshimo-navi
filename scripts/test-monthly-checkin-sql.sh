@@ -2,10 +2,10 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-REGRESSION_CONTAINER_NAME="oyano-ai-memory-regression-${GITHUB_RUN_ID:-local}-$$"
+REGRESSION_CONTAINER_NAME="oyano-monthly-checkin-${GITHUB_RUN_ID:-local}-$$"
 
 case "$REGRESSION_CONTAINER_NAME" in
-  oyano-ai-memory-regression-*) ;;
+  oyano-monthly-checkin-*) ;;
   *)
     echo "Refusing unexpected regression container name" >&2
     exit 1
@@ -34,17 +34,15 @@ if ! docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null 
   exit 1
 fi
 
-run_sql() {
-  docker exec -i "$REGRESSION_CONTAINER_NAME" \
-    psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$REPO_ROOT/$1"
-}
+docker cp \
+  "$REPO_ROOT/supabase/monthly_checkin_notifications.sql" \
+  "$REGRESSION_CONTAINER_NAME:/tmp/monthly_checkin_notifications.sql"
+docker cp \
+  "$REPO_ROOT/supabase/monthly_checkin_notifications_regression.sql" \
+  "$REGRESSION_CONTAINER_NAME:/tmp/monthly_checkin_notifications_regression.sql"
 
-run_sql supabase/ai_consult_memory_regression_bootstrap.sql
-run_sql supabase/schema.sql
-run_sql supabase/api_grants.sql
-run_sql supabase/production_rls.sql
-run_sql supabase/ai_consult_memory.sql
-run_sql supabase/ai_consult_memory.sql
-run_sql supabase/ai_consult_memory_regression.sql
+docker exec "$REGRESSION_CONTAINER_NAME" \
+  psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+  -f /tmp/monthly_checkin_notifications_regression.sql
 
-echo "AI consultation memory PostgreSQL regression: ok"
+echo "Monthly check-in notification PostgreSQL regression: ok"

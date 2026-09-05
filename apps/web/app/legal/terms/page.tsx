@@ -1,7 +1,8 @@
-import { getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
+import { getPublicOperatorContact, getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
 
 export default function TermsPage() {
-  const operator = getPublicOperatorDisclosure();
+  const operator = getPublicOperatorContact();
+  const disclosure = getPublicOperatorDisclosure();
   const contactHref = operator ? legalContactHref(operator.contact) : null;
   return (
     <main className="container">
@@ -11,8 +12,10 @@ export default function TermsPage() {
         <p className="lead">親のもしもナビの利用条件と、専門判断を断定しない方針を定めます。</p>
       </section>
       <section className="panel legal-panel">
-        {operator ? (
-          <p className="hint">施行日: {operator.termsEffectiveDate}／運営: {operator.operatorName}</p>
+        {disclosure ? (
+          <p className="hint">施行日: {disclosure.termsEffectiveDate}／運営: {disclosure.operatorName}</p>
+        ) : operator ? (
+          <p className="hint">正式公開に向けて準備中です。施行日は正式公開日に確定します。運営・問い合わせ先はこのページの下部をご確認ください。</p>
         ) : (
           <p className="hint">運営者、問い合わせ先、施行日は正式公開前に最終反映します。</p>
         )}

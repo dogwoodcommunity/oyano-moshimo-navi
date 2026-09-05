@@ -1,8 +1,9 @@
 import { SENSITIVE_INFO_CONSENT_TEXT, SENSITIVE_INFO_CONSENT_VERSION } from "@oyano/shared";
-import { getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
+import { getPublicOperatorContact, getPublicOperatorDisclosure, legalContactHref } from "@/lib/commercialReadiness";
 
 export default function PrivacyPage() {
-  const operator = getPublicOperatorDisclosure();
+  const operator = getPublicOperatorContact();
+  const disclosure = getPublicOperatorDisclosure();
   const contactHref = operator ? legalContactHref(operator.contact) : null;
   return (
     <main className="container">
@@ -16,8 +17,10 @@ export default function PrivacyPage() {
           親のもしもナビは、家族が親の状況、手続き、実家情報、相談先候補を整理するために必要な情報を取り扱います。
           銀行暗証番号、パスワード、マイナンバー画像など、保存禁止の情報は預かりません。
         </p>
-        {operator ? (
-          <p className="hint">施行日: {operator.privacyEffectiveDate}／運営: {operator.operatorName}</p>
+        {disclosure ? (
+          <p className="hint">施行日: {disclosure.privacyEffectiveDate}／運営: {disclosure.operatorName}</p>
+        ) : operator ? (
+          <p className="hint">正式公開に向けて準備中です。施行日と法務レビュー結果は正式公開前に最終反映します。運営・問い合わせ先はこのページの下部をご確認ください。</p>
         ) : (
           <p className="hint">事業者情報、問い合わせ先、施行日、法務レビュー結果は正式公開前に最終反映します。</p>
         )}

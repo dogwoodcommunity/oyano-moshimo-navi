@@ -13,11 +13,14 @@ export type LegalDisclosure = {
   cancellationPolicy: string;
 };
 
-export type PublicOperatorDisclosure = {
+export type PublicOperatorContact = {
   operatorName: string;
   responsiblePerson: string;
   contact: string;
   contactResponseTarget: string;
+};
+
+export type PublicOperatorDisclosure = PublicOperatorContact & {
   termsEffectiveDate: string;
   privacyEffectiveDate: string;
 };
@@ -35,11 +38,15 @@ const legalEnvKeys = [
   "LEGAL_CANCELLATION_POLICY"
 ] as const;
 
-const freeWebLegalEnvKeys = [
+const publicOperatorContactEnvKeys = [
   "LEGAL_BUSINESS_NAME",
   "LEGAL_RESPONSIBLE_PERSON",
   "LEGAL_CONTACT",
-  "LEGAL_CONTACT_RESPONSE_TARGET",
+  "LEGAL_CONTACT_RESPONSE_TARGET"
+] as const;
+
+const freeWebLegalEnvKeys = [
+  ...publicOperatorContactEnvKeys,
   "LEGAL_TERMS_EFFECTIVE_DATE",
   "LEGAL_PRIVACY_EFFECTIVE_DATE"
 ] as const;
@@ -69,17 +76,22 @@ function freeWebLegalValueReady(key: (typeof freeWebLegalEnvKeys)[number]) {
   if (key === "LEGAL_TERMS_EFFECTIVE_DATE" || key === "LEGAL_PRIVACY_EFFECTIVE_DATE") {
     return isValidLegalEffectiveDate(current);
   }
+  if (key === "LEGAL_CONTACT") return Boolean(legalContactHref(current));
   return Boolean(current);
 }
 
 export function legalContactHref(contact: string) {
   const normalized = contact.trim();
-  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+  if (/[\r\n]/.test(normalized)) return null;
+  // Accept a conservative business-mailbox form, not mailto query fragments
+  // or URLs containing user-info that happen to contain an @ sign.
+  if (/^[A-Za-z0-9._+-]+@(?:[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?\.)+[A-Za-z]{2,}$/.test(normalized)) {
     return `mailto:${normalized}`;
   }
   try {
     const url = new URL(normalized);
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+    return (url.protocol === "https:" || url.protocol === "http:") && !url.username && !url.password
+      ? url.toString() : null;
   } catch {
     return null;
   }
@@ -105,13 +117,23 @@ export function missingLegalDisclosureKeys() {
   return legalEnvKeys.filter((key) => !value(key));
 }
 
-export function getPublicOperatorDisclosure(): PublicOperatorDisclosure | null {
-  if (freeWebLegalEnvKeys.some((key) => !freeWebLegalValueReady(key))) return null;
+// A confirmed contact must not disappear while the formal release date is
+// still pending. This is not the readiness check for paid or formal release.
+export function getPublicOperatorContact(): PublicOperatorContact | null {
+  if (publicOperatorContactEnvKeys.some((key) => !freeWebLegalValueReady(key))) return null;
   return {
     operatorName: value("LEGAL_BUSINESS_NAME"),
     responsiblePerson: value("LEGAL_RESPONSIBLE_PERSON"),
     contact: value("LEGAL_CONTACT"),
-    contactResponseTarget: value("LEGAL_CONTACT_RESPONSE_TARGET"),
+    contactResponseTarget: value("LEGAL_CONTACT_RESPONSE_TARGET")
+  };
+}
+
+export function getPublicOperatorDisclosure(): PublicOperatorDisclosure | null {
+  const operator = getPublicOperatorContact();
+  if (!operator || freeWebLegalEnvKeys.some((key) => !freeWebLegalValueReady(key))) return null;
+  return {
+    ...operator,
     termsEffectiveDate: value("LEGAL_TERMS_EFFECTIVE_DATE"),
     privacyEffectiveDate: value("LEGAL_PRIVACY_EFFECTIVE_DATE")
   };

@@ -12,8 +12,8 @@ esac
 cleanup() { docker stop "$REGRESSION_CONTAINER_NAME" >/dev/null 2>&1 || true; }
 trap cleanup EXIT INT TERM
 
-docker run --rm --detach --name "$REGRESSION_CONTAINER_NAME" \
-  -e POSTGRES_HOST_AUTH_METHOD=trust postgres:16-bookworm >/dev/null
+docker run --pull=never --network=none --rm --detach --name "$REGRESSION_CONTAINER_NAME" \
+  -e POSTGRES_HOST_AUTH_METHOD=trust docker.io/library/postgres:16-bookworm >/dev/null
 for _ in $(seq 1 30); do
   if docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1; then break; fi
   sleep 1

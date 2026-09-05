@@ -1,5 +1,23 @@
 # 本番化チェックリスト
 
+## 2026-09-05 終了条件の再整理
+
+無料Web正式版（Stage A）を先に完成させる。有料受付（Stage B）・ストア公開（Stage C）は別段階。
+この日のローカル修正を本番反映済みとは扱わない。最新の実行記録は `SESSION_HANDOFF.md` 追記332を参照。
+
+- [ ] 外部通信許可後に、今回の限定commitをGitHubへpushしCIを確認
+- [ ] 本番の家族権限・家族管理RPC・原子的な1日1回相談RPCをread-onlyで検査し、**不足を確認したものだけ**承認後にDB-first適用。過去の未チェックだけを根拠に再実行しない
+- [ ] 月次通知関数の現行定義をread-onlyで照合し、今回の修正版が必要か判定。回帰用SQLを本番へ実行しない
+- [ ] 確定済みの運営者・責任者・問い合わせ先・返信目安4値を本番へ設定してWebを反映。施行日は公開日確定まで未設定のまま、準備中と表示
+- [ ] 新しい読み取り専用「アクセス権限を確認する」で本人sessionの5 API応答を確認。コード・疑似テストのPASSを本人認証の実測に代用しない
+- [ ] 専用テストアカウントで保存・別端末復元・家族の閲覧/編集境界・写真・削除を実機で完走
+- [ ] DB/Auth・Storage別バックアップと隔離復旧、問い合わせ受信/返信、障害通知の実受信を確認
+- [ ] 法務最終確認、正式公開日、運用担当・連絡方法を確定して最終判定
+
+`node scripts/test-stage-a-local.mjs` はソース/runtime・lint・型・隔離DB・buildをまとめて検査する。
+現時点でlint設定/依存は不足しており全体PASSではない。`--source-only` / `--sql-only` の
+部分PASSや、2つの疑似端末による同期試験だけで正式公開・実機復元を完了扱いにしない。
+
 ## 1. GitHub
 
 - [x] GitHub repoを作成
@@ -15,11 +33,13 @@
 - [x] `supabase/task_template_seed.sql` を実行
 - [x] `supabase/task_generation.sql` を実行
 - [x] `supabase/notification_delivery_hardening.sql` を実行
-- [ ] `claim_due_scheduled_notifications` が `verify_compact.sql` でtrueになることを確認
+- [x] `claim_due_scheduled_notifications` が `verify_compact.sql` でtrueになることを確認
+  - 履歴整合: 2026-07-09の `SESSION_HANDOFF.md` 追記35でtrueを確認済み。現在の配信成功・メール実受信の証明とは別。
 - [x] `supabase/task_notification_generation.sql` を実行
 - [x] `supabase/monthly_checkin_notifications.sql` を実行
 - [ ] `supabase/notification_email_delivery.sql` を実行
-- [ ] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
+- [x] 既存本番DB向け一括SQL `supabase/production_pending_hardening.sql` を実行
+  - 履歴整合: 2026-07-09の引き継ぎ追記34で成功、追記35で主要項目true。現在の新規migrationまで適用済みという意味ではない。
 - [ ] 個別実行する場合のみ `supabase/person_notebook_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/handoff_security_hardening.sql` を実行
 - [x] 個別実行する場合のみ `supabase/handoff_consume_rpc.sql` を実行
@@ -29,8 +49,8 @@
 - [ ] アプリ単体開始用 `supabase/create_initial_family_person.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/sensitive_info_consent_hardening.sql` を実行
 - [ ] 個別実行する場合のみ `supabase/home_photo_security_hardening.sql` を実行
-- [ ] `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` で同意ログ保存を確認
-  - 2026-07-09確認: 本番診断case作成は成功。ただし `cases.consent_to_sensitive_info` が本番DBに未作成のため、DB検証で失敗。`production_pending_hardening.sql` または `sensitive_info_consent_hardening.sql` の投入が必要。
+- [x] `pnpm smoke:production-consent https://oyano-moshimo-navi.vercel.app` で同意ログ保存を確認
+  - 履歴整合: 2026-07-09の初回失敗は追記36のWeb再反映後に解消。診断、case同意列、consent_logsの3項目が成功した。今回の新規実行ではない。
 - [x] `supabase/product_seed.sql` を実行
 - [x] `supabase/indexes.sql` を実行
 - [x] `supabase/production_rls.sql` を実行
@@ -53,8 +73,10 @@
 - [ ] Web更新前に `supabase/consult_daily_claim.sql` を実行し、`verify_compact.sql` で台帳・3 RPC・service-only ACLを確認
 - [x] Web更新前に `supabase/notebook_diary_delete.sql` を実行し、単一日記receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
 - [x] Web更新前に `supabase/notebook_person_delete.sql` を実行し、対象者削除receipt・Storage cleanup job・復活防止guard・service-only ACLを確認
-- [ ] `supabase/public_api_rate_limits.sql` を実行
-- [ ] `supabase/anonymous_case_retention.sql` を実行
+- [x] `supabase/public_api_rate_limits.sql` を実行
+  - 履歴整合: 2026-09-01の引き継ぎ追記266の本番適用記録でtable/RLS/RPC/service-onlyを確認済み。
+- [x] `supabase/anonymous_case_retention.sql` を実行
+  - 履歴整合: 2026-09-01の引き継ぎ追記269で適用・ACL・既存件数不変を確認済み。cron直近成功とは別。
 - [x] `supabase/storage_setup.sql` を実行
 - [x] `supabase/verify_setup.sql` / `verify_compact.sql` で主要項目trueを確認
 - [x] `supabase/api_grants.sql` を実行
@@ -100,7 +122,8 @@
 - [ ] Resend送信ドメインを認証し、`RESEND_API_KEY` / `NOTIFICATION_EMAIL_FROM` を設定
 - [ ] 期限通知メールと月1確認メールをテスト受信し、通知OFF後は送られないことを確認
 - [x] `/api/cron/purge-anonymous-cases` をdeploy対象に含める
-- [ ] `/api/cron/cleanup-notebook-storage` と `/api/cron/cleanup-person-notebook-storage` をdeploy対象に含め、本番の登録・直近成功・失敗通知を確認
+- [x] `/api/cron/cleanup-notebook-storage` と `/api/cron/cleanup-person-notebook-storage` を `vercel.json` のdeploy対象に含める
+- [ ] 上記Storage cleanup 2 cronの本番登録・直近成功・失敗通知を確認
 - [ ] Stripe関連env 3項目を設定
 
 ## 4. Stripe
@@ -137,12 +160,12 @@
 - [x] 銀行暗証番号・パスワード・マイナンバー画像を保存しない表示が残っている
 - [x] Web診断で要配慮情報の理解・最小限入力への同意を必須化
 - [x] 実家写真のアップロードURL発行を認証・家族権限チェック付きに変更
-- [ ] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認
+- [x] 本番DBで `consent_to_sensitive_info` と `consent_logs` の保存を実弾確認（2026-07-09引き継ぎ追記36の履歴。今回の再実行ではない）
 - [ ] 更新済み `handoff_consume_rpc.sql` → `anonymous_diagnosis_rpc.sql` の順に適用し、変換済みcaseの再診断・owner追加拒否を確認
 - [x] アプリ内に外部Web決済CTAがない
 - [x] 公開APIにレート制限を追加
-- [ ] 本番DBで `public_api_rate_limits.sql` を投入し、DB側レート制限を有効化
-- [ ] 本番DBで `anonymous_case_retention.sql` を投入し、匿名診断の保持期限削除を有効化
+- [x] 本番DBで `public_api_rate_limits.sql` を投入し、DB側レート制限を有効化（上記Supabase欄の適用履歴）
+- [x] 本番DBで `anonymous_case_retention.sql` を投入し、匿名診断の保持期限削除を有効化（上記Supabase欄の適用履歴。cron実運用確認は別）
 - [ ] 破棄DBで `test:diary-deletion:sql`、`test:person-deletion:sql`、`test:account-erasure:sql` を通し、本番では2端末から削除済み記録が復活しないことを確認
 - [ ] Supabase DB/AuthとStorage object本体を別々にバックアップし、隔離環境で復元を完走
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AdminDeleteRequestRow } from "@/app/api/admin/delete-requests/route";
 import { adminBearerHeaders } from "@/lib/adminClientAuth";
+import { AdminDeleteAccessCheck } from "@/components/AdminDeleteAccessCheck";
 
 function hasPendingAuthCallback() {
   const url = new URL(window.location.href);
@@ -359,6 +360,7 @@ export function AdminDeleteRequests() {
   return (
     <div className="admin-table-wrap">
       {error ? <p className="hint">{error}</p> : null}
+      <AdminDeleteAccessCheck operatorMethod={operatorMethod} />
       <table className="admin-table">
         <thead>
           <tr>

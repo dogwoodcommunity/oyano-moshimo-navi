@@ -249,10 +249,12 @@ assert.ok(tokushoho.includes("disclosure.cancellationPolicy"), "open sales must 
 assert.ok(readiness.includes("getPublicOperatorDisclosure()"), "paid sales must also require the free Web legal identity and effective dates");
 assert.ok(readiness.includes("isValidLegalEffectiveDate(current)"), "public legal readiness must require real effective dates instead of non-empty placeholders");
 assert.ok(readiness.includes("legalContactHref"), "published contact destinations must reject unsafe URL schemes");
-assert.ok(privacy.includes("operator.privacyEffectiveDate"), "privacy policy must publish its configured effective date");
-assert.ok(terms.includes("operator.termsEffectiveDate"), "terms must publish their configured effective date");
+assert.ok(privacy.includes("disclosure.privacyEffectiveDate"), "privacy policy must publish its configured effective date");
+assert.ok(terms.includes("disclosure.termsEffectiveDate"), "terms must publish their configured effective date");
 assert.ok(tokushoho.includes("disclosure.contactResponseTarget"), "commercial disclosure must publish the configured response target");
 for (const page of [privacy, terms]) {
+  assert.ok(page.includes("const operator = getPublicOperatorContact()"), "confirmed contact must not require a formal release date");
+  assert.ok(page.includes("const disclosure = getPublicOperatorDisclosure()"), "dated legal disclosure must retain full readiness checks");
   assert.ok(page.includes("operator.operatorName"), "formal free Web legal pages must publish the configured operator");
   assert.ok(page.includes("operator.contact"), "formal free Web legal pages must publish the configured contact");
   assert.ok(page.includes("operator.contactResponseTarget"), "formal free Web legal pages must publish the configured response target");

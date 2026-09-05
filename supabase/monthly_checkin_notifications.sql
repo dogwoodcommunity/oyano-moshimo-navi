@@ -45,7 +45,7 @@ begin
       and not exists (
         select 1
         from scheduled_notifications
-        where scheduled_notifications.user_id = push_tokens.user_id
+        where scheduled_notifications.user_id = profiles.id
           and scheduled_notifications.notification_type = 'monthly_checkin'
           and scheduled_notifications.status = 'scheduled'
           and scheduled_notifications.scheduled_for > now()

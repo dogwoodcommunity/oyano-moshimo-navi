@@ -38,7 +38,7 @@ function memoryStorage({ failNotebookWrites = false } = {}) {
   };
 }
 
-function loadStore(storage = memoryStorage()) {
+function loadStore(storage = memoryStorage(), StoreDate = Date) {
   const module = { exports: {} };
   const sandbox = {
     module,
@@ -46,7 +46,7 @@ function loadStore(storage = memoryStorage()) {
     window: { localStorage: storage },
     crypto: webcrypto,
     DOMException,
-    Date,
+    Date: StoreDate,
     Math,
     JSON,
     console,
@@ -362,6 +362,88 @@ function sampleCase(overrides = {}) {
   }, { cases: [sentCase], diaryEntries: [] });
   assert.deepEqual([...applied.rejectedProfileCaseIds], ["case-a"]);
   assert.equal(applied.cases[0].cloudSyncedUpdatedAt, sentCase.cloudSyncedUpdatedAt);
+}
+
+{
+  // Independent browser stores, with serialized snapshots standing in for the
+  // already-verified server response. This checks client restore/merge behavior,
+  // not live Auth, HTTP, Storage download, or real-device browser acceptance.
+  let clock = Date.parse("2026-09-03T00:00:00.000Z");
+  class TestDate extends Date {
+    constructor(...args) { super(...(args.length ? args : [clock])); }
+    static now() { return clock; }
+  }
+  const deviceA = loadStore(memoryStorage(), TestDate);
+  const deviceB = loadStore(memoryStorage(), TestDate);
+  const initialDate = "2026-09-01T00:00:00.000Z";
+  const cloudCase = sampleCase({
+    cloudRevision: 1,
+    cloudHash: "3".repeat(64),
+    cloudSyncedUpdatedAt: initialDate,
+    result: {
+      summary: "準備",
+      tasks: [{
+        id: "task-two-stores", title: "書類の置き場所を確認", progress: "todo",
+        status: "preparing", description: "仮の保管場所を記録する", defaultDueOffsetDays: 1,
+        priority: 2, category: "documents", dueDate: "2026-09-02",
+        updatedAt: initialDate, cloudSyncedUpdatedAt: initialDate,
+        cloudRevision: 1, cloudHash: "4".repeat(64)
+      }]
+    }
+  });
+  const snapshot = {
+    cases: [cloudCase],
+    diaryEntries: [1, 2].map((number) => ({
+      id: `diary-two-stores-${number}`, caseId: "case-a", date: `2026-09-0${number}`,
+      mood: number === 1 ? "stable" : "changed", body: `端末間確認の記録${number}`,
+      createdAt: initialDate, updatedAt: initialDate, cloudSyncedUpdatedAt: initialDate,
+      cloudRevision: 1, cloudHash: String(number + 4).repeat(64),
+      attachments: number === 1 ? [{
+        id: "photo-two-stores", name: "test-fixture.jpg", type: "image/jpeg", size: 128,
+        uploadStatus: "uploaded", uploadedAt: initialDate,
+        storageBucket: "home-photos", storagePath: "fixture-family/notebook/fixture-photo.jpg"
+      }] : []
+    }))
+  };
+  const copy = (value) => JSON.parse(JSON.stringify(value));
+  const exported = (store) => copy({ cases: [store.getLocalCase("case-a")], diaryEntries: store.listDiaryEntries("case-a") });
+  assert.equal(deviceA.replaceLocalNotebook(copy(snapshot)).persisted, true);
+  assert.equal(deviceB.replaceLocalNotebook(copy(snapshot)).persisted, true);
+  assert.deepEqual(exported(deviceB), exported(deviceA), "fresh second store must restore dates, bodies, tasks and photo references");
+
+  deviceA.updateDiaryEntry("diary-two-stores-1", { body: "端末Aで追記した内容" });
+  assert.equal(deviceB.listDiaryEntries("case-a").find((entry) => entry.id === "diary-two-stores-1").body,
+    "端末間確認の記録1", "two independent stores must not accidentally share local memory");
+  deviceA.applyNotebookCloudRevisions({ diaryRevisions: [{
+    localCaseId: "case-a", localDiaryId: "diary-two-stores-1", cloudRevision: 2, cloudHash: "7".repeat(64)
+  }] }, exported(deviceA));
+  const latest = exported(deviceA);
+  for (let round = 0; round < 3; round += 1) {
+    const restored = deviceB.replaceLocalNotebook(copy(latest));
+    assert.equal(restored.persisted, true);
+    assert.equal(restored.conflicts.length, 0);
+    assert.equal(restored.diaryEntries.length, 2, "repeat restores must not multiply records");
+    assert.equal(restored.cases[0].result.tasks.length, 1, "repeat restores must not multiply checklist entries");
+    assert.equal(restored.diaryEntries.find((entry) => entry.id === "diary-two-stores-1").attachments[0].storagePath,
+      "fixture-family/notebook/fixture-photo.jpg", "serialized restore must preserve the photo reference");
+  }
+  assert.deepEqual(exported(deviceB), latest, "a saved A change must be visible after B restores");
+
+  clock += 60_000;
+  deviceB.updateDiaryEntry("diary-two-stores-1", { body: "端末Bの未送信の内容" });
+  clock += 60_000;
+  deviceA.updateDiaryEntry("diary-two-stores-1", { body: "端末Aの別の変更" });
+  deviceA.applyNotebookCloudRevisions({ diaryRevisions: [{
+    localCaseId: "case-a", localDiaryId: "diary-two-stores-1", cloudRevision: 3, cloudHash: "8".repeat(64)
+  }] }, exported(deviceA));
+  const conflicted = deviceB.replaceLocalNotebook(exported(deviceA));
+  assert.ok(conflicted.conflicts.some((item) => item.kind === "diary" && item.id === "diary-two-stores-1"));
+  assert.equal(deviceB.listDiaryEntries("case-a").find((entry) => entry.id === "diary-two-stores-1").body,
+    "端末Bの未送信の内容", "restore must preserve B's unsent edit when A changed the same record");
+
+  const emptyDevice = loadStore(memoryStorage());
+  assert.equal(emptyDevice.replaceLocalNotebook(exported(deviceA)).persisted, true);
+  assert.deepEqual(exported(emptyDevice), exported(deviceA), "another empty store must recover the latest complete snapshot");
 }
 
 console.log("notebook sync runtime checks: ok");

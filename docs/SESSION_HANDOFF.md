@@ -12539,3 +12539,75 @@ GitHubへのpushは未実施。通信許可後にこの記録commitをpushする
   `33953375602` はこの追記時点で実行中であり、成功したとは扱わない。
 - 本番deploy、DB・環境変数変更、依頼変更、実削除は行っていない。削除スイッチはOFFから変更なし。
 - 残る実機・完全削除E2Eの確認範囲は追記330のとおり。今回の承認を実削除の承認へ拡大しない。
+
+## 2026-09-05 追記 332 — 正式公開の残作業を実装・ローカル検証、本番反映は通信許可待ち
+
+ユーザーの「全部終わらせてくれ」を受け、無料Web正式版（Stage A）の残作業を再監査した。
+開始時main/記録上originは `bac95cc2db2a4caac41877f2bdec57503f40e4d1`。
+今回の通信権限要求ではnetwork権限が付与されず、GitHub push・Vercel設定/deploy・本番DB確認/変更は
+実施していない。登録済みの本人ログイン確認までを「正式公開の全工程完了」とは扱わない。
+
+今回の実装:
+
+- 削除管理画面へ、手動で5 APIのHTTP番号だけを確認する読み取り専用診断を追加。
+  削除専用実行者は200/200/403/403/403、app_adminは全200が期待値。全レスポンス本文は解析せず
+  cancelし、token・個人識別子・回答・設定値を表示/保存しない。GET/no-store、Cookie非送信、
+  redirect拒否、20秒期限、二重実行防止、認証/role/storage変更・unmount時の中断と古い結果の破棄を検証。
+- 確定済みの運営・問い合わせ4値と、正式公開日の2値を分離。`getPublicOperatorContact()` で
+  会社名・責任者・窓口・返信目安を表示し、日付未設定なら準備中と明記する。
+  既存の `getPublicOperatorDisclosure()` と有料受付の完全条件は維持。URL認証情報や
+  不正なmailto queryをメールアドレスと誤認しない検査、HTML escaping・日付/販売gateの実行試験を追加。
+  **これは本番env設定済みの意味ではない。4値は次回本番へ設定・deployが必要。公開日は推測入力しない。**
+- `monthly_checkin_notifications.sql` の相関条件が別scopeの `push_tokens.user_id` を参照していた
+  不具合を `profiles.id` に修正。独立PostgreSQLで対象userごとの重複抑止、通知OFF、email/push対象、
+  最新設定、30日後09:00 JST、2回目0件、RPC ACLを検証する9本目のSQL試験を追加。
+  本番functionの現行定義は未確認。旧版なら影響し得るが、後発のemail migrationでは既に同じ相関が
+  修正されている。次回はread-only照合を先に行い、必要な修正だけを承認後に適用する。
+- `scripts/test-stage-a-local.mjs` を追加。固定された25 source/runtime、lint、Web/Mobile型検査、
+  9 SQL回帰、Web buildを検査。`--source-only` / `--sql-only` は必ずPARTIAL_PASS、
+  本番・実機はNOT_TESTEDと出す。実行用dotenvを内容非参照で拒否し、子プロセスから認証情報を除去。
+  ローカルUnix socketのDockerだけを許し、既存の9 SQL試験は取得済みのcanonical PostgreSQL imageを
+  `--pull=never --network=none` で使う。CIには明示的な事前image取得と新規テストを追加した。
+- 独立した2つの疑似ブラウザ保存領域で、復元/重複防止/未送信編集の競合保護/確認リスト・写真参照保持を検証。
+  これは実端末・実Storageの復元とは区別する。
+- クラウド検証手順のtoken抽出、生SQLによる本番DELETE、通常ブラウザの履歴消去を撤去。
+  専用テストアカウント・別プロファイル・正規UI/receiptでの検証に変更し、無料家族枠は本人＋1人に整合。
+  本番チェックリストの過去に完了済みだった初期hardening/同意保存/rate-limit/匿名保持期限を
+  実行履歴への参照付きで修正した。過去の実績と現在版の再確認は区別する。
+
+ローカル検証:
+
+- 25 source/runtime試験PASS（新規診断・公開情報rendering・runner安全性・追加同期試験を含む）。
+- Web/Mobile typecheck、Web production buildがPASS。認証情報・実行用dotenvを渡さず実施した。
+- PostgreSQLの既存8本と新規月次通知1本が、外部通信なしの破棄containerでPASS。
+  sandboxではDocker socket拒否/inspect timeoutがあり、ローカルDockerだけの限定承認後に実行した。
+  短縮image名のinspectが失敗する環境だったため、canonical `docker.io/library/postgres:16-bookworm` で照合。
+- loopback限定3126番でのsmokeは40項目成功、Admin envは未認証401で1項目skip。
+  Supabase・Stripe・AIの本番設定は渡しておらず、実際の保存・決済・AI呼出・メール送信はしていない。
+- Codex内ブラウザの幅390pxで特商法・利用規約・プライバシーのscrollWidth=clientWidth=390を確認。
+  特商法はスクリーンショットも確認。ブラウザのviewport overrideを戻し、テストタブとローカルserverを閉じた。
+  実機Safari/Brave/Android合格や、設定済み本番envの表示確認とは扱わない。
+- **lintは未完了**。既存ESLint設定と依存がなく、全体runnerは `lint_not_configured` で安全停止。
+  通信許可なしのため依存を取得していない。pnpm経由の再検査時にpnpm 11が自動installを試みたが、
+  registry通信失敗・非対話purge拒否で停止した。入口を `node scripts/test-stage-a-local.mjs` にし、
+  子pnpmの `pnpm_config_verify_deps_before_run=error` を固定して自動installを防止した。
+  部分試験・build成功をlint成功や全LOCAL_PASSへ読み替えない。
+
+次の順序（未完了）:
+
+1. 外部通信許可後に今回の限定commitをGitHubへpush、CIを確認。ESLint依存/設定も別途整え、全体runnerを再検査。
+2. 本番の `family_role_hardening_20260904.sql` / `family_management_rpc.sql` / `consult_daily_claim.sql`
+   に対応するschema・RPC・ACLと、月次通知functionをread-onlyで照合。未チェックの台帳だけで不足と断定せず、
+   本当に不足しているmigrationだけをRun直前承認後にDB-first適用する。初期SQL全体の再投入は禁止。
+3. 確定済み公開情報4値を本番設定し、今回のWebをdeploy。公開alias/診断5 API/公開情報を再確認。
+4. テスト専用受信メールを運営者から受け取り、既存利用者・管理者と分離した2アカウント/2端末で
+   保存・復元・家族権限・写真を完走。完全削除は正確な破棄対象と別確認者AAL2を確保し、
+   対象・job・manifestの照合と実行直前承認の後だけ行う。いま実行スイッチ/owner controlを開かない。
+5. DB/Auth・Storageそれぞれのbackup/隔離復元、RPO/RTO、通知の実受信、問い合わせ受信/返信、
+   運用連絡/当番、法務最終確認、正式公開日を確定する。無料Stage AにStripe/有料条件/ストア審査を混ぜない。
+
+問い合わせを両名で毎営業日確認する運用と、テスト専用メールをユーザーへ質問済みだが、
+この追記時点では回答待ち。未回答を承認とみなさない。費用の発生する契約・保存先追加も未実施。
+既存の利用者・日記・写真・AI相談・モニター回答・削除依頼は一切変更/削除していない。
+`review_exports/` と未追跡Claudeレビュー文書2件は参照・変更・stage対象外。
+GitHub push・本番反映は未実施のまま、この追記を含む限定commitをローカルへ保存する。
