@@ -66,6 +66,9 @@ jobs:
       - name: Test least-privilege account deletion operator
         run: pnpm run test:account-delete-executor
 
+      - name: Test deletion operator MFA setup
+        run: pnpm run test:delete-operator-mfa-setup
+
       - name: Test verified account erasure PostgreSQL pipeline
         run: pnpm run test:account-erasure:sql
 

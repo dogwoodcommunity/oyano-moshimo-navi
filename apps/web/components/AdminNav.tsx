@@ -13,16 +13,23 @@ const items = [
 ];
 
 const deleteRequestItem = { href: "/admin/delete-requests", label: "削除依頼" };
+const deleteRequestSetupItem = { href: "/admin/delete-requests/setup", label: "本人確認設定" };
 
 export function AdminNav() {
   const pathname = usePathname();
+  const deletionSetup = pathname === deleteRequestSetupItem.href;
   const deletionOnly = pathname.startsWith(deleteRequestItem.href);
-  const visibleItems = deletionOnly ? [deleteRequestItem] : items;
+  const visibleItems = deletionSetup
+    ? [deleteRequestSetupItem]
+    : deletionOnly
+      ? [deleteRequestItem]
+      : items;
+  const brandHref = deletionSetup ? deleteRequestSetupItem.href : deletionOnly ? deleteRequestItem.href : "/admin";
 
   return (
     <header className="admin-site-header">
       <div className="admin-site-header-inner">
-        <Link className="admin-site-brand" href={deletionOnly ? deleteRequestItem.href : "/admin"}>
+        <Link className="admin-site-brand" href={brandHref}>
           <span aria-hidden="true">運営</span>
           <strong>親のもしもナビ 管理画面</strong>
         </Link>

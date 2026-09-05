@@ -17483,10 +17483,15 @@ textarea {
 }
 
 .admin-section-label {
-  color: #63b2ca;
+  color: #176b87;
   font-size: 14px;
   font-weight: 900;
   margin: 0 0 8px;
+}
+
+.admin-dashboard-hero .admin-section-label,
+.admin-page-heading .admin-section-label {
+  color: #9bd8e7;
 }
 
 .admin-primary-link {
@@ -17601,7 +17606,7 @@ textarea {
 
 .admin-auth-warning {
   background: #fff4e7;
-  border: 1px solid #ead2b5;
+  border: 1px solid #b78349;
   border-radius: 6px;
   color: #7b4e23;
   line-height: 1.7;
@@ -17609,10 +17614,331 @@ textarea {
   padding: 14px 16px;
 }
 
+.admin-auth-warning p {
+  margin: 0;
+}
+
+.admin-auth-warning p + p,
+.admin-auth-warning p + .admin-auth-setup-link {
+  margin-top: 10px;
+}
+
+.admin-auth-inline-link {
+  color: #145c3c;
+  font-weight: 900;
+  margin-inline: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.admin-auth-setup-link {
+  align-items: center;
+  background: #145c3c;
+  border-radius: 6px;
+  color: #fff;
+  display: inline-flex;
+  font-weight: 900;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 16px;
+}
+
 .admin-auth-message {
   background: #f1f6f8;
+  border: 1px solid #a9bbc4;
   border-radius: 6px;
   padding: 12px 14px;
+}
+
+.admin-auth-message.is-success {
+  background: #eaf7ef;
+  border-color: #77aa8b;
+  color: #174f35;
+}
+
+.admin-auth-message.is-error {
+  background: #fff1ed;
+  border-color: #c77c68;
+  color: #742f20;
+  font-weight: 800;
+}
+
+.admin-auth-card .secondary:disabled {
+  background: #e1e7e3;
+  border-color: #87968d;
+  box-shadow: none;
+  color: #4d5a53;
+  cursor: not-allowed;
+  opacity: 1;
+  transform: none;
+}
+
+.admin-setup-kicker {
+  color: #176b87;
+  font-size: 16px;
+  font-weight: 900;
+  margin: 0;
+}
+
+.admin-mfa-setup {
+  margin-top: 18px;
+}
+
+.admin-mfa-setup .input,
+.admin-mfa-setup .secondary,
+.admin-mfa-setup .admin-mfa-signout,
+.admin-mfa-setup .admin-inline-button,
+.admin-mfa-setup .admin-mfa-method-card,
+.admin-mfa-setup .admin-mfa-qr {
+  border-color: #81959e;
+}
+
+.admin-mfa-setup .button {
+  background: #145c3c;
+  border-color: #0d452c;
+  color: #fff;
+}
+
+.admin-mfa-setup .button:disabled,
+.admin-mfa-setup .secondary:disabled,
+.admin-mfa-setup .admin-mfa-signout:disabled,
+.admin-mfa-setup .admin-inline-button:disabled {
+  background: #e1e7e3;
+  border-color: #87968d;
+  box-shadow: none;
+  color: #4d5a53;
+  cursor: not-allowed;
+  opacity: 1;
+  transform: none;
+}
+
+.admin-mfa-setup :is(button, a, input, summary):focus-visible {
+  outline: 3px solid #176b87;
+  outline-offset: 3px;
+}
+
+.admin-mfa-setup-heading {
+  align-items: center;
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.admin-mfa-setup-heading h2 {
+  color: var(--admin-ink);
+  font-size: 21px;
+  margin: 4px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.admin-mfa-signout,
+.admin-inline-button {
+  background: #fff;
+  border: 1px solid var(--admin-line);
+  border-radius: 6px;
+  color: var(--admin-ink);
+  cursor: pointer;
+  font-weight: 800;
+  min-height: 42px;
+  padding: 9px 14px;
+}
+
+.admin-mfa-step-card,
+.admin-mfa-complete {
+  background: #f8fbf9;
+  border: 1px solid #819d8e;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  padding: 20px;
+}
+
+.admin-mfa-step-card h3,
+.admin-mfa-complete h3 {
+  color: var(--admin-ink);
+  font-size: 21px;
+  margin: 0;
+}
+
+.admin-mfa-step-card > p:not(.admin-section-label),
+.admin-mfa-complete p:not(.admin-section-label) {
+  color: var(--admin-muted);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.admin-mfa-step-card > label {
+  color: var(--admin-ink);
+  font-weight: 900;
+}
+
+.admin-mfa-steps {
+  color: var(--admin-ink);
+  display: grid;
+  gap: 8px;
+  line-height: 1.7;
+  margin: 0;
+  padding-left: 24px;
+}
+
+.admin-mfa-incomplete {
+  background: #fff4e7;
+  border: 1px solid #b78349;
+  border-radius: 6px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+}
+
+.admin-mfa-incomplete p {
+  color: #7b4e23;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.admin-mfa-incomplete h3 {
+  color: #6f3d17;
+  margin: 0;
+}
+
+.admin-mfa-enrollment {
+  align-items: start;
+  display: grid;
+  gap: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.admin-mfa-method-card {
+  background: #fff;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.admin-mfa-method-card h4,
+.admin-mfa-code-panel h4 {
+  color: var(--admin-ink);
+  font-size: 18px;
+  margin: 0;
+}
+
+.admin-mfa-method-card > p {
+  color: var(--admin-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.admin-mfa-method-card label,
+.admin-mfa-code-panel label {
+  color: var(--admin-ink);
+  font-weight: 900;
+}
+
+.admin-mfa-method-card.is-qr {
+  justify-items: center;
+}
+
+.admin-mfa-method-card.is-qr h4,
+.admin-mfa-method-card.is-qr p {
+  justify-self: stretch;
+}
+
+.admin-mfa-qr {
+  aspect-ratio: 1;
+  background: #fff;
+  border: 1px solid var(--admin-line);
+  border-radius: 8px;
+  display: block;
+  height: auto;
+  padding: 12px;
+  max-width: 280px;
+  width: 100%;
+}
+
+.admin-mfa-code-panel {
+  background: #fff;
+  border: 1px solid #81959e;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.admin-mfa-manual-steps {
+  color: var(--admin-ink);
+  display: grid;
+  gap: 7px;
+  line-height: 1.65;
+  margin: 0;
+  padding-left: 24px;
+}
+
+.admin-mfa-manual-values {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.admin-mfa-manual-values > div {
+  background: #f1f6f3;
+  border-radius: 5px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: minmax(100px, auto) 1fr;
+  padding: 9px 10px;
+}
+
+.admin-mfa-manual-values dt {
+  color: var(--admin-muted);
+  font-weight: 800;
+}
+
+.admin-mfa-manual-values dd {
+  color: var(--admin-ink);
+  font-weight: 900;
+  margin: 0;
+}
+
+.admin-mfa-inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.admin-mfa-challenge-form {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-mfa-code-help {
+  color: var(--admin-muted);
+  line-height: 1.6;
+  margin: -4px 0 0;
+}
+
+.admin-mfa-secret {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.08em;
+}
+
+.admin-mfa-verification-code {
+  font-size: 25px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 900;
+  letter-spacing: 0.3em;
+  text-align: center;
+}
+
+.admin-mfa-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.admin-mfa-complete {
+  background: #eef8f3;
+  border-color: #a9d0b9;
 }
 
 .admin-emergency-access {
@@ -18008,6 +18334,29 @@ textarea {
 
   .admin-auth-card.is-authenticated .admin-text-button {
     align-self: flex-start;
+  }
+
+  .admin-mfa-setup-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .admin-mfa-signout {
+    align-self: flex-start;
+  }
+
+  .admin-mfa-enrollment {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-mfa-qr {
+    justify-self: center;
+    max-width: 280px;
+  }
+
+  .admin-mfa-actions,
+  .admin-mfa-actions .secondary {
+    width: 100%;
   }
 
   .admin-dashboard-section,
