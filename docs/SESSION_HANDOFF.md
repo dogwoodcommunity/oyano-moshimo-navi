@@ -11785,6 +11785,68 @@ Vercel production:
 - 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
   参照・変更・stage・commitしていない。
 
-次は、Auth画面とverified factorの正確なuser IDを権限付与直前に再照合し、実行者とは別の確認者の
-承認を得たうえで、当該1 UUIDだけを `account_delete_executors` へ初期値 `active=false` で登録する。
-権限変更は別途の実行時確認なしに行わず、完全削除スイッチは引き続きOFFを維持する。
+次は、Auth画面とverified factorの正確なuser IDを権限付与直前に再照合する。現行DBでは
+`account_delete_executors.user_id`、削除依頼の処理者、削除jobのoperator、監査actorが
+`profiles.id` を参照するため、profile 0件のままrole行を直接INSERTすると安全側に失敗する。
+当該1 UUIDについて、Authのemailだけを持ち、表示名・電話・家族所属・一般Adminを作らない最小profileと、
+`active=false` のexecutor行を同一transactionで作成して再確認する。その後、実行者とは別の確認者と
+その正確なprofileを照合・承認した場合だけ有効化する。executorだけを `auth.users` FKへ変える部分修正は、
+処理者・job・監査のprofile FKを壊すため行わない。権限変更は別途の実行時確認なしに行わず、
+完全削除スイッチは引き続きOFFを維持する。
+
+## 2026-09-05 追記 310 — 削除担当者を安全に登録・有効化する手順を補強
+
+追記309の本番照合後、削除実行者のAuth UUIDを `account_delete_executors` へ直接登録できるかを
+現行schemaと削除pipeline全体で再確認した。`account_delete_executors.user_id` だけでなく、削除依頼の
+`handled_by`、削除jobの `operator_user_id`、監査logの `actor_user_id` が `profiles.id` に依存するため、
+executorだけを `auth.users` 参照へ変える部分修正は、実処理・監査・退会時cleanupを不整合にする。
+部分的なFK変更は行わず、Auth UUIDを正本とする最小profile方式を継続する。
+
+文書・安全手順の変更:
+
+- `ADMIN_AUTH_POLICY.md` に、確認済みAuth UUIDとemail、verified TOTP 1件、unverified 0件、
+  既存profile・family所属・一般Admin・executorなしを照合し、Auth emailだけの最小profileと
+  `active=false` executorを同一transactionで作る初回登録手順を記載した。
+- 本人確認記録と別確認者の承認記録は実値を必須にし、空欄や `<...>` のplaceholderのままなら
+  SQLが例外で停止する。executor行には本人確認記録と承認記録の両方の参照を保持し、後者で前者を
+  上書きしない。正確なUUIDや個人メールは公開Gitへ記録しない。
+- 有効化は、実行者とは異なる別確認者についても確認済みAuthと一致するprofileを要求する。
+  同じUPDATE文で、実行者の確認済みAuth・profile email一致、verified TOTP正確に1件、
+  unverified 0件、family所属なし、一般Adminなし、未有効・未失効の初回行を再検証し、
+  途中で状態が変わっていれば0件更新として安全停止する。
+- 失効済み行をupsertで復活させる手順を廃止した。失効は有効化済み・未失効の1行だけに限定し、
+  既存の失効日時を上書きせず、未有効行へ誤適用しない。未有効行の取消は別の監査手順とする。
+- `COMMERCIAL_RELEASE_INPUTS.md`、`COMMERCIAL_OPERATIONS_RUNBOOK.md`、
+  `PRODUCTION_CHECKLIST.md` を、TOTP 1件・未完了0件・設定完了時AAL2確認済み、正確なUUIDの
+  制限付き台帳記録・最小profileと無効executorの原子的作成・別確認者・有効化は未完了、へ統一した。
+- `COMMERCIAL_RELEASE_PLAN_2026-09-03.md` は現況台帳ではなく作成時の基準線であることを明記し、
+  古い状態表示を現在の状態と誤認しないようにした。
+- `test-commercial-release-gates.mjs` は各SQL code blockだけを抽出し、Auth確認、TOTP再確認、
+  family/Admin分離、記録placeholder拒否、原子的な初回登録、状態限定の有効化・失効を個別検査する。
+
+検証:
+
+- `pnpm run test:commercial-release-gates`: 成功。
+- `pnpm run test:account-delete-executor`: 成功。
+- `pnpm run test:web-account-deletion`: 成功。
+- `pnpm run doctor:local`: 成功。
+- `git diff --check`: 成功。
+- 独立した2レビューで初回P0なし。有効化直前のAuth/TOTP再検証、別確認者Auth確認、
+  現況台帳の矛盾、原子的登録の表現、placeholder拒否、状態限定失効のP1を反映した。
+- 最終差分レビューで、`PRODUCTION_CHECKLIST.md` 冒頭の本番migration欄だけが未実施表示のまま
+  残っている矛盾を検出した。追記303の本番証跡に合わせ、削除専用role、削除pipeline、日記削除、
+  対象者削除の4 migrationを実施済みに統一し、完了・未完了の二重表示を静的回帰で禁止した。
+
+安全境界:
+
+- 今回は運用文書と静的回帰の変更だけである。本番Supabase DB/Auth/Storage、profile、family、
+  `app_admins`、`account_delete_executors` を作成・更新・削除していない。
+- 削除担当roleは0件、有効executorは0件のまま。完全削除スイッチはOFFを維持し、削除依頼・
+  削除job、DB削除RPC、Auth削除、Storage削除を実行していない。
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データは参照・変更・削除していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次は、最終差分レビューと限定stage・secret検査後に作業branchをGitHubへpushし、CI成功後に
+通常mergeする。実際の最小profile・無効executor作成や権限有効化は、正確なUUIDを権限付与直前に
+再照合し、実行者とは別の確認者を確定して、各操作時の明示確認を得るまで行わない。

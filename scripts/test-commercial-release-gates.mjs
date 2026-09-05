@@ -23,6 +23,30 @@ const releaseInputs = read("docs/COMMERCIAL_RELEASE_INPUTS.md");
 const operationsRunbook = read("docs/COMMERCIAL_OPERATIONS_RUNBOOK.md");
 const adminAuthPolicy = read("docs/ADMIN_AUTH_POLICY.md");
 const productionChecklist = read("docs/PRODUCTION_CHECKLIST.md");
+const commercialReleasePlan = read("docs/COMMERCIAL_RELEASE_PLAN_2026-09-03.md");
+
+const sqlBlockAfter = (document, marker) => {
+  const markerIndex = document.indexOf(marker);
+  assert.ok(markerIndex >= 0, `SQL marker must exist: ${marker}`);
+  const openingFence = document.indexOf("```sql", markerIndex);
+  assert.ok(openingFence >= 0, `SQL opening fence must follow: ${marker}`);
+  const sqlStart = openingFence + "```sql".length;
+  const closingFence = document.indexOf("```", sqlStart);
+  assert.ok(closingFence >= 0, `SQL closing fence must follow: ${marker}`);
+  return document.slice(sqlStart, closingFence);
+};
+
+const provisionOperatorSql = sqlBlockAfter(adminAuthPolicy, "次の初回登録は");
+const activateOperatorSql = sqlBlockAfter(adminAuthPolicy, "未有効・未失効の初回行を1件に限定して有効化する");
+const revokeOperatorSql = sqlBlockAfter(adminAuthPolicy, "次のように即時失効させる");
+const statementBefore = (sql, startMarker, endMarker) => {
+  const start = sql.indexOf(startMarker);
+  const end = sql.indexOf(endMarker, start);
+  assert.ok(start >= 0 && end > start, `SQL statement must contain ${startMarker} before ${endMarker}`);
+  return sql.slice(start, end);
+};
+const activateUpdateSql = statementBefore(activateOperatorSql, "update public.account_delete_executors", "if not found");
+const revokeUpdateSql = statementBefore(revokeOperatorSql, "update public.account_delete_executors", "if not found");
 
 const legalKeys = [
   "LEGAL_BUSINESS_NAME",
@@ -76,10 +100,14 @@ assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 |
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
 assert.ok(releaseInputs.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也（指名方針のみ）** |"), "the release input ledger must retain the intended deletion executor without claiming authorization");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
-assert.ok(operationsRunbook.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。本人用個別Supabase Authの招待受諾・メール確認済み。TOTP・正確なuser ID照合・`account_delete_executors` 登録は未実施）"), "the runbook must distinguish confirmed identity email from pending MFA and authorization");
+assert.ok(operationsRunbook.includes("最終更新: 2026-09-05"), "the operations runbook date must include the completed MFA and provisioning-policy update");
+assert.ok(operationsRunbook.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也**（指名方針のみ。本人用個別Supabase Auth、メール確認、本人端末のTOTP・AAL2確認済み。正確なuser IDの制限付き台帳記録、最小profile、`account_delete_executors` 登録は未実施）"), "the runbook must distinguish completed MFA identity proof from pending profile and authorization");
 assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
 assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
 assert.ok(releaseInputs.includes("アプリ内依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない"), "the release input ledger must distinguish in-app deletion requests from email intake");
+assert.ok(releaseInputs.includes("verified TOTP 1件・unverified 0件と設定完了時AAL2の確認は完了"), "the release input ledger must record completed MFA enrollment and setup-time possession");
+assert.ok(releaseInputs.includes("正確なuser IDの制限付き台帳記録、最小profileと無効な専用roleの同一transaction登録、別確認者と有効化は未確認"), "the release input ledger must keep identity anchoring and authorization pending");
+assert.ok(commercialReleasePlan.includes("履歴資料：これは2026-09-03作成時の基準線であり、現在の完了状況を示す台帳ではない"), "the dated release plan must not be mistaken for the current readiness ledger");
 assert.ok(operationsRunbook.includes("受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認"), "the operations runbook must retain the account-deletion delegate title and scope without claiming unverified routing");
 assert.ok(operationsRunbook.includes("現行実装は、このDBキューへの保存時に自動メール通知を行わない"), "the runbook must not claim that in-app deletion requests currently generate email");
 assert.ok(operationsRunbook.includes("共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う"), "shared inbox access must be individually attributable");
@@ -95,12 +123,43 @@ assert.ok(adminAuthPolicy.includes("実削除は登録済みTOTPで追加認証�
 assert.ok(adminAuthPolicy.includes("本人だけが `/admin/delete-requests/setup` を開き"), "the policy must document the operator-only setup route");
 assert.ok(adminAuthPolicy.includes("verified TOTPが1件でも、現在のセッションがAAL2になるまで設定完了と扱わない"), "existing MFA enrollment alone must not count as current possession");
 assert.ok(adminAuthPolicy.includes("この画面から新規ユーザー、`profiles`、家族、対象者、削除専用roleを作らない"), "MFA setup must remain separate from profile and role creation");
+assert.ok(adminAuthPolicy.includes("`profiles` 行だけでは、家族への所属、一般Admin、削除専用roleのいずれも付与されない"), "the minimal operator profile must be documented as an identity anchor rather than an authorization grant");
+assert.match(provisionOperatorSql, /begin;[\s\S]*?insert into public\.profiles \(id, email\)[\s\S]*?insert into public\.account_delete_executors[\s\S]*?false, null, null[\s\S]*?commit;/, "operator provisioning must create only the minimal profile and an inactive role in one transaction");
+assert.match(provisionOperatorSql, /email_confirmed_at is not null/, "operator provisioning must require a confirmed Auth identity");
+assert.match(provisionOperatorSql, /count\(\*\)[\s\S]*?factor\.status = 'verified'[\s\S]*?<> 1[\s\S]*?factor\.status = 'unverified'/, "operator provisioning must require exactly one verified TOTP and no unfinished TOTP");
+assert.match(provisionOperatorSql, /position\('<' in v_identity_record\) > 0[\s\S]*?raise exception/, "operator provisioning must reject an unchanged identity-record placeholder");
+assert.match(provisionOperatorSql, /exists \(select 1 from public\.profiles[\s\S]*?exists \(select 1 from public\.app_admins[\s\S]*?exists \(select 1 from public\.account_delete_executors[\s\S]*?raise exception/, "operator provisioning must reject every pre-existing identity or authority row");
+assert.match(provisionOperatorSql, /'identity=' \|\| btrim\(v_identity_record\)/, "the inactive executor row must retain its identity-verification record pointer");
+assert.ok(adminAuthPolicy.includes("失効済み行へ `on conflict ... revoked_at = null` を行って復活させてはいけない"), "revoked deletion authority must never be silently reactivated by an upsert");
+assert.match(activateOperatorSql, /v_operator_user_id = v_approver_user_id[\s\S]*?auth\.users[\s\S]*?email_confirmed_at is not null/, "activation must require distinct and confirmed operator and approver Auth identities");
+assert.match(activateOperatorSql, /join public\.profiles profile on profile\.id = auth_user\.id[\s\S]*?auth_user\.id = v_approver_user_id[\s\S]*?email_confirmed_at is not null[\s\S]*?lower\(profile\.email\) = lower\(auth_user\.email\)/, "activation must bind the separate approver to a confirmed matching Auth identity");
+assert.match(activateOperatorSql, /factor\.status = 'verified'[\s\S]*?<> 1[\s\S]*?factor\.status = 'unverified'/, "activation must recheck the operator TOTP state immediately before authorization");
+assert.match(activateOperatorSql, /public\.family_members[\s\S]*?public\.app_admins/, "activation must reject an operator who gained application-family or broader admin access");
+assert.match(activateOperatorSql, /position\('<' in v_approval_record\) > 0[\s\S]*?raise exception/, "activation must reject an unchanged approval-record placeholder");
+assert.match(activateOperatorSql, /active = false[\s\S]*?activated_at is null[\s\S]*?revoked_at is null[\s\S]*?if not found/, "activation must update exactly the new inactive state and fail closed when it is absent");
+assert.match(activateUpdateSql, /created_by is null[\s\S]*?note like 'identity=%'[\s\S]*?active = false[\s\S]*?activated_at is null[\s\S]*?revoked_at is null/, "the authorization update must be limited to the untouched provisional row");
+assert.match(activateUpdateSql, /auth_user\.id = v_operator_user_id[\s\S]*?email_confirmed_at is not null[\s\S]*?lower\(profile\.email\) = lower\(auth_user\.email\)/, "the authorization update itself must revalidate the operator Auth/profile identity");
+assert.match(activateUpdateSql, /factor\.status = 'verified'[\s\S]*?= 1[\s\S]*?factor\.status = 'unverified'/, "the authorization update itself must revalidate exact verified and absent unfinished TOTP state");
+assert.match(activateUpdateSql, /not exists \([\s\S]*?public\.family_members[\s\S]*?not exists \([\s\S]*?public\.app_admins/, "the authorization update itself must reject family membership and broader admin authority");
+assert.match(activateUpdateSql, /auth_user\.id = v_approver_user_id[\s\S]*?email_confirmed_at is not null[\s\S]*?lower\(profile\.email\) = lower\(auth_user\.email\)/, "the authorization update itself must revalidate the separate approver identity");
+assert.match(activateUpdateSql, /nullif\(btrim\(note\), ''\)[\s\S]*?'approval=' \|\| btrim\(v_approval_record\)/, "activation must append approval evidence without overwriting identity evidence");
+assert.match(revokeUpdateSql, /set active = false,[\s\S]*?revoked_at = now\(\)[\s\S]*?active = true[\s\S]*?activated_at is not null[\s\S]*?revoked_at is null/, "revocation must disable exactly an active unrevoked row and retain prior evidence");
 assert.ok(adminAuthPolicy.includes("削除依頼の一覧・状態変更・事前確認・実行では一切受け付けない"), "the static emergency token must not enter any deletion surface");
 assert.ok(productionChecklist.includes("[x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）"), "the checklist must distinguish executor assignment from authorization");
 assert.ok(productionChecklist.includes("[x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証"), "the checklist must record the locally verified least-privilege implementation");
 assert.ok(productionChecklist.includes("[x] 本番へ削除専用roleと更新済み削除pipelineをmigration"), "the checklist must record the verified production migration");
-assert.ok(productionChecklist.includes("[ ] `/admin/delete-requests/setup` でverified TOTPと現在のAAL2を確認"), "operator MFA and current possession must remain pending");
-assert.ok(productionChecklist.includes("[ ] 上記確認後に `account_delete_executors` へ有効登録"), "the named operator must remain unregistered until external checks pass");
+for (const appliedMigrationLabel of [
+  "`supabase/account_delete_executor_role.sql` を実行",
+  "`supabase/account_deletion_pipeline.sql` を実行",
+  "Web更新前に `supabase/notebook_diary_delete.sql` を実行",
+  "Web更新前に `supabase/notebook_person_delete.sql` を実行"
+]) {
+  assert.ok(productionChecklist.includes(`- [x] ${appliedMigrationLabel}`), `the checklist must mark ${appliedMigrationLabel} as applied`);
+  assert.ok(!productionChecklist.includes(`- [ ] ${appliedMigrationLabel}`), `the checklist must not also leave ${appliedMigrationLabel} pending`);
+}
+assert.ok(productionChecklist.includes("[x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認"), "the checklist must record the verified operator MFA result");
+assert.ok(productionChecklist.includes("[ ] 正確なAuth user IDを制限付き運用台帳へ記録し、監査用の最小profileと `active=false` のexecutor行を家族所属・一般Adminなしで同一transactionにより作成"), "the exact operator subject, minimal profile, and inactive role must remain one pending atomic step");
+assert.ok(productionChecklist.includes("[ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化"), "the named operator must remain inactive until the separate approval step");
 assert.ok(productionChecklist.includes("[ ] 削除実行者とは別の確認者を指名"), "a separate deletion verifier must remain pending");
 assert.ok(envExample.includes("ACCOUNT_ERASURE_EXECUTION_ENABLED=false"), "the destructive account-erasure execution switch must remain disabled by default");
 assert.ok(productionChecklist.includes("`ACCOUNT_ERASURE_EXECUTION_ENABLED=false` を維持する"), "production account erasure must remain disabled until its external prerequisites pass");
