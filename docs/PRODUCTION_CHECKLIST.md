@@ -69,7 +69,7 @@
 - [x] `/start -> /diagnosis -> /result/[caseId]` を確認
 - [x] `/admin` を確認
 - [ ] `/admin/delete-requests` で、共有家族ownerは完全削除が停止し、所有権移管後のみ再開できることを2アカウントで確認
-- [ ] 削除専用実行者で `/admin/delete-requests` だけを利用でき、モニター回答・利用状況・本番設定APIは403になることを確認
+- [ ] 登録済み削除専用実行者本人の個別セッションで `/admin/delete-requests` だけを利用でき、モニター回答・利用状況・本番設定APIは403になることを確認
 - [ ] AAL1では削除前確認だけ、登録済みTOTPでAAL2へ上げた後だけ完全削除が可能なことを確認
 - [ ] 単独テストアカウントでAuth・DB・Storageの削除と再実行時の冪等性を確認後、削除運用を開始
 - [x] app_admin個別アカウントを作成し、Admin APIをBearer認証で確認
@@ -144,15 +144,16 @@
 - [x] アプリ内削除依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない境界を記録
 - [ ] `info@bee-ch.co.jp` を共有パスワード方式にせず両名へ委任・転送し、外部テストメールの受信と返信を確認
 - [ ] テスト用アプリ内削除依頼がDBキューへ表示され、割り当てた監視・通知方法で両名が認知できることを確認
-- [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` と確定（無効状態の登録まで完了、権限未付与）
+- [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` と確定（別確認者承認付きで有効化済み・実行スイッチOFF）
 - [x] 池田知也本人用の個別Supabase Auth招待を受諾し、メール確認済みであることを本番で確認（個人メール・user IDはGitへ記録しない）
 - [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認
 - [x] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成
   - 2026-09-05確認: 実行直前のread-only検査で確認済みAuth 1件、TOTP総数1件・verified 1件・unverified 0件、既存profile・family所有/所属・一般Admin・executor・本人確認event各0件を確認。本人確認event 1件、最小profile 1件、無効executor 1件だけを同一transactionで作成し、事後検査は全項目PASS。有効executorと承認eventは0件で、既存データの更新・削除なし。
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証
 - [x] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、読み取り専用13項目を確認
-- [ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化して削除専用ログインを確認
-- [x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認（有効化の承認eventは未作成）
+- [x] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化し、削除対象本人とは別人であることを確認
+  - 2026-09-05確認: 実行直前のread-only検査で本人確認event 1件、無効executor 1件、承認event 0件、有効executor 0件と安全条件を再照合。別確認者の `activation_approved` event 1件と同じexecutorの有効化を1 transactionで実行し、台帳総数2件、executor総数1件・有効1件、family所有/所属・一般Admin・削除job各0件、認可method一致を事後確認した。`ACCOUNT_ERASURE_EXECUTION_ENABLED` は未登録のためOFF。
+- [x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認し、別操作で `activation_approved` eventを作成
 - [x] 初回の削除実行権限有効化では、実行者の本人確認eventと別確認者の `activation_approved` eventを分離して記録する手順を確定
 - [x] 実際の削除1件ごとに、request ID・target user ID・operator user IDを二人で照合し、確認者を運用台帳へ残す手順を確定（初回有効化eventとは別）
 - [ ] verified TOTP・実行者role・別確認者・単独テストアカウント完走後だけ、`ACCOUNT_ERASURE_EXECUTION_ENABLED=true` を承認

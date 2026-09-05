@@ -12158,3 +12158,49 @@ SESSION_HANDOFFを更新し、許可した5ファイルだけをmainへpushし�
   参照・変更・stage・commitしていない。
 
 次は追記317記載の有効化であり、新しい実行時明示確認なしには進めない。
+
+## 2026-09-05 追記 319 — 削除専用実行者を別確認者承認付きで本番有効化
+
+ユーザーからこの本番writeに対する実行時の明示承認を得て、既に無効状態で登録していた
+削除専用実行者1件を、別確認者の承認eventと同じtransactionで本番有効化した。
+これは削除依頼画面に対する削除専用roleの有効化であり、完全削除の実行許可や削除運用開始ではない。
+
+実行前ゲート:
+
+- Supabase SQL Editorが本番projectの `main / Production` であることを再確認した。
+- 個人情報や識別子を結果へ返さないread-only検査で、本人確認event 1件、正確な無効executor 1件、
+  承認event 0件、有効executor 0件、実行者と別確認者が別人、確認済みAuth・profile一致、
+  TOTP総数1件・verified 1件・unverified 0件、family所有・所属と一般Admin各0件を確認した。
+- executor tableの非internal triggerは0件、private台帳の非internal triggerは設計済み2件だけだった。
+- Vercel Production環境を一時ファイルへ取得して値を表示せず照合し、
+  `ACCOUNT_ERASURE_EXECUTION_ENABLED` が未登録でfail closedのOFFであることを確認した。
+  確認用ファイルは直後に削除した。
+- 独立監査は、上記条件、1回だけの単独実行、削除RPCを呼ばないことを条件にP0/P1なしのGOだった。
+
+本番有効化・事後確認:
+
+- `ADMIN_AUTH_POLICY.md` の検証済み有効化SQLへ、正確な実行者・別確認者・本人確認eventと
+  非秘密の承認証跡参照だけを画面内で設定した。未置換placeholder、DELETE文、削除RPCがないことを確認し、
+  選択範囲なしで1回だけ実行して `Success. No rows returned` を確認した。
+- 同じtransactionで新規作成したのは `activation_approved` event 1件だけで、既存executor 1件を
+  `created_by=別確認者 / active=true / activated_at is not null / revoked_at is null` へ更新した。
+  executorのnoteには本人確認eventと承認eventの両台帳参照を順番どおり保持した。
+- 別のread-only事後検査は `all_checks_pass=true`。本人確認event 1件、承認event 1件、台帳総数2件、
+  最小profile 1件、executor総数1件・有効1件・対象無効0件、認可method一致を確認した。
+  family所有・所属、一般Admin、削除jobは各0件で、TOTPとtriggerの安全条件も維持していた。
+- 実Auth UUID、個人メール、MFA情報を含む有効化・事後確認SQLは保存せず、各一時Editorタブを破棄した。
+
+安全境界:
+
+- `ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFのままであり、削除依頼の実行、DB削除RPC、Auth削除、
+  Storage削除は行っていない。削除専用アカウントでの本番ログイン試験もまだ行っていない。
+- 今回の承認event 1件追加とexecutor 1件更新以外に、利用者、モニター回答、日記、写真、AI相談、
+  family・対象者・profile・削除依頼・削除jobの作成、変更、削除は行っていない。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` は参照・変更・stage・commitしていない。
+  `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は変更・stage・commitしていないが、補助監査の初回検索で
+  除外指定が効かず一致行が各1行だけ出力された。以後は検索対象を明示した。
+
+次の1項目は、登録済み削除実行者本人の個別セッションで `/admin/delete-requests` にログインし、
+削除依頼画面だけ利用でき、モニター回答・利用状況・本番設定APIは403になることを確認することである。
+これはログインと権限分離の確認だけとし、実行スイッチON、削除前確認、完全削除は別承認まで行わない。
