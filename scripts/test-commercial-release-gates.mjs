@@ -103,15 +103,15 @@ assert.ok(envExample.includes("LEGAL_PRIVACY_EFFECTIVE_DATE=\n"), "the privacy e
 assert.doesNotMatch(envExample, /LEGAL_PRIVACY_EFFECTIVE_DATE=(?:正式公開日と同日|要確定)/, "a policy label must never be accepted as the privacy effective-date env value");
 assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 | **正式公開日と同日** |"), "the release input ledger must retain the confirmed privacy effective-date policy");
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
-assert.ok(releaseInputs.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也（指名方針のみ）** |"), "the release input ledger must retain the intended deletion executor without claiming authorization");
+assert.ok(releaseInputs.includes("| アカウント完全削除の実行予定者 | **システム責任者 池田知也（無効状態で登録済み）** |"), "the release input ledger must retain the inactive intended deletion executor without claiming authorization");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
 assert.ok(operationsRunbook.includes("最終更新: 2026-09-05"), "the operations runbook date must include the completed MFA and provisioning-policy update");
-assert.ok(operationsRunbook.includes("別確認者は代表取締役 池田哲也でAuth・profile一致を読み取り確認済み。private台帳の本番適用"), "the runbook must distinguish verified confirmer identity from pending approval and authorization");
+assert.ok(operationsRunbook.includes("private台帳を本番適用し、本人確認event・最小profile・`active=false` のexecutorを原子的に登録済み。承認event・有効化・本番削除権限は未付与"), "the runbook must distinguish completed inactive provisioning from pending approval and authorization");
 assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
 assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
 assert.ok(releaseInputs.includes("アプリ内依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない"), "the release input ledger must distinguish in-app deletion requests from email intake");
 assert.ok(releaseInputs.includes("本人端末のverified TOTP 1件・unverified 0件と設定完了時AAL2"), "the release input ledger must record completed MFA enrollment and setup-time possession");
-assert.ok(releaseInputs.includes("private台帳の本番適用、正確な実行者user IDの台帳記録、最小profileと無効な専用roleの同一transaction登録、承認・有効化は未確認"), "the release input ledger must keep identity anchoring and authorization pending");
+assert.ok(releaseInputs.includes("本人確認event・最小profile・無効な専用roleの同一transaction登録は確認済み（有効化承認は未実施）"), "the release input ledger must record completed inactive provisioning without claiming authorization");
 assert.ok(commercialReleasePlan.includes("履歴資料：これは2026-09-03作成時の基準線であり、現在の完了状況を示す台帳ではない"), "the dated release plan must not be mistaken for the current readiness ledger");
 assert.ok(operationsRunbook.includes("受付経路は主担当と同じ。実際の権限・通知設定・2経路の試験は要確認"), "the operations runbook must retain the account-deletion delegate title and scope without claiming unverified routing");
 assert.ok(operationsRunbook.includes("現行実装は、このDBキューへの保存時に自動メール通知を行わない"), "the runbook must not claim that in-app deletion requests currently generate email");
@@ -182,7 +182,7 @@ assert.match(activateOperatorSql, /event\.evidence_ref = btrim\(v_approval_evide
 assert.match(activateOperatorSql, /operator activation postcondition failed/, "activation must assert ledger and active-state postconditions before commit");
 assert.match(revokeUpdateSql, /set active = false,[\s\S]*?revoked_at = now\(\)[\s\S]*?active = true[\s\S]*?activated_at is not null[\s\S]*?revoked_at is null/, "revocation must disable exactly an active unrevoked row and retain prior evidence");
 assert.ok(adminAuthPolicy.includes("削除依頼の一覧・状態変更・事前確認・実行では一切受け付けない"), "the static emergency token must not enter any deletion surface");
-assert.ok(productionChecklist.includes("[x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）"), "the checklist must distinguish executor assignment from authorization");
+assert.ok(productionChecklist.includes("[x] アカウント完全削除の実行予定者を `システム責任者 池田知也` と確定（無効状態の登録まで完了、権限未付与）"), "the checklist must distinguish inactive executor registration from authorization");
 assert.ok(productionChecklist.includes("[x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証"), "the checklist must record the locally verified least-privilege implementation");
 assert.ok(productionChecklist.includes("[x] 本番へ削除専用roleと更新済み削除pipelineをmigration"), "the checklist must record the verified production migration");
 for (const appliedMigrationLabel of [
@@ -196,8 +196,9 @@ for (const appliedMigrationLabel of [
   assert.ok(!productionChecklist.includes(`- [ ] ${appliedMigrationLabel}`), `the checklist must not also leave ${appliedMigrationLabel} pending`);
 }
 assert.ok(productionChecklist.includes("[x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認"), "the checklist must record the verified operator MFA result");
-assert.ok(productionChecklist.includes("2026-09-05確認: 本番へ1回限り適用。private台帳0件"), "the private ledger production migration must retain its empty-ledger verification evidence");
-assert.ok(productionChecklist.includes("[ ] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成"), "the exact operator subject, minimal profile, and inactive role must remain one pending atomic step");
+assert.ok(productionChecklist.includes("2026-09-05確認: 本番へ1回限り適用。migration適用直後はprivate台帳0件"), "the private ledger production migration must retain its initial empty-ledger verification evidence without contradicting later provisioning");
+assert.ok(productionChecklist.includes("[x] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成"), "the exact operator subject, minimal profile, and inactive role must be recorded as one completed atomic step");
+assert.ok(productionChecklist.includes("本人確認event 1件、最小profile 1件、無効executor 1件だけを同一transactionで作成"), "the checklist must retain the exact non-authorizing production result");
 assert.ok(productionChecklist.includes("[ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化"), "the named operator must remain inactive until the separate approval step");
 assert.ok(productionChecklist.includes("[x] 削除実行者とは別の確認者を `代表取締役 池田哲也` と指名し、確認済みAuthと一致profileを本番で読み取り確認（有効化の承認eventは未作成）"), "the separately verified confirmer must be recorded without claiming activation approval");
 assert.ok(productionChecklist.includes("[x] 初回の削除実行権限有効化では、実行者の本人確認eventと別確認者の `activation_approved` eventを分離"), "the initial authority activation must retain separate identity and approval evidence");

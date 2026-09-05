@@ -39,7 +39,7 @@
 - [x] `supabase/account_delete_executor_role.sql` を実行
   - 2026-09-04確認: 本番へ適用し、migration単体ではユーザー作成・権限付与をせず、`account_delete_executors` のRLS/ACL、認可helperを含む読み取り専用13項目を確認。
 - [x] `supabase/account_delete_identity_ledger.sql` を1回だけ実行し、DB owner専用・追記専用・API role権限なしを確認
-  - 2026-09-05確認: 本番へ1回限り適用。private台帳0件、全ownerが`postgres`、FORCE RLS、owner以外のACLなし、API 3 roleの権限なし、制約6・列9・非internal trigger 2をread-only検査し、全項目PASS。既存データへの変更・削除なし。
+  - 2026-09-05確認: 本番へ1回限り適用。migration適用直後はprivate台帳0件、全ownerが`postgres`、FORCE RLS、owner以外のACLなし、API 3 roleの権限なし、制約6・列9・非internal trigger 2をread-only検査し、全項目PASS。既存データへの変更・削除なし。
 - [ ] `supabase/family_owner_succession.sql` を実行
 - [x] `supabase/account_deletion_pipeline.sql` を実行
   - 先に `supabase/notebook_diary_delete.sql`、`supabase/consult_daily_claim.sql`、`supabase/notebook_person_delete.sql`、`supabase/account_delete_executor_role.sql` を適用し、実行後 `account_erasure_jobs`、server-only RPC、Storage/共有写真race guardを `verify_compact.sql` で確認する。
@@ -144,10 +144,11 @@
 - [x] アプリ内削除依頼は `/admin/delete-requests` のDBキューへ入り、現行実装では自動メール通知しない境界を記録
 - [ ] `info@bee-ch.co.jp` を共有パスワード方式にせず両名へ委任・転送し、外部テストメールの受信と返信を確認
 - [ ] テスト用アプリ内削除依頼がDBキューへ表示され、割り当てた監視・通知方法で両名が認知できることを確認
-- [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` とする方針を確定（指名のみ、権限未付与）
+- [x] アカウント完全削除の実行予定者を `システム責任者 池田知也` と確定（無効状態の登録まで完了、権限未付与）
 - [x] 池田知也本人用の個別Supabase Auth招待を受諾し、メール確認済みであることを本番で確認（個人メール・user IDはGitへ記録しない）
 - [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認
-- [ ] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成
+- [x] 本人画面で選んだ正確な実行者Auth user IDをprivate台帳へ記録し、監査用の最小profileと `active=false` のexecutor行をfamily所有・所属・一般Adminなしで同一transactionにより作成
+  - 2026-09-05確認: 実行直前のread-only検査で確認済みAuth 1件、TOTP総数1件・verified 1件・unverified 0件、既存profile・family所有/所属・一般Admin・executor・本人確認event各0件を確認。本人確認event 1件、最小profile 1件、無効executor 1件だけを同一transactionで作成し、事後検査は全項目PASS。有効executorと承認eventは0件で、既存データの更新・削除なし。
 - [x] 一般Admin APIへ広がらない削除専用role、Bearer限定認証、実削除時AAL2、原子的な状態更新・監査を実装・ローカル検証
 - [x] 本番へ削除専用roleと更新済み削除pipelineをmigrationし、読み取り専用13項目を確認
 - [ ] 上記の無効なexecutor行を、別確認者のAuth・profileと承認記録を照合した後だけ有効化して削除専用ログインを確認

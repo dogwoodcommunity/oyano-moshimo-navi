@@ -12094,3 +12094,46 @@ GitHub・検証:
 その後、別の実行時明示確認を得て、最小profile、本人確認event、`active=false`のexecutorを
 同一transactionで作成する。有効化は別確認者の承認eventを伴うさらに別の操作・別承認とし、
 完全削除スイッチは単独テストアカウントの完走までOFFを維持する。
+
+## 2026-09-05 追記 317 — 削除実行予定者を無効状態で本番登録
+
+ユーザーから実行直前の明示確認を得て、削除実行予定者の本人確認event、監査用の最小profile、
+`active=false` のexecutor行をSupabase本番へ同一transactionで作成した。これは本人識別と
+将来の有効化準備だけであり、削除画面へのアクセス権や完全削除権限を付与する操作ではない。
+
+本番事前確認:
+
+- 本人画面で選択済みの正確な実行予定者Auth行と、既に照合済みの別確認者Auth行だけを使った。
+- 個人識別子を結果へ返さないread-only transactionで、`ready=true` を確認した。
+- 実行予定者はメール確認済みAuth 1件、TOTP総数1件・verified 1件・unverified 0件だった。
+- 実行予定者の既存profile、family所有、family所属、一般Admin、executor、本人確認eventはすべて0件だった。
+- 別確認者は実行予定者とは別人で、メール確認済みAuthと同一profile emailの一致が1件だった。
+- private台帳総数、executor総数はともに0件で、profile INSERTの非internal triggerも既知の
+  復活防止guard 1件だけだった。条件が1つでも違えば書き込まない検査である。
+
+本番登録・事後確認:
+
+- `ADMIN_AUTH_POLICY.md` の検証済み初回登録SQLを、短いlock/statement timeout付きの
+  1 transactionとして選択範囲なしで1回だけ実行し、`Success. No rows returned` を確認した。
+- 新規作成は `identity_verified` event 1件、Auth emailだけの最小profile 1件、
+  `created_by=null / active=false / activated_at=null / revoked_at=null` のexecutor 1件だけである。
+- 別のread-only事後検査は `all_checks_pass=true`。本人確認event 1件、最小profile 1件、
+  private eventを正確に参照する無効executor 1件、台帳総数1件、executor総数1件だった。
+- family所有・所属、一般Admin、対象executorの有効行、全体の有効executor、
+  `activation_approved` eventはすべて0件で、operator認可methodも未付与だった。
+- 実Auth UUIDと個人メールを含む事前確認・登録・事後確認SQLは保存せず、各一時Editorタブを破棄した。
+
+安全境界:
+
+- 既存利用者、モニター回答、日記、写真、AI相談、家族・対象者データを更新・削除していない。
+  既存profile、family、一般Admin、削除依頼、削除jobにも変更を加えていない。
+- 承認event、executor有効化、削除依頼画面でのログイン、DB削除RPC、Auth削除、Storage削除は
+  実行していない。`ACCOUNT_ERASURE_EXECUTION_ENABLED` はOFFを維持している。
+- 個人メール、実Auth UUID、MFA秘密、OTP、token、認証情報はGit・引継ぎへ記録していない。
+- 未追跡の `review_exports/` と `docs/CLAUDE_FULL_REVIEW_*_2026-09-03.md` は
+  参照・変更・stage・commitしていない。
+
+次の1項目は、別確認者による `activation_approved` eventの作成と、正確な無効executor 1件の
+有効化を同一transactionで行うことである。これは本番削除権限を付与する別の本番writeなので、
+実行直前に状態を再照合し、新しい明示確認を得るまで行わない。完全削除スイッチはその後も、
+単独テストアカウントのAuth・DB・Storage削除完走までOFFを維持する。
