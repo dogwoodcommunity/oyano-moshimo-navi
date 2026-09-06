@@ -14359,3 +14359,20 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   実機/二者削除、問い合わせ・通知受信、法務/施行日と、本番DB/Auth/写真backupが未完了。
   正式Stage AはNO-GOを維持。本番アプリは追記377の8289876を維持し、今回の説明修正は最終確認用sourceとして保存する。
   対象ファイルだけをcommit/pushし、`review_exports/` と未追跡Claude_FULL 2文書は触らない。
+
+## 2026-09-06 追記 380 — 最終文書を含むCIの日付固定を修正
+
+- 追記379の12ファイルをmain `f3b283a544127ccfff03181f08f688c04d04264a` としてpush。
+  CI `34001338684` は `test:commercial-release-gates` で停止した。
+  原因はrunbookの「最終更新: 2026-09-05」をexact matchする旧回帰で、9月6日への正しい更新を拒否したこと。
+  MFA/権限/二者承認/実行OFFの本文assertは維持し、日付は有効なISO日付かつ2026-09-05以降を検査する形に修正。
+  旧5ファイルoverlayのローカル試験には今回の文書更新が入っていなかったため検出できなかった。
+  最終文書を含むroot全体のsource32回帰は全PASS。修正commitのCIで残工程を再確認する。
+- Deploy workflow `34001338734` はcheck成功/deploy skipped。本番aliasをCLIで再inspectし、
+  `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / production / Ready / 08:59:36 JSTを確認。
+  新しい説明文は本番未反映で、正式公開の外部条件を未完了のまま公開扱いにしていない。
+- rootで最終buildのprivacyを隔離port3122のブラウザで確認。
+  runtime環境は最小allowlist、archiveに`.env.example`以外のdotenvがないことを確認。
+  幅390pxで横はみ出し0、修正説明2段落ともleft37/right338pxで枠内。
+  これはDOM表示確認であり実iPhoneの受入とはしない。認証/送信/保存なし。
+  viewport解除、検証タブ終了、3122プロセス停止とLISTEN残存なしを確認。既存3119は維持。

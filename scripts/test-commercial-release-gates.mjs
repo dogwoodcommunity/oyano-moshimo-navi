@@ -105,7 +105,10 @@ assert.ok(releaseInputs.includes("| プライバシーポリシーの施行日 |
 assert.ok(releaseInputs.includes("| アカウント削除担当・代行者 | **主担当：代表取締役 池田哲也／代行者：システム責任者 池田知也** |"), "the release input ledger must retain both confirmed account-deletion assignees and the delegate title");
 assert.ok(releaseInputs.includes("| アカウント完全削除の登録済み実行者 | **システム責任者 池田知也（有効化済み・実行スイッチOFF）** |"), "the release input ledger must record the activated deletion-only executor without claiming that erasure is enabled");
 assert.ok(operationsRunbook.includes("| Supabase・個人情報削除担当 | **代表取締役 池田哲也**"), "the operations runbook must retain the confirmed account-deletion owner");
-assert.ok(operationsRunbook.includes("最終更新: 2026-09-05"), "the operations runbook date must include the completed MFA and provisioning-policy update");
+const operationsUpdatedAt = operationsRunbook.match(/^最終更新: (\d{4}-\d{2}-\d{2})$/m)?.[1];
+assert.ok(operationsUpdatedAt && Number.isFinite(Date.parse(operationsUpdatedAt))
+  && new Date(operationsUpdatedAt).toISOString().slice(0, 10) === operationsUpdatedAt
+  && operationsUpdatedAt >= "2026-09-05", "the operations runbook date must not predate the completed MFA and provisioning-policy update");
 assert.ok(operationsRunbook.includes("private台帳の本人確認eventと別確認者の `activation_approved` eventを分離して記録し、削除専用roleを有効化済み。削除専用ログイン試験は完了し、単独テスト削除は未完了。実行スイッチはOFF"), "the runbook must record completed approval, activation, and scope verification while keeping destructive execution disabled");
 assert.ok(releaseInputs.includes("主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み削除実行者と別確認者の二者で実施"), "the release input ledger must retain the confirmed account-deletion delegate scope");
 assert.ok(releaseInputs.includes("メールによる削除依頼は `info@bee-ch.co.jp` の共有受信箱で受けて両名へ通知する方針"), "the release input ledger must retain the confirmed email account-deletion inbox policy");
