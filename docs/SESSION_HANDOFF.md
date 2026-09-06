@@ -14203,3 +14203,53 @@ Claudeは通常の長文保存を狭めず、統合側の既存上限と専用�
 引き継ぎと今回のcomponent/lib/回帰だけを同ブランチへcommit/push。
 確認版タブとローカル3119を維持し、本番反映の承認後にexact SHAのCI・公開・旧案内が消えることを確認する。
 `review_exports/` と未追跡Claude_FULL 2文書は引き続き触らない。
+
+## 2026-09-06 追記 377 — 折りたたみ表示と終了済みモニター停止を本番公開
+
+「前回の折りたたみ変更とまとめて本番へ反映してよいですか？」への「すすめて」を受領し、
+追記374/376の2件をまとめて公開。最新origin/mainが修正ブランチの祖先であることを確認し、
+`fix/collapsible-notebook-guidance` の `8289876d0f1536c3c0b595794d9bf9771f60a0db` を
+mainへfast-forward/pushした。今回は追加アプリコード変更なし。
+
+公開証跡：
+
+- 独立read-onlyレビューは開始時main `525132c` から対象SHAまでを固定して確認。
+  製品4ファイル/回帰2ファイル/引き継ぎのみ。保存・写真添付・AI送信処理、Auth/権限、
+  DB/SQL、環境、価格、削除処理は変更なし。表示/モニター停止回帰とdiff --check PASS。
+- exact SHAのCI `33999947467` はattempt 1でsuccess/completed、web-and-mobile 3分15秒。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/33999947467
+  lint/Web・mobile型/ソース回帰/隔離SQL/build/smokeまで成功。既存警告のみ。
+  Deploy workflow `33999947446` はcheck成功/deploy skippedで、実公開とは区別した。
+- クリーンGit書庫 `/private/tmp/oyano-guidance-release-8289876.or1njA`：444ファイル、
+  Git blob不一致0・想定外0、inventory SHA256
+  `523555deadf85a1c65d4bb01e3d32a23fa623125e6c8201e726074271992deeb`。
+  dry-runはNext.js/443ファイル/9,424,048 bytes（.gitignoreのみ除外）。
+  env/git/node_modules/outputs/review_exports/未追跡Claude_FULL混入0。
+- CI成功後、既存Vercel project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope dogwoodcommunity1へ
+  CLI 59.11.7でprod deploy。metadata releaseShaは上記SHA。
+  deployment `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG`、2026-09-06 08:59:36 JST作成。
+  https://oyano-moshimo-navi-qgom7bgzk-dogwoodcommunity1.vercel.app
+  公開alias https://oyano-moshimo-navi.vercel.app を別途inspectし、同deployment/production/Readyを確認。
+  直前のrollback候補は `dpl_3SMVQpuRWfSnpbdvy3i7Zr6eLhDY`。rollback未実行。
+
+本番確認：
+
+- 同じ既存本番タブで、公開前はモニター共有案内あり/折りたたみ0/新規本文空を確認。
+  通常reload後は案内が消え、ナビ/AIの2枚が最初から閉状態になった。
+  既存架空手帳の記録3件・写真0件の表示も維持。共有同意は操作していない。
+- 各見出しをクリックして本文/注意書き/既存の相談・履歴ボタンが現れ、閉じると短い見出しに戻る。
+  Enterで開く/Spaceで閉じる操作も成功。相談実行や保存ボタンは押していない。
+- 幅320/390/481/1280pxでページ横はみ出し0、アイコンとタイトル/開閉表示の矩形重なり0。
+  PC幅1280pxは各カード99px。390pxはナビ170px/AI140pxで、両方を開いても横はみ出し0。
+  1280pxと390pxの閉状態をスクリーンショットで目視確認。
+  最終console error/warn 0、viewport override解除済み。2枚を閉じた状態で本番タブを維持。
+- 独立認証なしGETは /home /start /monitor /monitor/report?preview=1 /family /guides
+  /crisis /legal/tokushoho /api/health の9件すべて200。home参照CSS4件も200で、
+  summary配置/閉状態・開状態の切替ルールを確認。認証header/Cookie/POST/DBアクセスなし。
+
+今回の承認済み2件は本番反映まで完了。終了後の送信遮断は追記376の実module回帰/配信コードで検証し、
+本番へ検証POSTは送っていない。古い開きっぱなしタブは再読み込み後から新しい停止処理が適用される。
+記録/写真/回答の保存・編集・削除・復元・統合、メール/招待/AI/回答送信、DB/Auth/設定変更はしていない。
+全利用者データの完全一致監査や実iPhone/Android受入とは別。
+この公開記録だけをmainへcommit/pushし、文書だけでは再deployしない。公開アプリsourceは8289876のまま。
+ローカル3119も維持。`review_exports/` と未追跡Claude_FULL 2文書は触らない。
