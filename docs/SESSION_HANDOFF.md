@@ -14376,3 +14376,19 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   幅390pxで横はみ出し0、修正説明2段落ともleft37/right338pxで枠内。
   これはDOM表示確認であり実iPhoneの受入とはしない。認証/送信/保存なし。
   viewport解除、検証タブ終了、3122プロセス停止とLISTEN残存なしを確認。既存3119は維持。
+
+最終結果:
+
+- 修正commit `119af9756371dae6b8e59486d6466b6972fd6996` はmainへpush済み。
+- exact SHAのCI `34001579119` はattempt 1、web-and-mobile 3分1秒で全工程success。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34001579119
+  lint・Web/mobile型・最新文書を含む回帰・隔離SQL・Web build・smokeまで成功。
+  GitHub Actions実行環境のNode20廃止予定警告と既存lint警告は残る。アプリの動作失敗ではない。
+- 合成復旧scriptは上記CIの対象外で、追記379の固定SHA・ローカル独立PASSを別証跡とする。
+- 今回は正式公開条件の不足を発見したため、本番反映・正式施行日の入力はしていない。
+  説明修正の公開も次の正式公開作業へ持ち越す。バックアップ費用/方式の判断、実機/二者削除、
+  問い合わせ/運用通知の実受信、法務最終確認を先に閉じる。利用者向け無料方針は維持。
+- 次はFree外部定期dump方式かPro等かを運営者へ確認。Proの月25USDは最低基本料金で、
+  写真backupと組織の実構成/追加費用を含む確定見積ではない。未回答の実機/法務質問も引き継ぐ。
+- 完了記録だけを追加commit/push。CI成功を本番受入・法務承認・公開完了に読み替えない。
+  本番データ変更0、契約/課金変更0。未追跡Claude_FULL2文書とreview_exportsは不介入。
