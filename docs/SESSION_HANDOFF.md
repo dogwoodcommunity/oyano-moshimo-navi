@@ -14417,3 +14417,35 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   https://supabase.com/docs/guides/platform/project-transfer
   https://supabase.com/docs/guides/platform/access-control
 - この追記のみcommit/pushし、アプリsource/本番データ/契約/権限/保存先を変更しない。
+
+## 2026-09-06 追記 382 — 既存Proへの移管前チェック通過・実費用を確認（移管せず）
+
+- ユーザー依頼は「まとめられるか確認してから報告」。移管・課金・設定変更は対象外。
+  09:53 JST頃までにログイン済みSupabaseの対象画面をread-only確認。
+- もしもナビprojectのGeneral画面は `dogwoodcommunity's Org FREE`、組織メンバー1名で現在の利用者がOwner。
+  Transfer projectのプレビューで `imamite-staging` を選択でき、非同期チェック後に実行ボタンが有効になった。
+  阻止エラーはなく、移管先費用は月10USD増えると明示された。
+  Microへの変更は移管後に手動操作できるとの注意も表示。実行ボタンは押さずCancelで閉じた。
+  元のFREE所属表示へ戻ったことを確認。これは移管前チェックPASSであり、移管完了/本番受入ではない。
+- 移管先 `imamite-staging PRO` のProjectsは現在2件（`imamite-stg-data` と `imamite-stg-media`）、いずれもMicro/Tokyo。
+  Teamは元組織と同一アカウント1名・Owner。現時点で追加の第三者メンバーは確認されなかった。
+  将来このPro組織へ追加する組織メンバーには全projectへのロール相応の権限が及ぶ点に注意。
+  Team画面の管理者MFAはDisabled。アプリの削除管理画面側MFAとは別なので混同せず、
+  Supabase管理アカウントの二段階認証設定を推奨する。今回は資格情報/認証設定を変更していない。
+- Billingの実表示：Pro、Spend Cap enabled、請求期間September 04–October 04。
+  基本料25USD、2件のMicro compute、Compute Credits、既存IPv4 add-onを確認。
+  Current Costs 25.19USD、Projected Costs 41.66USD（現時点の今期予測であり固定料金/確定請求額ではない）。
+  よって追記381の「既存1projectなら移管後約35USD」という仮定例は実構成には当てはまらない。
+  現構成に今回の月10USD相当増を加える概算は約52USD/月。月途中は稼働時間分で計算され、
+  期間/構成/利用/税等により確定請求は異なる。移管後の新しい予測額は未生成（移管していないため）。
+- 公式docsではcomputeは時間課金・組織のcompute creditsは月10USD共用。
+  Nanoは有料組織内ではMicroと同額だが、自動でサイズ変更されない。別途サイズ変更には停止が伴うため実行を分ける。
+  Spend Capはcompute/IPv4等を対象外とするため、画面の超過請求防止の説明を総額上限と解釈しない。
+  https://supabase.com/docs/guides/platform/project-transfer
+  https://supabase.com/docs/guides/platform/manage-your-usage/compute
+  https://supabase.com/docs/guides/platform/access-control
+  https://supabase.com/docs/guides/platform/cost-control
+- 結論：既存Proへまとめる移管前チェックは通過。別Pro基本契約は増やさず、project分離を保つ方式が選べる。
+  実行は費用・権限・影響を提示して承認を得た別工程とし、backup/写真復元等の未完了条件も維持。
+  今回はユーザーの既存SQL・APIキー・記録・写真・アプリsource・権限・契約・請求設定へ変更なし。
+  引き継ぎ文書のみ更新/push。review_exportsと未追跡Claude_FULL2文書には触れない。
