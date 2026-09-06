@@ -14521,6 +14521,20 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   以後は結果の文書追記のみ。source33＋lint＋型2＋修正版SQL10＋fresh buildの47工程は
   各最終結果PASSで、分離実行の証跡として扱う。実装者以外による未保存ガードの再レビューもP0/P1なし。
 - 検証3123をPID/cwd照合後停止し、待受0・試験コンテナ0を確認。3119は未操作（観測時の待受は0）。
-  検証終了ログにSupabase SDKのNode20以下非推奨警告あり。手元Node20.20.2の将来更新課題として残し、
-  既存lint警告や本番ランタイムの確認結果とは混同しない。今回ランタイム/依存更新なし。
-- GitHub保存/CI結果は実行後にこの末尾へ追記する。今回の変更は本番未反映。
+  検証終了ログにSupabase SDKのNode20以下非推奨警告あり。手元Node20.20.2の更新課題として残す。
+  最後のVercel project inspectではproject設定がNode24.xであることを確認した。
+  設定値と特定deploymentの実行ログは別であり、今回ランタイム/依存更新なし。
+- 実装・検証文書26ファイルを `09dc23deaaaff842093198c775b2ddbe895ce390` としてmainへpush。
+  Deploy workflow `34004645343` はcheck成功・deploy skipped。
+  push後のVercel read-only照会も `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 08:59:36 JST作成のままで、
+  今回の変更は本番未反映。
+- 最後に今回作ったローカル3123の検証タブだけを閉じ、既存の本番/管理/3119タブが残ることを確認。
+  保存済みの架空記録を除く利用者データの操作は行わず、履歴・localStorageの一括消去はしていない。
+- exact SHA `09dc23deaaaff842093198c775b2ddbe895ce390` のCI `34004645350` は
+  10:43:56〜10:47:14 JST（3分18秒）、全step成功・failedSteps空。
+  lint/型/source回帰/SQL10/build/smokeの一続きのCI成功で、ローカル分離実行とは別証跡。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34004645350
+  ActionsのNode20 runtime非推奨・Node24強制実行のannotationあり。CI失敗ではないが、
+  手元Nodeと既存Actions更新は別の保守課題として残す。正式公開の残条件は引き続き未完了。
+- この最終結果は手帳/検証報告の文書2ファイルだけで追加commit/pushし、`[skip ci]`を付ける。
+  実装は上記exact CI成功commitと同一。最終文書commitを新たな本番反映や実機受入とは扱わない。

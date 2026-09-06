@@ -98,8 +98,16 @@
   取消後は元本文となり警告が消えることを確認。dirty時のreload操作はブラウザ操作のtimeoutとなり、
   復帰時に入力は保持されていたが、OSの確認ダイアログ自体は観測できなかった。
   beforeunload登録/解除は回帰試験で検査済みだが、実iPhone/Braveの警告表示は未確認である。
-- 最終3文書を含めたsource33の再確認とGitHub保存結果はSESSION_HANDOFF追記384末尾に記録する。
-  これらはローカル・sourceの資格確認であり、本番反映・正式公開・実機PDF出力の完了証跡ではない。
+- 最終3文書を含むsource33も10:42:18 JSTに全PASS。隔離archive456ファイルと作業ツリーは一致した。
+  検証サーバー3123・試験コンテナは停止、今回の検証タブも閉じた。3119と本番タブは未操作。
+- 実装は `09dc23deaaaff842093198c775b2ddbe895ce390` としてGitHubのmainへ保存済み。
+  [CI 34004645350](https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34004645350) は
+  10:47:14 JSTに全step成功（3分18秒）。source・型・lint・SQL10・build・smokeを一続きで確認した。
+  Deploy workflowのdeploy本体はskipped、公開aliasは既存Ready deploymentから変わっていない。
+- 既存lint41警告、手元Node20に対するSupabase SDK警告、既存ActionsのNode20非推奨annotationは
+  保守課題として残る。Vercel project設定はread-onlyでNode24.xを確認。今回ランタイム/依存更新なし。
+- これらはローカル・source/CIの資格確認であり、本番反映・正式公開・実機PDF出力の完了証跡ではない。
+  最終結果の文書追記は別のdocs-only commitで保存する。詳細はSESSION_HANDOFF追記384末尾を参照。
 
 ## 契約不要でも本人・運営側の判断が必要な残項目
 
