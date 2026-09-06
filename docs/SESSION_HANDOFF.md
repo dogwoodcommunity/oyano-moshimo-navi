@@ -14392,3 +14392,28 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   写真backupと組織の実構成/追加費用を含む確定見積ではない。未回答の実機/法務質問も引き継ぐ。
 - 完了記録だけを追加commit/push。CI成功を本番受入・法務承認・公開完了に読み替えない。
   本番データ変更0、契約/課金変更0。未追跡Claude_FULL2文書とreview_exportsは不介入。
+
+## 2026-09-06 追記 381 — 既存のいまみてPro契約を確認（変更なし）
+
+- ユーザーから「いまみてでPro契約したが、また別契約が必要か」と質問。
+  今回は料金・配置のread-only確認のみで、移管/課金/権限変更の承認ではない。
+- ログイン済みSupabaseで `imamite-stg-data` / `imamite-staging PRO` / Micro / Tokyoを今回確認。
+  親のもしもナビは追記379で別の `dogwoodcommunity's Org FREE` と確認済み。
+  既存Proを考慮せず新規Proだけを選択肢にしていた説明を補足する。
+- Supabaseの基本契約はアプリ別ではなく組織別。同じPro組織へプロジェクトを移管する方式なら、
+  DB/Auth/Storageのプロジェクト分離を保ち、2契約目のPro基本料を避けられる可能性がある。
+  2アプリを1つのDBへ統合する提案ではない。
+- 追加プロジェクトはcompute費用が発生する。公式ではMicro月10USDから。
+  既存1件と追加1件の計2件がMicroで他の追加料金なしなら、月25USD＋追加約10USD＝約35USDが例。
+  別組織2契約の基本料金合計50USDとの比較であり、実際の請求見積ではない。
+  他のproject/compute/利用超過/税/写真backup費用は未確認。組織の利用枠は共有。
+- 移管には元組織Owner、移管先Member以上、GitHub integration/Log Drains等の条件確認が必要。
+  移管先組織メンバーの権限も対象projectへ及ぶため、運用担当/アクセス範囲を確認し、
+  正確な費用と影響を示してから別途実行承認を得る。まだ移管・追加契約は一切していない。
+  Pro DBbackupに写真object本体が含まれない点、実backup復元等の正式公開条件は引き続き未完了。
+- 公式確認先（2026-09-06）:
+  https://supabase.com/docs/guides/platform/billing-on-supabase
+  https://supabase.com/pricing
+  https://supabase.com/docs/guides/platform/project-transfer
+  https://supabase.com/docs/guides/platform/access-control
+- この追記のみcommit/pushし、アプリsource/本番データ/契約/権限/保存先を変更しない。
