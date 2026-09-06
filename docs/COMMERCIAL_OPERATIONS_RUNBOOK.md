@@ -1,8 +1,34 @@
 # 無料Web正式版 Stage A 運用手順書
 
-最終更新: 2026-09-05
+最終更新: 2026-09-06
 
 対象: 親のもしもナビ 無料Web版（Next.js / Vercel / Supabase / 任意のResend）
+
+### 2026-09-06 確認できた現況
+
+- 本番Supabase `ypnuxyfirlvbsqujocuy` のDatabase > Backupsをread-onlyで確認。
+  組織はFreeで、画面は「Free Plan does not include project backups」と表示。
+  providerの自動backupは利用できていない。別途運営が保有する外部dumpの有無までは未確認。
+- Storage object本体の独立backupは未確認。DBのPro backupを有効にしても写真本体は含まれない。
+- [合成復旧演習](SYNTHETIC_RECOVERY_REHEARSAL.md)を実装し、56テーブル・家族権限・削除証跡・合成画像の
+  ローカルdump/restoreはPASS。本番backup、実Auth/Storage、実機、実測本番RPO/RTOの合格とはしない。
+- 運営情報4値は2026-09-05公開済み、2026-09-06の本番規約/プライバシーでも確認済み。
+  本文に残る「表示未確認」などの過去記述より、この現況とSESSION_HANDOFFの後続記録を優先する。
+  問い合わせ受信/返信、運用通知、実機/二者削除、法務最終確認・施行日は未完了。
+- 契約変更、backup取得/restore、本番削除、外部メール送信はこの確認では行っていない。
+
+バックアップ方式の次の判断（未承認）:
+
+- Free継続なら、DB/Authの定期外部dumpとStorage実objectの独立保存、アクセス制限・暗号化・保持・失敗検知を別途整える。
+  保存先と実行環境が未指定のため、費用ゼロや復旧可能とは約束しない。
+- Proは[公式価格](https://supabase.com/pricing)で月25 USDから、1 Micro相当のcompute creditと7日保持の日次DBbackupを含む。
+  組織全体の実構成・税・通貨換算・追加project/compute・写真別保存先の費用は契約直前に確認する。
+  [Spend Cap](https://supabase.com/docs/guides/platform/cost-control)は総額上限ではなく、compute/branch/PITR等は対象外。
+  PITRや追加compute等の有料add-onを今回の案へ自動追加しない。
+- [契約変更](https://supabase.com/docs/guides/platform/manage-your-subscription)は即時適用、プラン料は前払い。
+  Freeへ戻す解約は即時で、未使用分は原則組織credit、支払方法への返金ではない。超過使用分は別に請求され得る。
+- Proを選んでも[DBbackupに写真本体は含まれない](https://supabase.com/docs/guides/platform/backups)。
+  写真backupと本番相当の隔離restoreが完了するまで、バックアップ条件は未完了のまま。
 
 ## 1. この文書の位置づけ
 
@@ -538,7 +564,7 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
    pnpm run test:account-erasure:sql
    ```
 
-8. 実測RPOを「障害想定時刻－最新復元データ時刻」、RTOを「開始承認時刻－利用確認完了時刻」で記録する。
+8. 実測RPOを「障害想定時刻－最新復元データ時刻」、RTOを「利用確認完了時刻－開始承認時刻」で記録する。
 9. 欠落、権限逸脱、外部送信が1件でもあれば失敗とし、目標を達成したと記録しない。
 10. 隔離環境の削除対象を列挙し、承認後に削除する。production projectが対象に含まれないことを二人で確認する。
 

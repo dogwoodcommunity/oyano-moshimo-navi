@@ -113,4 +113,44 @@ for (const html of renderPages()) {
   assert.match(html, /&lt;script&gt;test&lt;\/script&gt;/);
   assert.doesNotMatch(html, /<script>test<\/script>/);
 }
-console.log("public operator contact, rendering and formal release gate tests passed");
+
+// Render the actual privacy page: prohibited input is not automatic rejection,
+// and declining to make professional judgments must not prohibit recording them.
+const privacyHtml = renderPages()[1];
+assert.match(privacyHtml, /<h2>入力・保存を禁止する情報<\/h2>/);
+assert.doesNotMatch(privacyHtml, /<h2>保存しない情報<\/h2>|保存禁止の情報は預かりません|詳細住所は取得しません/);
+assert.match(privacyHtml, /居住地域の入力欄では、番地、丁目、建物名などの詳細住所を求めません/);
+assert.match(privacyHtml, /自由記述や写真の内容を自動で判別し、保存を防ぐ仕組みではありません/);
+assert.match(privacyHtml, /端末内の手帳や、クラウド保存を利用した場合はクラウドにも残る可能性/);
+const prohibitedList = privacyHtml.match(/<h2>入力・保存を禁止する情報<\/h2>\s*<ul[^>]*>([\s\S]*?)<\/ul>/)?.[1];
+assert.ok(prohibitedList);
+assert.match(prohibitedList, /銀行暗証番号|マイナンバー画像/);
+assert.doesNotMatch(prohibitedList, /法律|税務|医療|判断/);
+assert.match(privacyHtml, /<h2>本サービスが行わない判断<\/h2>/);
+assert.match(privacyHtml, /医師などの専門家から伝えられた内容を手帳に記録することを禁止する趣旨ではありません/);
+assert.match(privacyHtml, /一定の形式に一致するものを、送信前に自動で伏せます/);
+assert.match(privacyHtml, /全角数字や異なる区切り方など、形式によっては検出できません/);
+assert.match(privacyHtml, /すべての機密情報の送信を防ぐものではなく、元の手帳記録を書き換える処理でもありません/);
+
+// Use actual shared display constants and the pure redactor, with no API calls.
+const sharedConsult = load("packages/shared/src/consult.ts", {});
+const maskedFields = sharedConsult.CONSULT_WITHHELD_FIELDS.filter((field) => field.includes("自動で伏せ"));
+assert.equal(maskedFields.length, 2);
+for (const field of maskedFields) {
+  assert.match(field, /一定の形式/);
+  assert.match(field, /検出できない/);
+  assert.doesNotMatch(field, /（自動で伏せます）/);
+}
+assert.ok(maskedFields.some((field) => field.includes("送信される可能性")));
+assert.ok(maskedFields.some((field) => field.includes("全角数字")));
+for (const relative of ["apps/web/components/ConsultPanel.tsx", "apps/mobile/app/consult.tsx"]) {
+  const source = fs.readFileSync(path.join(root, relative), "utf8");
+  assert.match(source, /送信から除く情報・伏せ字の対象/);
+  assert.doesNotMatch(source, />送らないもの</);
+}
+const { redactSensitive } = load("apps/web/lib/consult.ts", { "@oyano/shared": sharedConsult });
+assert.equal(redactSensitive("09000000000"), "［伏字］");
+assert.equal(redactSensitive("test@example.test"), "［伏字］");
+assert.equal(redactSensitive("医師から水分を取るようにと言われた。"), "医師から水分を取るようにと言われた。");
+
+console.log("public operator contact, rendering, privacy data boundaries and formal release gate tests passed");

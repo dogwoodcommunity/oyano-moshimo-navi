@@ -1559,7 +1559,7 @@ export function ConsultPanel() {
               <ul>{CONSULT_SENT_FIELDS.map((item) => <li key={item}>{item}</li>)}</ul>
             </div>
             <div className="is-withheld">
-              <strong>送らないもの</strong>
+              <strong>送信から除く情報・伏せ字の対象</strong>
               <ul>{CONSULT_WITHHELD_FIELDS.map((item) => <li key={item}>{item}</li>)}</ul>
             </div>
           </div>

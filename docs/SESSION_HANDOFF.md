@@ -14289,3 +14289,73 @@ mainへfast-forward/pushした。今回は追加アプリコード変更なし�
 Stripe/有料受付、物理製本、スポンサー、ストアアプリは無料Stage Aの完了条件へ追加しない。
 この判断記録だけをcommit/push。アプリ/設定/デプロイ/DB/保存データは変更せず、
 `review_exports/` と未追跡Claude_FULL 2文書は触らない。
+
+## 2026-09-06 追記 379 — 最終確認を実施、Freeの本番backup不足を確認
+
+「最後全部それをやって、確認を終えて正式公開へ進める」を受け、main `cf856ad` から再開。
+利用者の記録を試験へ転用せず、3担当に既存回帰・合成復旧・表示/法務整合確認を分担。
+本人操作、費用/契約、対象未確定の削除を包括承認で通過したとは扱わない。
+
+### 実際の本番確認
+
+- Supabase `ypnuxyfirlvbsqujocuy` / dogwoodcommunity's Org / main PRODUCTION の
+  Database > Backupsをログイン済み画面でread-only確認。
+  `Free Plan does not include project backups.` と `Upgrade to the Pro Plan for up to 7 days of scheduled backups.` を確認。
+  provider自動backupは利用できない。運営が別に保有する外部dumpの有無は未確認。
+  記録の消失を検出したという意味ではない。Storage実objectの独立backupも未確認。
+- 公式docsではProの日次DBbackupは7日保持、Storage object本体は含まれない。
+  公式価格は月25 USDから。組織の実構成/税/追加compute/写真保存先の費用は未確定。
+  Spend Capの対象外、即時契約・前払い・解約時credit/超過請求の注意を運用手順書へ記録。
+  Upgradeリンクの操作は安全確認で拒否され、契約・課金・プラン変更はしていない。
+  画面は次の判断用に保持。無料外部dump方式かPro等か、保存先/費用の方向決定が必要。
+- Vercelログはローカル `.vercel/project.json` の名前・組織・ID一致guard後に
+  production / 直近1時間 / 5xx / 最大100件をread-only照会。CLI exit0・返却0件。
+  ログ本文・個人識別子を出力せず件数だけ確認。全期間の無障害、Cron成功、通知実受信の証明ではない。
+  初回はproject IDの転記誤りでnot found、正確なローカル設定で照合し直して実施した。
+- 本番DB/Auth/Storageの書込、backup取得/restore、削除、メール/招待/AI送信はなし。
+
+### 限定修正
+
+- privacyページの「預かりません/保存しない情報」を「入力・保存を禁止する情報」へ。
+  自由記述・写真に含めた情報の保存を技術的に防ぐ保証ではないと明示。
+  詳細住所を求めないのは居住地域入力欄であり、自由記述の不取得保証としない。
+  サービスが専門判断をしないことと、医師等から聞いた内容を記録することを区別。
+- 自動伏字は一定形式だけ、全角数字等は検出できない場合があり、元の記録は変えないと明示。
+  shared表示文とWeb/mobileの見出しも「送信から除く情報・伏せ字の対象」に整合。
+  同意version/親同意文・AI処理/保存/権限/削除・依存・SQLは変更していない。
+- `test-public-operator-disclosure.mjs` に実privacy render、表示const、純粋redactor、見出し回帰を追加。
+  `LEGAL_FINAL_REVIEW_2026-09-06.md` に本人同意/海外処理/請求窓口等の未確定点と一次資料を整理。
+  法的承認や正式公開日確定の代替ではない。
+- 運用手順書のRTO式を「利用確認完了時刻－開始承認時刻」へ訂正。
+  入力票に残っていた運営4値のWeb反映待ちを公開済みの事実へ修正し、backupの現況を反映。
+
+### 合成復旧試験
+
+- 新規 `scripts/test-synthetic-recovery.mjs` は入力dump/URL/接続文字列/保存先overrideを受け付けない。
+  local Unix socket、cached PG16固定image、network none/pull never、公開port/host bind/既存volumeなし。
+  18 tracked SQLと試験専用Auth/Storage shimから合成2家族・3利用者を作る。
+- 最終script SHA256 `457546b40f04ababfba1518f8a09bfa4c652bc4acebd85d5439e74d0448c24d1` をrootも独立実行。
+  56テーブルの全内容hash、実効ACL/RLS/functions/triggers/3roles、家族分離/viewer拒否、
+  削除receipt/復活拒否、pending cleanup、送信receipt、実行gate閉状態が全PASS。
+  binary dump 467,557 bytesを別の新規空DBへ復元。合成PNG1件68bytesも独立保存・復元・hash/参照/破損検出PASS。
+- 09:22:57.640–09:23:00.430 JST、合成復元2,790ms・全体9,001ms、exit0/cleanup PASS。
+  label付きコンテナ残存0もrootで確認。詳細hashは `SYNTHETIC_RECOVERY_REHEARSAL.md`。
+  予備試験の初期化待機/実効ACL比較と独立レビューのPNG CRC/作成応答消失時cleanup追跡を修正後の証跡。
+  実Auth資格情報、Storage API、本番backup後の削除証跡再適用、Web/実機、本番RPO/RTOはNOT_TESTED。
+
+### 既存回帰と次の境界
+
+- 開始cf856adのclean archive `/private/tmp/oyano-final-local-cf856ad.PZx56m` は449 blobs一致。
+  初回account-erasure停止は単独/全体再試験で再現せず、2回目の全46工程は連続LOCAL_PASS。
+- 修正文言3ファイル版のarchive `/private/tmp/oyano-final-copy-cf856ad.yD08V8` でSQL10全工程PASS。
+  8工程の後にmonthly-checkinは一時DBの起動確認で停止、同一source単独再試験はPASS。
+  後続reconciliationもPASS。SQL assert不具合と決めつけず、再試験を含む全工程結果として扱う。
+- 最終見出し修正を含む5ファイル版はsource32/lint/Web・mobile型/buildの36工程連続PASS。
+  最終5ファイルはarchiveとrootの実行前後SHA256一致、他444blobはcf856ad一致。
+  隔離BUILD_ID `OlBGZorjI7WR5mJBkr8wr`。上記SQL10は個別再試験を含む結果として区別する。
+  根元3119と既存 `.next` は変更せず、隔離archiveでbuild。exact commit CIは後続追記へ。
+  既存img/Hook警告は残り、警告ゼロとはしない。
+- このターンは法務確認担当と利用可能な実機を質問中。未回答を承認扱いにしない。
+  実機/二者削除、問い合わせ・通知受信、法務/施行日と、本番DB/Auth/写真backupが未完了。
+  正式Stage AはNO-GOを維持。本番アプリは追記377の8289876を維持し、今回の説明修正は最終確認用sourceとして保存する。
+  対象ファイルだけをcommit/pushし、`review_exports/` と未追跡Claude_FULL 2文書は触らない。

@@ -425,7 +425,7 @@ export default function ConsultScreen() {
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>送る情報と、送らない情報</Text>
+        <Text style={styles.cardTitle}>AIへ送る情報の扱い</Text>
         <Text style={styles.body}>
           {CONSULT_MEMORY_CONSENT_TEXT} 相談のたびに、下の内容だけを外部の生成AI（Anthropic Claude）へ送ります。送った内容は学習には使われません。
         </Text>
@@ -439,7 +439,7 @@ export default function ConsultScreen() {
           ))}
         </View>
         <View style={[styles.disclosure, styles.disclosureWithheld]}>
-          <Text style={styles.disclosureLabel}>送らないもの</Text>
+          <Text style={styles.disclosureLabel}>送信から除く情報・伏せ字の対象</Text>
           {CONSULT_WITHHELD_FIELDS.map((item) => (
             <Text key={item} style={styles.disclosureItem}>・{item}</Text>
           ))}

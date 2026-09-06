@@ -1,5 +1,18 @@
 # 本番化チェックリスト
 
+## 2026-09-06 最終確認の進捗
+
+- 開始source `cf856ad` は隔離環境で全46工程LOCAL_PASS（source32・lint・Web/mobile型・SQL10・build）。
+- 本番SupabaseのDatabase > Backupsで **Free / 自動backupなし** を確認。記録消失の観測ではないが、
+  本番backup・Storage独立保存・実backupの隔離復旧は公開前の未完了条件。
+- [合成復旧演習](SYNTHETIC_RECOVERY_REHEARSAL.md)を追加し、56テーブルと権限・削除証跡・合成PNGの復元PASS。
+  実Auth/Storageや本番データの復旧完了とはしない。
+- プライバシーの保存禁止と技術的保存防止の違い、限定的な自動伏字を明確化。
+  [法務最終確認メモ](LEGAL_FINAL_REVIEW_2026-09-06.md)へ未確定事項を集約。
+- 実機・二者によるテスト削除・問い合わせ/通知の実受信・法務と施行日は未完了。
+  正式公開の判定はNO-GOを維持し、費用/契約/本番削除の確認を飛ばさない。
+- 最新差分の検証・公開証跡は `SESSION_HANDOFF.md` 追記379以降を参照。
+
 ## 2026-09-05 終了条件の再整理
 
 無料Web正式版（Stage A）を先に完成させる。有料受付（Stage B）・ストア公開（Stage C）は別段階。
