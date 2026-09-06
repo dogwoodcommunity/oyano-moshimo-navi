@@ -8,6 +8,7 @@ import { NotebookReconciliation } from "@/components/NotebookReconciliation";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { truncateDisplayText } from "@/lib/displayText";
+import { hasUnsavedDiaryEdit, hasUnsavedNewDiaryInput, UNSAVED_DIARY_WARNING } from "@/lib/diaryUnsavedChanges";
 import { PREFECTURES } from "@/lib/prefectures";
 import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
@@ -1178,6 +1179,7 @@ export default function FamilyBoardPage() {
   const [diaryEntries, setDiaryEntries] = useState<Record<string, DiaryEntry[]>>({});
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
   const [diaryEditForms, setDiaryEditForms] = useState<Record<string, DiaryEditForm>>({});
+  const [diaryEditOriginals, setDiaryEditOriginals] = useState<Record<string, DiaryEditForm>>({});
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
   const [diarySavedId, setDiarySavedId] = useState<string | null>(null);
   const [diaryUpdatedId, setDiaryUpdatedId] = useState<string | null>(null);
@@ -1414,6 +1416,25 @@ export default function FamilyBoardPage() {
   const activeTasks = activeCase?.result?.tasks ?? [];
   const nextTask = activeTasks[0];
   const activeForm = activeCase ? forms[activeCase.id] ?? emptyDiaryForm : emptyDiaryForm;
+  const hasUnsavedDiaryChanges = cases.some((caseRecord) => (
+    hasUnsavedNewDiaryInput(forms[caseRecord.id])
+    || (diaryEntries[caseRecord.id] ?? []).some((entry) => (
+      hasUnsavedDiaryEdit(diaryEditForms[entry.id], diaryEditOriginals[entry.id])
+    ))
+  ));
+
+  useEffect(() => {
+    if (!hasUnsavedDiaryChanges) return;
+    // Browsers may suppress this confirmation (especially on mobile). The
+    // visible warning remains necessary; this does not persist or send drafts.
+    const warnBeforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnBeforeUnload);
+    return () => window.removeEventListener("beforeunload", warnBeforeUnload);
+  }, [hasUnsavedDiaryChanges]);
+
   const activeProfile = activeCase ? profileForms[activeCase.id] ?? profileSeed(activeCase) : undefined;
   const activePrefecturePromptDraft = activeCase
     ? prefecturePromptDrafts[activeCase.id] ?? {
@@ -1937,38 +1958,61 @@ export default function FamilyBoardPage() {
   }
 
   function openDiaryEditor(entry: DiaryEntry) {
+    const original = diaryEditOriginals[entry.id];
+    const draft = diaryEditForms[entry.id];
+    const keepDraft = hasUnsavedDiaryEdit(draft, original);
+    const seed = diaryEditSeed(entry);
     setDiaryEditForms((current) => ({
       ...current,
-      [entry.id]: current[entry.id] ?? diaryEditSeed(entry)
+      [entry.id]: keepDraft && draft ? draft : seed
+    }));
+    setDiaryEditOriginals((current) => ({
+      ...current,
+      [entry.id]: keepDraft && original ? original : seed
     }));
     setEditingDiaryId(entry.id);
     setDiarySavedId(null);
     setDiaryUpdatedId(null);
+    scrollToDiaryEntry(entry.id, true);
   }
 
-  function scrollToDiaryEntry(entryId: string) {
+  function scrollToDiaryEntry(entryId: string, editMode = false) {
     window.setTimeout(() => {
       window.requestAnimationFrame(() => {
-        document.getElementById(`diary-entry-${entryId}`)?.scrollIntoView({
-          block: "start",
-          behavior: "smooth"
+        const entry = document.getElementById(`diary-entry-${entryId}`);
+        if (!entry) return;
+        const target = editMode ? entry.querySelector(".diary-edit-panel") ?? entry : entry;
+        // Header height varies with screen width and text size. Static mobile tabs
+        // must not count as an obstruction, while sticky desktop tabs must count.
+        let stickyBottom = 0;
+        document.querySelectorAll<HTMLElement>(".nav, .notebook-tab-bar").forEach((element) => {
+          const style = window.getComputedStyle(element);
+          const top = Number.parseFloat(style.top);
+          const height = element.getBoundingClientRect().height;
+          if ((style.position === "sticky" || style.position === "fixed") && Number.isFinite(top) && height > 0) {
+            stickyBottom = Math.max(stickyBottom, top + height);
+          }
+        });
+        window.scrollTo({
+          top: Math.max(0, window.scrollY + target.getBoundingClientRect().top - stickyBottom - 16),
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
         });
       });
     }, 80);
   }
 
-  function showDiaryEntry(entry: DiaryEntry) {
+  function showDiaryEntry(entry: DiaryEntry, shouldScroll = true) {
     setActiveNotebookTab("history");
     setSelectedDiaryDate(entry.date);
     setDiaryCalendarMonth(monthInputValue(entry.date));
     setRecordFilter("all");
     markMonitorActivity("diaryHistoryOpened");
     trackFunnel("history_viewed");
-    scrollToDiaryEntry(entry.id);
+    if (shouldScroll) scrollToDiaryEntry(entry.id);
   }
 
   function openDiaryEditorAndScroll(entry: DiaryEntry) {
-    showDiaryEntry(entry);
+    showDiaryEntry(entry, false);
     openDiaryEditor(entry);
   }
 
@@ -1977,8 +2021,13 @@ export default function FamilyBoardPage() {
       ...current,
       [entry.id]: diaryEditSeed(entry)
     }));
+    setDiaryEditOriginals((current) => ({
+      ...current,
+      [entry.id]: diaryEditSeed(entry)
+    }));
     setEditingDiaryId(null);
     setDiaryUpdatedId(null);
+    scrollToDiaryEntry(entry.id);
   }
 
   function updateDiaryEditForm(entryId: string, patch: Partial<DiaryEditForm>) {
@@ -2020,6 +2069,10 @@ export default function FamilyBoardPage() {
       [caseId]: listDiaryEntries(caseId)
     }));
     setDiaryEditForms((current) => ({
+      ...current,
+      [entryId]: diaryEditSeed(updated)
+    }));
+    setDiaryEditOriginals((current) => ({
       ...current,
       [entryId]: diaryEditSeed(updated)
     }));
@@ -3789,6 +3842,12 @@ export default function FamilyBoardPage() {
               {recordStorageMessage ? (
                 <p className={`record-storage-message is-${recordStorageTone}`}>{recordStorageMessage}</p>
               ) : null}
+              {hasUnsavedNewDiaryInput(activeForm) ? (
+                <p className="record-storage-message is-warning" role="status">
+                  {UNSAVED_DIARY_WARNING}
+                  <br /><small>端末やブラウザによっては、閉じる時の確認が出ない場合があります。</small>
+                </p>
+              ) : null}
               <button className="nb-save" type="button" disabled={cloudContentReadOnly} onClick={() => saveDiary(activeCase.id)}>
                 この人の手帳に残す
               </button>
@@ -4061,6 +4120,12 @@ export default function FamilyBoardPage() {
                                         ))}
                                       </div>
                                     </div>
+                                    {hasUnsavedDiaryEdit(editForm, diaryEditOriginals[entry.id]) ? (
+                                      <p className="record-storage-message is-warning" role="status">
+                                        {UNSAVED_DIARY_WARNING}
+                                        <br /><small>端末やブラウザによっては、閉じる時の確認が出ない場合があります。</small>
+                                      </p>
+                                    ) : null}
                                     <div className="diary-edit-actions">
                                       <button disabled={cloudContentReadOnly || !editForm.body.trim()} type="button" onClick={() => saveDiaryEdit(activeCase.id, entry.id)}>変更を保存する</button>
                                       <button type="button" onClick={() => closeDiaryEditor(entry)}>変更せず閉じる</button>

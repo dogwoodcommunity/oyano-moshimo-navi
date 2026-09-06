@@ -23,13 +23,13 @@ docker run --pull=never --network=none --rm --detach \
   docker.io/library/postgres:16-bookworm >/dev/null
 
 for _ in $(seq 1 30); do
-  if docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1; then
+  if docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then
     break
   fi
   sleep 1
 done
 
-if ! docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1; then
+if ! docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then
   echo "Disposable PostgreSQL did not become ready" >&2
   exit 1
 fi

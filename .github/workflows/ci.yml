@@ -78,6 +78,9 @@ jobs:
       - name: Test home overview reachability
         run: pnpm run test:home-overview-reachability
 
+      - name: Test unsaved diary warning and unload guard
+        run: pnpm run test:diary-unsaved-changes
+
       - name: Test web account deletion
         run: pnpm run test:web-account-deletion
 

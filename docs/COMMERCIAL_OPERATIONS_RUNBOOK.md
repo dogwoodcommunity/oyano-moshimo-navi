@@ -13,8 +13,12 @@
 - [合成復旧演習](SYNTHETIC_RECOVERY_REHEARSAL.md)を実装し、56テーブル・家族権限・削除証跡・合成画像の
   ローカルdump/restoreはPASS。本番backup、実Auth/Storage、実機、実測本番RPO/RTOの合格とはしない。
 - 運営情報4値は2026-09-05公開済み、2026-09-06の本番規約/プライバシーでも確認済み。
-  本文に残る「表示未確認」などの過去記述より、この現況とSESSION_HANDOFFの後続記録を優先する。
   問い合わせ受信/返信、運用通知、実機/二者削除、法務最終確認・施行日は未完了。
+- 非対話lintは設定済み。開始source `cf856ad` の隔離ローカル46工程PASSと、最終説明修正を含む
+  `119af9756371dae6b8e59486d6466b6972fd6996` のCI `34001579119` 成功を確認済み。
+  合成復旧はこのCIの対象外で、固定script SHAの独立ローカルPASSを別証跡とする。
+- 公開aliasは2026-09-06 09:59 JST頃の再照会で `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready。
+  稼働版は `8289876`、最終説明修正は本番未反映。最新の証跡は `SESSION_HANDOFF.md` 追記379〜383を参照する。
 - 契約変更、backup取得/restore、本番削除、外部メール送信はこの確認では行っていない。
 
 バックアップ方式の次の判断（未承認）:
@@ -22,7 +26,14 @@
 - Free継続なら、DB/Authの定期外部dumpとStorage実objectの独立保存、アクセス制限・暗号化・保持・失敗検知を別途整える。
   保存先と実行環境が未指定のため、費用ゼロや復旧可能とは約束しない。
 - Proは[公式価格](https://supabase.com/pricing)で月25 USDから、1 Micro相当のcompute creditと7日保持の日次DBbackupを含む。
-  組織全体の実構成・税・通貨換算・追加project/compute・写真別保存先の費用は契約直前に確認する。
+  新規Pro契約だけでなく、既存 `imamite-staging PRO` へproject分離を保って移管する候補がある。
+  2026-09-06の移管前チェックは通過し、追加月10 USD相当の表示を確認したが、移管は実行していない。
+  移管先は既存2 MicroとIPv4 add-on、Spend Cap有効、請求期間9月4日〜10月4日、今期予測41.66 USD。
+  移管後は概算約52 USD/月だが、時間課金・構成・利用・税等で変わり、移管後の予測額は未生成。
+  compute creditsは組織全体で月10 USD共用。有料組織のNanoはMicroと同額で、自動でサイズ変更されない。
+  両組織は同一Owner 1名。将来の組織メンバーにも移管したprojectの権限が及ぶ。
+  移管先Team画面の管理者MFAはDisabledで、アプリの削除実行者MFAとは別の未完了事項。
+  根拠は `SESSION_HANDOFF.md` 追記382。方式・費用・権限・写真別保存先を確定してから実行する。
   [Spend Cap](https://supabase.com/docs/guides/platform/cost-control)は総額上限ではなく、compute/branch/PITR等は対象外。
   PITRや追加compute等の有料add-onを今回の案へ自動追加しない。
 - [契約変更](https://supabase.com/docs/guides/platform/manage-your-subscription)は即時適用、プラン料は前払い。
@@ -30,11 +41,14 @@
 - Proを選んでも[DBbackupに写真本体は含まれない](https://supabase.com/docs/guides/platform/backups)。
   写真backupと本番相当の隔離restoreが完了するまで、バックアップ条件は未完了のまま。
 
+Proへの移管・新規契約は必須の方式ではない。Freeの外部dump方式でも、DB/Auth・写真の保護と
+実backupの隔離復旧が必要である。費用・契約を変えない準備は付録のbackup準備票で進める。
+
 ## 1. この文書の位置づけ
 
 この文書は、無料Web版を正式運用する担当者が、障害、問い合わせ、削除依頼、復旧、リリースを同じ判断基準で扱うための手順書である。[正式公開計画](COMMERCIAL_RELEASE_PLAN_2026-09-03.md)、[デプロイ手順](DEPLOYMENT.md)、[本番チェックリスト](PRODUCTION_CHECKLIST.md)、[Supabaseセットアップ](../supabase/README.md)を補完する。
 
-ここに書かれた「目標」は内部運用目標であり、利用者への保証またはSLAではない。外部サービスの管理画面をこの文書作成時には確認していないため、Vercel・Supabase・Resendの契約プラン、バックアップ、アラート、ドメイン認証、環境変数の実設定状態はすべて本番管理画面で再確認する。
+ここに書かれた「目標」は内部運用目標であり、利用者への保証またはSLAではない。外部設定の確認済み範囲は冒頭の現況と日付付き実施記録を参照する。未確認のバックアップ、アラート、ドメイン認証等を設定済みと推測せず、変更前に対象と現在の状態を再照合する。
 
 ### 1.1 判定ラベル
 
@@ -58,7 +72,7 @@
 
 正式な利用者向け問い合わせ先は `info@bee-ch.co.jp`、対応目安は「メール受付：24時間／原則3営業日以内に返信」と確定した。メールによるアカウント削除依頼は同じ共有受信箱で受け、主担当と代行者の双方へ通知する運用方針とする。アプリ内の `/account/delete` から送られた依頼はDBへ保存され、`/admin/delete-requests` の一覧で確認する。現行実装は、このDBキューへの保存時に自動メール通知を行わない。双方通知の方針を満たすには、共有受信箱の通知に加えてDBキューの監視・通知方法を割り当て、両経路を試験する必要がある。
 
-ただし、`LEGAL_CONTACT` と `LEGAL_CONTACT_RESPONSE_TARGET` の本番設定、両名の共有受信権限、双方通知のメールルール、DBキューの監視・通知方法、外部からの実受信・返信、公開画面の表示は未確認である。共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う。共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない。通知メール用の `NOTIFICATION_EMAIL_REPLY_TO` は別用途のため未確定のままとする。[環境変数マトリクス](ENVIRONMENT_MATRIX.md)と公開画面を照合する。
+`LEGAL_CONTACT` と `LEGAL_CONTACT_RESPONSE_TARGET` の本番設定・公開表示は2026-09-05に確認し、2026-09-06にも再確認済みである。両名の共有受信権限、双方通知のメールルール、DBキューの監視・認知方法、外部からの実受信・返信は未確認である。共有パスワードを使わず、個別アカウントへの委任または追跡可能な転送を使う。共有受信箱のパスワード、MFA、復旧コードはGitや一般チャットへ記録しない。通知メール用の `NOTIFICATION_EMAIL_REPLY_TO` は別用途のため未確定のままとする。[環境変数マトリクス](ENVIRONMENT_MATRIX.md)と公開画面を照合する。
 
 削除担当への指名だけではAdmin権限を付与しない。代行者の責任範囲「主担当不在時に削除依頼の受付・本人確認・実行担当への引継ぎを代行。本番削除は登録済み実行者と別確認者の二者で実施」は確定した。ここでいう本人確認は、利用者が `/account/delete` のMagic Link認証を完了した状態と、request ID・対象user IDの一致を確認することを指す。身分証画像、パスワード、Magic Link、access tokenは受け取らない。アカウント完全削除の登録済み実行者は `システム責任者 池田知也` とし、本人用の個別Supabase Auth招待受諾・メール確認、本人端末でのverified TOTP 1件・現在のAAL2確認、Auth emailだけの最小profile、private台帳の本人確認eventまで確認した。別確認者は `代表取締役 池田哲也` とし、確認済みAuthと同一UUIDのprofile・メール一致を読み取り確認した後、別の本番操作で `activation_approved` event 1件と同じexecutorの `created_by` が別確認者、`active=true`、`activated_at is not null`、`revoked_at is null`、identity・approval両台帳参照を事後確認した。private台帳総数は2件、executor総数・有効数は各1件で、family所有・所属、一般Admin、削除jobは0件だった。QR、手入力用コード、6桁の数字は運営者へ送らず、正確なuser IDはowner専用SQLと制限付き本番データだけで扱い、一般文書やGitへ記録しない。削除専用roleと削除pipelineの本番migrationは実装・適用済みで、一般Admin APIへは広がらず、緊急用管理キーも受け付けない。最小profileは監査上の本人識別子であり、それだけではfamily所有・所属・一般Admin・削除権限を付与しない。無効なexecutor登録と別確認者による承認event・有効化は分けて実施した。池田知也本人のアカウントを削除する場合は、別の登録済み実行者と別確認者を必要とする。本番の `ACCOUNT_ERASURE_EXECUTION_ENABLED` は未登録のためOFFである。削除専用ログインと一般Admin拒否は確認済みだが、メールとアプリ内DBキューの実際の権限・監視・通知設定・両経路の試験、単独テストアカウント完走が未確認の間は、削除実行の正式運用を開始しない。
 
@@ -68,12 +82,12 @@
 
 | 領域 | 現行の根拠 | 現時点の扱い |
 | --- | --- | --- |
-| Web | `apps/web` のNext.js、`vercel.json`、GitHub ActionsのVercel deploy | 実装あり。本番の現行deployment、Git連携、Actions secretsは外部要確認 |
-| DB / Auth | Supabase PostgreSQL、Auth、RLS、server-only service role | 実装あり。本番migration適用状態とAuth設定は外部要確認 |
+| Web | `apps/web` のNext.js、`vercel.json`、GitHub ActionsのVercel deploy | 稼働deploymentと未反映sourceは冒頭の現況を参照。CI成功とdeploy workflowのdeploy skippedを本番反映と混同しない。自動deploy経路は別途確認 |
+| DB / Auth | Supabase PostgreSQL、Auth、RLS、server-only service role | 必要migrationの適用・read-only検証実績は本番チェックリストに記録済み。全schemaの完全監査や実Auth復旧の合格ではない |
 | 写真 | Supabase Storage `home-photos` | 実装あり。独立バックアップ・versioning・復元実績は未確認 |
 | メール | Resendを使う期限・月1確認メール | 任意機能。`RESEND_API_KEY` と認証済み送信元が不足するとメールだけ停止する。設定済みとは扱わない |
 | Cron | Vercel Cronから通知、匿名データ削除、日記・対象者Storage cleanup | 設定ファイルあり。本番での登録、直近成功、失敗通知は外部要確認 |
-| アカウント削除 | 本人確認済み受付、削除専用role、Bearer限定管理一覧、TOTP/AAL2、耐久prepare、DB ownerだけが開く最大15分・one-shot control、別のAAL2 app adminによるcontrol内の最大10分・1回限りgrant、再開可能なDB証跡RPC | 削除role・pipelineとprivate台帳の本番migration、実行者のverified TOTP、別確認者のAuth・profile一致、本人確認event・最小profile、別確認者の承認event、削除専用role有効化、旧Webでの削除専用ログイン・一般Admin拒否は確認済み。2026-09-05にexecution gateを本番適用して読み取り専用12項目を確認し、対応Web `c1415b3` も本番反映してReady・smoke・削除API未認証401を確認した。更新後の本人認証・AAL2・空一覧・一般Admin画面拒否はChromeで確認済み。HTTP数値の直接再採取、非空依頼の応答最小化、別確認者のAAL2と単独テストアカウント完走は未確認。本番の実行スイッチはOFF |
+| アカウント削除 | 本人確認済み受付、削除専用role、Bearer限定管理一覧、TOTP/AAL2、耐久prepare、DB ownerだけが開く最大15分・one-shot control、別のAAL2 app adminによるcontrol内の最大10分・1回限りgrant、再開可能なDB証跡RPC | 削除role・pipeline・private台帳・execution gateの本番適用と読み取り専用検証、実行者のTOTP・本人確認、別確認者の承認event、削除専用role有効化は確認済み。対応Web `c1415b3` の反映後、後続 `17bbc7b` の本人Chrome/AAL2で削除専用2 APIの200・一般Admin 3 APIの403を実測した。非空依頼の応答最小化、別確認者のAAL2と単独テストアカウント完走は未確認。本番の実行スイッチはOFF |
 | 監視 | `/api/health`、Vercel/Supabase/Resendのログ | `/api/health` はWebプロセスだけの浅い確認。外部uptime・error alertは確認できず、未設定扱い |
 
 `/api/health` の200だけでDB、Auth、Storage、Cron、Resendの正常を宣言してはいけない。`/admin/env` も環境変数の「存在」だけを確認し、値の正しさや外部疎通は確認しない。
@@ -82,7 +96,7 @@
 
 次をすべて満たした時だけStage Aの運用GOを記録する。
 
-- [ ] 上記5役割と連絡手段、問い合わせ窓口を指定した。
+- [ ] 上記の担当役割と連絡手段、問い合わせ窓口を指定した。
 - [ ] 本番URL、Vercel project、Supabase project refを二人で照合した。
 - [ ] Vercelの自動deploy経路を「Git連携」または「GitHub Actions」の一方に決め、二重deployでないことを確認した。
 - [ ] 本番環境変数を `/admin/env` と各外部サービスで照合した。値そのものは議事録やチャットに貼らない。
@@ -106,7 +120,7 @@
 | 対象 | 正本 | 最低限必要な保護 |
 | --- | --- | --- |
 | アプリコード・設定 | Gitの承認済みcommit | remote repository、release SHA、Vercel deployment ID |
-| PostgreSQLデータ | Supabase DB（`public` とAuth関連） | provider backupまたはPITR、保持期間、復元可能な時点 |
+| PostgreSQLデータ | Supabase DB（`public` とAuth関連） | provider backupまたは定期外部dump。必要なroles・ACL・schemaを含む復旧範囲、保持期間、復元可能な時点を確認 |
 | 写真 | Supabase Storage `home-photos` | DBとは別にobject本体を戻せる仕組みとmanifest |
 | 削除証跡 | `account_delete_requests`、`account_erasure_jobs`、`audit_logs` | 個人情報を増やさず、改変権限を限定したDB backup |
 | 日記写真cleanup | `notebook_storage_deletion_jobs` | 未完了jobが親レコード削除後も残るDB backup |
@@ -119,12 +133,12 @@ Supabaseの[公式バックアップ案内](https://supabase.com/docs/guides/pla
 
 ### 4.2 現時点のRPO/RTO
 
-リポジトリには、Supabaseの本番backup設定、Storageの独立backup、復元演習の実測証跡がない。したがって、現時点で保証できるRPO/RTOは**なし**である。次は正式公開に向けた暫定目標で、外部設定と演習で達成を確認するまで「目標」のまま扱う。
+合成DB・画像のローカル復旧実測はあるが、本番DB/Auth・Storageのbackup成功履歴と実backupの隔離復旧実績は未確認である。したがって、現時点で保証できる本番RPO/RTOは**なし**である。次は正式公開に向けた暫定目標で、外部設定と演習で達成を確認するまで「目標」のまま扱う。
 
 | 障害範囲 | 暫定RPO目標 | 暫定RTO目標 | 現在の確証 |
 | --- | --- | --- | --- |
 | Web code / Vercelのみ | 承認済みrelease SHAまで（実質0） | 1時間 | Gitとrollback可能なdeploymentの外部確認が必要 |
-| Supabase DB / Auth | 24時間以内 | 8時間 | backup/PITR契約・保持・Auth復元範囲・演習が未確認 |
+| Supabase DB / Auth | 24時間以内 | 8時間 | Free・provider自動backupなしを確認済み。外部dump等の方式・保持・Auth復元範囲・実backup演習は未確認 |
 | Supabase Storage | 24時間以内 | 24時間 | 独立backup方式と復元演習が未確認。公開前必須 |
 | 通知処理 | DBのRPOに従う | 24時間 | 送信receipt migration、Cron、Resend設定が未確認 |
 
@@ -192,17 +206,39 @@ Supabaseの[公式バックアップ案内](https://supabase.com/docs/guides/pla
    group by status
    order by status;
 
-   select id, status, due_at, last_status_changed_at
+   select status, count(*) as open_requests,
+          count(*) filter (where due_at < now()) as overdue_requests,
+          min(due_at) as earliest_due_at,
+          max(last_status_changed_at) as latest_status_changed_at
    from public.account_delete_requests
    where status <> 'completed'
-   order by due_at
-   limit 100;
+   group by status
+   order by status;
    ```
+
+   最後の集計は現行schemaの未完了状態 `requested` / `reviewing` / `needs_followup` を全件対象にし、
+   request ID、user ID、本文、連絡先を返さない。行数0は、この表を全件参照できる権限と
+   対象projectの一致を確認できた場合だけ未完了0件と扱う。権限拒否やRLSで限定された結果を0件扱いしない。
+   個別対応が必要なら、権限のある本人が `/admin/delete-requests` の未完了一覧を全ページ確認する。
+
+   2026-09-06、trackedの `account_deletion_pipeline.sql` にあるtable DDLで作った隔離PG16に
+   架空1,025件を用意し、このSQLが未完了1,008件を100件制限なしで数え、完了17件を除外し、
+   期限超過件数と空キューも正しく返すことをread-only transactionで確認した。出力は上記5列のみ。
+   networkなし・キャッシュ済みimage・host bindなしの新規コンテナを使用し、清掃後の残存0件を確認。
+   本番キューの件数・権限・運用認知を確認した証跡ではない。
 
 6. Resendを有効にした場合だけ、前日の送信・bounce・complaintを確認する。未設定時は通知メール0件が正常である。
 7. 異常があれば時刻、環境、deployment ID、request/job ID、HTTP status、error codeだけを台帳へ記録する。本文、メール、token、写真pathは貼らない。
 
 外部alertが設定されていない間は、この手動確認を省略できない。
+
+### 5.3 費用・契約を変えない監視の準備
+
+既存の共有受信箱と上記の日次手動確認を使う方式を選べる。Resendの期限・月1確認メールは任意で、
+障害対応や問い合わせ受付のために新規契約・有料監視・Resend設定を必須化しない。
+手動方式でも担当・代行・確認時刻・未確認時の引継ぎ先を決め、両名の認知を試験する必要がある。
+未実施を「通知成功」と記録しない。日次確認だけで30分以内の障害検知ができるとは扱わず、
+実際の当番・連絡体制に合わせて内部ack目標を確認する。付録の日次運用票は未記入の準備票である。
 
 ## 6. 障害レベルと一次対応
 
@@ -328,7 +364,7 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - 「確認中」「要確認」の変更は、現routeがAAL2 app adminを確認したうえで `update_account_delete_request_status_v2` を呼び、DBも正確なoperator user IDを有効なapp adminとして再確認してから依頼行と監査ログを1トランザクションで更新する。手動の完了、処理中・完了済み依頼の巻き戻しは拒否する。旧 `update_account_delete_request_status_v1` はservice roleから失効させ、AAL1の旧deploymentもPATCH前にfail closedにする。
 - 実行APIは、control・grant・対象範囲を検証するDB削除v2 RPC、Supabase Auth userのhard delete、許可された `home-photos` objectの削除と不在確認、最終化RPCの順に進む。DB削除前に範囲変化等の安全blockを検出した場合は削除せずcontrolをfail closeしてgrantを取り消す。通信断やSQL例外ではcontrol/grant状態を推測せずowner-onlyで再確認し、activeならowner closeまたは期限切れまで再実行しない。通常の新規DB削除にはenv ON、live owner control、未使用・未失効grantを必須とする。唯一の途中再開はDB削除がcommit済みの `database_erased` に限り、最初のDB削除を実行した本人と同じ削除専用実行者が現在も有効かつAAL2で正確なrequest/target/job/manifest hashを送り、DB v2が同じjobの消費済み・未取消しgrantと現在の実行者hash＝grantの `operator_user_hash` を検証できた場合だけ、env OFF後もAuth/Storage不在確認と最終化を続行できる。DB未削除のjob、値の不一致、未消費・取消済みgrant、無効な実行者、AAL1、別の有効な削除専用実行者は拒否し、新規削除のenv OFF bypassにはしない。
 - `account_erasure_execution_gate.sql` は旧 `inspect_account_erasure_v1` / `prepare_account_erasure_v1`、旧 `update_account_delete_request_status_v1`、旧の3引数 `execute_account_erasure_database_v1` のservice role実行権限を取り上げ、privacy-safeなinspect/prepare v2、AAL2 app adminをDBで再確認するstatus update v2、control必須のexecute v2だけをservice roleへ開く。対応WebよりDBを先に移行することで、旧Webは認可table SELECTまたはv1権限で拒否され、過去のON deploymentを含むv2経路もcontrolなしでは `execution_control_disabled` となり、どの過去URLも新規DB削除前にfail closedになる。
-- 削除role・pipelineとprivate台帳の本番migration、担当者のverified TOTP、別確認者のAuth・profile一致と承認event、最小profile、削除専用role有効化、旧Webでの削除専用ログイン・一般Admin拒否は確認済み。`account_erasure_execution_gate.sql` は2026-09-05に本番適用し、読み取り専用12項目でRPC・ACL・FORCE RLSを確認した。controlは1行・active 0件、grant・削除依頼・削除jobは各0件、有効な削除専用実行者は1件だった。対応Web `c1415b3` は同日に本番反映済みで、更新後の本人認証済み・AAL2・空一覧・一般Admin画面拒否はChromeで確認済みである。HTTP数値の直接再採取、非空依頼の応答最小化、別確認者のAAL2と単独テストアカウント完走は未確認である。本番の実行スイッチはOFFで、これらを確認するまで「削除運用開始済み」と扱わない。
+- 削除role・pipelineとprivate台帳の本番migration、担当者のverified TOTP、別確認者のAuth・profile一致と承認event、最小profile、削除専用role有効化、旧Webでの削除専用ログイン・一般Admin拒否は確認済み。`account_erasure_execution_gate.sql` は2026-09-05に本番適用し、読み取り専用12項目でRPC・ACL・FORCE RLSを確認した。controlは1行・active 0件、grant・削除依頼・削除jobは各0件、有効な削除専用実行者は1件だった。対応Web `c1415b3` は同日に本番反映済みで、更新後の本人認証済み・AAL2・空一覧・一般Admin画面拒否はChromeで確認済みである。後続 `17bbc7b` の本人Chrome/AAL2では5 APIのHTTP数値200・200・403・403・403も直接確認済み。非空依頼の応答最小化、別確認者のAAL2と単独テストアカウント完走は未確認である。本番の実行スイッチはOFFで、これらを確認するまで「削除運用開始済み」と扱わない。
 
 ### 8.2 事前条件
 
@@ -337,7 +373,8 @@ Resendの期限通知は問い合わせ返信用ではない。指定したサ�
 - [x] `account_erasure_execution_gate.sql` を既存pipelineの後にDB-firstで本番適用し、private control/grant表とopen/close関数のowner-only ACL、controlの既定closed、`verify_account_delete_operator_v2` / `inspect_account_erasure_v2` / `prepare_account_erasure_v2` / `update_account_delete_request_status_v2` / `execute_account_erasure_database_v2` のservice-only ACL、`account_delete_executors` 生tableのservice role SELECTなし、旧v1 inspect/prepare/status update/execute RPCのservice role権限なしをread-onlyで確認した（2026-09-05、読み取り専用12項目PASS。private表FORCE RLS、active control 0件・grant 0件も確認）。
 - [x] 対応Web `c1415b3b036fbdfa9977f0d870a808bb633c6467` を2026-09-05に本番へ反映した。CI `33952555663` PASS（2分24秒）、deploy workflow `33952555613` は未設定のためskip、Vercel CLIでdeployment `dpl_Hx7V71Pd9voYiMYgfmFFRxmo7MnA` を作成しReadyを確認した。直接URLは `https://oyano-moshimo-navi-oamhlgdrr-dogwoodcommunity1.vercel.app`、公開aliasは `https://oyano-moshimo-navi.vercel.app`。smokeは検査対象すべてPASS、Admin envは未認証401のためskip。削除API auth-status・一覧等の未認証401、未ログイン画面にCONTACT/REASON/HANDLED BY列がないことを確認した。productionの実行スイッチは未登録のためOFF。本人ログイン後のAPI・列の検査はこの確認に含めない。
 - [x] 更新後の登録済み削除専用実行者のChrome画面で、本人認証済み・AAL2確認済み・削除依頼0件・CONTACT/REASON/HANDLED BY列なしを確認した。同じ本人sessionのモニター回答・AI利用・env画面では管理権限拒否とデータ非表示を確認し、前2画面は `Admin authorization is forbidden` を表示した。これはソース上の403応答と一致するが、今回HTTP数値は直接採取していない。token・request headerは参照していない。
-- [ ] 本人sessionの削除専用auth-status・一覧200と一般Admin API 403のHTTP数値を直接再採取し、非空依頼での応答最小化、別確認者のAAL2、認可が `verify_account_delete_operator_v2` だけを使い生executor行を読まないこと、preflight/prepareとPATCHがv2だけを使うこと、blocker応答がcode/数値件数だけで `familyId` / `familyName` / Storage生pathを含まないこと、PATCHがrouteとDBの両方でAAL2 app adminだけに成功すること、旧Webはexecutor認可またはv1権限で拒否、過去のON deploymentを含むexecute v2経路はlive DB controlなしで `execution_control_disabled` となりDB削除前にfail closedになることを確認した。
+- [x] 後続 `17bbc7b` の本人Chrome/AAL2で削除専用auth-status・一覧200と一般Admin 3 API 403のHTTP数値を直接再採取した（2026-09-05、`dpl_3dnyJRVqXaRiJ8Uc1svJLcSa18Wv`、依頼0件、token/header抽出なし）。直前の `c1415b3` 時点の画面観測とは別の証跡。
+- [ ] 非空依頼での応答最小化、別確認者のAAL2、認可が `verify_account_delete_operator_v2` だけを使い生executor行を読まないこと、preflight/prepareとPATCHがv2だけを使うこと、blocker応答がcode/数値件数だけで `familyId` / `familyName` / Storage生pathを含まないこと、PATCHがrouteとDBの両方でAAL2 app adminだけに成功すること、旧Webはexecutor認可またはv1権限で拒否、過去のON deploymentを含むexecute v2経路はlive DB controlなしで `execution_control_disabled` となりDB削除前にfail closedになることを確認した。
 - [ ] 一覧が未完了依頼をページ取得で全件含め、完了済みだけを直近100件に限ることを、100件超の破棄データで確認した。
 - [x] 実行予定者 `システム責任者 池田知也` の本人用個別Supabase Auth招待受諾・メール確認を本番で確認した。
 - [x] `/admin/delete-requests/setup` でverified TOTP 1件と現在のAAL2を本人端末で確認し、Supabase側もverified 1件・unverified 0件を確認した。
@@ -748,15 +785,63 @@ request ID / job ID（必要時のみ）:
 
 ## 14. 既知の未確認・NO-GO候補
 
-- Supabase本番backup/PITRのplan、保持期間、直近成功、Auth復元範囲。
+- 本番はFree・provider自動backupなしを確認済み。外部dump等の方式、保持期間、直近成功、Auth復元範囲は未確認。既存Proへの移管前チェックは通過したが、移管・契約変更は未実行。
 - Storage object本体の独立backupと復元方法。
-- 隔離復旧演習と実測RPO/RTO。
-- Vercel/Supabase/Cronの外部alertと当番通知先。
-- Resend domain、API key、送信元、実受信。未設定ならメール通知は無効のままにする。
-- 正式な問い合わせ先と担当シフト。
-- v2-only対応Web更新後の本人sessionのHTTP数値（200/403）の直接再採取、別確認者のAAL2、旧deploymentの認可fail closed、未完了全件+完了直近100件の一覧保全、privacy-safeなblocker応答、削除専用一覧のSELECT段階最小化、状態/処理メモPATCHのAAL2 app_admin限定、DB owner controlと別のAAL2 app adminのgrantを含む単独テストアカウントによる外部Auth/Storage完走。`account_erasure_execution_gate.sql` の本番適用、executor生table SELECT失効、control/grantのACL・初期閉鎖状態と対応Web `c1415b3` の本番反映・smokeは2026-09-05に確認済みで、本人認証・AAL2・空一覧・一般Admin画面拒否もChromeで確認済み。HTTP数値の直接再採取、非空依頼の応答検証、別確認者のAAL2と完全削除E2Eは残る。
-- 更新版gateと対応Webは2026-09-05に本番反映済みで、owner-only control、別の登録済みapp admin、request/job/hash/operator/control epochへの固定、期限、DB削除成功時のcontrol/grant同時消費を実装している。更新後の削除専用実行者の本人認証・AAL2・空一覧・一般Admin画面拒否は確認済みだが、HTTP数値の直接再採取、非空依頼、別確認者のAAL2を含む実機完走は未確認であるため、削除運用はまだ開始しない。別確認者が表示された対象を実際に照合したことは運用証跡で補完する。
-- 個別削除migration・cleanup Cron・復活防止receiptの本番適用と、2端末による完走。
-- 非対話lint gateが未設定である点。
+- 実backupの隔離復旧と本番RPO/RTO。合成56テーブル・画像復旧PASSはこの合格の代替ではない。
+- Vercel/Supabase/Cronの外部alert、または毎日手動確認の担当・代行・認知試験。内部連絡・当番とSupabase管理アカウントMFAも未完了。
+- Resend domain、API key、送信元、実受信は有効化する場合だけ確認する。任意のメール通知を無効のままStage Aを進めることは可能。
+- 問い合わせ先・返信目安・公開表示は確認済み。共有受信権限、実受信/返信、担当シフト、アプリ内削除依頼の両名認知は未完了。
+- 別確認者のAAL2、旧deploymentの認可fail closed、未完了全件+完了直近100件の一覧保全、privacy-safeなblocker応答、削除専用一覧のSELECT段階最小化、状態/処理メモPATCHのAAL2 app_admin限定、DB owner controlと別のAAL2 app adminのgrantを含む単独テストアカウントによる外部Auth/Storage完走。`account_erasure_execution_gate.sql` の本番適用、executor生table SELECT失効、control/grantのACL・初期閉鎖状態と対応Webの反映・smokeは確認済み。本人Chrome/AAL2の空一覧・5 APIの200/403実測は確認済みだが、非空依頼・別確認者・完全削除E2Eへ広げない。
+- 更新版gateと対応Webは2026-09-05に本番反映済みで、owner-only control、別の登録済みapp admin、request/job/hash/operator/control epochへの固定、期限、DB削除成功時のcontrol/grant同時消費を実装している。非空依頼、別確認者のAAL2を含む実機完走は未確認であるため、削除運用はまだ開始しない。別確認者が表示された対象を実際に照合したことは運用証跡で補完する。
+- 個別削除migration・復活防止receiptは本番適用済み。cleanup Cronの実行結果と2端末の完走は未完了。
+- 最終説明修正の本番反映、実機受入、法務最終確認・正式施行日。非対話lintと最新説明修正sourceのCIは確認済み。
 
 これらは「後で確認」ではなく、Stage A GO判定時に担当者が結果と根拠を記録する。
+
+## 付録A. 日次運用票（未記入）
+
+この票の作成は監視開始・担当割当・通知成功を意味しない。個人情報や認証情報を含まない結果だけを記録し、
+内部連絡先や問い合わせ内容は制限付き台帳で管理する。手動方式の場合も未確認を正常扱いしない。
+
+```text
+確認日・時刻・対象期間（JST）: 未記入
+担当 / 代行 / 次回確認予定: 未記入
+対象project・公開deployment・release SHA: 未記入
+公開health / 主要画面: 未確認
+Vercelの5xx・timeout件数 / 4 Cronの最終結果: 未確認
+Supabase DB/Auth/Storageのerror・容量: 未確認
+DB backup最終成功 / 保持期限: 未確認
+写真backup最終成功 / 対象件数 / 失敗件数: 未確認
+日記・対象者cleanupの状態別件数 / 最古時刻: 未確認
+アプリ内削除依頼の状態別総件数 / 超過件数 / 最短期限: 未確認
+共有受信箱の確認 / 主担当・代行者の認知: 未確認
+Resend（無効 / 有効時のみ配信結果）: 未確認
+異常・未確認項目 / 引継ぎ先 / 対応期限: 未記入
+```
+
+## 付録B. backup準備票（未記入）
+
+現段階は方式の準備で、本番dump取得や復元の実行記録ではない。既存の保存先・実行環境を使えるか確認し、
+追加費用が判明した場合は契約や有料資源を作らず、その判断を分ける。dumpや写真をGitへ置かない。
+秘密値、写真path、暗号化鍵の値は記録せず、制限付き管理場所への参照だけを残す。
+
+```text
+方式（Free外部dump / 既存Pro移管等）: 未決定
+責任者 / 確認者 / 対象project: 未記入
+既存保存先 / 空き容量 / 追加費用の確認: 未確認
+アクセス権 / 暗号化方式 / 鍵の管理先・復旧担当: 未確認
+DB/Auth・必要roles/ACL・独自Auth/Storage schemaの取得範囲: 未確認
+写真object本体・metadata・件数/bytes/hash manifestの取得範囲: 未確認
+DBと写真の取得時点の整合 / 後発削除receiptの再適用方法: 未確認
+実行環境 / 周期 / 保持期間 / 世代削除の担当: 未記入
+成功・失敗の検知方法 / 担当不在時の確認方法: 未記入
+本番資格情報の安全な利用経路（値は記載しない）: 未確認
+隔離復元先 / 外部送信・Cron無効化 / 検証後の清掃方法: 未確認
+初回実backupの成功時刻・件数・hash: 未実施
+実backupの隔離復旧 / 実Auth・写真表示 / 本番RPO・RTO: 未実施
+残項目 / 担当 / 次回確認日: 未記入
+```
+
+Free方式は[公式CLI手順](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)を基に、
+roles・独自Auth/Storage schema・migration履歴等の復旧範囲を確認する。合成演習の固定3 rolesや18本のSQLを
+本番全体の復旧範囲とみなさない。既存資格情報が利用できるかを確認せず、本番DBパスワードを変更しない。

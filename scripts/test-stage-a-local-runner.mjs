@@ -23,7 +23,9 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 32);
+assert.equal(createPlan({ sourceOnly: true }).length, 33);
+assert.equal(plan.length, 47);
+assert.ok(plan.some((step) => step.id === "source:diary-unsaved-changes"));
 assert.ok(plan.some((step) => step.id === "source:notebook-sync-text-retry"));
 assert.ok(plan.some((step) => step.id === "source:notebook-diary-text"));
 assert.ok(plan.some((step) => step.id === "source:unicode-display-text"));
@@ -42,8 +44,17 @@ for (const step of createPlan({ sqlOnly: true })) {
   assert.match(script, /docker run --pull=never --network=none/, `${step.id} must never pull or give its fixture database network access`);
   assert.match(script, /docker\.io\/library\/postgres:16-bookworm/, `${step.id} must use the canonical cached PostgreSQL image`);
   assert.doesNotMatch(script, /DATABASE_URL|SUPABASE_DB|docker pull|--publish|--volume|--mount/, `${step.id} must not use production DB variables, published ports, or host volumes`);
+  // The official image briefly serves a Unix socket during bootstrap, then
+  // stops it. Only the final server listens on the container's loopback TCP.
+  const readinessChecks = script.match(/\bpg_isready\b[^\r\n]*/g) ?? [];
+  assert.ok(readinessChecks.length >= 2, `${step.id} must both wait and verify readiness`);
+  assert.ok(readinessChecks.every((check) => /(?:^|\s)-h\s+127\.0\.0\.1\b/.test(check)),
+    `${step.id} must wait for the final loopback server, not the temporary bootstrap Unix socket`);
 }
 const ci = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
+const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+assert.equal(packageJson.scripts["test:diary-unsaved-changes"], "node scripts/test-diary-unsaved-changes.mjs");
+assert.match(ci, /pnpm run test:diary-unsaved-changes/, "unsaved diary guard must remain in CI as well as local qualification");
 assert.match(ci, /docker pull docker\.io\/library\/postgres:16-bookworm/, "fresh CI must explicitly prepare the image before offline SQL scripts");
 assert.ok(ci.indexOf("docker pull docker.io/library/postgres:16-bookworm") < ci.indexOf("pnpm run test:account-erasure:sql"), "CI image preparation must precede the first offline SQL suite");
 

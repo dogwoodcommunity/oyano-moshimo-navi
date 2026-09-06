@@ -15,10 +15,10 @@ trap cleanup EXIT INT TERM
 docker run --pull=never --network=none --rm --detach --name "$REGRESSION_CONTAINER_NAME" \
   -e POSTGRES_HOST_AUTH_METHOD=trust docker.io/library/postgres:16-bookworm >/dev/null
 for _ in $(seq 1 30); do
-  if docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null 2>&1; then break; fi
+  if docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -h 127.0.0.1 -U postgres >/dev/null 2>&1; then break; fi
   sleep 1
 done
-docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -U postgres >/dev/null
+docker exec "$REGRESSION_CONTAINER_NAME" pg_isready -h 127.0.0.1 -U postgres >/dev/null
 
 run_sql() {
   docker exec -i "$REGRESSION_CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U postgres -d postgres < "$REPO_ROOT/$1"

@@ -88,14 +88,19 @@ function harness(entries, { todayEntry = entries[0], activeCase = sourceCase } =
     consultHref: (...args) => { events.push(["consultHref", ...args]); return "/fixture-consult"; },
     window: {
       setTimeout: (fn) => fn(), requestAnimationFrame: (fn) => fn(),
+      scrollY: 0, scrollTo: (options) => events.push(["scrollPosition", options.top, options.behavior]),
+      matchMedia: () => ({ matches: false }),
       location: { assign: record("navigate") }
     },
     document: {
+      querySelectorAll: () => [],
       querySelector: (selector) => ({
         scrollIntoView: (options) => events.push(["scroll", selector, options.block]),
         focus: (options) => events.push(["focus", selector, options.preventScroll])
       }),
-      getElementById: (id) => ({ scrollIntoView: (options) => events.push(["scrollId", id, options.block]) })
+      getElementById: () => ({
+        getBoundingClientRect: () => ({ top: 600 }), querySelector: () => null
+      })
     }
   };
   const rendered = compile(`${functions}
@@ -106,6 +111,66 @@ function harness(entries, { todayEntry = entries[0], activeCase = sourceCase } =
     export { openNotebookSection, hashForNotebookTab };`, globals);
   return { ...rendered, events };
 }
+
+// Measure the real sticky elements instead of relying on the old 96px margin.
+// These are deterministic DOM/timer fixtures, not proof of a rendered browser.
+for (const fixture of [
+  { width: 320, navHeight: 143, tabPosition: "static", expectedInset: 143 },
+  { width: 390, navHeight: 143, tabPosition: "static", expectedInset: 143 },
+  { width: 1280, navHeight: 88, tabPosition: "sticky", expectedInset: 170 }
+]) {
+  for (const editMode of [false, true]) {
+    const pending = [];
+    const calls = [];
+    let mounted = false;
+    const nav = { style: { position: "sticky", top: "0px" }, height: fixture.navHeight };
+    const tabs = { style: { position: fixture.tabPosition, top: "76px" }, height: 94 };
+    const hidden = { style: { position: "fixed", top: "0px" }, height: 0 };
+    const bottomOnly = { style: { position: "fixed", top: "auto" }, height: 1000 };
+    const headers = [nav, tabs, hidden, bottomOnly].map((value) => ({
+      ...value, getBoundingClientRect: () => ({ height: value.height })
+    }));
+    const panel = { getBoundingClientRect: () => ({ top: 35.8 }) };
+    const card = {
+      getBoundingClientRect: () => ({ top: -74.2 }),
+      querySelector: (selector) => {
+        assert.equal(selector, ".diary-edit-panel");
+        return editMode ? panel : null;
+      }
+    };
+    const scroll = compile(`${helper("scrollToDiaryEntry")}\nexport { scrollToDiaryEntry };`, {
+      window: {
+        setTimeout: (run) => pending.push(run), requestAnimationFrame: (run) => pending.push(run),
+        scrollY: 2763, getComputedStyle: (element) => element.style,
+        matchMedia: (query) => { assert.equal(query, "(prefers-reduced-motion: reduce)"); return { matches: true }; },
+        scrollTo: (options) => calls.push(options)
+      },
+      document: {
+        getElementById: (id) => { assert.equal(id, "diary-entry-fixture"); return mounted ? card : null; },
+        querySelectorAll: (selector) => { assert.equal(selector, ".nav, .notebook-tab-bar"); return headers; }
+      }
+    }).scrollToDiaryEntry;
+    scroll("fixture", editMode);
+    assert.equal(calls.length, 0, "wait until the selected history/editor has rendered");
+    mounted = true;
+    while (pending.length) pending.shift()();
+    assert.equal(calls.length, 1, "one request must produce one scroll, without a focus-induced jump");
+    assert.equal(calls[0].top, 2763 + (editMode ? 35.8 : -74.2) - fixture.expectedInset - 16,
+      `${fixture.width}px: ${editMode ? "editor" : "record"} starts below the actual sticky header plus a gap`);
+    assert.equal(calls[0].behavior, "auto", "respect reduced motion");
+    mounted = false;
+    scroll("fixture", editMode);
+    while (pending.length) pending.shift()();
+    assert.equal(calls.length, 1, "a removed record must not scroll another record");
+  }
+}
+
+assert.match(helper("openDiaryEditor"), /scrollToDiaryEntry\(entry\.id, true\)/,
+  "the in-card edit button must bring the newly expanded editor below the sticky header");
+assert.match(helper("openDiaryEditorAndScroll"), /showDiaryEntry\(entry, false\)/,
+  "the saved-record edit shortcut must not queue a competing read-mode scroll");
+assert.match(helper("closeDiaryEditor"), /scrollToDiaryEntry\(entry\.id\)/,
+  "closing the tall editor must return to the record rather than follow browser anchoring");
 
 for (const count of [0, 1, 2]) {
   const entries = Array.from({ length: count }, (_, index) => ({ ...fixtureEntry, id: `fixture-${index}` }));
@@ -151,7 +216,7 @@ for (const count of [0, 1, 2]) {
   latest[0].props.onClick();
   assert.deepEqual(ui.events.splice(0), count ? [
     ["tab", "history"], ["date", entries[0].date], ["month", "2026-09"], ["filter", "all"],
-    ["monitor", "diaryHistoryOpened"], ["funnel", "history_viewed"], ["scrollId", `diary-entry-${entries[0].id}`, "start"]
+    ["monitor", "diaryHistoryOpened"], ["funnel", "history_viewed"], ["scrollPosition", 584, "smooth"]
   ] : [["tab", "record"], ["scroll", "#today-diary", "start"]]);
 
   const people = descendants(ui.switcher, (node) => node.type === "button");

@@ -20,12 +20,13 @@ const compiled = ts.transpileModule(source, {
 
 const moduleRecord = { exports: {} };
 let mockServerSupabase = null;
+let mockNormalizeConsultAnswer = () => null;
 const mockRequire = (specifier) => {
   if (specifier === "@oyano/shared") {
     return {
       CONSULT_MEMORY_CONSENT_VERSION: "consult-memory-v02-2026-09-01",
       consultAnswerToHistoryTurn: (question, answer) => ({ question, situation: answer.situation }),
-      normalizeConsultAnswer: () => null
+      normalizeConsultAnswer: (value) => mockNormalizeConsultAnswer(value)
     };
   }
   if (specifier === "@/lib/consult") {
@@ -381,5 +382,168 @@ const acceptedConsent = await setConsultMemoryConsent({
 assert.equal(revisionCompared, 2);
 assert.equal(acceptedConsent.revision, 3);
 assert.equal(acceptedConsent.active, true);
+
+// Continuous synthetic flow: run the actual DELETE route, then the actual next
+// durable-context assembly. The DB double only applies query operations; it
+// must not implement the reset-time/source-record filtering being tested.
+{
+  const beforeReset = new Date(Date.now() - 86_400_000).toISOString();
+  const historyAnswer = {
+    situation: "残る本人相談履歴のAI提案です。",
+    nextChecks: [], askQuestions: [], providerCategories: [], watchOuts: [], recordSuggestion: ""
+  };
+  mockNormalizeConsultAnswer = (value) => value?.situation === historyAnswer.situation ? value : null;
+  const tables = {
+    family_members: [{ user_id: "user-reset", family_id: "family-reset", role: "owner" }],
+    people: [{ id: "person-reset", family_id: "family-reset", profile: { localCaseId: "case-reset" } }],
+    person_ai_memories: [{ person_id: "person-reset", memory_version: 1, user_summary: "削除前の補足" }],
+    timeline_events: Array.from({ length: 16 }, (_, index) => ({
+      id: `old-reset-${index}`, person_id: "person-reset", event_type: "diary",
+      event_date: `2026-08-${String(index + 1).padStart(2, "0")}`,
+      created_at: beforeReset, body: `RESET_OLD 原記録 薬の確認 ${index}`, mood: "changed", metadata: {}
+    })),
+    tasks: [],
+    ai_consult_threads: [{ id: "thread-reset", person_id: "person-reset", owner_user_id: "user-reset" }],
+    ai_consult_turns: [{
+      id: "private-history-before-reset", thread_id: "thread-reset", question: "以前の薬の相談",
+      answer: historyAnswer, source_event_ids: ["old-reset-0"], memory_version: 1, created_at: beforeReset
+    }],
+    audit_logs: []
+  };
+  const writes = [];
+  const supabase = {
+    auth: { async getUser(token) {
+      assert.equal(token, "test-token");
+      return { data: { user: { id: "user-reset" } }, error: null };
+    } },
+    from(table) {
+      assert.ok(Object.hasOwn(tables, table), `unexpected reset fixture table: ${table}`);
+      const filters = [];
+      const orders = [];
+      let start = 0;
+      let end = Infinity;
+      let update = null;
+      let insert = null;
+      function run(single = false) {
+        let rows = tables[table].filter((row) => filters.every((filter) => filter(row)));
+        if (update) {
+          assert.equal(table, "person_ai_memories", "reset may only update derived memory");
+          writes.push(["update", table]);
+          rows.forEach((row) => Object.assign(row, update));
+        }
+        if (insert) {
+          assert.equal(table, "audit_logs", "an existing private thread must not be recreated");
+          writes.push(["insert", table]);
+          tables[table].push(insert);
+          rows = [insert];
+        }
+        rows = [...rows].sort((a, b) => {
+          for (const [column, ascending] of orders) {
+            const comparison = String(a[column] ?? "").localeCompare(String(b[column] ?? ""));
+            if (comparison) return ascending ? comparison : -comparison;
+          }
+          return 0;
+        }).slice(start, end === Infinity ? undefined : end + 1);
+        return { data: single ? rows[0] ?? null : rows, error: null };
+      }
+      const query = {
+        select() { return query; },
+        eq(column, value) { filters.push((row) => row[column] === value); return query; },
+        neq(column, value) { filters.push((row) => row[column] !== value); return query; },
+        in(column, values) { filters.push((row) => values.includes(row[column])); return query; },
+        order(column, { ascending }) { orders.push([column, ascending]); return query; },
+        range(from, to) { start = from; end = to; return query; },
+        limit(count) { end = count - 1; return query; },
+        update(value) { update = value; return query; },
+        insert(value) { insert = value; return query; },
+        delete() { assert.fail("memory-only deletion must not delete raw records or private history"); },
+        async maybeSingle() { return run(true); },
+        async single() { return run(true); },
+        then(resolve, reject) { return Promise.resolve(run()).then(resolve, reject); }
+      };
+      return query;
+    }
+  };
+  mockServerSupabase = supabase;
+  const request = {
+    ...authorizationRequest,
+    nextUrl: new URL("https://example.test/api/consult/memory?scope=memory&personId=person-reset&familyId=family-reset")
+  };
+  const routePath = path.join(repoRoot, "apps/web/app/api/consult/memory/route.ts");
+  const routeModule = { exports: {} };
+  const routeCode = ts.transpileModule(fs.readFileSync(routePath, "utf8"), {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 }
+  }).outputText;
+  new Function("exports", "require", "module", routeCode)(routeModule.exports, (specifier) => {
+    if (specifier === "@/lib/consultMemory") return moduleRecord.exports;
+    if (specifier === "next/server") return { NextResponse: {
+      json: (body, init = {}) => ({ status: init.status ?? 200, body })
+    } };
+    throw new Error(`Unexpected memory DELETE import: ${specifier}`);
+  }, routeModule);
+  const authorized = await authorizeConsultPerson(request, { personId: "person-reset", familyId: "family-reset" });
+  const before = await moduleRecord.exports.loadDurableConsultContext(authorized, "薬の確認");
+  assert.equal(before.memoryState.recordCount, 16, "the fixture must be remembered before deletion");
+  assert.match(before.memory.longTermSummary, /RESET_OLD/);
+  const originalRows = JSON.stringify(tables.timeline_events);
+  const originalHistory = JSON.stringify(tables.ai_consult_turns);
+  const deleted = await routeModule.exports.DELETE(request);
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(deleted.body.deleted, { memory: true, history: false });
+  assert.equal(deleted.body.notebookRecordsDeleted, false);
+  assert.equal(JSON.stringify(tables.timeline_events), originalRows, "deleting memory preserves all original diary rows");
+  assert.equal(JSON.stringify(tables.ai_consult_turns), originalHistory, "private consultation history is a separate deletion scope");
+  const empty = await moduleRecord.exports.loadDurableConsultContext(authorized, "薬の確認");
+  assert.equal(empty.memoryState.recordCount, 0);
+  assert.equal(empty.memoryState.userSummary, "");
+  assert.deepEqual(empty.sourceEventIds, []);
+  assert.deepEqual(empty.memory.latestRecords, []);
+  assert.deepEqual(empty.memory.relevantOlderRecords, []);
+  assert.deepEqual(empty.memory.importantChanges, []);
+  assert.equal(empty.historyTurns, 1);
+  assert.equal(empty.memory.priorSuggestions[0].situation, historyAnswer.situation,
+    "memory reset does not promise removal of retained private AI suggestions");
+
+  const resetAt = deleted.body.memoryResetAt;
+  const resetTime = Date.parse(resetAt);
+  assert.ok(Number.isFinite(resetTime));
+  const newRows = Array.from({ length: 14 }, (_, index) => ({
+    id: `new-reset-${index}`, person_id: "person-reset", event_type: "diary",
+    // A newly entered backdated diary remains eligible: created_at defines the boundary.
+    event_date: `2026-07-${String(index + 1).padStart(2, "0")}`,
+    created_at: new Date(resetTime + index + 1).toISOString(),
+    body: index === 0 ? "新しい薬の確認" : `新しい毎日の記録 ${index}`,
+    mood: index === 0 ? "changed" : "stable", metadata: {}
+  }));
+  tables.timeline_events.push(...newRows,
+    { ...newRows[0], id: "exact-reset-boundary", body: "RESET_OLD 境界と同時刻", created_at: resetAt },
+    { ...newRows[0], id: "invalid-created-at", body: "RESET_OLD 時刻不明", created_at: "invalid" },
+    { ...newRows[0], id: "other-person-record", person_id: "person-other", body: "OTHER_PERSON" },
+    { ...newRows[0], id: "saved-ai-memo", body: "相談メモ: 過去のAI提案" },
+    { ...newRows[0], id: "ai-source-record", metadata: { source: "ai_consult" } });
+  const rawAfterAppend = JSON.stringify(tables.timeline_events);
+  const after = await moduleRecord.exports.loadDurableConsultContext(authorized, "薬の確認");
+  assert.equal(after.memoryState.memoryResetAt, resetAt);
+  assert.equal(after.memoryState.recordCount, 14);
+  assert.equal(after.memory.latestRecords.length, 12);
+  assert.deepEqual(after.memory.relevantOlderRecords.map((record) => record.sourceEventId), ["new-reset-0"]);
+  assert.deepEqual(new Set(after.memoryState.sourceEventIds), new Set(newRows.map((row) => row.id)));
+  const recordContext = {
+    longTermSummary: after.memory.longTermSummary, userSummary: after.memory.userSummary,
+    importantChanges: after.memory.importantChanges, latestRecords: after.memory.latestRecords,
+    relevantOlderRecords: after.memory.relevantOlderRecords, sourceEventIds: after.sourceEventIds
+  };
+  assert.doesNotMatch(JSON.stringify(recordContext), /RESET_OLD|old-reset-|OTHER_PERSON|saved-ai-memo|ai-source-record/);
+  assert.equal(JSON.stringify(tables.timeline_events), rawAfterAppend, "context assembly must not change raw fixture rows");
+  assert.equal(JSON.stringify(tables.ai_consult_turns), originalHistory);
+  assert.equal(after.historyTurns, 1);
+  const storedMemory = JSON.stringify(tables.person_ai_memories);
+  const repeated = await moduleRecord.exports.loadDurableConsultContext(authorized, "薬の確認");
+  assert.deepEqual(repeated.sourceEventIds, after.sourceEventIds);
+  assert.equal(JSON.stringify(tables.person_ai_memories), storedMemory, "repeated context must not resurrect pre-reset memory");
+  assert.ok(writes.some(([operation, table]) => operation === "insert" && table === "audit_logs"));
+  mockNormalizeConsultAnswer = () => null;
+  mockServerSupabase = null;
+}
 
 console.log("consult memory core tests: ok");
