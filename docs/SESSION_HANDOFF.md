@@ -14570,3 +14570,19 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   実backup保管先・取得/隔離復旧、専用実機/二者削除、問い合わせ実受信/担当運用、法務/施行日、最終本番反映が残る。
   次の最小の選択は既存端末/媒体のbackup保管先。保管先指定だけで本番データ取得まで承認されたとはしない。
   `review_exports/` と未追跡Claude_FULL2文書は不介入。
+
+### 追記385の最終結果
+
+- 最終6ファイルの隔離source33再実行も10:48:52 JSTに全PASS、diff-check PASS。
+  10:49:05 JST照合でsource458ファイルが一致（baseline452不変＋今回6ファイル）、
+  manifest SHA256 `708f9efa4375ea88bd216f4eed1d37d623235646da54ed047684b086ce496dfb`。
+  アプリ3ファイルは37工程PASS時から不変。これ以後は検証結果の文書追記のみ。
+- 実装・資料6ファイルを `52ed0555eeb8f987458187b269f96915fad70582` としてmainへpush。
+  exact CI `34074251479` は10:49:32〜10:52:14 JST（2分42秒）、全step成功・failedSteps空。
+  lint/型/source回帰/SQL10/build/smokeの連続成功。合成backup復旧scriptの実行は別のローカル証跡。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34074251479
+- Deploy workflow `34074251465` はcheck成功・deploy skipped。push後のVercel照会も
+  `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 9月6日08:59:36 JST作成のまま。
+  sourceの保存と本番反映を混同しない。Actions Node20非推奨annotationは残り、今回は依存/ランタイム未変更。
+- 実backup保管先に使う既存端末/媒体をユーザーへ質問済み。回答と保管方法の確認待ちで、本番取得は未実施。
+  最終結果はこの引き継ぎと検証報告の文書2つだけを `[skip ci]` commit/push。実装はexact CI合格版と同一。

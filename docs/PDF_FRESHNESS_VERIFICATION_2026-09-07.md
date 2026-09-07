@@ -63,7 +63,18 @@ Claudeの新規レビュー送信ではなく、9月6日に受領したレビュ
   横はみ出しなし。OSの印刷画面・実PDF保存は実行していない。
 - 作成したローカル検証タブ2つだけを閉じ、viewportをreset。試験サーバーのPID/cwdを照合して停止し、
   10:45:12 JSTに3123の待受0を確認。既存本番/管理/3119のタブには手を加えない。
-- GitHub exact SHAのCIとdeploy skippedはpush後に別途記録する。
+- 最終6ファイルを反映したsource33も10:48:52 JSTに全PASS。10:49:05 JSTの隔離archive照合は
+  458 sourceファイルが一致（baseline452不変＋今回6ファイル）。アプリ3ファイルは37工程PASS時から不変。
+- 実装・検証文書6ファイルを `52ed0555eeb8f987458187b269f96915fad70582` としてmainへpush。
+  [exact SHAのCI](https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34074251479)は
+  10:49:32〜10:52:14 JST、2分42秒、全step成功・failedSteps空。
+  lint/型/今回のPDF回帰/既存SQL10/build/smokeが一続きに成功した。
+  合成backup復旧scriptはこのCIとは別のローカル実行証跡である。
+- [Deploy workflow](https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34074251465)は
+  check成功・deploy skipped。push後の公開aliasも9月6日08:59:36 JST作成の
+  `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Readyのまま。今回の変更は本番未反映。
+- ActionsのNode20非推奨/Node24強制実行annotationは残る。今回ランタイムや依存は変更していない。
+  この最終結果は検証報告とSESSION_HANDOFFの2文書だけで追記し、`[skip ci]` commitでpushする。
 
 ## 追加の合成復旧試験
 
@@ -95,3 +106,4 @@ Claudeの新規レビュー送信ではなく、9月6日に受領したレビュ
 
 正式公開の判定は引き続きNO-GO。実バックアップ準備の最小の次の選択は、
 既に持っているどの端末・媒体を保管先に使うか。保存先の指定だけで本番取得・外部送信まで承認されたとはしない。
+ユーザーへ保管先の質問を送付済み。回答・安全な保管方法の確認を待ち、本番データはまだ取得しない。
