@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/browserSupabase";
 import { entryIdsInDateRange, waitForPrintableImage, withDeadline } from "@/lib/memoryBookExport";
@@ -67,6 +67,52 @@ export default function MemoryBookPage() {
   const [dateRangeStart, setDateRangeStart] = useState("");
   const [dateRangeEnd, setDateRangeEnd] = useState("");
   const [expandedPhoto, setExpandedPhoto] = useState<ExpandedPhoto | null>(null);
+  // Only raw local data belongs in this signature. Temporary signed photo URLs
+  // are display-only and must not make the local notebook appear to change.
+  const rawNotebookSignatureRef = useRef<string | null>(null);
+  const snapshotGenerationRef = useRef(0);
+  const printAttemptRef = useRef(0);
+  const preparedAttemptRef = useRef<number | null>(null);
+  const cloudPhotoAbortRef = useRef<AbortController | null>(null);
+  // Refs invalidate immediately; React may not have committed the replacement
+  // content yet. Old rendered buttons must not prepare or print that old DOM.
+  const renderedSnapshotGeneration = snapshotGenerationRef.current;
+  const renderedPrintAttempt = printAttemptRef.current;
+
+  const invalidatePreparedPrint = useCallback(() => {
+    printAttemptRef.current += 1;
+    preparedAttemptRef.current = null;
+    setPreparedPrintIntent(null);
+    setPrintPreparing(false);
+  }, []);
+
+  const refreshLocalNotebook = useCallback(() => {
+    const refreshedCase = getLocalCase(params.caseId) ?? null;
+    const refreshedEntries = refreshedCase
+      ? [...listDiaryEntries(refreshedCase.id)].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
+      : [];
+    const signature = JSON.stringify([params.caseId, refreshedCase, refreshedEntries]);
+    if (rawNotebookSignatureRef.current === signature) return false;
+
+    rawNotebookSignatureRef.current = signature;
+    snapshotGenerationRef.current += 1;
+    invalidatePreparedPrint();
+    cloudPhotoAbortRef.current?.abort();
+    cloudPhotoAbortRef.current = null;
+    setExpandedPhoto(null);
+    setCaseRecord(refreshedCase);
+    setEntries(refreshedEntries);
+    const visibleIds = new Set(refreshedEntries.map((entry) => entry.id));
+    // Preserve intentional omissions; newly added records are never included
+    // automatically in a document the user has already reviewed.
+    setSelectedEntryIds((current) => new Set([...current].filter((id) => visibleIds.has(id))));
+    setPhotoLoadState("ready");
+    setPhotoLoadMessage(refreshedEntries.some((entry) => entry.attachments.some((attachment) => (
+      attachment.type.startsWith("image/") && attachment.storagePath && !attachment.previewUrl
+    ))) ? "記録が更新されました。クラウドの写真も入れる場合は、手帳からこの画面を開き直してください。本文だけならこのまま準備できます。" : "");
+    setPrintError("手帳の記録が変更されたため、PDF・印刷の準備を取り消しました。内容と選んだ記録を確認して、もう一度準備してください。");
+    return true;
+  }, [params.caseId, invalidatePreparedPrint]);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,6 +120,11 @@ export default function MemoryBookPage() {
     const nextEntries = nextCase
       ? [...listDiaryEntries(nextCase.id)].sort((a, b) => a.date.localeCompare(b.date) || a.createdAt.localeCompare(b.createdAt))
       : [];
+    rawNotebookSignatureRef.current = JSON.stringify([params.caseId, nextCase, nextEntries]);
+    const photoGeneration = ++snapshotGenerationRef.current;
+    invalidatePreparedPrint();
+    setPrintError("");
+    setExpandedPhoto(null);
     setCaseRecord(nextCase);
     setEntries(nextEntries);
     const defaultEntries = nextEntries.filter((entry) => !isConsultMemo(entry));
@@ -92,17 +143,23 @@ export default function MemoryBookPage() {
       setPhotoLoadState("ready");
       return () => {
         cancelled = true;
+        snapshotGenerationRef.current += 1;
+        printAttemptRef.current += 1;
+        preparedAttemptRef.current = null;
       };
     }
 
     setPhotoLoadState("loading");
     const controller = new AbortController();
+    cloudPhotoAbortRef.current = controller;
+    const isCurrentPhotoRequest = () => !cancelled && !controller.signal.aborted
+      && snapshotGenerationRef.current === photoGeneration;
     void (async () => {
       try {
         await withDeadline((async () => {
           const client = getBrowserSupabase();
           const sessionData = client ? (await client.auth.getSession()).data : null;
-          if (cancelled || controller.signal.aborted) return;
+          if (!isCurrentPhotoRequest() || refreshLocalNotebook()) return;
           const accessToken = sessionData?.session?.access_token;
           if (!accessToken) throw new Error("cloud_session_missing");
           let diaryOffset = 0;
@@ -124,7 +181,7 @@ export default function MemoryBookPage() {
               diaryEntriesTotal?: number;
               diaryEntriesHasMore?: boolean;
             };
-            if (cancelled || controller.signal.aborted || !result?.diaryEntries) return;
+            if (!isCurrentPhotoRequest() || refreshLocalNotebook() || !result?.diaryEntries) return;
             if ((result.diaryEntriesTotal ?? 0) > NOTEBOOK_CLOUD_RESTORE_LIMIT) throw new Error("cloud_photo_limit_exceeded");
             const diaryEntriesTotal = result.diaryEntriesTotal ?? diaryOffset + result.diaryEntries.length;
             if (expectedDiaryEntriesTotal === null) expectedDiaryEntriesTotal = diaryEntriesTotal;
@@ -134,18 +191,19 @@ export default function MemoryBookPage() {
             if (result.diaryEntries.length === 0) throw new Error("cloud_photo_page_empty");
             diaryOffset += result.diaryEntries.length;
           }
-          if (cancelled || controller.signal.aborted) return;
+          if (!isCurrentPhotoRequest() || refreshLocalNotebook()) return;
           if (remoteEntriesById.size !== (expectedDiaryEntriesTotal ?? 0)) throw new Error("cloud_photo_restore_incomplete");
           const remoteById = remoteEntriesById;
-          setEntries((current) => current.map((entry) => {
+          setEntries((current) => !isCurrentPhotoRequest() ? current : current.map((entry) => {
             const remoteEntry = remoteById.get(entry.id);
-            if (!remoteEntry) return entry;
+            if (!remoteEntry || remoteEntry.caseId !== entry.caseId) return entry;
             return {
               ...entry,
               attachments: entry.attachments.map((attachment) => {
                 const remoteAttachment = remoteEntry.attachments.find((candidate) => (
-                  candidate.id === attachment.id
-                  || (attachment.storagePath && candidate.storagePath === attachment.storagePath)
+                  (candidate.id === attachment.id || (attachment.storagePath && candidate.storagePath === attachment.storagePath))
+                  && (!attachment.storagePath || candidate.storagePath === attachment.storagePath)
+                  && (!attachment.storageBucket || candidate.storageBucket === attachment.storageBucket)
                 ));
                 return remoteAttachment?.previewUrl
                   ? { ...attachment, previewUrl: remoteAttachment.previewUrl }
@@ -156,21 +214,42 @@ export default function MemoryBookPage() {
         })(), CLOUD_PHOTO_LOAD_TIMEOUT_MS, () => controller.abort());
       } catch (error) {
         // 端末内の本文だけでも手帳は作れるため、写真取得失敗では画面全体を止めない。
-        if (!cancelled) {
+        if (!cancelled && snapshotGenerationRef.current === photoGeneration) {
           setPhotoLoadMessage(error instanceof Error && (error.name === "AbortError" || error.name === "TimeoutError")
             ? "写真の確認に時間がかかっています。写真を外せば、本文だけ先にPDF保存・印刷できます。"
             : "写真を確認できませんでした。写真を外せば、本文だけ先にPDF保存・印刷できます。");
         }
       } finally {
-        if (!cancelled) setPhotoLoadState("ready");
+        if (!cancelled && snapshotGenerationRef.current === photoGeneration) setPhotoLoadState("ready");
       }
     })();
 
     return () => {
       cancelled = true;
       controller.abort();
+      if (cloudPhotoAbortRef.current === controller) cloudPhotoAbortRef.current = null;
+      snapshotGenerationRef.current += 1;
+      printAttemptRef.current += 1;
+      preparedAttemptRef.current = null;
     };
-  }, [params.caseId]);
+  }, [params.caseId, invalidatePreparedPrint, refreshLocalNotebook]);
+
+  useEffect(() => {
+    const refresh = () => { refreshLocalNotebook(); };
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") refreshLocalNotebook();
+    };
+    // Reading the existing local store also honours deletion receipts. Refresh
+    // never writes records, starts authentication, or fetches new cloud data.
+    window.addEventListener("storage", refresh);
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.removeEventListener("storage", refresh);
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [refreshLocalNotebook]);
 
   const selectedEntries = useMemo(
     () => entries.filter((entry) => selectedEntryIds.has(entry.id)),
@@ -242,6 +321,7 @@ export default function MemoryBookPage() {
   }, [expandedPhoto]);
 
   function toggleEntry(entryId: string) {
+    invalidatePreparedPrint();
     setSelectedEntryIds((current) => {
       const next = new Set(current);
       if (next.has(entryId)) next.delete(entryId);
@@ -249,7 +329,6 @@ export default function MemoryBookPage() {
       return next;
     });
     setPrintError("");
-    setPreparedPrintIntent(null);
   }
 
   function applyDateRange() {
@@ -270,21 +349,27 @@ export default function MemoryBookPage() {
       setPrintError("選んだ期間には、まとめられる毎日の記録がありません。");
       return;
     }
+    invalidatePreparedPrint();
     setSelectedEntryIds(new Set(ids));
-    setPreparedPrintIntent(null);
     setPrintError("");
   }
 
   function selectAllDailyEntries() {
+    invalidatePreparedPrint();
     const dailyEntries = entries.filter((entry) => !isConsultMemo(entry));
     setSelectedEntryIds(new Set(dailyEntries.map((entry) => entry.id)));
     setDateRangeStart(dailyEntries[0]?.date ?? "");
     setDateRangeEnd(dailyEntries[dailyEntries.length - 1]?.date ?? "");
-    setPreparedPrintIntent(null);
     setPrintError("");
   }
 
   async function preparePrint(intent: PrintIntent) {
+    if (refreshLocalNotebook()
+      || renderedSnapshotGeneration !== snapshotGenerationRef.current
+      || renderedPrintAttempt !== printAttemptRef.current) return;
+    const generation = snapshotGenerationRef.current;
+    invalidatePreparedPrint();
+    const attempt = printAttemptRef.current;
     if (selectedEntries.length === 0) {
       setPrintError("PDFに入れる記録を1件以上選んでください。");
       return;
@@ -293,7 +378,6 @@ export default function MemoryBookPage() {
       setPrintError("写真を確認しています。待たずに進む場合は「写真もPDFに入れる」を外してください。");
       return;
     }
-    setPreparedPrintIntent(null);
     setPrintError("");
     setPrintPreparing(true);
     try {
@@ -302,19 +386,26 @@ export default function MemoryBookPage() {
           ".memory-book-entry.is-included .memory-book-photos img"
         ));
         const imageResults = await Promise.allSettled(images.map((image) => waitForPrintableImage(image)));
+        if (refreshLocalNotebook() || snapshotGenerationRef.current !== generation || printAttemptRef.current !== attempt) return;
         const failedPhotoCount = imageResults.filter((result) => result.status !== "fulfilled" || !result.value).length;
         if (failedPhotoCount > 0) {
           setPrintError(`${failedPhotoCount}枚の写真を読み込めませんでした。写真を外して保存するか、通信を確認してもう一度お試しください。`);
           return;
         }
       }
+      if (refreshLocalNotebook() || snapshotGenerationRef.current !== generation || printAttemptRef.current !== attempt) return;
+      preparedAttemptRef.current = attempt;
       setPreparedPrintIntent(intent);
     } finally {
-      setPrintPreparing(false);
+      if (printAttemptRef.current === attempt) setPrintPreparing(false);
     }
   }
 
   function openPreparedPrintDialog() {
+    if (refreshLocalNotebook()
+      || renderedSnapshotGeneration !== snapshotGenerationRef.current
+      || renderedPrintAttempt !== printAttemptRef.current) return;
+    if (!preparedPrintIntent || printPreparing || preparedAttemptRef.current !== printAttemptRef.current) return;
     window.print();
   }
 
@@ -368,8 +459,8 @@ export default function MemoryBookPage() {
                   value={dateRangeStart}
                   disabled={printPreparing}
                   onChange={(event) => {
+                    invalidatePreparedPrint();
                     setDateRangeStart(event.target.value);
-                    setPreparedPrintIntent(null);
                   }}
                 />
               </label>
@@ -380,8 +471,8 @@ export default function MemoryBookPage() {
                   value={dateRangeEnd}
                   disabled={printPreparing}
                   onChange={(event) => {
+                    invalidatePreparedPrint();
                     setDateRangeEnd(event.target.value);
-                    setPreparedPrintIntent(null);
                   }}
                 />
               </label>
@@ -396,8 +487,8 @@ export default function MemoryBookPage() {
                 checked={includePhotos}
                 disabled={photosOverLimit || printPreparing}
                 onChange={(event) => {
+                  invalidatePreparedPrint();
                   setIncludePhotos(event.target.checked);
-                  setPreparedPrintIntent(null);
                   setPrintError("");
                 }}
               />
@@ -484,6 +575,7 @@ export default function MemoryBookPage() {
           <p>PDFには選んだ記録本文、呼び名、記録期間、表示中の写真が入ります。暗証番号や身分証の画像など、共有してはいけない情報がないか確認してください。</p>
           <p>他の家族が入力した記録や、本人・第三者が写った写真を含める場合は、共有してよい内容か確認してください。</p>
           <p>PDFはこの画面から印刷・保存し、自動で家族や第三者へ送信されません。元の手帳の記録も削除されません。</p>
+          <p>このブラウザの別の画面で記録を変更・削除した場合は、内容を読み直して準備をやり直します。すでに保存したPDFや開いた印刷画面を、自動で取り消すことはできません。最新の内容を使うには、古い印刷画面を閉じて、この画面から準備し直してください。</p>
           <p>無料なのはPDFデータの作成です。紙の本の印刷・製本・配送は含みません。</p>
         </div>
       </section>
@@ -532,10 +624,15 @@ export default function MemoryBookPage() {
                           <button
                             className="memory-book-photo-open"
                             type="button"
-                            onClick={() => setExpandedPhoto({
-                              src: photo.previewUrl!,
-                              alt: `${formatBookDate(entry.date)}の記録写真${index + 1}`
-                            })}
+                            onClick={() => {
+                              if (refreshLocalNotebook()
+                                || renderedSnapshotGeneration !== snapshotGenerationRef.current
+                                || renderedPrintAttempt !== printAttemptRef.current) return;
+                              setExpandedPhoto({
+                                src: photo.previewUrl!,
+                                alt: `${formatBookDate(entry.date)}の記録写真${index + 1}`
+                              });
+                            }}
                           >
                             <img src={photo.previewUrl} alt={`${formatBookDate(entry.date)}の記録写真${index + 1}`} />
                             <span>写真を大きく見る</span>

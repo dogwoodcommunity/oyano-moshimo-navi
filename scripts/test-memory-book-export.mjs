@@ -129,7 +129,7 @@ assert.deepEqual(
       params: { caseId }, ...store, entryIdsInDateRange,
       dateRangeStart: "2026-09-01", dateRangeEnd: "2026-09-03", selectedEntryIds: new Set(),
       setSelectedEntryIds(ids) { context.selectedEntryIds = ids; },
-      setPreparedPrintIntent() {}, setPrintError(message) { context.error = message; }
+      invalidatePreparedPrint() {}, setPreparedPrintIntent() {}, setPrintError(message) { context.error = message; }
     };
     vm.runInNewContext(selectionCode, context);
     return context;
@@ -207,4 +207,5 @@ assert.match(page, /写真を大きく見る/);
 assert.ok((page.match(/disabled=\{printPreparing\}/g) ?? []).length >= 5, "selection controls must be locked while print preparation runs");
 assert.match(page, /disabled=\{photosOverLimit \|\| printPreparing\}/, "the photo option must be locked while print preparation runs");
 
+await import("./test-memory-book-freshness.mjs");
 console.log("memory book export safety checks: ok");

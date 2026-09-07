@@ -14538,3 +14538,35 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   手元Nodeと既存Actions更新は別の保守課題として残す。正式公開の残条件は引き続き未完了。
 - この最終結果は手帳/検証報告の文書2ファイルだけで追加commit/pushし、`[skip ci]`を付ける。
   実装は上記exact CI成功commitと同一。最終文書commitを新たな本番反映や実機受入とは扱わない。
+
+## 2026-09-07 追記 385 — 無料先行確認の続き：PDF更新検知と合成の後発削除再適用
+
+- 「つづけて」を追記384から再開。開始mainは `0259977b5f3a63911989de7aa4e3ea120679b9ef`。
+  追加費用・新規契約・移管・実AI/メール送信・本番DB/Storage変更・本番反映は行わない。
+  Claudeの新規送信ではなく、9月6日に受領した実レビューに残った確認を継続。
+- PDFは初回読取だけだったため、別画面で編集/削除しても旧内容を印刷できる問題を修正。
+  storage/focus/表示復帰と準備開始/画像待機後/印刷直前で既存storeを再読し、変更時に準備を失効。
+  元記録・写真の書込みは追加しない。削除receiptを尊重し、外した選択を維持、新規記録は自動選択しない。
+  旧世代の写真応答/遅延state更新も除外。初回の既存写真取得以外に新たな認証・クラウドfetchはしない。
+- 実page/実storeを使う合成回帰 `test-memory-book-freshness.mjs` を既存PDF試験から実行。
+  旧baseはイベントなしの古い印刷試験で失敗、初回修正の独立レビューでも描画commit前の旧handler競合を発見。
+  初回37工程合格を流用せず、描画時世代/準備番号で旧handlerを拒否する修正と追加negative controlを実施。
+  最終版の独立レビューにP0/P1なし。合成printは呼出し回数だけの検査で実PDF保存ではない。
+- 最終アプリ差分は隔離source33・lint・型2・fresh buildの37工程が連続PASS、10:42:02 JST終了。
+  BUILD_ID `g2SHjC2PdfVK-SfZC5UM_`。既存lint41警告あり。SQL10は未変更でこのローカル検証では再実行せず。
+  追加された復旧試験はこの37工程と別に実施した。最終GitHub CIはpush後にexact SHAで確認する。
+- 修正版の実ブラウザ2タブで、架空記録の別タブ編集→PDF新本文/準備取消→再準備を確認。
+  外した記録の未選択維持と、追加した記録が未選択で現れることも確認。reloadなし。
+  390px幅の準備/注意文も横はみ出しなし。OS印刷・実iPhone/Android・2端末クラウドは未検証のまま。
+  検証タブ2つだけclose、viewport reset、3123サーバー停止/待受0。実利用者の記録は操作していない。
+- 追加で既存の合成復旧試験を拡張。dump完了後の日記削除receiptのidentityを使い、旧dumpの隔離復旧先で
+  実削除RPCを再実行。同じlocalDiaryIdの別家族・既存receipt/job・無関係tableが不変、二重再適用不変、
+  再insert拒否を確認。56テーブル復旧/既存10確認もPASS、合成復旧2,565ms/工程全体5,629ms、残存コンテナ0。
+  対象は架空日記1件のみ。元deleted_at復元・写真の物理削除・本番・対象者/アカウント後発削除は未確認。
+  本番用replayツールではなく、実backupや本番RPO/RTOの達成とはしない。
+- 10:45 JST頃のVercel read-only再照会は引き続き `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready /
+  9月6日08:59:36 JST作成。今回のsource変更は本番未反映。GitHub PUBLICとdeploy secrets3種の件数0を再確認。
+- 詳細は `docs/PDF_FRESHNESS_VERIFICATION_2026-09-07.md`。正式無料Web公開はNO-GOを維持。
+  実backup保管先・取得/隔離復旧、専用実機/二者削除、問い合わせ実受信/担当運用、法務/施行日、最終本番反映が残る。
+  次の最小の選択は既存端末/媒体のbackup保管先。保管先指定だけで本番データ取得まで承認されたとはしない。
+  `review_exports/` と未追跡Claude_FULL2文書は不介入。

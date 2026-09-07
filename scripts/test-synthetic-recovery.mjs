@@ -22,6 +22,8 @@ const migrations = [
 const scope = {
   productionBackup: "NOT_TESTED", providerAuthLogin: "NOT_TESTED",
   providerStorageRecovery: "NOT_TESTED", newerDeletionReceiptReplay: "NOT_TESTED",
+  providerNewerDeletionReceiptReplay: "NOT_TESTED", newerPersonAndAccountDeletionReplay: "NOT_TESTED",
+  postBackupDeletionObjectCleanup: "NOT_TESTED",
   webAndRealDeviceAcceptance: "NOT_TESTED", providerRpoRto: "NOT_TESTED"
 };
 const argv = process.argv.slice(2);
@@ -33,7 +35,8 @@ if (argv[0] === "--plan") {
   console.log(JSON.stringify({ scope: "synthetic-local-recovery", image, imageId, migrations,
     isolation: "two newly created containers; local Unix socket; no network, ports, host binds or existing volumes",
     checks: ["binary pg_dump/pg_restore", "all fixture table rows", "roles/ACL/RLS/functions/triggers",
-      "family boundary and viewer rejection", "deletion receipts and pending jobs", "synthetic object bytes/hash"], ...scope }, null, 2));
+      "family boundary and viewer rejection", "deletion receipts and pending jobs", "synthetic object bytes/hash",
+      "post-backup synthetic diary receipt replay, idempotence and resurrection rejection"], ...scope }, null, 2));
   process.exit(0);
 }
 
@@ -251,6 +254,116 @@ function objectRoundTrip() {
   return entry;
 }
 
+const newerDiaryIdentity = {
+  family_id: "ea000000-0000-4000-8000-000000000010",
+  person_id: "ea000000-0000-4000-8000-000000000020",
+  local_case_id: "synthetic-case-a", local_diary_id: "synthetic-live"
+};
+function validateNewerDiaryReceipt(receipt) {
+  // This is a fixed fixture replay, not an import tool or production authority.
+  assert.deepEqual(Object.keys(receipt).sort(), [...Object.keys(newerDiaryIdentity), "deleted_at"].sort());
+  for (const [key, value] of Object.entries(newerDiaryIdentity)) assert.equal(receipt[key], value);
+  assert.ok(Number.isFinite(Date.parse(receipt.deleted_at)));
+}
+function replayNewerDiaryReceipt(container, receipt) {
+  validateNewerDiaryReceipt(receipt);
+  const encoded = Buffer.from(JSON.stringify(receipt)).toString("hex");
+  sql(container, `
+begin;
+set local request.jwt.claim.role = 'service_role';
+do $replay$ declare receipt public.notebook_diary_deletion_receipts%rowtype;
+  restored public.timeline_events%rowtype; response jsonb;
+begin
+  select * into receipt from jsonb_populate_record(null::public.notebook_diary_deletion_receipts,
+    convert_from(decode('${encoded}', 'hex'), 'UTF8')::jsonb);
+  select e.* into restored from public.timeline_events e join public.people p on p.id=e.person_id
+    where p.family_id=receipt.family_id and p.id=receipt.person_id
+      and p.profile->>'localCaseId'=receipt.local_case_id and e.event_type='diary'
+      and e.metadata->>'localCaseId'=receipt.local_case_id
+      and e.metadata->>'localDiaryId'=receipt.local_diary_id;
+  -- Receipts do not contain actor/revision/hash. Only this fixed synthetic
+  -- owner and the exact restored identity's current CAS values are used.
+  -- Do not insert the receipt first: a live row plus receipt is a conflict.
+  response := public.delete_notebook_diary_v1('ea000000-0000-4000-8000-000000000001',
+    receipt.family_id, receipt.person_id, receipt.local_case_id, receipt.local_diary_id,
+    restored.cloud_revision, restored.cloud_hash);
+  if response->>'ok' <> 'true' or response->>'receiptRecorded' <> 'true'
+    or (response->>'deleted' <> 'true' and response->>'alreadyDeleted' <> 'true') then
+    raise exception 'synthetic receipt replay failed';
+  end if;
+end $replay$;
+commit;
+`);
+}
+function verifyNewerDiaryReplay(destination, receipt) {
+  phase = "newer-receipt-baseline";
+  assert.equal(sql(destination, `select count(*) from public.timeline_events
+    where id='ea000000-0000-4000-8000-000000000040';`), "1", "old backup contains the subsequently deleted record");
+  assert.equal(sql(destination, `select count(*) from public.notebook_diary_deletion_receipts
+    where local_diary_id='synthetic-live';`), "0", "old backup must not already contain the newer receipt");
+  // A same-local-ID record in the other family is a replay isolation probe.
+  sql(destination, `insert into public.timeline_events(id,person_id,event_type,title,body,metadata,created_by)
+    values('ea000000-0000-4000-8000-000000000042','ea000000-0000-4000-8000-000000000021',
+      'diary','合成別家族の同名ID','再適用で消してはいけない合成記録',
+      '{"localCaseId":"synthetic-case-b","localDiaryId":"synthetic-live"}',
+      'ea000000-0000-4000-8000-000000000003');`);
+  const before = sql(destination, dataInventory);
+  const existingDeletionStateQuery = `select jsonb_build_object(
+    'receipts', (select jsonb_agg(to_jsonb(r) order by r.local_diary_id)
+      from public.notebook_diary_deletion_receipts r where local_diary_id <> 'synthetic-live'),
+    'jobs', (select jsonb_agg(to_jsonb(j) order by j.storage_path)
+      from public.notebook_storage_deletion_jobs j where local_diary_id <> 'synthetic-live'));`;
+  const existingDeletionState = sql(destination, existingDeletionStateQuery);
+  const decoyQuery = "select to_jsonb(e)::text from public.timeline_events e where id='ea000000-0000-4000-8000-000000000042';";
+  const decoy = sql(destination, decoyQuery);
+  assert.throws(() => replayNewerDiaryReceipt(destination, { ...receipt, person_id: "ea000000-0000-4000-8000-000000000021" }),
+    assert.AssertionError, "a non-fixture identity must be rejected before SQL");
+  assert.equal(sql(destination, dataInventory), before);
+  phase = "newer-diary-receipt-replay";
+  replayNewerDiaryReceipt(destination, receipt);
+  const after = sql(destination, dataInventory);
+  const unaffected = (inventory) => inventory.split("\n").filter((line) =>
+    !/^(?:public\.timeline_events|public\.notebook_diary_deletion_receipts|public\.notebook_storage_deletion_jobs)\t/.test(line)).join("\n");
+  assert.equal(unaffected(after), unaffected(before), "replay must not modify unrelated fixture tables");
+  assert.equal(sql(destination, existingDeletionStateQuery), existingDeletionState, "existing receipts and cleanup jobs must remain unchanged");
+  assert.equal(sql(destination, decoyQuery), decoy, "same local ID in the other family must survive unchanged");
+  phase = "newer-diary-replay-idempotence";
+  replayNewerDiaryReceipt(destination, receipt);
+  assert.equal(sql(destination, dataInventory), after, "second replay must not duplicate receipts/jobs or change any rows");
+  phase = "newer-diary-resurrection-rejection";
+  sql(destination, `
+begin;
+set local request.jwt.claim.role='service_role';
+do $check$ begin
+  if exists(select 1 from public.timeline_events where id='ea000000-0000-4000-8000-000000000040')
+    or (select count(*) from public.notebook_diary_deletion_receipts where
+      family_id='ea000000-0000-4000-8000-000000000010' and person_id='ea000000-0000-4000-8000-000000000020'
+      and local_case_id='synthetic-case-a' and local_diary_id='synthetic-live') <> 1
+    or (select count(*) from public.notebook_storage_deletion_jobs where local_diary_id='synthetic-live'
+      and storage_bucket='home-photos' and storage_path='notebook/ea000000-0000-4000-8000-000000000001/synthetic.png'
+      and status='pending') <> 1 then raise exception 'replayed deletion state missing'; end if;
+  begin
+    insert into public.timeline_events(person_id,event_type,title,metadata)
+      values('ea000000-0000-4000-8000-000000000020','diary','must not resurrect after newer receipt',
+        '{"localCaseId":"synthetic-case-a","localDiaryId":"synthetic-live"}');
+    raise exception 'newer deleted diary resurrected';
+  exception when serialization_failure then if sqlerrm <> 'notebook_diary_deleted' then raise; end if; end;
+  -- Physical object deletion is deliberately not simulated as completed.
+  if (select count(*) from storage.objects where name='notebook/ea000000-0000-4000-8000-000000000001/synthetic.png') <> 1
+    then raise exception 'unexpected object deletion'; end if;
+end $check$;
+rollback;
+`);
+  assert.equal(sql(destination, dataInventory), after, "rejected resurrection must leave all data unchanged");
+  return { scope: "synthetic-diary-only", sourceReceiptCount: 1, sourceReceiptSha256: hash(JSON.stringify(receipt)),
+    replayMethod: "exact-receipt-identity-with-restored-CAS-and-fixed-fixture-owner",
+    originalDeletedAtRestored: false, sourceDeletionStrictlyAfterBackup: "PASS",
+    oldBackupContainsDeletedRow: "PASS", newerReceiptAbsentFromOldBackup: "PASS", replay: "PASS",
+    nonFixtureIdentityRejected: "PASS", otherFamilySameLocalIdPreserved: "PASS", unrelatedTablesUnchanged: "PASS",
+    existingReceiptsAndJobsUnchanged: "PASS",
+    repeatedReplayUnchanged: "PASS", resurrectionRejected: "PASS", objectCleanupRemainsPending: "PASS" };
+}
+
 try {
   // Read only explicitly listed source files; never load dotenv or an input dump.
   const sources = migrations.map(name => fs.readFileSync(path.join(root, "supabase", `${name}.sql`)));
@@ -272,6 +385,23 @@ try {
   const backupAt = Date.now();
   const dump = command(["exec", source, "pg_dump", "-U", "postgres", "-d", "postgres", "--format=custom"]).stdout;
   assert.ok(dump.length > 0);
+  const dumpHash = hash(dump);
+  phase = "delete-after-backup-completion";
+  const backupDatabaseTime = sql(source, `select to_char(clock_timestamp() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"');`);
+  assert.match(backupDatabaseTime, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
+  sql(source, `begin; set local request.jwt.claim.role='service_role';
+    do $delete$ declare r public.timeline_events%rowtype; response jsonb; begin
+      select * into strict r from public.timeline_events where id='ea000000-0000-4000-8000-000000000040';
+      response := public.delete_notebook_diary_v1('ea000000-0000-4000-8000-000000000001',
+        'ea000000-0000-4000-8000-000000000010','ea000000-0000-4000-8000-000000000020',
+        'synthetic-case-a','synthetic-live',r.cloud_revision,r.cloud_hash);
+      if response->>'deleted' <> 'true' then raise exception 'post-backup source deletion failed'; end if;
+    end $delete$; commit;`);
+  const newerReceipt = JSON.parse(sql(source, `select jsonb_build_object('receipt', to_jsonb(r),
+    'strictlyAfterBackup', deleted_at > '${backupDatabaseTime}'::timestamptz)
+    from public.notebook_diary_deletion_receipts r where local_diary_id='synthetic-live';`));
+  assert.equal(newerReceipt.strictlyAfterBackup, true);
+  validateNewerDiaryReceipt(newerReceipt.receipt);
   const restoreStartedAt = Date.now();
   const destination = await createContainer("restore");
   phase = "restore-role-bootstrap";
@@ -301,6 +431,9 @@ try {
   const object = objectRoundTrip();
   assert.equal(sql(destination, "select bucket_id||'/'||name from storage.objects;"), `${object.bucket}/${object.path}`);
   assert.equal(sql(destination, "select attachments->0->>'storagePath' from public.timeline_events;"), object.path);
+  const newerDiaryReplay = verifyNewerDiaryReplay(destination, newerReceipt.receipt);
+  assert.equal(sql(destination, catalogInventory), sourceCatalog, "replay does not change restored roles/schema/security");
+  assert.equal(hash(dump), dumpHash, "newer deletion replay must not rewrite the original backup bytes");
   const completedAt = Date.now();
   result = { status: "SYNTHETIC_RESTORE_PASS", scope: "synthetic-local-recovery", imageId,
     dbDumpSha256: hash(dump), dbDumpBytes: dump.length, tableCount: sourceRows.split("\n").length,
@@ -312,7 +445,8 @@ try {
     syntheticObjectCount: 1, syntheticObjectBytes: object.size, syntheticObjectSha256: object.sha256,
     backupStartedAt: new Date(backupAt).toISOString(), restoreStartedAt: new Date(restoreStartedAt).toISOString(),
     acceptanceCompletedAt: new Date(completedAt).toISOString(), syntheticRestoreDurationMs: completedAt - restoreStartedAt,
-    rpo: "NOT_MEASURED_NO_PRODUCTION_DATA_OR_SIMULATED_LOSS_WINDOW", ...scope };
+    rpo: "NOT_MEASURED_NO_PRODUCTION_DATA_OR_SIMULATED_LOSS_WINDOW", ...scope,
+    newerDeletionReceiptReplay: "SYNTHETIC_DIARY_ONLY_PASS", newerDiaryReplay };
 } catch (error) {
   result = { status: "SYNTHETIC_RESTORE_FAIL", phase, failure: error instanceof assert.AssertionError ? "assertion_failed" : "local_operation_failed", ...(catalogDifferences ? { catalogDifferences } : {}), ...scope };
   process.exitCode = 1;
