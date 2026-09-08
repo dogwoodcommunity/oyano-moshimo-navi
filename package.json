@@ -23,6 +23,7 @@
     "test:stage-a-local": "node scripts/test-stage-a-local.mjs",
     "test:stage-a-local-runner": "node scripts/test-stage-a-local-runner.mjs",
     "test:personal-data-infra": "node scripts/test-personal-data-infra.mjs",
+    "test:backup-generation": "node scripts/test-backup-generation.mjs",
     "plan:personal-data-backup": "node scripts/plan-personal-data-backup.mjs --plan",
     "review:zip": "node scripts/create-review-zip.mjs",
     "smoke:web": "node scripts/smoke-web.mjs",

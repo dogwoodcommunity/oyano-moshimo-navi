@@ -60,6 +60,9 @@ jobs:
       - name: Test personal-data storage policies and offline planner
         run: pnpm run test:personal-data-infra
 
+      - name: Test backup byte integrity and interrupted completion
+        run: pnpm run test:backup-generation
+
       - name: Test monitor timeline
         run: pnpm run test:monitor-timeline
 

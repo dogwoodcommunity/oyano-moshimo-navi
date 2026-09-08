@@ -7,7 +7,7 @@ export const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)
 const sourceTests = [
   "stage-a-local-runner", "monitor-timeline", "monitor-retention", "monitor-submission-gate",
   "cron-auth", "notebook-sync-safety", "notebook-sync-runtime", "notebook-sync-text-retry", "notebook-diary-text", "unicode-display-text", "memory-book-export",
-  "diary-unsaved-changes", "personal-data-infra",
+  "diary-unsaved-changes", "personal-data-infra", "backup-generation",
   "notebook-reconciliation", "notebook-reconcile-route", "notebook-reconciliation-ui",
   "free-first-redesign", "readable-design-b", "home-overview-reachability", "web-account-deletion",
   "account-delete-executor-auth", "delete-operator-mfa-setup", "commercial-release-gates",

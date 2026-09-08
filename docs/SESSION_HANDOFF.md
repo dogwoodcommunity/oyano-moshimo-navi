@@ -14640,3 +14640,44 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 9月6日08:59:36 JST作成のまま。
   今回の構成はGitHubに保存しただけでAWSには未作成、本番アプリ未変更、既存の公開残条件も未完了。
 - 最終結果はこの引き継ぎ1ファイルだけを `[skip ci]` commit/push。構成・検証script・CI設定は上記合格SHAと同一。
+
+## 2026-09-08 追記 387 — バックアップの実bytes照合・未完了判定を先行実装
+
+- 「すすめて」をmain `d7f22bb5aca18492e0c71b3ffb2f973858e44278` から再開。
+  AWSアカウント・費用承認は未確定のまま。AWS CLI `configure list-profiles`は0件だったが、
+  これはアカウント未契約の意味ではない。資格情報の値を表示/保存せず、環境変数も調査せず、STS等の管理APIも呼ばない。
+  既存の会社アカウントを使うか、未作成かをユーザーへ質問。回答待ちの間に接続不要の実装を進める。
+- 新規 `scripts/lib/backup-generation.mjs` は、将来のreader/writerから使う共通の世代照合処理。
+  DB/Auth dump・roles・storage catalog各1つ、写真一覧との過不足、version/key/サイズ/重複/日時を検査。
+  frozen copyに固定し、指定VersionIdの実streamを読んでSHA-256とbytesを照合する。
+  AWS SDK/CLI/DB接続/資格情報/ファイル入力/実送信adapterは持たない。
+- 全artifact照合後にだけmanifestをIf-None-Match:*で1回送信し、ACKのVersionIdを指定してmanifestも再読取。
+  自己hash/versionをmanifest内部へ入れず、再照合後の外側receiptとして返す。
+  409/412、送信後応答消失、timeout、不正ACK、再読取失敗は成功にしない。自動再送・自動削除なし。
+  uncertainty時には相手側にobjectが存在する可能性を残し、後続照合が必要とする。
+- deadline/AbortSignal/容量/chunk上限を追加。adapterが止まらない場合のremote書込み取消までは保証しない。
+  エラーは固定コードのみ。本文/path/secretを例外出力せず、型変換・getter・Proxy・配列subclass等も拒否。
+- 独立レビューでkindの暗黙変換とArray subclassのmapによる未検証artifact混入を発見し修正。
+  root独立回帰に再現ケースを追加、最終62ケースPASS。別担当も62ケース再実行でP0/P1なし。
+  合成dump bytesと合成1pixel PNGをメモリ内だけで照合しており、実DBの形式/意味的復元ではない。
+- 返却結果/manifestはBYTE_INTEGRITY_ONLY、productionReady:falseを固定。
+  原本snapshot整合性、削除coverage、実復旧はNOT_VERIFIED。写真一覧も入力されたリストの一致であって、
+  元Storageの全ページが取得済みという証明ではない。reader/writerの資格情報分離は実接続時の別要件。
+- アカウント削除完了時には関連日記/対象者receiptが消え、元UUID/pathも最小化されるため、
+  現在のreceipt一覧だけで過去の削除coverageを証明できない。累積export/限定照合/汎用replayは未実装のまま。
+- 詳細 `docs/BACKUP_GENERATION_VERIFICATION_2026-09-08.md`。設計書/概算表示の進捗欄と
+  CI/Stage Aに新規回帰を登録、最新工程定義はsource35/full49。cfn-lintは別検査のまま。
+- AWS作成・課金設定・本番DB/Storage・利用者記録/写真・メール・本番反映なし。
+  アプリsourceとCloudFormation保管庫本体も変更しない。正式無料Web公開はNO-GOを維持。
+  `review_exports/` と未追跡Claude_FULL2文書は不介入。最新CI/最終結果は以下へ追記する。
+
+### 追記387の検証結果
+
+- 11:14 JSTまでに資格情報・dotenvのない隔離archiveでsource35連続PASS。
+  最終62ケースの個別再実行もPASS。CIの負荷で送信前timeoutと混同しないよう、
+  late-write試験の猶予だけ10msから100msへ広げ、相手の完了は200ms後にした。実装のdeadlineは変更していない。
+- rootの最初の試験はadapter以外のfixture情報もoptionsへ渡して厳密schemaで拒否された。
+  テスト側の受渡しを契約どおりに限定して修正。未知optionsの拒否そのものも負例に追加した。
+  その後レビューで見つけた型変換/配列subclassと、Proxy等の漏れを修正し、旧成功結果を流用せず再実行。
+- Web/mobileアプリsource・SQL・依存・保管庫CFNは不変。lint/型/SQL/buildはローカルで再実行せず、
+  push後のexact CIで別確認する。diff-check PASS、GitHub PUBLIC、deploy secrets3種の件数0、remote mainは開始SHAだった。

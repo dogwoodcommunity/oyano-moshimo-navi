@@ -49,6 +49,8 @@ export function createBackupPlan({ retainedGb = 10, dailyMinutes = 10 } = {}) {
     notIncludedInTemplate: ["backup collection worker and container image", "DB and Storage read credentials",
       "daily schedule and independent deletion journal export", "backup failure/freshness notification",
       "budget notifications", "production restore and deletion replay"],
+    offlineComponentsImplemented: ["strict generation manifest and streamed byte-integrity verification",
+      "conditional manifest completion protocol with injected test adapters only"],
     requiredBeforeAwsCreation: ["confirm AWS account and existing role ARNs", "approve itemized cost and retention",
       "verify MFA and key recovery administration", "review exact CloudFormation change set"],
     requiredBeforePersonalData: ["complete collector and manifest verification", "verify deny/restore behavior with synthetic AWS objects",

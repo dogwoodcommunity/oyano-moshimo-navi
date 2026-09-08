@@ -97,7 +97,11 @@ Complianceは期限前にrootでも削除できないため、未確定の削除
 利用者へ再表示させず、承認された保持期間・例外手順に従って処理する。利用者向け説明と法務判断が必要。
 削除markerだけでは過去versionの消去にならない。[AWS Lifecycle](https://docs.aws.amazon.com/AmazonS3/latest/userguide/lifecycle-expire-general-considerations.html)
 
-## 次段階の自動取得・復旧設計（未実装）
+## 自動取得・復旧への接続計画（実環境は未実装）
+
+2026-09-08追補: 共通の実bytes照合・manifest確定処理を
+`scripts/lib/backup-generation.mjs` に追加。これは収集/保存adapterや自動運転ではない。
+内容と受入境界は `docs/BACKUP_GENERATION_VERIFICATION_2026-09-08.md` を参照。
 
 1. EventBridge Scheduler → 専用ECS Fargate taskを日次実行。常設Mac・GitHub hosted runnerに本番dumpを置かない。
    taskは受信portなし、read-only root filesystem、暗号化された一時領域、secretや本文をログに出さない。
@@ -185,8 +189,8 @@ S3/KMS/IAM/CloudTrailの作成、AWS契約/請求設定変更、Supabase移管�
   既知の条件の合成評価と設定を意図的に壊すnegative controlであり、AWS IAMの実評価・配送試験ではない。
 - `cfn-lint` 1.53.3で東京リージョンのCloudFormation schemaを検証する。AWS資格情報・APIを使わない。
   CIにも独立した検証jobを追加。テンプレートがlint合格でも上流role・アカウント・請求・service連携は未確認。
-- Stage Aの最新定義はsource34/full48工程。cfn-lintはこの工程数に含めず別検証とする。
+- Stage Aの最新定義はsource35/full49工程。cfn-lintはこの工程数に含めず別検証とする。
 - 実装者以外が構成・データ境界・料金を独立レビュー。現構成で明確なP0/P1は見つからなかったが、
   本番用backup collector・監視・実復旧が完了したという判定ではない。Claudeへの新規送信ではない。
 
-実行結果・commit・CIは `docs/SESSION_HANDOFF.md` の追記386で記録する。
+実行結果・commit・CIは `docs/SESSION_HANDOFF.md` の追記386・387で記録する。
