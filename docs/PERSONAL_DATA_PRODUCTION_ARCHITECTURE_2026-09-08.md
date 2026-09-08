@@ -171,12 +171,36 @@ node scripts/plan-personal-data-backup.mjs --plan --retained-gb 100 --daily-minu
 
 `--apply`、upload、実データ入力のモードは用意しない。
 
+## 管理者の接続経路（作成前の追加確認）
+
+2026-09-08追補。MFAデバイスの登録、ログイン時のMFA認証、対象roleへの到達、
+鍵管理/復旧を実行する権限は別々に確認する。デバイス登録済み表示だけで全条件の合格にはしない。
+
+- 現テンプレートは正確な上流role ARNのみを信頼する。IAMユーザーから通常のconsole Switch roleで
+  Role Aへ切り替え、続けてRole Bへ切り替えても、Role Bの認可には元のIAMユーザーが使われる。
+  この画面操作を、Role Aのみを信頼するRole Bへのrole chaining手順として案内しない。
+  [AWS公式Switch role仕様](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-console.html)
+- 現構成を維持するなら、上流の認証方式とCLI等による実際のAssumeRole経路を確認する。
+  別案として直接のconsole利用に合う信頼設計へ変更する場合も、先に最小権限/MFA/本人追跡を再レビューする。
+  操作が通らないことを理由に、IAMユーザーやaccount全体を無条件で信頼するよう変更しない。
+- パスキーの情報をSTSのOTP引数へ渡すことはできない。一方、CLIの`aws login`による短期接続は利用可能。
+  そのためパスキーを理由にTOTPの再登録や永続access key作成を必須としない。
+  [AWS公式MFA説明](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa.html)
+- `aws login`はCLI 2.32.0以上と適切な権限を必要とする。本人がブラウザで許可し、短期資格情報をMacへ
+  キャッシュする別の操作である。最大12時間の更新、終了時の当該profileだけのlogoutを説明し、承認後に使う。
+  他サービスの既存profileを上書きしない。キャッシュ、資格情報、認可codeを表示/転記しない。
+  [AWS CLI公式手順](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html)
+- 一時接続の承認は、有料資源作成、権限変更、本番データ取得の承認とは分ける。
+  必要な操作権限が不足した場合は、具体的な付与内容を提示する。既存他サービスのroleを流用しない。
+
 ## 実環境へ作る前の確認
 
 1. 所有AWSアカウント・請求先を指定。もしもナビ専用backupアカウントが第一案。既存の他サービス用bucketは流用しない。
-2. 信頼元のcollector/restore/audit/admin role、MFA、緊急時の鍵回復、個人単位の監査を確認。
+2. 信頼元のcollector/restore/audit/admin role、上記の実接続経路、MFA、緊急時の鍵回復、個人単位の監査を確認。
 3. 保持日数、削除依頼の説明、月額試算と通知基準を承認。
 4. CloudFormation change setの対象と権限変更を別確認者が確認。実行は別承認。東京以外では作らない。
+   このTrailは東京の管理イベントとglobal service eventsも記録するため、既存Trailとの追加コピー課金と
+   他サービスの管理イベントを監査コピーに含める範囲を確認する。ログ本文の参照や既存Trail変更は不要。
 5. 本番データを入れず、合成objectで公開GET/誤鍵/無条件上書き/writer読取削除を拒否し、正しいMPU/復旧読取/CloudTrailを確認。
 6. 次段階worker・独立削除export・監視を実装して合成試験、通知の実受信を確認。
 7. 個人情報をAWSへ複製する対象/保管/委託条件を承認後にだけ実backupを取得。隔離復旧と二者削除を終えて公開判定する。
