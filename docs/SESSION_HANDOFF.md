@@ -14631,3 +14631,12 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   実テンプレートに対する検査で、AWSの実IAM判定・CloudTrail配送・MPU競合はNOT_TESTEDと明記。
   取得前承認と実backup取得後の復旧受入を別にし、実データ取得前に実データ復旧を要求する循環も除去した。
 - 隔離先でもcfn-lint1.53.3東京schema PASS。diff-check PASS。GitHub mainは開始SHAのままを確認した。
+- 実装・構成・資料10ファイルを `2dd70c8409a5c6d7a8a0391b8e9078e906b974f4` としてmainへpush。
+  exact CI `34177712125` は10:45:26〜10:48:27 JST（3分1秒）でsuccess、両jobのfailedSteps空。
+  Web/mobileはlint/型/source/SQL10/build/smoke成功、独立infra jobもcfn-lint成功（21秒）。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34177712125
+  Actions Node20非推奨/Node24強制実行のannotationは残る。実AWSや実機の受入ではない。
+- Deploy workflow `34177712122` はcheck成功・deploy skipped。push後のVercel read-only照会も
+  `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 9月6日08:59:36 JST作成のまま。
+  今回の構成はGitHubに保存しただけでAWSには未作成、本番アプリ未変更、既存の公開残条件も未完了。
+- 最終結果はこの引き継ぎ1ファイルだけを `[skip ci]` commit/push。構成・検証script・CI設定は上記合格SHAと同一。
