@@ -1,0 +1,1925 @@
+{
+ "AWSTemplateFormatVersion": "2010-09-09",
+ "Description": "UNDEPLOYED DESIGN: Tokyo-only dedicated encrypted backup, receipt and audit storage foundation for Oyano Moshimo Navi. Does not collect or schedule backups.",
+ "Metadata": {
+  "DeploymentStatus": "DRAFT_UNDEPLOYED_REQUIRES_EXPLICIT_AWS_AND_COST_APPROVAL",
+  "Scope": "Only storage, scoped roles and CloudTrail. No source credentials, Supabase access, collector, compute, schedule, secrets, alert delivery or production data.",
+  "ApprovalRequired": [
+   "AWS account and region",
+   "Existing exact collector, restore, audit and administrator role ARNs",
+   "One-time and recurring costs",
+   "30-day backup and 180-day receipt/audit lifecycle with noncurrent expiration after 1 day",
+   "7-day GOVERNANCE Object Lock and privacy deletion handling",
+   "SSO MFA and session policies enforced upstream",
+   "Isolated restore evidence and separate production launch approval"
+  ],
+  "RegionGuard": "TokyoOnly is applied to every resource. A stack created outside ap-northeast-1 creates no resources; treat this as a failed deployment preflight, not success. TargetRegion is fixed to ap-northeast-1.",
+  "SecurityBoundary": "The writer has no S3 read/delete/retention administration. Separate restore and audit roles are read only for their respective buckets. These are scoped grants, not an account-wide guarantee: root account IAM delegation and a key administrator capable of changing policies can grant additional access. Review account IAM, SCPs, permission boundaries and CloudFormation execution authority separately.",
+  "AuthenticationBoundary": "Only the exact existing role ARNs can assume these roles. MFA/SSO is an upstream requirement that this template does not configure or verify. MaxSessionDuration is 3600 seconds.",
+  "RetentionBoundary": "GOVERNANCE protects existing backup object versions for 7 days; it is not irrevocable COMPLIANCE retention. Retention/lifecycle timings are unapproved design values. S3 expiration is asynchronous and locked/legal-held versions can outlive lifecycle eligibility. Retain protects stack deletion/replacement, not administrator actions or lifecycle expiration.",
+  "WriteBoundary": "Backup and receipt PutObject/CompleteMultipartUpload require If-None-Match: *. Multipart initiation and parts are exempt through s3:ObjectCreationOperation. Conditional writes concern the current key state, not perpetual uniqueness after expiration/delete markers. Capture VersionId and SHA-256 in a verified manifest. No collector or restore runner is included.",
+  "EncryptionBoundary": "Backup and receipt defaults select the exact key with S3 Bucket Keys. Explicit other algorithms/keys, customer-provided keys and aws:kms without a key ARN are denied. Requests with no encryption headers use bucket defaults; multipart requests do not repeat initiation headers. Writer/restore KMS permissions require S3 ViaService and the exact bucket encryption context.",
+  "KeyNames": "Object keys, tags and encryption context must contain only opaque run identifiers and hashes; never names, email addresses, consultation text, credentials or other personal content.",
+  "AuditBoundary": "Trail records all management events in Tokyo plus global service events, read/write S3 data events for backup and receipt buckets, and read-only audit bucket S3 data events. Audit writes are excluded to avoid delivery self-logging; integrity validation is not an alerting system. Audit/receipt buckets do not use Object Lock. Audit uses default SSE-KMS and Trail.KMSKeyId; bucket policy intentionally does not demand SSE-KMS request headers because CloudTrail log validation can require AES256 delivery. Actual log/digest encryption and delivery must be verified in an approved isolated deployment.",
+  "References": [
+   "https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/conditions-section-structure.html",
+   "https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-lock-managing.html",
+   "https://docs.aws.amazon.com/AmazonS3/latest/userguide/conditional-writes-enforce.html",
+   "https://docs.aws.amazon.com/AmazonS3/latest/userguide/UsingKMSEncryption.html",
+   "https://docs.aws.amazon.com/AmazonS3/latest/userguide/amazon-s3-policy-keys.html",
+   "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/create-s3-bucket-policy-for-cloudtrail.html",
+   "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/create-kms-key-policy-for-cloudtrail.html",
+   "https://docs.aws.amazon.com/awscloudtrail/latest/userguide/best-practices-security.html"
+  ],
+  "ReceiptBoundary": "180 days is the TTL of stored receipt copies, not deletion of source DB deletion evidence. Preserve source deletion history in cumulative daily snapshots plus short-interval deltas. Restoration must stop if receipt coverage is missing or unverified; this template does not implement that process."
+ },
+ "Parameters": {
+  "TargetRegion": {
+   "Type": "String",
+   "Default": "ap-northeast-1",
+   "AllowedValues": [
+    "ap-northeast-1"
+   ],
+   "Description": "Approved design region. Deployment preflight must also verify the actual AWS::Region is ap-northeast-1."
+  },
+  "BackupBucketName": {
+   "Type": "String",
+   "AllowedPattern": "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$",
+   "MinLength": 3,
+   "MaxLength": 63,
+   "Description": "New globally unique dedicated backup bucket name; only opaque identifiers, no personal data."
+  },
+  "ReceiptBucketName": {
+   "Type": "String",
+   "AllowedPattern": "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$",
+   "MinLength": 3,
+   "MaxLength": 63,
+   "Description": "New globally unique dedicated receipt bucket name; distinct from the other bucket names."
+  },
+  "AuditBucketName": {
+   "Type": "String",
+   "AllowedPattern": "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$",
+   "MinLength": 3,
+   "MaxLength": 63,
+   "Description": "New globally unique dedicated CloudTrail bucket name; distinct from the other bucket names."
+  },
+  "CollectorRoleArn": {
+   "Type": "String",
+   "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+   "Description": "Exact ARN of the existing collector identity approved to assume BackupWriterRole; no credential value."
+  },
+  "RestoreOperatorRoleArn": {
+   "Type": "String",
+   "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+   "Description": "Exact ARN of the existing human restore identity with upstream SSO MFA and audited approval; unverified by this template."
+  },
+  "AdminRoleArn": {
+   "Type": "String",
+   "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+   "Description": "Exact ARN of an existing key administrator role. Separate from collector and restore identities."
+  },
+  "TrailName": {
+   "Type": "String",
+   "MinLength": 3,
+   "MaxLength": 128,
+   "AllowedPattern": "^[A-Za-z0-9][A-Za-z0-9._-]{1,126}[A-Za-z0-9]$",
+   "Description": "New dedicated regional CloudTrail name. Must satisfy CloudTrail naming rules and be unique in this region."
+  },
+  "AuditOperatorRoleArn": {
+   "Type": "String",
+   "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$",
+   "Description": "Exact ARN of a distinct existing human audit identity with upstream SSO MFA; unverified by this template."
+  }
+ },
+ "Rules": {
+  "DistinctBuckets": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "BackupBucketName"
+         },
+         {
+          "Ref": "ReceiptBucketName"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Backup and receipt buckets must be different."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "BackupBucketName"
+         },
+         {
+          "Ref": "AuditBucketName"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Backup and audit buckets must be different."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "ReceiptBucketName"
+         },
+         {
+          "Ref": "AuditBucketName"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Receipt and audit buckets must be different."
+    }
+   ]
+  },
+  "SeparatePrincipals": {
+   "Assertions": [
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "CollectorRoleArn"
+         },
+         {
+          "Ref": "RestoreOperatorRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Collector and human restore roles must be different."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "AdminRoleArn"
+         },
+         {
+          "Ref": "CollectorRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Key administrator and collector roles must be different."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "AdminRoleArn"
+         },
+         {
+          "Ref": "RestoreOperatorRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Key administrator and restore roles must be different."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "AuditOperatorRoleArn"
+         },
+         {
+          "Ref": "AdminRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Audit operator must be separate from AdminRoleArn."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "AuditOperatorRoleArn"
+         },
+         {
+          "Ref": "CollectorRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Audit operator must be separate from CollectorRoleArn."
+    },
+    {
+     "Assert": {
+      "Fn::Not": [
+       {
+        "Fn::Equals": [
+         {
+          "Ref": "AuditOperatorRoleArn"
+         },
+         {
+          "Ref": "RestoreOperatorRoleArn"
+         }
+        ]
+       }
+      ]
+     },
+     "AssertDescription": "Audit operator must be separate from RestoreOperatorRoleArn."
+    }
+   ]
+  }
+ },
+ "Conditions": {
+  "TokyoOnly": {
+   "Fn::And": [
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "AWS::Region"
+      },
+      "ap-northeast-1"
+     ]
+    },
+    {
+     "Fn::Equals": [
+      {
+       "Ref": "TargetRegion"
+      },
+      {
+       "Ref": "AWS::Region"
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "Resources": {
+  "BackupWriterRole": {
+   "Type": "AWS::IAM::Role",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "Description": "Assumed only by the approved existing collector; scoped append attempts, no S3 reads/deletes. No collector is deployed.",
+    "MaxSessionDuration": 3600,
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "TrustOnlyNamedExistingRole",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Ref": "CollectorRoleArn"
+        }
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     }
+    ]
+   }
+  },
+  "RestoreReaderRole": {
+   "Type": "AWS::IAM::Role",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "Description": "Read-only backup and receipt version retrieval for approved restoration; upstream SSO MFA remains required.",
+    "MaxSessionDuration": 3600,
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "TrustOnlyNamedExistingRole",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Ref": "RestoreOperatorRoleArn"
+        }
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     }
+    ]
+   }
+  },
+  "BackupKmsKey": {
+   "Type": "AWS::KMS::Key",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "Description": "Dedicated backup and receipt SSE-KMS key for Oyano Moshimo Navi",
+    "EnableKeyRotation": true,
+    "KeySpec": "SYMMETRIC_DEFAULT",
+    "KeyUsage": "ENCRYPT_DECRYPT",
+    "MultiRegion": false,
+    "PendingWindowInDays": 30,
+    "KeyPolicy": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "EnableAccountRecoveryAndIAMDelegation",
+       "Effect": "Allow",
+       "Action": "kms:*",
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+        }
+       }
+      },
+      {
+       "Sid": "NamedKeyAdministratorWithoutDirectDataActions",
+       "Effect": "Allow",
+       "Action": [
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:PutKeyPolicy",
+        "kms:ListKeyPolicies",
+        "kms:EnableKey",
+        "kms:DisableKey",
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation",
+        "kms:GetKeyRotationStatus",
+        "kms:UpdateKeyDescription",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:ListResourceTags",
+        "kms:CancelKeyDeletion",
+        "kms:ScheduleKeyDeletion"
+       ],
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Ref": "AdminRoleArn"
+        }
+       }
+      },
+      {
+       "Sid": "WriterMultipartCryptographyOnlyThroughVaultS3",
+       "Effect": "Allow",
+       "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+       ],
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "BackupWriterRole",
+          "Arn"
+         ]
+        }
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucketName}"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReceiptBucketName}"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "RestoreDecryptOnlyThroughVaultS3",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "RestoreReaderRole",
+          "Arn"
+         ]
+        }
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucketName}"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReceiptBucketName}"
+          }
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "backup-receipt-encryption"
+     }
+    ]
+   }
+  },
+  "AuditKmsKey": {
+   "Type": "AWS::KMS::Key",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "Description": "Dedicated CloudTrail audit encryption key for Oyano Moshimo Navi",
+    "EnableKeyRotation": true,
+    "KeySpec": "SYMMETRIC_DEFAULT",
+    "KeyUsage": "ENCRYPT_DECRYPT",
+    "MultiRegion": false,
+    "PendingWindowInDays": 30,
+    "KeyPolicy": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "EnableAccountRecoveryAndIAMDelegation",
+       "Effect": "Allow",
+       "Action": "kms:*",
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::Sub": "arn:${AWS::Partition}:iam::${AWS::AccountId}:root"
+        }
+       }
+      },
+      {
+       "Sid": "NamedKeyAdministratorWithoutDirectDataActions",
+       "Effect": "Allow",
+       "Action": [
+        "kms:DescribeKey",
+        "kms:GetKeyPolicy",
+        "kms:PutKeyPolicy",
+        "kms:ListKeyPolicies",
+        "kms:EnableKey",
+        "kms:DisableKey",
+        "kms:EnableKeyRotation",
+        "kms:DisableKeyRotation",
+        "kms:GetKeyRotationStatus",
+        "kms:UpdateKeyDescription",
+        "kms:TagResource",
+        "kms:UntagResource",
+        "kms:ListResourceTags",
+        "kms:CancelKeyDeletion",
+        "kms:ScheduleKeyDeletion"
+       ],
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Ref": "AdminRoleArn"
+        }
+       }
+      },
+      {
+       "Sid": "CloudTrailGenerateDataKeysForThisTrail",
+       "Effect": "Allow",
+       "Action": "kms:GenerateDataKey*",
+       "Resource": "*",
+       "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+       },
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         },
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:cloudtrail:arn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "CloudTrailDescribeThisKey",
+       "Effect": "Allow",
+       "Action": "kms:DescribeKey",
+       "Resource": "*",
+       "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+       },
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         },
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "CloudTrailDecryptForS3BucketKeyDelivery",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": "*",
+       "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+       },
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         },
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "AuditReaderDecryptCloudTrailLogsThroughS3",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "AuditReaderRole",
+          "Arn"
+         ]
+        }
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:cloudtrail:arn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "AuditReaderDecryptAuditS3BucketKey",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": "*",
+       "Principal": {
+        "AWS": {
+         "Fn::GetAtt": [
+          "AuditReaderRole",
+          "Arn"
+         ]
+        }
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${AuditBucketName}"
+          }
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "audit-encryption"
+     }
+    ]
+   }
+  },
+  "BackupBucket": {
+   "Type": "AWS::S3::Bucket",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "BucketName": {
+     "Ref": "BackupBucketName"
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "BucketKeyEnabled": true,
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "aws:kms",
+        "KMSMasterKeyID": {
+         "Fn::GetAtt": [
+          "BackupKmsKey",
+          "Arn"
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "ObjectLockEnabled": true,
+    "ObjectLockConfiguration": {
+     "ObjectLockEnabled": "Enabled",
+     "Rule": {
+      "DefaultRetention": {
+       "Mode": "GOVERNANCE",
+       "Days": 7
+      }
+     }
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "ExpireCurrentAndNoncurrentVersions",
+       "Status": "Enabled",
+       "ExpirationInDays": 30,
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+       }
+      },
+      {
+       "Id": "AbortIncompleteUploads",
+       "Status": "Enabled",
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+       }
+      },
+      {
+       "Id": "RemoveExpiredDeleteMarkers",
+       "Status": "Enabled",
+       "ExpiredObjectDeleteMarker": true
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     },
+     {
+      "Key": "RetentionDecision",
+      "Value": "draft-not-approved"
+     }
+    ]
+   }
+  },
+  "ReceiptBucket": {
+   "Type": "AWS::S3::Bucket",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "BucketName": {
+     "Ref": "ReceiptBucketName"
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "BucketKeyEnabled": true,
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "aws:kms",
+        "KMSMasterKeyID": {
+         "Fn::GetAtt": [
+          "BackupKmsKey",
+          "Arn"
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "ExpireCurrentAndNoncurrentVersions",
+       "Status": "Enabled",
+       "ExpirationInDays": 180,
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+       }
+      },
+      {
+       "Id": "AbortIncompleteUploads",
+       "Status": "Enabled",
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+       }
+      },
+      {
+       "Id": "RemoveExpiredDeleteMarkers",
+       "Status": "Enabled",
+       "ExpiredObjectDeleteMarker": true
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     },
+     {
+      "Key": "RetentionDecision",
+      "Value": "draft-not-approved"
+     }
+    ]
+   }
+  },
+  "AuditBucket": {
+   "Type": "AWS::S3::Bucket",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "BucketName": {
+     "Ref": "AuditBucketName"
+    },
+    "VersioningConfiguration": {
+     "Status": "Enabled"
+    },
+    "PublicAccessBlockConfiguration": {
+     "BlockPublicAcls": true,
+     "BlockPublicPolicy": true,
+     "IgnorePublicAcls": true,
+     "RestrictPublicBuckets": true
+    },
+    "OwnershipControls": {
+     "Rules": [
+      {
+       "ObjectOwnership": "BucketOwnerEnforced"
+      }
+     ]
+    },
+    "BucketEncryption": {
+     "ServerSideEncryptionConfiguration": [
+      {
+       "BucketKeyEnabled": true,
+       "ServerSideEncryptionByDefault": {
+        "SSEAlgorithm": "aws:kms",
+        "KMSMasterKeyID": {
+         "Fn::GetAtt": [
+          "AuditKmsKey",
+          "Arn"
+         ]
+        }
+       }
+      }
+     ]
+    },
+    "LifecycleConfiguration": {
+     "Rules": [
+      {
+       "Id": "ExpireCurrentAndNoncurrentVersions",
+       "Status": "Enabled",
+       "ExpirationInDays": 180,
+       "NoncurrentVersionExpiration": {
+        "NoncurrentDays": 1
+       }
+      },
+      {
+       "Id": "AbortIncompleteUploads",
+       "Status": "Enabled",
+       "AbortIncompleteMultipartUpload": {
+        "DaysAfterInitiation": 1
+       }
+      },
+      {
+       "Id": "RemoveExpiredDeleteMarkers",
+       "Status": "Enabled",
+       "ExpiredObjectDeleteMarker": true
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     },
+     {
+      "Key": "RetentionDecision",
+      "Value": "draft-not-approved"
+     }
+    ]
+   }
+  },
+  "BackupBucketPolicy": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "Bucket": {
+     "Ref": "BackupBucket"
+    },
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "DenyInsecureTransport",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "BackupBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${BackupBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false",
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyTlsBelow12",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "BackupBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${BackupBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "NumericLessThan": {
+         "s3:TlsVersion": 1.2
+        },
+        "Bool": {
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyExplicitNonKmsEncryption",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption": "false"
+        },
+        "StringNotEquals": {
+         "s3:x-amz-server-side-encryption": "aws:kms"
+        }
+       }
+      },
+      {
+       "Sid": "DenyExplicitUnexpectedKmsKey",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": "false"
+        },
+        "StringNotEquals": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": {
+          "Fn::GetAtt": [
+           "BackupKmsKey",
+           "Arn"
+          ]
+         }
+        }
+       }
+      },
+      {
+       "Sid": "DenyKmsRequestWithoutExactKey",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "StringEquals": {
+         "s3:x-amz-server-side-encryption": "aws:kms"
+        },
+        "Null": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyCustomerProvidedEncryptionKeys",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption-customer-algorithm": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyObjectCreationWithoutIfNoneMatch",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:if-none-match": "true"
+        },
+        "Bool": {
+         "s3:ObjectCreationOperation": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyObjectCreationUnlessIfNoneMatchIsStar",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "StringNotEquals": {
+         "s3:if-none-match": "*"
+        },
+        "Bool": {
+         "s3:ObjectCreationOperation": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyWriterReadDeleteAndRetentionChanges",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": [
+        "s3:GetObject*",
+        "s3:DeleteObject*",
+        "s3:PutObjectRetention",
+        "s3:PutObjectLegalHold",
+        "s3:BypassGovernanceRetention"
+       ],
+       "Resource": {
+        "Fn::Sub": "${BackupBucket.Arn}/*"
+       },
+       "Condition": {
+        "ArnEquals": {
+         "aws:PrincipalArn": {
+          "Fn::GetAtt": [
+           "BackupWriterRole",
+           "Arn"
+          ]
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "ReceiptBucketPolicy": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "Bucket": {
+     "Ref": "ReceiptBucket"
+    },
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "DenyInsecureTransport",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ReceiptBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${ReceiptBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false",
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyTlsBelow12",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "ReceiptBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${ReceiptBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "NumericLessThan": {
+         "s3:TlsVersion": 1.2
+        },
+        "Bool": {
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyExplicitNonKmsEncryption",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption": "false"
+        },
+        "StringNotEquals": {
+         "s3:x-amz-server-side-encryption": "aws:kms"
+        }
+       }
+      },
+      {
+       "Sid": "DenyExplicitUnexpectedKmsKey",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": "false"
+        },
+        "StringNotEquals": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": {
+          "Fn::GetAtt": [
+           "BackupKmsKey",
+           "Arn"
+          ]
+         }
+        }
+       }
+      },
+      {
+       "Sid": "DenyKmsRequestWithoutExactKey",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "StringEquals": {
+         "s3:x-amz-server-side-encryption": "aws:kms"
+        },
+        "Null": {
+         "s3:x-amz-server-side-encryption-aws-kms-key-id": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyCustomerProvidedEncryptionKeys",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:x-amz-server-side-encryption-customer-algorithm": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyObjectCreationWithoutIfNoneMatch",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "Null": {
+         "s3:if-none-match": "true"
+        },
+        "Bool": {
+         "s3:ObjectCreationOperation": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyObjectCreationUnlessIfNoneMatchIsStar",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "StringNotEquals": {
+         "s3:if-none-match": "*"
+        },
+        "Bool": {
+         "s3:ObjectCreationOperation": "true"
+        }
+       }
+      },
+      {
+       "Sid": "DenyWriterReadDeleteAndRetentionChanges",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": [
+        "s3:GetObject*",
+        "s3:DeleteObject*",
+        "s3:PutObjectRetention",
+        "s3:PutObjectLegalHold",
+        "s3:BypassGovernanceRetention"
+       ],
+       "Resource": {
+        "Fn::Sub": "${ReceiptBucket.Arn}/*"
+       },
+       "Condition": {
+        "ArnEquals": {
+         "aws:PrincipalArn": {
+          "Fn::GetAtt": [
+           "BackupWriterRole",
+           "Arn"
+          ]
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "AuditBucketPolicy": {
+   "Type": "AWS::S3::BucketPolicy",
+   "Condition": "TokyoOnly",
+   "DeletionPolicy": "Retain",
+   "UpdateReplacePolicy": "Retain",
+   "Properties": {
+    "Bucket": {
+     "Ref": "AuditBucket"
+    },
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "DenyInsecureTransport",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AuditBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${AuditBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "Bool": {
+         "aws:SecureTransport": "false",
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "DenyTlsBelow12",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:*",
+       "Resource": [
+        {
+         "Fn::GetAtt": [
+          "AuditBucket",
+          "Arn"
+         ]
+        },
+        {
+         "Fn::Sub": "${AuditBucket.Arn}/*"
+        }
+       ],
+       "Condition": {
+        "NumericLessThan": {
+         "s3:TlsVersion": 1.2
+        },
+        "Bool": {
+         "aws:PrincipalIsAWSService": "false"
+        }
+       }
+      },
+      {
+       "Sid": "CloudTrailAclCheck",
+       "Effect": "Allow",
+       "Action": "s3:GetBucketAcl",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuditBucket",
+         "Arn"
+        ]
+       },
+       "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+       },
+       "Condition": {
+        "StringEquals": {
+         "aws:SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         },
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "CloudTrailLogDelivery",
+       "Effect": "Allow",
+       "Action": "s3:PutObject",
+       "Resource": {
+        "Fn::Sub": "${AuditBucket.Arn}/cloudtrail/AWSLogs/${AWS::AccountId}/*"
+       },
+       "Principal": {
+        "Service": "cloudtrail.amazonaws.com"
+       },
+       "Condition": {
+        "StringEquals": {
+         "s3:x-amz-acl": "bucket-owner-full-control",
+         "aws:SourceArn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         },
+         "aws:SourceAccount": {
+          "Ref": "AWS::AccountId"
+         }
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "BackupWriterPolicy": {
+   "Type": "AWS::IAM::Policy",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "PolicyName": "VaultScopedBackupWriter",
+    "Roles": [
+     {
+      "Ref": "BackupWriterRole"
+     }
+    ],
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "WriteBackupAndReceiptObjects",
+       "Effect": "Allow",
+       "Action": [
+        "s3:PutObject",
+        "s3:AbortMultipartUpload",
+        "s3:ListMultipartUploadParts"
+       ],
+       "Resource": [
+        {
+         "Fn::Sub": "${BackupBucket.Arn}/backups/*"
+        },
+        {
+         "Fn::Sub": "${ReceiptBucket.Arn}/receipts/*"
+        }
+       ]
+      },
+      {
+       "Sid": "ListBackupPrefixOnly",
+       "Effect": "Allow",
+       "Action": "s3:ListBucket",
+       "Resource": {
+        "Fn::GetAtt": [
+         "BackupBucket",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          "backups/*"
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "ListReceiptPrefixOnly",
+       "Effect": "Allow",
+       "Action": "s3:ListBucket",
+       "Resource": {
+        "Fn::GetAtt": [
+         "ReceiptBucket",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          "receipts/*"
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "KmsForMultipartThroughS3Only",
+       "Effect": "Allow",
+       "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+       ],
+       "Resource": {
+        "Fn::GetAtt": [
+         "BackupKmsKey",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucketName}"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReceiptBucketName}"
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "RestoreReaderPolicy": {
+   "Type": "AWS::IAM::Policy",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "PolicyName": "VaultScopedRestoreReader",
+    "Roles": [
+     {
+      "Ref": "RestoreReaderRole"
+     }
+    ],
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "ReadExactBackupAndReceiptVersions",
+       "Effect": "Allow",
+       "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+       ],
+       "Resource": [
+        {
+         "Fn::Sub": "${BackupBucket.Arn}/backups/*"
+        },
+        {
+         "Fn::Sub": "${ReceiptBucket.Arn}/receipts/*"
+        }
+       ]
+      },
+      {
+       "Sid": "ListBackupVersionsOnly",
+       "Effect": "Allow",
+       "Action": [
+        "s3:ListBucket",
+        "s3:ListBucketVersions"
+       ],
+       "Resource": {
+        "Fn::GetAtt": [
+         "BackupBucket",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          "backups/*"
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "ListReceiptVersionsOnly",
+       "Effect": "Allow",
+       "Action": [
+        "s3:ListBucket",
+        "s3:ListBucketVersions"
+       ],
+       "Resource": {
+        "Fn::GetAtt": [
+         "ReceiptBucket",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          "receipts/*"
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "DecryptBackupAndReceiptThroughS3",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": {
+        "Fn::GetAtt": [
+         "BackupKmsKey",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${BackupBucketName}"
+          },
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${ReceiptBucketName}"
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  },
+  "AuditTrail": {
+   "Type": "AWS::CloudTrail::Trail",
+   "Condition": "TokyoOnly",
+   "DependsOn": [
+    "AuditBucketPolicy"
+   ],
+   "Properties": {
+    "TrailName": {
+     "Ref": "TrailName"
+    },
+    "IsLogging": true,
+    "IsMultiRegionTrail": false,
+    "IncludeGlobalServiceEvents": true,
+    "EnableLogFileValidation": true,
+    "KMSKeyId": {
+     "Fn::GetAtt": [
+      "AuditKmsKey",
+      "Arn"
+     ]
+    },
+    "S3BucketName": {
+     "Ref": "AuditBucket"
+    },
+    "S3KeyPrefix": "cloudtrail",
+    "EventSelectors": [
+     {
+      "IncludeManagementEvents": true,
+      "ReadWriteType": "All",
+      "DataResources": [
+       {
+        "Type": "AWS::S3::Object",
+        "Values": [
+         {
+          "Fn::Sub": "${BackupBucket.Arn}/"
+         },
+         {
+          "Fn::Sub": "${ReceiptBucket.Arn}/"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "IncludeManagementEvents": false,
+      "ReadWriteType": "ReadOnly",
+      "DataResources": [
+       {
+        "Type": "AWS::S3::Object",
+        "Values": [
+         {
+          "Fn::Sub": "${AuditBucket.Arn}/"
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-access-audit"
+     }
+    ]
+   }
+  },
+  "AuditReaderRole": {
+   "Type": "AWS::IAM::Role",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "Description": "Read-only dedicated CloudTrail audit review; upstream SSO MFA and audited approval remain required.",
+    "MaxSessionDuration": 3600,
+    "AssumeRolePolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "TrustOnlyNamedExistingRole",
+       "Effect": "Allow",
+       "Principal": {
+        "AWS": {
+         "Ref": "AuditOperatorRoleArn"
+        }
+       },
+       "Action": "sts:AssumeRole"
+      }
+     ]
+    },
+    "Tags": [
+     {
+      "Key": "Application",
+      "Value": "oyano-moshimo-navi"
+     },
+     {
+      "Key": "Purpose",
+      "Value": "personal-data-vault"
+     }
+    ]
+   }
+  },
+  "AuditReaderPolicy": {
+   "Type": "AWS::IAM::Policy",
+   "Condition": "TokyoOnly",
+   "Properties": {
+    "PolicyName": "VaultScopedAuditReader",
+    "Roles": [
+     {
+      "Ref": "AuditReaderRole"
+     }
+    ],
+    "PolicyDocument": {
+     "Version": "2012-10-17",
+     "Statement": [
+      {
+       "Sid": "ReadCloudTrailLogAndDigestVersions",
+       "Effect": "Allow",
+       "Action": [
+        "s3:GetObject",
+        "s3:GetObjectVersion"
+       ],
+       "Resource": {
+        "Fn::Sub": "${AuditBucket.Arn}/cloudtrail/AWSLogs/${AWS::AccountId}/*"
+       }
+      },
+      {
+       "Sid": "ListAuditVersionsOnly",
+       "Effect": "Allow",
+       "Action": [
+        "s3:ListBucket",
+        "s3:ListBucketVersions"
+       ],
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuditBucket",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringLike": {
+         "s3:prefix": [
+          {
+           "Fn::Sub": "cloudtrail/AWSLogs/${AWS::AccountId}/*"
+          }
+         ]
+        }
+       }
+      },
+      {
+       "Sid": "DecryptCloudTrailThroughS3",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuditKmsKey",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:cloudtrail:arn": {
+          "Fn::Sub": "arn:${AWS::Partition}:cloudtrail:${AWS::Region}:${AWS::AccountId}:trail/${TrailName}"
+         }
+        }
+       }
+      },
+      {
+       "Sid": "DecryptAuditS3BucketKey",
+       "Effect": "Allow",
+       "Action": "kms:Decrypt",
+       "Resource": {
+        "Fn::GetAtt": [
+         "AuditKmsKey",
+         "Arn"
+        ]
+       },
+       "Condition": {
+        "StringEquals": {
+         "kms:ViaService": {
+          "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}"
+         },
+         "kms:CallerAccount": {
+          "Ref": "AWS::AccountId"
+         },
+         "kms:EncryptionContext:aws:s3:arn": [
+          {
+           "Fn::Sub": "arn:${AWS::Partition}:s3:::${AuditBucketName}"
+          }
+         ]
+        }
+       }
+      }
+     ]
+    }
+   }
+  }
+ },
+ "Outputs": {
+  "BackupBucketArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated 30-day backup storage; 7-day GOVERNANCE protects versions.",
+   "Value": {
+    "Fn::GetAtt": [
+     "BackupBucket",
+     "Arn"
+    ]
+   }
+  },
+  "ReceiptBucketArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated 180-day sanitized receipt storage.",
+   "Value": {
+    "Fn::GetAtt": [
+     "ReceiptBucket",
+     "Arn"
+    ]
+   }
+  },
+  "AuditBucketArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated 180-day encrypted CloudTrail log storage.",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuditBucket",
+     "Arn"
+    ]
+   }
+  },
+  "BackupWriterRoleArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Role ARN for the future approved collector.",
+   "Value": {
+    "Fn::GetAtt": [
+     "BackupWriterRole",
+     "Arn"
+    ]
+   }
+  },
+  "RestoreReaderRoleArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Role ARN for future approved read-only backup and receipt restoration.",
+   "Value": {
+    "Fn::GetAtt": [
+     "RestoreReaderRole",
+     "Arn"
+    ]
+   }
+  },
+  "BackupKmsKeyArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated backup/receipt KMS key ARN.",
+   "Value": {
+    "Fn::GetAtt": [
+     "BackupKmsKey",
+     "Arn"
+    ]
+   }
+  },
+  "AuditKmsKeyArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated audit KMS key ARN.",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuditKmsKey",
+     "Arn"
+    ]
+   }
+  },
+  "AuditTrailArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Dedicated CloudTrail ARN.",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuditTrail",
+     "Arn"
+    ]
+   }
+  },
+  "DeploymentBoundary": {
+   "Value": {
+    "Fn::If": [
+     "TokyoOnly",
+     "Storage foundation only. Collector, schedule, alerts, source credentials, backup receipt verification and restore rehearsal remain unimplemented or unverified.",
+     "NO RESOURCES CREATED: actual stack region is not ap-northeast-1. Treat this as an invalid deployment."
+    ]
+   }
+  },
+  "AuditReaderRoleArn": {
+   "Condition": "TokyoOnly",
+   "Description": "Role ARN for future approved read-only CloudTrail audit review.",
+   "Value": {
+    "Fn::GetAtt": [
+     "AuditReaderRole",
+     "Arn"
+    ]
+   }
+  }
+ }
+}

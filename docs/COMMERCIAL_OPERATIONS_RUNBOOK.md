@@ -845,3 +845,11 @@ DBと写真の取得時点の整合 / 後発削除receiptの再適用方法: 未
 Free方式は[公式CLI手順](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)を基に、
 roles・独自Auth/Storage schema・migration履歴等の復旧範囲を確認する。合成演習の固定3 rolesや18本のSQLを
 本番全体の復旧範囲とみなさない。既存資格情報が利用できるかを確認せず、本番DBパスワードを変更しない。
+
+### 2026-09-08追記: AWS保管構成への方針変更
+
+ユーザーは個人情報を扱うためのAWS/S3構成を希望。手元端末/媒体の指定を次の前提にはせず、
+`docs/PERSONAL_DATA_PRODUCTION_ARCHITECTURE_2026-09-08.md` の専用東京backup案と
+`infra/aws-personal-data/backup-vault.cfn.json` を準備した。稼働Vercel/Supabaseの移管ではない。
+保管庫は未作成、自動取得・独立削除ジャーナル・監視・実backup復旧も未実施。
+付録Bの受入欄をPASSへ変更せず、AWSアカウント/権限/保持/費用の承認を得てから合成AWS検証へ進む。

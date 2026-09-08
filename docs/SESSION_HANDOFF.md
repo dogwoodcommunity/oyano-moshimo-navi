@@ -14586,3 +14586,48 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   sourceの保存と本番反映を混同しない。Actions Node20非推奨annotationは残り、今回は依存/ランタイム未変更。
 - 実backup保管先に使う既存端末/媒体をユーザーへ質問済み。回答と保管方法の確認待ちで、本番取得は未実施。
   最終結果はこの引き継ぎと検証報告の文書2つだけを `[skip ci]` commit/push。実装はexact CI合格版と同一。
+
+## 2026-09-08 追記 386 — 個人情報を扱うAWS/S3構成の準備
+
+- 最新依頼は「本番環境で個人情報を取り扱うため、それに対応できる構成を作る。AWSのS3等」。
+  開始mainは `445ebda92a2946e9104173fed1edb522af98ea46`。追記385の手元端末/媒体指定待ちを継続せず、
+  稼働Vercel/Supabaseを維持してAWS東京に独立backupを置く方針へ変更した。DB/写真の正本移行ではない。
+- `docs/PERSONAL_DATA_PRODUCTION_ARCHITECTURE_2026-09-08.md` に現sourceの個人情報境界、構成、
+  保持/削除、費用、将来の収集/監視/復旧、実環境承認条件を作成。
+  AWS東京だけでVercel/Supabase/Anthropicや端末の全データが国内保管・暗号化されるとは説明しない。
+  Supabase DB backupに写真実体は含まれないため、写真bytes/metadata/hashを別に保全する設計。
+- `infra/aws-personal-data/backup-vault.cfn.json` は15resourceのCloudFormation保管基盤。
+  S3をbackup/削除証跡/監査の3個、KMS鍵をデータ/監査の2個に分け、公開遮断・ACL無効・versioningを設定。
+  writer/restore/auditの一時roleと上流adminを分離し、writerのS3読取/削除/retention変更を明示Deny。
+  条件付きPut/CompleteMultipartUpload、TLS、KMS context制限を設ける。
+  multipart用kms:DecryptをS3経由で付与するので「復号権限ゼロ」ではない。
+- CloudTrailはbackup/receiptの操作とauditの読取を記録。auditの書込イベント循環は避ける。
+  監査ログ検証digestのAES256配送を妨げない例外を説明。ログ配送と検証はAWS上では未確認。
+  backup30日/noncurrent1日、Governance7日、削除証跡コピー/監査180日は承認前の案。
+  lifecycle非同期、Object Lock無効化不可、強権管理者・鍵削除の限界、Retain後の料金継続を明記した。
+- `scripts/plan-personal-data-backup.mjs` は資格情報/通信/実ファイル入力なしの概算専用。
+  --apply/export/uploadは存在しない。東京公式料金で全世代合計10GB+2鍵の基本小計$2.25/月、
+  100GBなら$4.50/月。従量、監視、収集、転送、税、将来の鍵rotation等を別にし、上限や総額とはしない。
+- 日次Fargate collector、独立した最新削除journal export、通知、実backup/実復旧は未実装・未実施。
+  対象者receiptのSELECT制限やアカウントIDの最小化を回避せず、専用限定export/replayが必要。
+  前回の架空日記1件のreplayを本番全体の削除再適用PASSにしない。
+- 構成/境界/費用を別実装者が独立レビュー、明確なP0/P1なし。Claudeへの新規送信ではない。
+  公式cfn-lint1.53.3を一時venvへ導入し、rootもAWS資格情報を除いた環境で東京schema検証PASS。
+  48,017bytes、51,200bytes以下、全15resourceがTokyoOnly条件、依存循環なし。
+  S3/IAM/KMSの実service評価、MFA、通知実受信、実backup復旧のPASSではない。
+- regressionをStage A source34/full48へ追加し、CIに別のcfn-lint jobを登録。最終実行/CI結果はこの下へ追記する。
+- 10:42 JST頃のread-only確認はGitHub PUBLIC、Vercel deploy secrets3種の件数0。
+  本番は引き続き `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 9月6日08:59:36 JST作成。
+  アプリ/本番DB/Storage/利用者の記録/契約/請求/メールは変更していない。AWS API実行・資源作成・secret登録・
+  個人情報の取得/移送もなし。正式無料Web公開はNO-GO。AWSアカウント/権限/保持/費用承認後に合成AWS試験へ進む。
+  `review_exports/` と未追跡Claude_FULL2文書は不介入。
+
+### 追記386の検証結果
+
+- 10:44 JSTまでに資格情報・dotenvのない隔離archiveでsource34連続PASS。
+  最初は隔離先のWeb依存参照不足でTypeScriptを解決できず停止し、既存node_modulesへの参照だけを整備して再実行。
+  依存installやアプリsource変更はなし。lint/型/SQL/buildはローカルでは今回再実行せず、push後のCIを別確認する。
+- 新規infra回帰は15resources/59条件fixture/10 mutation negative controls/planner PASS。
+  実テンプレートに対する検査で、AWSの実IAM判定・CloudTrail配送・MPU競合はNOT_TESTEDと明記。
+  取得前承認と実backup取得後の復旧受入を別にし、実データ取得前に実データ復旧を要求する循環も除去した。
+- 隔離先でもcfn-lint1.53.3東京schema PASS。diff-check PASS。GitHub mainは開始SHAのままを確認した。

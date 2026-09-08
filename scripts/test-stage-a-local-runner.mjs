@@ -23,8 +23,9 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 33);
-assert.equal(plan.length, 47);
+assert.equal(createPlan({ sourceOnly: true }).length, 34);
+assert.equal(plan.length, 48);
+assert.ok(plan.some((step) => step.id === "source:personal-data-infra"));
 assert.ok(plan.some((step) => step.id === "source:diary-unsaved-changes"));
 assert.ok(plan.some((step) => step.id === "source:notebook-sync-text-retry"));
 assert.ok(plan.some((step) => step.id === "source:notebook-diary-text"));
@@ -53,6 +54,10 @@ for (const step of createPlan({ sqlOnly: true })) {
 }
 const ci = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+assert.equal(packageJson.scripts["test:personal-data-infra"], "node scripts/test-personal-data-infra.mjs");
+assert.match(ci, /pnpm run test:personal-data-infra/);
+assert.match(ci, /cfn-lint==1\.53\.3/);
+assert.match(ci, /cfn-lint -t infra\/aws-personal-data\/backup-vault\.cfn\.json -r ap-northeast-1/);
 assert.equal(packageJson.scripts["test:diary-unsaved-changes"], "node scripts/test-diary-unsaved-changes.mjs");
 assert.match(ci, /pnpm run test:diary-unsaved-changes/, "unsaved diary guard must remain in CI as well as local qualification");
 assert.match(ci, /docker pull docker\.io\/library\/postgres:16-bookworm/, "fresh CI must explicitly prepare the image before offline SQL scripts");
