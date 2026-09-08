@@ -14681,3 +14681,13 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
   その後レビューで見つけた型変換/配列subclassと、Proxy等の漏れを修正し、旧成功結果を流用せず再実行。
 - Web/mobileアプリsource・SQL・依存・保管庫CFNは不変。lint/型/SQL/buildはローカルで再実行せず、
   push後のexact CIで別確認する。diff-check PASS、GitHub PUBLIC、deploy secrets3種の件数0、remote mainは開始SHAだった。
+- 実装・検証・資料10ファイルを `cbcf9a18d0a4e4c2a3840747ea14f30dc605f47f` としてmainへpush。
+  exact CI `34179390749` は11:14:53〜11:18:20 JST（3分27秒）でsuccess、両jobのfailedSteps空。
+  source回帰/新規62ケース/lint/型/SQL10/build/smokeと、独立cfn-lint（19秒）が成功。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/actions/runs/34179390749
+  Actions Node20非推奨・Node24強制実行のannotationは残る。実AWS・実機・本番復旧の受入とはしない。
+- Deploy workflow `34179390742` はcheck成功・deploy skipped。push後のVercel read-only照会も
+  `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / Ready / 9月6日08:59:36 JST作成のまま。
+  AWSアカウント選択の回答はこの時点では未受領。次は使用アカウントの確認であり、
+  短い続行だけで費用・権限・本番データ移送の承認を補わない。自動取得/独立削除journal/通知/実復旧は未完了。
+- 最終結果はこの引き継ぎ1ファイルだけを `[skip ci]` commit/pushする。実装は上記合格SHAと同一。
