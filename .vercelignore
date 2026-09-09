@@ -11,3 +11,13 @@ outputs
 review_exports
 docs/CLAUDE_FULL_REVIEW_REQUEST_2026-09-03.md
 docs/CLAUDE_FULL_REVIEW_RESULT_2026-09-03.md
+
+# Deploy only the Web application and its shared build dependencies.
+# Operational notes, tests, SQL, infrastructure, and native app sources stay in GitHub.
+docs
+scripts
+supabase
+infra
+.github
+apps/mobile
+README.md
