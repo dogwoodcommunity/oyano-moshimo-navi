@@ -14750,3 +14750,26 @@ Stripe/有料受付、物理製本、スポンサー、ストアアプリは無�
 根拠: https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-console.html
 https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_mfa.html
 https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sign-in.html
+
+## 2026-09-09 追記 391 — Claude APIの会社アカウントと設定記録の照合
+
+- 「どのアカウント」「調べて」「つづけて」を、Anthropicの請求先と本番利用キーの所属を調べる
+  読み取り調査として実施。本人が選択した会社組織のConsoleに、アプリ名のAPIキーが存在することを確認した。
+  作成日は2026年8月21日で、追記126の本番キー設定日と一致し、Consoleに使用実績も表示されていた。
+  これにより会社組織に当アプリ用のキーがあることは確認できたが、名前・日付・使用実績だけで
+  現在のVercel本番に設定された秘密値との完全一致を証明したとは扱わない。
+- 会社組織の請求画面で残高と自動チャージ状態を読み取り再確認して本人へ報告。
+  公開repoには登録メール、組織ID、キー断片、残高・支払い詳細等を記載しない。
+  他用途のキーは調査対象にせず、キーの作成・表示・変更・失効や、追加購入・自動チャージ設定変更をしていない。
+- 本番環境変数のメタデータ一覧をCLIで照会しようとしたが、ローカルのCLIパッケージがなく取得できなかった。
+  秘密値の取得・env pull・実行環境への表示用コード追加では補わない。
+  現在のアプリsourceと既存の環境確認APIにはAnthropicの組織IDを保存・返却する仕組みがないことを確認した。
+- 公式資料を独立担当も確認。API応答の `anthropic-organization-id` は使用したキーの所属組織を表すため、
+  本番の既存記録にこの値があれば照合できる。今回その記録は特定できていない。
+  新規の本番API確認や診断用変更は行わず、厳密な現在の所属確認は未完了として残す。
+- アプリsource、利用者の手帳・写真・相談、本番設定、デプロイは変更していない。
+  AWSの短期接続承認待ち・保管庫未作成・公開判定NO-GO等の残工程は追記390のまま。
+  `review_exports/` と未追跡Claude_FULL2文書は不介入。この引き継ぎのみを更新してpushする。
+
+根拠: https://platform.claude.com/docs/en/api/overview#response-headers
+https://vercel.com/docs/environment-variables/sensitive-environment-variables
