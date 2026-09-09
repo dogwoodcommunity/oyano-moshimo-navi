@@ -14857,3 +14857,45 @@ https://mitene.us/
   次は本人に実画面を確認してもらい、本番反映の依頼があればmain統合・CI・デプロイを別工程で行う。
   正式公開NO-GO/バックアップ残工程は不変。利用者の実記録・写真・相談、AWS/課金設定は変更なし。
   `review_exports/` と未追跡Claude_FULL2文書は不介入。
+
+## 2026-09-09 追記 395 — ロゴ・キャラクター付き手帳UIを既存本番へ反映済み
+
+- 本人の「本番反映して」を受けて追記394から再開。`main` を `61b0b22` から
+  `0ec387e6d696543a9bae09de595778195b9a4836` へfast-forwardし、GitHubへpushした。
+  UI以外に旧本番から未反映だった `f3b283a`（プライバシー/AI説明の正確化）、
+  `09dc23d`（未保存の警告と編集中の移動）、`52ed055`（古いPDF準備結果の失効）も含むことを
+  独立担当が確認。追加の同意version、API、SQL、権限、課金gateの変更はなく、本人にも範囲を説明した。
+- ローカルsource-only 37/37 PASS。`0ec387e` のexact-SHA CI `34327076783` は全ジョブ成功。
+  最終反映source `1229072f75d265896f111a44de33ddde3da401df` のCI `34327522879` も全ジョブ成功。
+  Web lint、Web/mobile型検査、保存・同期・削除・AI記憶・家族権限等のテスト、隔離SQL、build、smokeを含む。
+  Deploy workflowはsecrets不足でdeploy jobがskipのため、緑色を本番反映の証拠にはしていない。
+- 初回のVercel送信は、Git archiveに運用文書が含まれるため安全審査で実行前に拒否された。
+  このarchiveを再送せず、`.vercelignore` に docs/scripts/supabase/infra/.github/apps/mobile/README.mdを
+  加えて `1229072` としてcommit/push。さらに `apps/web`、`packages`、package.json、pnpm lock/workspace、
+  vercel.json、.vercelignoreだけのWeb専用archiveを物理的に作成した。
+  `/private/tmp/oyano-web-only-release.FiXx3i` の197 Git blobsを対象commitと照合、余分なファイルなし。
+  Vercel dry-runは196送信ファイル・3,890,600 bytes、内部文書/SQL/環境秘密値/利用者データなし。
+  独立レビューでも除外ディレクトリへのWeb build依存がないことを確認した。
+- 既存のVercel project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope `dogwoodcommunity1` を使用。
+  サービス移行、環境変数取得・変更、Node設定変更、追加契約はしていない。
+  最小archiveから `--prod --skip-domain` / metadata releaseSha=`1229072f75d265896f111a44de33ddde3da401df`
+  で先に本番環境ビルドを行い、Readyと最終CI成功後に同じdeploymentをpromoteした。
+- 本番反映済みdeployment: `dpl_FbM8TTKAEfPuy94Up7d9G5ZtUacw`（2026-09-09 17:10 JST作成、Ready）。
+  deployment URL: https://oyano-moshimo-navi-mfma0zrl7-dogwoodcommunity1.vercel.app
+  公開URL: https://oyano-moshimo-navi.vercel.app/home
+  promote成功後、公開hostnameのinspectも上記IDへ解決することを確認した。
+  直前の戻し先候補は `dpl_GjKfchbJCDxLCyG5hrTo9oCgVDVG` / source `8289876` / URL
+  https://oyano-moshimo-navi-qgom7bgzk-dogwoodcommunity1.vercel.app 。戻し操作は実施していない。
+- 本番のread-only検証: `/api/health` 200/ok、`/home` `/consult` `/start` `/legal/privacy` `/crisis`
+  の5公開ページが200かつ新UI marker「キャラクターの表示設定」を含むことを確認。
+  隔離Chromeに架空の手帳と1件の記録だけを置き、POSTを含む非GET、ブラウザからのAPI、外部通信を遮断。
+  あいさつの1回動作と終了、履歴/助言の開閉、動きオフと再読込後の保持、AI相談への遷移/AI表示を確認。
+  320/390/768/1280pxで横はみ出しなし、pageerror 0、表示操作前後で架空手帳の保存値は完全一致。
+  `PUBLIC_UI_PASS`、遮断要求2件、本番書込0、実AI呼出し0。390pxの公開画面も画像で目視確認した。
+  検証scriptは `/private/tmp/verify-oyano-mascot-production.mjs`、画像は
+  `/private/tmp/oyano-production-mascot-390.png`（一時ファイルで、長期保管は保証しない）。
+- この確認は公開UIと隔離ブラウザの架空データでの受入であり、実利用者の認証/クラウド保存/
+  二端末復元を新たに通した証拠ではない。本番DB、実記録・写真・相談、AWS、課金設定は変更していない。
+  今回のUI反映を正式商用公開GOとは扱わず、追記390以前からのバックアップ等の残工程は不変。
+  古い表示が残る場合は通常の再読み込みを案内し、履歴/localStorage削除を促さない。
+  `review_exports/` と未追跡Claude_FULL2文書は不介入。この引き継ぎを最後にmainへpushする。
