@@ -44,6 +44,8 @@
     "test:memory-book-export": "node scripts/test-memory-book-export.mjs",
     "test:free-first-redesign": "node scripts/test-free-first-redesign.mjs",
     "test:readable-design-b": "node scripts/test-readable-design-b.mjs",
+    "test:notebook-mascot": "node scripts/test-notebook-mascot.mjs",
+    "test:mascot-motion-preference": "node scripts/test-mascot-motion-preference.mjs",
     "test:notebook-diary-text": "node scripts/test-notebook-diary-text.mjs",
     "test:diary-unsaved-changes": "node scripts/test-diary-unsaved-changes.mjs",
     "test:notebook-sync-text-retry": "node scripts/test-notebook-sync-text-retry.mjs",

@@ -516,3 +516,88 @@ html.readable-design-b .display-theme-message:empty { display: none; }
   html.readable-design-b .record-first-latest { padding: 14px; }
   html.readable-design-b .record-chip-grid { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* A familiar notebook cover; diary text keeps priority over decoration. */
+html.readable-design-b .record-first-card {
+  border-top: 6px solid var(--line);
+  border-radius: 8px 24px 24px 8px;
+}
+html.readable-design-b .record-first-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 110px;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--action-bg);
+  border-radius: 6px 18px 18px 6px;
+  border-left: 4px solid var(--primary-deep);
+}
+html.readable-design-b .record-first-head > div { min-width: 0; }
+html.readable-design-b .record-first-head h1 { overflow-wrap: anywhere; }
+html.readable-design-b .record-first-head .notebook-welcome { margin: 8px 0; font-weight: 700; color: var(--action-ink); }
+html.readable-design-b .record-first-head > p { grid-column: 1 / -1; margin: 0; }
+html.readable-design-b .notebook-greeting {
+  display: grid;
+  justify-items: center;
+  width: 110px;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--action-ink);
+  cursor: pointer;
+}
+html.readable-design-b .notebook-greeting > span:last-child { font-size: 16px; line-height: 1.5; letter-spacing: 0; white-space: nowrap; }
+html.readable-design-b .notebook-greeting:disabled { opacity: 1; cursor: default; }
+html.readable-design-b .readable-entry-list { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+html.readable-design-b .readable-entry.is-primary { grid-column: 1 / -1; min-height: 90px; }
+html.readable-design-b .readable-entry:not(.is-primary) {
+  grid-template-columns: minmax(0, 1fr) 16px;
+  padding: 14px;
+  min-height: 72px;
+  border-radius: 10px;
+  gap: 8px;
+}
+html.readable-design-b .readable-entry:not(.is-primary) .entry-symbol { display: none; }
+html.readable-design-b .readable-entry:not(.is-primary) .entry-copy strong { font-size: 20px; }
+html.readable-design-b .record-first-latest {
+  border: 0;
+  border-left: 3px solid var(--line);
+  border-radius: 0;
+  padding: 8px 16px;
+}
+html.readable-design-b .record-first-latest > span { color: var(--ink-sub); font-size: 16px; }
+html.readable-design-b .diary-entry-card { border-left: 4px solid var(--line); }
+html.readable-design-b .diary-entry-body { padding: 8px 0; }
+html.readable-design-b .notebook-save-mascot { width: 76px; }
+html.readable-design-b .notebook-small-mascot { width: 48px; }
+html.readable-design-b .notebook-consult-mascot { width: 72px; }
+html.readable-design-b .diary-save-complete-head { grid-template-columns: 76px minmax(0, 1fr); align-items: center; }
+html.readable-design-b .notebook-photo-note,
+html.readable-design-b .notebook-edit-feedback { display: flex; align-items: center; gap: 12px; color: var(--ink); }
+html.readable-design-b .notebook-photo-note { border-top: 1px solid var(--hairline); padding-top: 12px; }
+html.readable-design-b .notebook-photo-note p { margin: 0; font-size: 16px; line-height: 1.75; }
+html.readable-design-b .notebook-motion-settings { margin: 24px auto 0; max-width: 768px; padding: 0 16px; color: var(--ink); }
+html.readable-design-b .notebook-motion-settings > summary { padding: 12px 0; cursor: pointer; font-size: 16px; min-height: 48px; }
+html.readable-design-b .mascot-motion-control { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+html.readable-design-b .mascot-motion-label { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; min-height: 48px; font-size: 18px; font-weight: 700; cursor: pointer; }
+html.readable-design-b .mascot-motion-label input { width: 24px; height: 24px; min-height: 24px; accent-color: var(--primary-deep); }
+html.readable-design-b .mascot-motion-value { color: var(--primary-deep); }
+html.readable-design-b :is(.mascot-motion-help, .mascot-motion-message) { margin: 8px 0 0; color: var(--ink-sub); font-size: 16px; }
+@media (max-width: 480px) {
+  html.readable-design-b .record-first-head { grid-template-columns: minmax(0, 1fr) 72px; padding: 14px 12px; gap: 8px; }
+  html.readable-design-b .record-first-head h1 { font-size: 26px; }
+  html.readable-design-b .notebook-greeting { width: 72px; }
+  html.readable-design-b .readable-entry:not(.is-primary) { padding: 12px 10px; }
+  html.readable-design-b .readable-entry:not(.is-primary) .entry-copy strong { font-size: 18px; }
+  html.readable-design-b .diary-save-complete-head { grid-template-columns: 56px minmax(0, 1fr); gap: 8px; }
+  html.readable-design-b .notebook-save-mascot { width: 56px; }
+}
+@media (max-width: 370px) {
+  html.readable-design-b .readable-entry-list { grid-template-columns: minmax(0, 1fr); }
+}
+@media print {
+  html.readable-design-b .notebook-motion-settings,
+  html.readable-design-b .notebook-greeting { display: none; }
+}

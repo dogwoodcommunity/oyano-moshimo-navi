@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { NotebookMascot } from "@/components/NotebookMascot";
+import { useMascotMotionPreference } from "@/components/MascotMotionPreference";
 import {
   CONSULT_MEMORY_CONSENT_TEXT,
   CONSULT_MEMORY_CONSENT_VERSION,
@@ -391,6 +393,7 @@ function consultNotebookMeta(caseRecord: CaseRecord) {
 }
 
 export function ConsultPanel() {
+  const { enabled: mascotMotionEnabled } = useMascotMotionPreference();
   const [loaded, setLoaded] = useState(false);
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [activeCaseId, setActiveCaseId] = useState<string | undefined>();
@@ -1027,7 +1030,7 @@ export function ConsultPanel() {
       <section className="consult-chat" aria-label="AI相談チャット">
         <header className="consult-chat-head">
           <div className="consult-chat-title">
-            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+            <NotebookMascot key={activeCase?.id ?? "no-case"} pose={phase === "error" ? "neutral" : "listen"} motionKey={phase === "loading" ? 1 : 0} motionEnabled={mascotMotionEnabled} className="notebook-consult-mascot" />
             <div>
               <p>AI相談チャット</p>
               <h2>{consultNotebookBaseName(activeCase)}の手帳を読んで答えます</h2>

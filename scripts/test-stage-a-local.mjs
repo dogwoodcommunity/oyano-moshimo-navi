@@ -9,7 +9,7 @@ const sourceTests = [
   "cron-auth", "notebook-sync-safety", "notebook-sync-runtime", "notebook-sync-text-retry", "notebook-diary-text", "unicode-display-text", "memory-book-export",
   "diary-unsaved-changes", "personal-data-infra", "backup-generation",
   "notebook-reconciliation", "notebook-reconcile-route", "notebook-reconciliation-ui",
-  "free-first-redesign", "readable-design-b", "home-overview-reachability", "web-account-deletion",
+  "free-first-redesign", "readable-design-b", "notebook-mascot", "mascot-motion-preference", "home-overview-reachability", "web-account-deletion",
   "account-delete-executor-auth", "delete-operator-mfa-setup", "commercial-release-gates",
   "admin-delete-access-check", "public-operator-disclosure",
   "family-role-security", "family-invite-permissions", "family-context-selection",

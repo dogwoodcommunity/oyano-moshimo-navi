@@ -10495,7 +10495,7 @@ textarea {
   grid-template-columns: 52px minmax(0, 1fr);
 }
 
-.diary-save-complete-head img {
+.diary-save-complete-head > img {
   background: #fffdf6;
   border: 1px solid #d6e8e4;
   border-radius: 17px;
@@ -10505,7 +10505,7 @@ textarea {
   width: 52px;
 }
 
-.diary-save-complete-head span {
+.diary-save-complete-head > div > span {
   color: #0f6f49;
   display: inline-block;
   font-size: 17px;
@@ -14138,7 +14138,7 @@ textarea {
   gap: 12px;
 }
 
-.consult-chat-title img {
+.consult-chat-title > img {
   background: #fffdf8;
   border: 1px solid #d7e3dc;
   border-radius: 17px;

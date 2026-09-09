@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { FREE_PLAN_MEMBER_LIMIT, statusLabel, targetLabel } from "@oyano/shared";
 import { MonitorTestReminder } from "@/components/MonitorTestReminder";
+import { NotebookMascot } from "@/components/NotebookMascot";
+import { useMascotMotionPreference } from "@/components/MascotMotionPreference";
 import { NotebookReconciliation } from "@/components/NotebookReconciliation";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
@@ -1174,6 +1176,11 @@ function buildNotebookInsight(
 }
 
 export default function FamilyBoardPage() {
+  const { enabled: mascotMotionEnabled } = useMascotMotionPreference();
+  const [greetingPulse, setGreetingPulse] = useState(0);
+  const [savedMascotPulse, setSavedMascotPulse] = useState(0);
+  const [photoMascotPulse, setPhotoMascotPulse] = useState(0);
+  const previousPhotoChoice = useRef<{ caseId?: string; count: number }>({ count: 0 });
   const [cases, setCases] = useState<CaseRecord[]>([]);
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<Record<string, DiaryEntry[]>>({});
@@ -1474,6 +1481,19 @@ export default function FamilyBoardPage() {
   const latestEntry = activeEntries[0];
   const todayEntry = activeEntries.find((entry) => entry.date === todayInputValue());
   const savedDiaryEntry = diarySavedId ? activeEntries.find((entry) => entry.id === diarySavedId) : undefined;
+  // Success IDs are set only after local persistence succeeds. Pulse after render
+  // so a newly mounted success notice can animate, without changing save handlers.
+  useEffect(() => {
+    if (diarySavedId || diaryUpdatedId) setSavedMascotPulse((value) => value + 1);
+  }, [diarySavedId, diaryUpdatedId]);
+  const mascotQuiet = cloudContentReadOnly || recordStorageTone === "warning" || activeForm.mood === "urgent";
+  useEffect(() => {
+    const previous = previousPhotoChoice.current;
+    if (previous.caseId === activeCase?.id && activeForm.files.length > previous.count) {
+      setPhotoMascotPulse((value) => value + 1);
+    }
+    previousPhotoChoice.current = { caseId: activeCase?.id, count: activeForm.files.length };
+  }, [activeCase?.id, activeForm.files.length]);
   const daysFromLatestEntry = daysSince(latestEntry?.date);
   const latestEntrySummary = latestEntry
     ? truncateDisplayText(latestEntry.body, 92)
@@ -3232,18 +3252,28 @@ export default function FamilyBoardPage() {
           <section className="nb-section person-command-section" aria-label={`${activePersonName}の手帳メニュー`}>
             <article className="nb-card person-command-card record-first-card">
               <div className="record-first-head">
-                <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <div>
                   <p className="nb-eyebrow">{`${activeRelationship} · ${activeCareStatus}`}</p>
                   <h1>{notebookTitle(activePersonName)}</h1>
-                  <p className={`record-first-storage ${cloudUserEmail && cloudIdentityStatus === "ready" ? "is-cloud" : "is-device"}`}>
-                    {cloudUserEmail && cloudIdentityStatus === "ready"
-                      ? lastCloudSyncedAt
-                        ? `クラウドにも保存済み · ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
-                        : "この端末とクラウドに保存"
-                      : "今はこの端末に保存"}
-                  </p>
                 </div>
+                <button
+                  className="notebook-greeting"
+                  type="button"
+                  aria-label="キャラクターのあいさつを見る"
+                  disabled={mascotQuiet}
+                  onClick={() => setGreetingPulse((value) => value + 1)}
+                >
+                  <NotebookMascot key={activeCase.id} pose={mascotQuiet ? "neutral" : "hello"} motionKey={greetingPulse} motionEnabled={mascotMotionEnabled && !mascotQuiet} />
+                  <span aria-live="polite">{greetingPulse % 2 ? "よろしく" : "どうぞ"}</span>
+                </button>
+                <p className="notebook-welcome">今日のこと、ひとことから。</p>
+                <p className={`record-first-storage ${cloudUserEmail && cloudIdentityStatus === "ready" ? "is-cloud" : "is-device"}`}>
+                  {cloudUserEmail && cloudIdentityStatus === "ready"
+                    ? lastCloudSyncedAt
+                      ? `クラウドにも保存済み · ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
+                      : "この端末とクラウドに保存"
+                    : "今はこの端末に保存"}
+                </p>
               </div>
               <div className="readable-entry-list" aria-label="手帳でできる3つのこと">
                 <button className="readable-entry is-primary" type="button" onClick={() => openNotebookSection("#today-diary")}>
@@ -3830,6 +3860,12 @@ export default function FamilyBoardPage() {
                 </div>
               </div>
               {activeForm.files.length > 0 ? (
+                <div className="notebook-photo-note" role="status">
+                  <NotebookMascot pose={mascotQuiet ? "neutral" : "photo"} motionKey={photoMascotPulse} motionEnabled={mascotMotionEnabled && !mascotQuiet} className="notebook-small-mascot" />
+                  <p>写真を{activeForm.files.length}枚選びました。下の「この人の手帳に残す」で、記録と一緒に保存します。</p>
+                </div>
+              ) : null}
+              {activeForm.files.length > 0 ? (
                 <div className="attachment-strip">
                   {activeForm.files.map((file) => (
                     <span className={file.previewUrl ? "has-preview" : file.storagePath ? "is-uploaded-photo" : undefined} key={file.id}>
@@ -3855,7 +3891,12 @@ export default function FamilyBoardPage() {
             {savedDiaryEntry ? (
               <article className="nb-card diary-save-complete-card" id="diary-save-complete" role="status" aria-live="polite">
                 <div className="diary-save-complete-head">
-                  <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
+                  <NotebookMascot
+                    pose={mascotQuiet || savedDiaryEntry.mood === "urgent" ? "neutral" : "saved"}
+                    motionKey={savedMascotPulse}
+                    motionEnabled={mascotMotionEnabled && !mascotQuiet && savedDiaryEntry.mood !== "urgent"}
+                    className="notebook-save-mascot"
+                  />
                   <div>
                     <span>保存しました</span>
                     <strong>{formatLongDate(savedDiaryEntry.date)}の記録をこの端末に保存しました。</strong>
@@ -4147,7 +4188,12 @@ export default function FamilyBoardPage() {
                                     ))}
                                   </div>
                                 ) : null}
-                                {diaryUpdatedId === entry.id ? <small className="entry-feedback" role="status">変更を保存しました。</small> : null}
+                                {diaryUpdatedId === entry.id ? (
+                                  <span className="entry-feedback notebook-edit-feedback" role="status">
+                                    <NotebookMascot pose={mascotQuiet || entry.mood === "urgent" ? "neutral" : "saved"} motionKey={savedMascotPulse} motionEnabled={mascotMotionEnabled && !mascotQuiet && entry.mood !== "urgent"} className="notebook-small-mascot" />
+                                    <span>変更を保存しました。</span>
+                                  </span>
+                                ) : null}
                                 {taskAddedEntryId === entry.id ? (
                                   <small className="entry-feedback" role="status">
                                     「{diaryTaskTitle(entry)}」を、あとで確認することに追加しました。

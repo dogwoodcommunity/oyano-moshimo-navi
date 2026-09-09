@@ -4,6 +4,7 @@ import { Zen_Maru_Gothic } from "next/font/google";
 import { MainNav } from "@/components/MainNav";
 import { PwaRegister } from "@/components/PwaRegister";
 import { DisplayThemePicker } from "@/components/DisplayThemePicker";
+import { MascotMotionToggle } from "@/components/MascotMotionPreference";
 import { displayThemeCss } from "@/lib/display-theme";
 import "./globals.css";
 import "./readable-theme.css";
@@ -106,6 +107,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </header>
           <DisplayThemePicker />
           {children}
+          <details className="notebook-motion-settings">
+            <summary>キャラクターの表示設定</summary>
+            <MascotMotionToggle />
+          </details>
           <footer className="footer">
             <Link href="/safety">安全方針</Link>
             <Link href="/legal/privacy">プライバシー</Link>

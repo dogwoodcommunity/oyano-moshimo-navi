@@ -23,8 +23,11 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 35);
-assert.equal(plan.length, 49);
+assert.equal(createPlan({ sourceOnly: true }).length, 37);
+assert.equal(plan.length, 51);
+for (const name of ["notebook-mascot", "mascot-motion-preference"]) {
+  assert.ok(plan.some((step) => step.id === `source:${name}`));
+}
 assert.ok(plan.some((step) => step.id === "source:backup-generation"));
 assert.ok(plan.some((step) => step.id === "source:personal-data-infra"));
 assert.ok(plan.some((step) => step.id === "source:diary-unsaved-changes"));

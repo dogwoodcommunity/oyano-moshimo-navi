@@ -93,6 +93,11 @@ jobs:
       - name: Test readable three-entry design
         run: pnpm run test:readable-design-b
 
+      - name: Check notebook mascot and motion preference
+        run: |
+          pnpm run test:notebook-mascot
+          pnpm run test:mascot-motion-preference
+
       - name: Test diary text preservation and Unicode excerpts
         run: |
           pnpm run test:notebook-diary-text
