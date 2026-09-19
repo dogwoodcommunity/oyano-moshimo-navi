@@ -15071,3 +15071,25 @@ https://mitene.us/
 - CURRENT_STATUSと本追記を更新し、文書だけ[skip ci]でmainへpush。既存記録/写真、本番DB、
   AI回数・課金・契約・秘密値・正式商用公開の保留条件は変更なし。
   実スポンサーの掲載合意/地域・業種・期間審査は別途必要。公開準備の残件まで完了したとは言わない。
+
+## 2026-09-19 追記 403 — フルネーム任意を明示し、空欄のまま使える導線へ
+
+- 本人の「フルネームは任意でええんちゃう？」に対応。main `c2597f6` から
+  `codex/optional-full-name` に分離。この追加修正の本番反映は未承認、main/本番は変更しない。
+- 元から型/必須判定では任意だった。登録・情報編集に「フルネーム（任意）」と空欄でよい説明を追加。
+  呼び名・関係・都道府県・市区町村の必須要件は変更なし。導入/結果画面も呼び名中心の表現へ。
+- homeのprofileSeedがanswers.targetName（呼び名）を空のfullNameへ代入していた箇所を除去。
+  fullNameを充足率・不足項目から外し、先にフルネームを入れるよう促す文言を修正。
+  本人が既に保存したfullNameは保持。既存氏名の消去/変換/DB migrationは行わない。
+- 独立読み取り確認: storeは空欄をundefinedへ正規化し、クラウド同期/復元もfullname必須ではない。
+  targetNameからfullnameへ補完する問題はhomeの編集初期値に限定。store/API変更不要。
+- 既存test-free-first-redesign.mjsへ実関数の回帰を追加。未指定/空欄/空白のみ、旧形式targetName、
+  入力済み氏名保持、必須呼び名、充足率/不足項目/説明を合成値で確認。
+  同テスト、sync-safety、sync-runtime、reconciliation（272 checks）、型検査、対象3ページlint成功。
+  lintは既存img/hook警告あり、エラーなし。git diff --check成功。
+- 資格情報を外したlocalhost:3124と隔離Chrome390pxで、フルネーム空欄の登録→情報編集→保存→
+  再読込後も空欄/呼び名保持を確認。横溢れなし、pageerror 0、説明表示を画像でも確認。
+  API応答代替・外部通信/非GET遮断、合成データのみ。実認証・本番クラウド同期の確認ではない。
+  一時検証script /private/tmp/verify-oyano-optional-name.mjs、画像 oyano-optional-name-{start,home}-390.png。
+- CURRENT_STATUS/本追記を更新してfeature branchへcommit/push。CI全体・本番build/deployは未実施。
+  本番は追記402のdeploymentのまま。保護対象、既存記録・写真・相談、課金/AI回数/環境設定は不変。

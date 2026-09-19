@@ -422,9 +422,8 @@ function relationshipName(caseRecord: CaseRecord) {
 
 function profileSeed(caseRecord: CaseRecord): PersonProfile {
   const profile = caseRecord.personProfile ?? {};
-  const targetName = caseRecord.answers.targetName?.trim() ?? "";
   return {
-    fullName: profile.fullName ?? targetName,
+    fullName: profile.fullName ?? "",
     displayName: profile.displayName ?? personName(caseRecord),
     relationship: profile.relationship ?? relationshipName(caseRecord),
     birthDate: profile.birthDate ?? "",
@@ -445,7 +444,6 @@ function profileSeed(caseRecord: CaseRecord): PersonProfile {
 
 function profileCompletion(profile: PersonProfile) {
   const fields = [
-    profile.fullName,
     profile.displayName,
     profile.relationship,
     profile.parentPrefecture,
@@ -472,7 +470,6 @@ function profileCompletion(profile: PersonProfile) {
 
 function missingProfileItems(profile: PersonProfile) {
   const items = [
-    ["フルネーム", profile.fullName],
     ["呼び名", profile.displayName],
     ["関係", profile.relationship],
     ["親御さんの都道府県", profile.parentPrefecture],
@@ -1019,7 +1016,7 @@ function buildNotebookInsight(
     alerts.push({
       tone: "warning",
       title: "本人情報がまだ薄いです",
-      body: "フルネーム、生年月日、病院・施設、薬の注意点を足すと、相談時に説明しやすくなります。",
+      body: "病院・ケア先、薬の注意点などを、わかる範囲で残せます。フルネームは空欄のままで大丈夫です。",
       href: "#profile-edit-fields"
     });
   }
@@ -4549,7 +4546,7 @@ export default function FamilyBoardPage() {
               <div className="profile-edit-guide">
                 <div>
                   <strong>基本情報を足すほど、日記・確認リスト・相談が使いやすくなります。</strong>
-                  <p>まずはフルネーム、病院・ケア先、緊急連絡先だけでも入れておくと、家族で同じ前提を持てます。</p>
+                  <p>呼び名だけでも使えます。病院・ケア先、緊急連絡先などは、必要なときにわかる範囲で追加してください。</p>
                 </div>
                 <button type="button" disabled={cloudProfileReadOnly} onClick={() => setProfileEditorOpen(true)}>
                   プロフィールを編集する
@@ -4591,12 +4588,15 @@ export default function FamilyBoardPage() {
                 {activeProfile ? (
                   <fieldset className="profile-form-grid profile-permission-fieldset" disabled={cloudProfileReadOnly} id="profile-edit-fields" aria-label="対象者プロフィール編集">
                     <label>
-                      <span>フルネーム</span>
+                      <span>フルネーム（任意）</span>
                       <input
+                        autoComplete="off"
+                        aria-describedby="profile-full-name-note"
                         placeholder="例: 山田 太郎"
                         value={activeProfile.fullName ?? ""}
                         onChange={(event) => updateProfileForm(activeCase.id, { fullName: event.target.value })}
                       />
+                      <small id="profile-full-name-note">空欄で大丈夫です。手帳では呼び名を使えます。</small>
                     </label>
                     <label>
                       <span>呼び名</span>
