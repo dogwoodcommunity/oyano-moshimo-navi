@@ -15122,3 +15122,37 @@ https://mitene.us/
   一時script /private/tmp/verify-oyano-consult-entry.mjs、画像 /private/tmp/oyano-consult-{start,input}-390.png 等。
 - 本追記/CURRENT_STATUSを更新してfeature branchへpush。本番build/deploy・GitHub CI・実端末での
   本人確認完走は未実施。本番は追記402のまま。既存記録、保護対象、正式商用公開の保留条件は不変。
+
+## 2026-09-19 追記 405 — フルネーム任意表示・相談入力導線を本人承認で本番反映
+
+- 本人の「本番反映して」により、追記403・404の修正を既存Webへ反映。
+  `c2597f6..905b783` の13ファイルを独立読み取り監査し、公開を止める問題なし。
+  DB/API route/依存追加/環境設定/課金変更なし。元の氏名・記録を消去せず、認証/同意/記憶/利用枠を維持。
+- PR #8 https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/8 を作成。
+  head `905b783ac1381a40e353667be4c69e7e1c3fb263` のCI `35437769296` は全ジョブ成功
+  （Web/mobile型・回帰・隔離SQL・build・smoke）。同headを指定してmergeし、mainをff更新。
+  main `3a9e51fd6f7ab29c7a45bceb481cb9fd6bcf049c` とheadの全tree一致も確認。
+  main CI `35437951780` は確認時実行中。Deploy workflow `35437951877` はcheck成功・deploy skipped。
+- GitからWeb専用sourceを `/private/tmp/oyano-web-release.fLTuBI` へ抽出し、全fileのGit blobを照合。
+  apps/web・packages・package/lock/workspace・vercel設定だけ。環境設定例も除外し、運用docs/SQL/infra/
+  保護対象/実データ/秘密値なし。CLI `deploy --dry --json` で204ファイル・3,951,591 bytesと一致。
+  project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope `dogwoodcommunity1` は既存のまま。
+- 本番用sourceを `--prod --skip-domain` とreleaseSha=905b783完全SHAでビルド。
+  build/型/lint完了・Ready後、CI成功とmergeを確認して公開URLへpromote。
+  新deployment `dpl_9u8W9sdTiGCgoMLTs6B1EiMTHjqo`、作成19:36 JST。
+  https://oyano-moshimo-navi-erqsrca4q-dogwoodcommunity1.vercel.app 。
+  https://oyano-moshimo-navi.vercel.app のinspectも新deploymentへ一致しReady。
+  直前の戻し先は `dpl_HHp82MAKNJ3nCwh4rqES7PPxvgYH` /
+  https://oyano-moshimo-navi-axpp9or76-dogwoodcommunity1.vercel.app （戻し操作なし）。
+- 公開GET: /api/health、/home、/start、/consult、/providers、/safety の6件200。
+  フルネーム（任意）と簡潔な相談ヘッダーの新表示を確認。
+- 本番配信アセットを隔離Chrome・合成手帳だけで確認。API/非GET/外部origin通信・Service Workerを遮断。
+  320/390/1280pxで設定前の入力、設定CTAの展開、別タブから復帰、明示再確認後の本文保持、
+  質問例の末尾追加、横溢れなし・pageerror 0・相談POST 0を確認。公開390px画像も目視確認。
+  390pxで呼び名のみ（フルネームなし）登録→情報編集→保存→再読込で空欄/呼び名保持を確認。
+  実認証完走/本番クラウド同期/実AI回答の検証ではない。実利用者データ・既存記録は操作していない。
+- 一時script /private/tmp/verify-oyano-consult-entry-production.mjs、verify-oyano-optional-name-production.mjs。
+  画像 /private/tmp/oyano-consult-production-start-390.png 等。元の相談タブを閉じる/再読込すると
+  未送信文は消える仕様は変更なし。本人確認・同意を省略して匿名AIへ戻す変更も行っていない。
+- CURRENT_STATUSと本追記を文書だけ[skip ci]でmainへpushし、再デプロイはしない。
+  未追跡Claude_FULL2文書・review_exports/、課金・環境秘密値・正式商用公開の保留条件は変更なし。
