@@ -113,6 +113,9 @@ jobs:
       - name: Test diary continuity and optional follow-ups
         run: pnpm run test:diary-continuity
 
+      - name: Test disclosed provider directory and privacy boundaries
+        run: pnpm run test:provider-directory
+
       - name: Test web account deletion
         run: pnpm run test:web-account-deletion
 

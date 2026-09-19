@@ -49,6 +49,7 @@
     "test:notebook-diary-text": "node scripts/test-notebook-diary-text.mjs",
     "test:diary-unsaved-changes": "node scripts/test-diary-unsaved-changes.mjs",
     "test:diary-continuity": "node scripts/test-diary-continuity.mjs && node scripts/test-diary-follow-up.mjs",
+    "test:provider-directory": "node scripts/test-provider-directory.mjs && node scripts/test-provider-directory-boundaries.mjs",
     "test:notebook-sync-text-retry": "node scripts/test-notebook-sync-text-retry.mjs",
     "test:unicode-display-text": "node scripts/test-unicode-display-text.mjs",
     "test:web-account-deletion": "node scripts/test-web-account-deletion.mjs",

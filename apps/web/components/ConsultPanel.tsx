@@ -1430,10 +1430,12 @@ export function ConsultPanel() {
 
                   {turn.answer.providerCategories.length > 0 ? (
                     <div className="consult-answer-block">
-                      <h3>相談先の候補</h3>
+                      <h3>相談先の種類</h3>
                       <div className="consult-chips">
                         {turn.answer.providerCategories.map((item, index) => <span key={`${item}-${index}`}>{item}</span>)}
                       </div>
+                      <p><Link className="secondary" href="/providers" prefetch={false}>地域の相談先を見る</Link></p>
+                      <p>地域と分野を自分で選べます。広告掲載の事業者は、次の画面で区別して表示します。</p>
                     </div>
                   ) : null}
 

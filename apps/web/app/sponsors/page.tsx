@@ -28,8 +28,8 @@ export default function SponsorsPage() {
         <p>
           親のもしもナビは、家族が親の状況を記録し、次に確認することを整理する手帳です。
           広告の掲載枠は、利用者本人の住所ではなく、親御さんの居住都道府県を基準に扱います。
-          利用者の記録画面に広告を出すものではなく、地域ガイド、相談先一覧、印刷物など、
-          家族が明示的に相談先を探す場面だけで、協賛/PRとして明示して扱います。
+          利用者の記録画面に広告を出すものではなく、家族が自分で地域の相談先を探す場面で、
+          「広告」と明示して掲載します。申請だけで自動的に公開されることはありません。
         </p>
         <div className="sponsor-hero-actions">
           <a className="primary-cta" href="#apply">申請する</a>
@@ -53,6 +53,14 @@ export default function SponsorsPage() {
           <strong>公開数字は閾値制</strong>
           <p>管理画面では生数字を見ますが、公開側では一定数を超えた県だけ利用数を表示します。営業資料の前月比は月次確定値だけを使います。</p>
         </article>
+      </section>
+
+      <section className="panel sponsor-field-panel">
+        <h2>条件が合うとき、広告枠で優先掲載</h2>
+        <p>AI相談の回答から「地域の相談先を見る」を選び、利用者自身が地域・サービスを指定した場合に、条件に合う協賛事業者を広告枠へ表示します。広告以外の掲載や公的な窓口とは分けて案内します。</p>
+        <p>優先掲載は広告枠の中だけです。AIの助言や回答をスポンサーのために変えたり、最適・最寄りの事業者だと保証したりするものではありません。紹介件数・問い合わせ・成約も保証しません。</p>
+        <p>掲載内容・対応地域・公開期間を運営が確認し、掲載合意後に登録します。申請時の連絡先や担当者情報を、そのまま公開することはありません。</p>
+        <Link className="secondary" href="/providers">地域の相談先画面を見る</Link>
       </section>
 
       <section className="panel sponsor-field-panel sponsor-threshold-panel">
