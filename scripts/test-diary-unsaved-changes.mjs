@@ -20,6 +20,7 @@ function evaluate(source, sandbox = {}) {
   return module.exports;
 }
 const { hasUnsavedNewDiaryInput, hasUnsavedDiaryEdit, UNSAVED_DIARY_WARNING } = evaluate(helper);
+const { hasUnsavedDiaryFollowUp } = evaluate(read("apps/web/lib/diaryFollowUp.ts"));
 const blank = () => ({ date: "2026-09-06", body: "", mood: "stable", files: [] });
 const original = { date: "2026-09-01", body: "仮の記録\n二行目", mood: "stable" };
 assert.equal(hasUnsavedNewDiaryInput(), false);
@@ -94,8 +95,8 @@ const fixture = (id, caseId = "case-a") => ({ ...original, id, caseId, attachmen
 const state = {
   cases: [{ id: "case-a" }, { id: "case-b" }],
   diaryEntries: { "case-a": [fixture("entry-a")], "case-b": [fixture("entry-b", "case-b")] },
-  forms: {}, diaryEditForms: {}, diaryEditOriginals: {},
-  hasUnsavedNewDiaryInput, hasUnsavedDiaryEdit,
+  forms: {}, diaryEditForms: {}, diaryEditOriginals: {}, followUpDrafts: {},
+  hasUnsavedNewDiaryInput, hasUnsavedDiaryEdit, hasUnsavedDiaryFollowUp,
   cloudContentReadOnly: false,
   todayInputValue: () => "2026-09-06", emptyDiaryForm: blank(),
   formatLongDate: (value) => value,
@@ -132,6 +133,9 @@ vm.runInContext(ts.transpileModule([
 ].join("\n"), { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText, runtime);
 const run = (expression) => vm.runInContext(expression, runtime);
 assert.equal(run("isDirty()"), false, "registration and initial state must be clean");
+state.followUpDrafts["case-a"] = { outcome: "pending", note: "", subject: "", mood: null };
+assert.equal(run("isDirty()"), true, "an optional follow-up choice is unsaved even without a note");
+state.followUpDrafts = {};
 run("openDiaryEditor(diaryEntries['case-a'][0])");
 assert.equal(run("isDirty()"), false, "opening a seeded editor alone is clean");
 run("updateDiaryEditForm('entry-a', { body: diaryEditOriginals['entry-a'].body })");

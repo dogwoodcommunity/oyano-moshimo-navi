@@ -110,6 +110,9 @@ jobs:
       - name: Test unsaved diary warning and unload guard
         run: pnpm run test:diary-unsaved-changes
 
+      - name: Test diary continuity and optional follow-ups
+        run: pnpm run test:diary-continuity
+
       - name: Test web account deletion
         run: pnpm run test:web-account-deletion
 

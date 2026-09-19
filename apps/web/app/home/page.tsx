@@ -11,6 +11,9 @@ import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMag
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { truncateDisplayText } from "@/lib/displayText";
 import { hasUnsavedDiaryEdit, hasUnsavedNewDiaryInput, UNSAVED_DIARY_WARNING } from "@/lib/diaryUnsavedChanges";
+import { findRelatedDiaryEntry } from "@/lib/diaryContinuity";
+import { buildDiaryFollowUpBody, diaryFollowUpSourceVersion, hasUnsavedDiaryFollowUp, type DiaryFollowUpDraft } from "@/lib/diaryFollowUp";
+import { DiaryFollowUpPanel } from "@/components/DiaryFollowUpPanel";
 import { PREFECTURES } from "@/lib/prefectures";
 import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
@@ -1185,6 +1188,8 @@ export default function FamilyBoardPage() {
   const [activeCaseId, setActiveCaseId] = useState<string | null>(null);
   const [diaryEntries, setDiaryEntries] = useState<Record<string, DiaryEntry[]>>({});
   const [forms, setForms] = useState<Record<string, DiaryFormState>>({});
+  const [followUpDrafts, setFollowUpDrafts] = useState<Record<string, DiaryFollowUpDraft | undefined>>({});
+  const [followUpError, setFollowUpError] = useState<string | undefined>();
   const [diaryEditForms, setDiaryEditForms] = useState<Record<string, DiaryEditForm>>({});
   const [diaryEditOriginals, setDiaryEditOriginals] = useState<Record<string, DiaryEditForm>>({});
   const [editingDiaryId, setEditingDiaryId] = useState<string | null>(null);
@@ -1425,6 +1430,7 @@ export default function FamilyBoardPage() {
   const activeForm = activeCase ? forms[activeCase.id] ?? emptyDiaryForm : emptyDiaryForm;
   const hasUnsavedDiaryChanges = cases.some((caseRecord) => (
     hasUnsavedNewDiaryInput(forms[caseRecord.id])
+    || hasUnsavedDiaryFollowUp(followUpDrafts[caseRecord.id])
     || (diaryEntries[caseRecord.id] ?? []).some((entry) => (
       hasUnsavedDiaryEdit(diaryEditForms[entry.id], diaryEditOriginals[entry.id])
     ))
@@ -1481,6 +1487,14 @@ export default function FamilyBoardPage() {
   const latestEntry = activeEntries[0];
   const todayEntry = activeEntries.find((entry) => entry.date === todayInputValue());
   const savedDiaryEntry = diarySavedId ? activeEntries.find((entry) => entry.id === diarySavedId) : undefined;
+  const continuityScopeKey = `${cloudUserId ?? "local"}:${cloudFamilyId ?? "local"}`;
+  const continuityAvailable = activeCase ? canUseDiaryContinuity(activeCase.id) : false;
+  const activeFollowUpDraft = activeCase ? followUpDrafts[activeCase.id] : undefined;
+  const visibleFollowUpDraft = activeFollowUpDraft?.scopeKey === continuityScopeKey ? activeFollowUpDraft : undefined;
+  const followUpSource = visibleFollowUpDraft ? activeEntries.find((entry) => entry.id === visibleFollowUpDraft.entryId) : undefined;
+  const relatedDiaryEntry = savedDiaryEntry && continuityAvailable
+    ? findRelatedDiaryEntry(savedDiaryEntry, activeEntries.filter((entry) => !isDiaryEntryCloudSyncBlocked(entry.caseId, entry.id)))
+    : undefined;
   // Success IDs are set only after local persistence succeeds. Pulse after render
   // so a newly mounted success notice can animate, without changing save handlers.
   useEffect(() => {
@@ -1920,6 +1934,142 @@ export default function FamilyBoardPage() {
     }
   }
 
+  // Cloud-bound notebooks must finish identity/role resolution before these
+  // new entry points expose source records or accept a follow-up. Server-side
+  // sync/consult authorization remains unchanged; this is not an ACL substitute.
+  function canUseDiaryContinuity(caseId: string) {
+    if (reconciliationBusy || isPersonNotebookCloudSyncBlocked(caseId)) return false;
+    const binding = readNotebookCloudBinding();
+    if (!cloudUserId && !binding) return true;
+    return Boolean(binding && cloudUserId === binding.authUserId
+      && cloudFamilyId === binding.familyId && cloudIdentityStatus === "ready"
+      && cloudMemberRole && cloudMemberRole !== "viewer");
+  }
+
+  function currentContinuityEntries(caseId: string) {
+    return listDiaryEntries(caseId).filter((entry) => !isDiaryEntryCloudSyncBlocked(caseId, entry.id));
+  }
+
+  function openRelatedDiary(savedId: string) {
+    if (!activeCase || !canUseDiaryContinuity(activeCase.id)) return;
+    const entries = currentContinuityEntries(activeCase.id);
+    const saved = entries.find((entry) => entry.id === savedId);
+    const related = saved ? findRelatedDiaryEntry(saved, entries) : undefined;
+    setDiaryEntries((current) => ({ ...current, [activeCase.id]: entries }));
+    if (related) showDiaryEntry(related);
+    else {
+      setRecordStorageTone("info");
+      setRecordStorageMessage("記録が更新されたため、以前の関連表示を取り消しました。過去の記録から確認できます。");
+    }
+  }
+
+  function openDiaryFollowUp(entry: DiaryEntry) {
+    if (!activeCase || entry.caseId !== activeCase.id || !canUseDiaryContinuity(entry.caseId)) return;
+    const entries = currentContinuityEntries(entry.caseId);
+    const source = entries.find((item) => item.id === entry.id);
+    if (!source) return;
+    const existing = followUpDrafts[entry.caseId];
+    if (existing && existing.entryId !== entry.id && hasUnsavedDiaryFollowUp(existing)
+      && !window.confirm("別の記録に切り替えると、入力中の追記は保存されません。切り替えますか？")) return;
+    const scopeKey = `${cloudUserId ?? "local"}:${cloudFamilyId ?? "local"}`;
+    setDiaryEntries((current) => ({ ...current, [entry.caseId]: entries }));
+    setFollowUpDrafts((current) => ({ ...current, [entry.caseId]:
+      existing?.entryId === entry.id && existing.scopeKey === scopeKey ? existing : {
+        entryId: source.id, sourceVersion: diaryFollowUpSourceVersion(source), scopeKey,
+        date: todayInputValue(), outcome: null, note: "", subject: "", mood: null
+      }
+    }));
+    setFollowUpError(undefined);
+    setActiveNotebookTab("history");
+    scrollToDiaryEntry("", false, "diary-follow-up");
+    window.setTimeout(() => {
+      const panel = document.getElementById("diary-follow-up");
+      panel?.focus({ preventScroll: true });
+    }, 80);
+  }
+
+  function updateDiaryFollowUp(patch: Partial<Pick<DiaryFollowUpDraft, "date" | "outcome" | "note" | "subject" | "mood">>) {
+    if (!activeCase || !canUseDiaryContinuity(activeCase.id)) return;
+    const caseId = activeCase.id;
+    setFollowUpDrafts((current) => {
+      const draft = current[caseId];
+      return draft?.scopeKey === continuityScopeKey ? { ...current, [caseId]: { ...draft, ...patch } } : current;
+    });
+    setFollowUpError(undefined);
+  }
+
+  function refreshDiaryFollowUpSource() {
+    if (!activeCase || !canUseDiaryContinuity(activeCase.id)) return;
+    const caseId = activeCase.id;
+    const draft = followUpDrafts[caseId];
+    const entries = currentContinuityEntries(caseId);
+    const source = entries.find((entry) => entry.id === draft?.entryId);
+    setDiaryEntries((current) => ({ ...current, [caseId]: entries }));
+    if (!source || !draft || draft.scopeKey !== continuityScopeKey) return;
+    // Only acknowledge the content actually displayed, not a newer unseen edit.
+    const displayed = (diaryEntries[caseId] ?? []).find((entry) => entry.id === source.id);
+    if (!displayed || diaryFollowUpSourceVersion(displayed) !== diaryFollowUpSourceVersion(source)) {
+      setFollowUpError("元の記録が更新されました。最新の内容を開いて、もう一度確認してください。");
+      return;
+    }
+    setFollowUpDrafts((current) => ({ ...current, [caseId]: { ...draft, sourceVersion: diaryFollowUpSourceVersion(source) } }));
+    setFollowUpError(undefined);
+  }
+
+  function skipDiaryFollowUp() {
+    if (!activeCase) return;
+    const draft = followUpDrafts[activeCase.id];
+    if (draft?.scopeKey === continuityScopeKey && hasUnsavedDiaryFollowUp(draft)
+      && !window.confirm("入力した追記は保存せずに閉じますか？元の記録と、今日の記録の入力内容は変わりません。")) return;
+    setFollowUpDrafts((current) => ({ ...current, [activeCase.id]: undefined }));
+    setFollowUpError(undefined);
+  }
+
+  function saveDiaryFollowUp() {
+    if (!activeCase || !canUseDiaryContinuity(activeCase.id)) {
+      setFollowUpError("保存先と編集権限を確認してから、もう一度お試しください。");
+      return;
+    }
+    const caseId = activeCase.id;
+    const draft = followUpDrafts[caseId];
+    if (!draft || draft.scopeKey !== continuityScopeKey) return;
+    const entries = currentContinuityEntries(caseId);
+    const source = entries.find((entry) => entry.id === draft.entryId);
+    setDiaryEntries((current) => ({ ...current, [caseId]: entries }));
+    if (!source) {
+      setFollowUpError("元の記録が見つかりません。追記は保存していません。");
+      return;
+    }
+    let body: string;
+    try { body = buildDiaryFollowUpBody(source, draft); }
+    catch {
+      setFollowUpError("元の記録の最新内容、日付、確認状況を確認してください。まだ保存していません。");
+      return;
+    }
+    // A self-reported check-in is not a clinical change or resolution. Keep the
+    // original diary intact; existing sync/memory paths consume this new text.
+    const { entry, persisted } = addDiaryEntryWithStatus({ caseId, date: draft.date, mood: draft.mood!, body, attachments: [] });
+    const warning = consumeNotebookStorageWarning();
+    if (!persisted) {
+      setDiarySavedId(null);
+      setFollowUpError(warning ?? "保存できませんでした。入力内容は残しています。もう一度お試しください。");
+      return;
+    }
+    setDiaryEntries((current) => ({ ...current, [caseId]: [entry, ...entries] }));
+    setFollowUpDrafts((current) => ({ ...current, [caseId]: undefined }));
+    setFollowUpError(undefined);
+    setDiarySavedId(entry.id);
+    setDiaryUpdatedId(null);
+    setDiaryCalendarMonth(monthInputValue(entry.date));
+    setSelectedDiaryDate(entry.date);
+    setRecordFilter("all");
+    setActiveNotebookTab("record");
+    setRecordStorageTone("info");
+    setRecordStorageMessage("その後の確認状況を、新しい記録としてこの端末に保存しました。元の記録は変更していません。");
+    markMonitorActivity("dailyRecordSaved");
+    scrollToDiaryEntry("", false, "diary-save-complete");
+  }
+
   function saveDiary(caseId: string) {
     if (cloudContentReadOnly) {
       showCloudRoleReadOnlyMessage("content");
@@ -1971,7 +2121,7 @@ export default function FamilyBoardPage() {
     setDiarySavedId(entry.id);
     setDiaryUpdatedId(null);
     setRecordStorageTone("info");
-    setRecordStorageMessage(`${formatLongDate(entry.date)}の記録をこの端末に保存しました。過去の記録とAI相談に反映されています。`);
+    setRecordStorageMessage(`${formatLongDate(entry.date)}の記録をこの端末に保存しました。過去の記録から見返せます。`);
     window.setTimeout(() => {
       document.querySelector("#diary-save-complete")?.scrollIntoView({ block: "center", behavior: "smooth" });
     }, 80);
@@ -1996,10 +2146,10 @@ export default function FamilyBoardPage() {
     scrollToDiaryEntry(entry.id, true);
   }
 
-  function scrollToDiaryEntry(entryId: string, editMode = false) {
+  function scrollToDiaryEntry(entryId: string, editMode = false, elementId?: string) {
     window.setTimeout(() => {
       window.requestAnimationFrame(() => {
-        const entry = document.getElementById(`diary-entry-${entryId}`);
+        const entry = document.getElementById(elementId ?? `diary-entry-${entryId}`);
         if (!entry) return;
         const target = editMode ? entry.querySelector(".diary-edit-panel") ?? entry : entry;
         // Header height varies with screen width and text size. Static mobile tabs
@@ -3907,6 +4057,15 @@ export default function FamilyBoardPage() {
                   <span className={`mood-badge is-${savedDiaryEntry.mood}`}>{moodLabel(savedDiaryEntry.mood)}</span>
                   <p>{savedDiaryEntry.body}</p>
                 </div>
+                {relatedDiaryEntry ? (
+                  <div className="diary-continuity-note">
+                    <strong>以前の記録も、一緒に見返せます</strong>
+                    <button type="button" onClick={() => openRelatedDiary(savedDiaryEntry.id)}>
+                      {formatLongDate(relatedDiaryEntry.date)}の記録を開く →
+                    </button>
+                    <small>本文の共通する言葉から選んでいます。状態の改善・悪化を判断したものではありません。</small>
+                  </div>
+                ) : null}
                 <div className="diary-save-complete-actions">
                   <button className="is-primary" type="button" onClick={() => openConsultFromEntry(savedDiaryEntry)}>
                     この記録でAI相談する
@@ -4040,6 +4199,25 @@ export default function FamilyBoardPage() {
               <span className="rule" aria-hidden="true" />
               <span className="aside">{activeEntries.length > 0 ? `${activeEntries.length}件` : "未記録"}</span>
             </div>
+            {visibleFollowUpDraft && continuityAvailable ? (
+              <div id="diary-follow-up" tabIndex={-1}>
+                <DiaryFollowUpPanel
+                  draft={visibleFollowUpDraft}
+                  source={followUpSource && !isDiaryEntryCloudSyncBlocked(activeCase.id, followUpSource.id) ? followUpSource : undefined}
+                  disabled={cloudContentReadOnly}
+                  error={followUpError}
+                  onChange={updateDiaryFollowUp}
+                  onRefreshSource={refreshDiaryFollowUpSource}
+                  onSave={saveDiaryFollowUp}
+                  onSkip={skipDiaryFollowUp}
+                />
+                {hasUnsavedDiaryFollowUp(visibleFollowUpDraft) ? (
+                  <p className="record-storage-message is-warning" role="status">{UNSAVED_DIARY_WARNING}</p>
+                ) : null}
+              </div>
+            ) : activeFollowUpDraft ? (
+              <p className="record-storage-message is-warning" role="status">保存先と編集権限を確認するまで、入力中の追記は表示・保存しません。</p>
+            ) : null}
             <article className="nb-card history-card">
               <div className="history-export-shortcut">
                 <Link className="quiet-link" href={`/memory-book/${activeCase.id}`}>記録をPDFに保存・印刷する</Link>
@@ -4212,6 +4390,13 @@ export default function FamilyBoardPage() {
                                 <div className="diary-entry-tools">
                                   <span>この記録をどうしますか？</span>
                                   <div className="diary-entry-actions">
+                                    <button
+                                      type="button"
+                                      disabled={!continuityAvailable || isDiaryEntryCloudSyncBlocked(activeCase.id, entry.id)}
+                                      onClick={() => openDiaryFollowUp(entry)}
+                                    >
+                                      <strong>その後を記録</strong>
+                                    </button>
                                     <button
                                       aria-label="記録内容を編集する"
                                       disabled={cloudContentReadOnly || editingDiaryId === entry.id}
