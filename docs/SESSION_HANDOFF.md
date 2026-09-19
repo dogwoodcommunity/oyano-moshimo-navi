@@ -15093,3 +15093,32 @@ https://mitene.us/
   一時検証script /private/tmp/verify-oyano-optional-name.mjs、画像 oyano-optional-name-{start,home}-390.png。
 - CURRENT_STATUS/本追記を更新してfeature branchへcommit/push。CI全体・本番build/deployは未実施。
   本番は追記402のdeploymentのまま。保護対象、既存記録・写真・相談、課金/AI回数/環境設定は不変。
+
+## 2026-09-19 追記 404 — AI相談は準備案内より先に入力、初回設定を1か所へ
+
+- 本人が画面写真とともに「普通にAI相談の入力にできへんか。抵抗がある/スムーズにいかない」と依頼。
+  `codex/optional-full-name` / `2bfeff9` から継続。本番反映承認はこの変更に対して未取得。
+- ConsultPanelは未設定/確認中/同意待ち/準備済みのすべてで、入力欄をチャット見出し直下へ表示。
+  導入文を短縮し、質問例と初回設定・記憶詳細を折り畳み。3か所の重複した準備停止案内を除去。
+  入力下に、初回送信前のメール確認・保存/AI送信同意が必要な旨は簡潔に明示する。
+- 未準備の「AIに相談する」は設定詳細を開くのみ。設定画面は別タブで開くと明示し、元タブの本文を維持。
+  戻って「設定を確認する」を押すと、ローカル手帳/現在の認証・利用枠・同意・記憶を取り直す。
+  同じcaseIdを維持し、設定側でcloudPersonIdが更新されても反映。対象が消えても別人へ自動変更しない。
+  無条件のfocus再取得はしないため、既存の記憶補足編集/削除確認/相談送信を画面復帰で消さない。
+  設定確認・同意完了だけでは相談POSTしない。準備できた後に本人が送信ボタンを押す。
+- 下書きの新たな永続保存やURL付加はなし。元タブを閉じる/再読込すると未送信文は保持されないため、
+  「この相談画面を閉じずに設定」と説明。既存の記録からのq事前入力は変更しない。
+- 送信handlerにdisabled/利用枠ガードを追加。長期記憶必須、本人確認、明示同意、サーバー側の
+  対象者/家族権限・無料回数・原子的保存は維持。その場限りのAIへのfallbackや自動同意は追加しない。
+  読込の失敗を案内へ戻し、対象変更/離脱後の古い読込結果を無効化。準備完了で入力欄へfocus。
+- 独立担当が初期化/送信/再確認経路を確認し、実TSX+SSR/handlerテストを追加。
+  `scripts/test-consult-entry.mjs` は4状態の入力先行、設定CTA非送信、質問例追記、別タブ明示、
+  認証/同意/本文/利用枠ガード、失敗時本文保持、再確認の8ガード、同じ対象/削除済み対象を合成値で検証。
+  test:consult-memoryとstage-a source計画に組込み。source-only 42/42 PASS、Web型/対象lint成功。
+  lintは既存img警告2件のみ。git diff --check成功。DB/lockfile/本番環境/課金変更なし。
+- 資格情報なしlocalhost:3124の隔離Chrome320/390/1280pxで、設定前入力・別タブ設定→復帰・
+  明示再確認後も本文保持・質問例末尾追加・横溢れなし・pageerror 0を確認。画面画像も目視確認。
+  外部通信/非GET/API実通信を遮断した合成テスト。相談POST 0、実利用者データ・実AI送信なし。
+  一時script /private/tmp/verify-oyano-consult-entry.mjs、画像 /private/tmp/oyano-consult-{start,input}-390.png 等。
+- 本追記/CURRENT_STATUSを更新してfeature branchへpush。本番build/deploy・GitHub CI・実端末での
+  本人確認完走は未実施。本番は追記402のまま。既存記録、保護対象、正式商用公開の保留条件は不変。

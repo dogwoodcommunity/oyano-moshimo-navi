@@ -418,11 +418,12 @@ export function ConsultPanel() {
   const [consentCanManageSharedMemory, setConsentCanManageSharedMemory] = useState(false);
   const [memoryMessage, setMemoryMessage] = useState("");
   const [deleteIntent, setDeleteIntent] = useState<MemoryDeleteScope | null>(null);
+  const [memoryDetailsOpen, setMemoryDetailsOpen] = useState(false);
   const memoryRequestRef = useRef(0);
   const questionRef = useRef<HTMLTextAreaElement>(null);
+  const memoryDetailsRef = useRef<HTMLDetailsElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
     const localCases = listLocalCases();
     const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
     const requestedCaseId = params?.get("caseId") ?? undefined;
@@ -438,7 +439,18 @@ export function ConsultPanel() {
       setOpenedFromRecord(true);
     }
     setLoaded(true);
+  }, []);
 
+  const activeCase = useMemo(
+    () => cases.find((item) => item.id === activeCaseId),
+    [cases, activeCaseId]
+  );
+
+  useEffect(() => {
+    if (!activeCase) return;
+    let cancelled = false;
+    setAuthChecked(false);
+    setConsultAccess(null);
     const client = getBrowserSupabase();
     void (async () => {
       try {
@@ -459,12 +471,7 @@ export function ConsultPanel() {
     })();
 
     return () => { cancelled = true; };
-  }, []);
-
-  const activeCase = useMemo(
-    () => cases.find((item) => item.id === activeCaseId),
-    [cases, activeCaseId]
-  );
+  }, [activeCase]);
   const durableMemoryEnabled = memoryMode === "durable" && Boolean(memoryPayload?.personId);
   const needsPlus = Boolean(authChecked && consultAccess && !consultAccess.canConsult);
   const submitDisabled = !authChecked
@@ -485,6 +492,12 @@ export function ConsultPanel() {
       : consultAccess?.dailyFreeAvailable
         ? "今日の無料AI相談を使う"
         : "AI相談をはじめる";
+
+  useEffect(() => {
+    if (!durableMemoryEnabled) return;
+    setMemoryDetailsOpen(false);
+    questionRef.current?.focus({ preventScroll: true });
+  }, [durableMemoryEnabled]);
 
   useEffect(() => {
     if (!activeCase) return;
@@ -537,7 +550,17 @@ export function ConsultPanel() {
       setMemoryReason(result.reason);
       setMemoryPayload(null);
       setTurns([]);
-    })();
+    })().catch(() => {
+      if (memoryRequestRef.current !== requestId) return;
+      setMemoryMode("temporary");
+      setMemoryReason("設定を確認できませんでした。通信を確認して、もう一度お試しください。");
+      setConsent(false);
+      setMemoryPayload(null);
+      setTurns([]);
+    });
+    return () => {
+      if (memoryRequestRef.current === requestId) memoryRequestRef.current += 1;
+    };
   }, [activeCase]);
 
   async function refreshDurableMemory(options?: { keepMessage?: boolean }) {
@@ -798,7 +821,24 @@ export function ConsultPanel() {
     setQuestion("");
     setErrorMessage("");
     setOpenedFromRecord(false);
+    setMemoryDetailsOpen(false);
     setPhase("idle");
+  }
+
+  function showConsultSetup() {
+    setMemoryDetailsOpen(true);
+    window.setTimeout(() => {
+      memoryDetailsRef.current?.querySelector("summary")?.focus();
+      memoryDetailsRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }, 40);
+  }
+
+  function recheckConsultSetup() {
+    if (durableMemoryEnabled || memoryMode === "checking" || phase === "loading" || consentSaving
+      || memoryAction !== "idle" || memoryEditing || historyLoading || deleteIntent) return;
+    // 設定を開いた別タブで更新された同じ手帳だけを再確認。相談文は変更しない。
+    // 対象が削除されていても、別の人の手帳には自動で切り替えない。
+    setCases(listLocalCases());
   }
 
   function addSuggestedQuestion(item: string) {
@@ -815,7 +855,7 @@ export function ConsultPanel() {
   }
 
   async function submit() {
-    if (!activeCase || !durableMemoryEnabled || !memoryPayload?.personId || question.trim().length < 4) return;
+    if (submitDisabled || needsPlus || !activeCase || !durableMemoryEnabled || !memoryPayload?.personId || question.trim().length < 4) return;
 
     const submittedQuestion = question.trim();
     setPhase("loading");
@@ -1038,11 +1078,11 @@ export function ConsultPanel() {
           </div>
           <p className="consult-plan-status">
             {memoryMode === "consent-required"
-              ? "長期記憶への同意が必要"
+              ? "無料・1日1回答から"
               : memoryMode === "checking"
-              ? "長期記憶を確認中"
+              ? "設定を確認中・先に入力できます"
               : memoryMode === "temporary"
-                ? "長期記憶の準備が必要"
+                ? "無料・1日1回答から"
             : !authChecked
               ? "利用条件を確認中"
               : consultAccess?.plan === "plus"
@@ -1052,6 +1092,71 @@ export function ConsultPanel() {
                   : "今日の無料相談は利用済みです"}
           </p>
         </header>
+
+        <div className="consult-composer">
+          <h2 id="consult-question-heading">{turns.length > 0 ? "続けて聞きたいことを書く" : "相談内容を書く"}</h2>
+          <p className="consult-edit-note" id="consult-edit-note">
+            {openedFromRecord ? "記録から相談文を用意しました。自由に書き直せます。" : "短い言葉で大丈夫です。"}
+            本名・住所などは書かないでください。
+          </p>
+          <textarea
+            aria-labelledby="consult-question-heading"
+            aria-describedby="consult-edit-note consult-send-note"
+            disabled={phase === "loading"}
+            maxLength={CONSULT_MAX_QUESTION_LENGTH}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder={turns.length > 0 ? "例: まず病院には何と聞けばいいですか。" : "例: 最近、食事の量が減っていて心配です。何を確認したらいいですか。"}
+            rows={4}
+            ref={questionRef}
+            value={question}
+          />
+          <p className="consult-count">4文字以上 / {question.length}字（最大{CONSULT_MAX_QUESTION_LENGTH}字）</p>
+          <p className="consult-send-note" id="consult-send-note">
+            {durableMemoryEnabled ? "記録とこれまでの相談を踏まえて答えます。"
+              : memoryMode === "checking" ? "保存設定を確認中です。相談文は先に書けます。"
+              : "初回の送信前に、メール確認と保存・AI送信への同意をお願いします。入力しただけでは送信されません。"}
+          </p>
+          {durableMemoryEnabled && needsPlus ? (
+            <div className="consult-followup-gate">
+              <strong>今日の無料AI相談は利用済みです。</strong>
+              <p>明日0時から、また無料で1回相談できます。今日の回答と相談履歴は、この画面で見返せます。</p>
+              <Link className="secondary" href="/home">手帳に戻る</Link>
+            </div>
+          ) : (
+            <button
+              className="consult-submit"
+              disabled={durableMemoryEnabled ? submitDisabled
+                : !authChecked || memoryMode === "checking" || consentSaving || question.trim().length < 4 || phase === "loading"}
+              onClick={durableMemoryEnabled ? submit : showConsultSetup}
+              type="button"
+            >
+              {durableMemoryEnabled ? consultButtonLabel : memoryMode === "checking" ? "確認しています…" : "AIに相談する"}
+            </button>
+          )}
+          {durableMemoryEnabled && !hasSubstance ? (
+            <p className="consult-hint">
+              先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。
+              <Link href="/home#today-diary">今日の記録を書く</Link>
+            </p>
+          ) : null}
+          {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
+          {turns.length === 0 ? (
+            <details className="consult-question-examples">
+              <summary>何を聞けばいい？ 質問例を見る</summary>
+              <p>押すと、書きかけの文章の末尾に追加します。</p>
+              <div className="consult-suggestions">
+                {suggestedQuestions.map((item) => (
+                  <button aria-label={`${item}を相談内容に追加`} disabled={phase === "loading"} key={item} onClick={() => addSuggestedQuestion(item)} type="button">
+                    <span aria-hidden="true">＋</span>{item}
+                  </button>
+                ))}
+              </div>
+            </details>
+          ) : null}
+        </div>
+
+        <details className="consult-memory-details" ref={memoryDetailsRef} open={memoryDetailsOpen} onToggle={(event) => setMemoryDetailsOpen(event.currentTarget.open)}>
+          <summary>{durableMemoryEnabled ? "AIが覚えていること・相談の保存先" : "初回の確認・設定"}</summary>
 
         {memoryMode === "consent-required" ? (
           <section className="consult-memory-fallback is-consent" aria-label="この人専用AIの長期記憶への同意">
@@ -1105,25 +1210,15 @@ export function ConsultPanel() {
             </details>
           </section>
         ) : memoryMode === "checking" ? (
-          <section className="consult-memory-card is-checking" aria-busy="true" aria-label="専用AIの長期記憶">
-            <div className="consult-memory-head">
-              <div>
-                <span>この人専用の長期記憶</span>
-                <h2>専用AIが覚えていること</h2>
-              </div>
-              <strong>確認中</strong>
-            </div>
-            <p className="consult-memory-loading" role="status">クラウドに保存された記録と、あなた自身のこれまでの相談を読み込んでいます。</p>
-          </section>
+          <p role="status">記録の保存先を確認しています。相談文は先に書けます。</p>
         ) : memoryMode === "temporary" ? (
-          <section className="consult-memory-fallback" aria-label="長期記憶の準備が必要">
-            <div>
-              <span>専用AIを使うための準備</span>
-              <h2>長期記憶の準備が終わるまで、相談は送信しません</h2>
-            </div>
-            <p>{memoryReason}</p>
-            <p>その場限りの回答には戻しません。クラウド保存とメール確認を終えると、この人の全記録と、あなた自身の相談履歴を継続して踏まえる専用AIとして使えます。</p>
-            <Link href="/home#cloud-backup">クラウド保存とメール確認を設定する</Link>
+          <section className="consult-setup-note" aria-label="相談を続けて使うための設定">
+            <h3>はじめての相談は、メール確認をお願いします</h3>
+            <p>この人の記録と相談を次回にも引き継ぐため、メール確認とクラウド保存が必要です。設定済みの方は、下の「設定を確認する」を押してください。</p>
+            <a className="secondary" href="/home#cloud-backup" target="_blank" rel="noopener noreferrer">メール確認・保存設定を開く（別タブ）</a>
+            <p>この相談画面を閉じずに設定してください。戻ったら「設定を確認する」を押すと、書きかけの相談を続けられます。確認だけでは送信しません。</p>
+            <button className="secondary" onClick={recheckConsultSetup} type="button">設定を確認する</button>
+            {memoryReason ? <details><summary>設定を確認できない場合の詳細</summary><p>{memoryReason}</p></details> : null}
           </section>
         ) : memoryPayload ? (
           <section className="consult-memory-card" aria-label="専用AIが覚えていること">
@@ -1320,53 +1415,14 @@ export function ConsultPanel() {
           </section>
         ) : null}
 
-        <div className="consult-storage-note" role="note">
-          <strong>{memoryMode === "checking"
-            ? "相談履歴の保存方法を確認しています。"
-            : durableMemoryEnabled
-              ? "AI相談の質問と回答は、相談履歴へ自動保存されます。"
-              : "専用AIの長期記憶を準備してください。"}</strong>
-          <p>{memoryMode === "checking"
-            ? "確認が終わるまで、そのままお待ちください。"
-            : durableMemoryEnabled
-              ? "次の相談でも会話の経過を踏まえます。日付別の手帳には自動追加しません。手帳にも残したい回答だけ「この回答を手帳に残す」を押してください。"
-              : "長期記憶が確認できるまで、相談内容はAIへ送りません。"}</p>
-        </div>
-
-        {durableMemoryEnabled && openedFromRecord && turns.length === 0 ? (
-          <div className="consult-ready-card" role="status">
-            <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
-            <div>
-              <span>記録から相談</span>
-              <strong>質問文は入っています。そのまま送れます。</strong>
-              <p>保存した記録とプロフィールも一緒に読みます。</p>
-            </div>
+        {durableMemoryEnabled ? (
+          <div className="consult-storage-note" role="note">
+            <strong>AI相談の質問と回答は、相談履歴へ自動保存されます。</strong>
+            <p>次の相談でも会話の経過を踏まえます。日付別の手帳には自動追加しません。手帳にも残したい回答だけ「この回答を手帳に残す」を押してください。</p>
           </div>
         ) : null}
 
-        {durableMemoryEnabled && turns.length === 0 ? (
-          <div className="consult-chat-intro">
-            <h2>聞きたいことを1つ書いてください</h2>
-            <p>
-              {consultAccess?.plan === "plus"
-                ? "一度答えた後も、この画面で会話の続きを聞けます。"
-                : "無料では1日1回答まで使えます。毎日0時に、また1回相談できます。"}
-            </p>
-            <p className="consult-suggestion-guide">下の質問例を押すと、入力欄の末尾に追加されます。いま入っている文章は消えません。</p>
-            <div className="consult-suggestions">
-              {suggestedQuestions.map((item) => (
-                <button
-                  aria-label={`${item}を相談内容に追加`}
-                  key={item}
-                  onClick={() => addSuggestedQuestion(item)}
-                  type="button"
-                >
-                  <span aria-hidden="true">＋</span>{item}
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : null}
+        </details>
 
         {turns.length > 0 ? (
           <div className="consult-thread" aria-live="polite">
@@ -1490,65 +1546,6 @@ export function ConsultPanel() {
           </div>
         ) : null}
 
-        <div className="consult-composer">
-          <h2>{durableMemoryEnabled
-            ? turns.length > 0 ? "続けて聞きたいことを書いてください" : "相談内容を書く"
-            : "専用AIの準備をしてください"}</h2>
-          {!durableMemoryEnabled ? (
-            <div className="consult-memory-required">
-              <strong>{memoryMode === "checking" ? "長期記憶を確認しています" : "その場限りの相談は送信しません"}</strong>
-              <p>{memoryMode === "checking"
-                ? "この人の記録と、あなた自身の相談履歴を安全に読み込んでいます。そのままお待ちください。"
-                : "この人の記録を継続して覚えるため、先にクラウド保存とメール確認が必要です。"}</p>
-              {memoryMode === "temporary" ? <Link href="/home#cloud-backup">長期記憶を準備する</Link> : null}
-            </div>
-          ) : needsPlus ? (
-            <div className="consult-followup-gate">
-              <strong>今日の無料AI相談は利用済みです。</strong>
-              <p>明日0時から、また無料で1回相談できます。今日の回答と相談履歴は、この画面で見返せます。</p>
-              <Link className="consult-submit consult-submit-link is-secondary" href="/home">
-                手帳に戻る
-              </Link>
-            </div>
-          ) : (
-            <>
-              <p className="consult-edit-note" id="consult-edit-note">
-                {openedFromRecord
-                  ? "記録から相談文を用意しました。内容は自由に修正・削除して構いません。"
-                  : "文章は自由に修正できます。短い言葉でも大丈夫です。"}
-              </p>
-              <textarea
-                aria-describedby="consult-edit-note"
-                maxLength={CONSULT_MAX_QUESTION_LENGTH}
-                onChange={(event) => setQuestion(event.target.value)}
-                placeholder={turns.length > 0
-                  ? "例: さっき教えてもらった中で、まず病院には何と聞けばいいですか。"
-                  : "例: 退院の話が出ています。何から確認すればいいですか。"}
-                rows={4}
-                ref={questionRef}
-                value={question}
-              />
-              <p className="consult-count">{question.length} / {CONSULT_MAX_QUESTION_LENGTH}</p>
-              {!consent ? (
-                <label className="consult-consent">
-                  <input checked={consent} disabled={consentSaving} onChange={(event) => void toggleConsent(event.target.checked)} type="checkbox" />
-                  <span>手帳の内容をAI相談に送ることに同意します。</span>
-                </label>
-              ) : null}
-              <button className="consult-submit" disabled={submitDisabled} onClick={submit} type="button">
-                {consultButtonLabel}
-              </button>
-            </>
-          )}
-          {durableMemoryEnabled && !hasSubstance ? (
-            <p className="consult-hint">
-              先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。
-              <Link href="/home#today-diary">今日の記録を書く</Link>
-            </p>
-          ) : null}
-          {durableMemoryEnabled && !consent && !needsPlus ? <p className="consult-hint">同意すると相談ボタンを押せます。</p> : null}
-          {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
-        </div>
       </section>
 
       <details className="consult-disclosure">
