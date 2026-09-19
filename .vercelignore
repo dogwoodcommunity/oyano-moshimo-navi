@@ -21,3 +21,5 @@ infra
 .github
 apps/mobile
 README.md
+AGENTS.md
+CLAUDE.md
