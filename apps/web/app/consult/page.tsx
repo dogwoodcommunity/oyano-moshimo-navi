@@ -10,19 +10,12 @@ export const metadata: Metadata = {
 export default function ConsultPage() {
   return (
     <main className="container consult-page">
-      <section className="consult-hero">
-        <p className="consult-eyebrow">AI相談チャット</p>
-        <h1>この人のことを、続けて相談できます。</h1>
-        <p className="consult-lead">
-          クラウドに保存した全期間の手帳記録と、あなた自身のこれまでの相談履歴を読み、同じ相談の続きとして答えます。
-          診断や法律・税務の結論は出しません。判断が必要なことは、必ず主治医や専門家に確認してください。
-        </p>
-        <div className="consult-hero-actions">
-          <Link className="secondary" href="/home">手帳へ戻る</Link>
-        </div>
-      </section>
-
+      <header className="consult-page-heading">
+        <h1>AI相談</h1>
+        <Link className="secondary" href="/home">手帳へ戻る</Link>
+      </header>
       <ConsultPanel />
+      <p className="consult-safety-note">AIの回答は参考情報です。診断や法律・税務の判断は、主治医や専門家に確認してください。</p>
     </main>
   );
 }

@@ -13,7 +13,7 @@ const sourceTests = [
   "account-delete-executor-auth", "delete-operator-mfa-setup", "commercial-release-gates",
   "admin-delete-access-check", "public-operator-disclosure",
   "family-role-security", "family-invite-permissions", "family-context-selection",
-  "family-management", "handoff-security", "consult-memory", "consult-route",
+  "family-management", "handoff-security", "consult-memory", "consult-route", "consult-entry",
   "diary-deletion", "notebook-person-deletion"
 ];
 const sqlTests = [

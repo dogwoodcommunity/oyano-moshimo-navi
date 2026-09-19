@@ -15044,10 +15044,83 @@ textarea {
 }
 
 .consult-composer {
-  border-top: 2px solid rgba(181, 202, 187, 0.85);
   display: grid;
   gap: 12px;
-  padding-top: 20px;
+  min-width: 0;
+}
+
+.consult-page-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.consult-page-heading h1 {
+  font-size: 28px;
+  margin: 0;
+}
+
+.consult-safety-note {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.consult-memory-details,
+.consult-question-examples {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  min-width: 0;
+  padding: 12px 14px;
+}
+
+.consult-memory-details > summary,
+.consult-question-examples > summary {
+  color: var(--ink);
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.6;
+  padding: 6px 0;
+}
+
+.consult-memory-details > summary:focus-visible,
+.consult-question-examples > summary:focus-visible {
+  outline: 3px solid var(--tab-teal-ink);
+  outline-offset: 4px;
+}
+
+.consult-memory-details[open] > summary,
+.consult-question-examples[open] > summary {
+  margin-bottom: 14px;
+}
+
+.consult-setup-note {
+  color: var(--ink);
+  display: grid;
+  gap: 14px;
+  line-height: 1.8;
+  min-width: 0;
+}
+
+.consult-setup-note h3,
+.consult-setup-note p,
+.consult-send-note {
+  margin: 0;
+}
+
+.consult-setup-note .secondary {
+  min-height: 48px;
+  text-align: center;
+  white-space: normal;
+}
+
+.consult-send-note {
+  color: var(--ink);
+  font-size: 16px;
+  line-height: 1.8;
 }
 
 .consult-composer h2 {

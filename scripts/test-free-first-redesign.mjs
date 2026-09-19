@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import vm from "node:vm";
+import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -61,4 +63,53 @@ for (const event of ["history_viewed", "document_memo_saved", "family_invite_cre
 }
 assert.ok(privacy.includes("履歴の表示、書類メモの保存、家族招待リンクの作成・共有"), "privacy notice must describe the free growth events");
 
-console.log("free-first redesign tests passed");
+// Exercise the actual profile helpers, using only synthetic local values.
+const ts = createRequire(path.join(repoRoot, "apps/web/package.json"))("typescript");
+function profileHelpers(source, names, dependencies = {}) {
+  const file = ts.createSourceFile("profile.tsx", source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const statements = file.statements.filter((statement) =>
+    (ts.isFunctionDeclaration(statement) && names.includes(statement.name?.text))
+    || (ts.isVariableStatement(statement) && statement.declarationList.declarations.some((declaration) => names.includes(declaration.name.getText(file)))));
+  assert.equal(statements.length, names.length, "all actual helpers found");
+  const code = statements.map((statement) => statement.getText(file)).join("\n")
+    + "\nmodule.exports = {" + names.join(",") + "};";
+  const module = { exports: {} };
+  vm.runInNewContext(ts.transpileModule(code, { compilerOptions: { target: ts.ScriptTarget.ES2022 } }).outputText,
+    { module, ...dependencies });
+  return module.exports;
+}
+const registration = profileHelpers(start, ["requiredProfileLabels", "missingRequiredProfileFields", "compactProfile"], {
+  statusTitle: () => "準備中"
+});
+const profile = { displayName: "お母さん", relationship: "母", parentPrefecture: "兵庫県", parentCity: "神戸市" };
+assert.equal(registration.missingRequiredProfileFields(profile).length, 0, "nickname is enough without full name");
+assert.equal(registration.missingRequiredProfileFields({ ...profile, displayName: "" })[0], "displayName", "nickname stays required");
+const initial = profileHelpers(read("apps/web/lib/store.ts"), ["textOrUndefined", "cleanInitialProfile"], {
+  statusLabel: () => "準備中"
+});
+const editor = profileHelpers(home, ["profileSeed", "profileCompletion", "missingProfileItems"], {
+  personName: (record) => record.personProfile?.displayName || record.answers.targetName,
+  relationshipName: () => "母",
+  statusLabel: () => "準備中"
+});
+for (const fullName of [undefined, "", "   "]) {
+  const cleaned = initial.cleanInitialProfile(registration.compactProfile({ ...profile, fullName }, "preparing"), "preparing", "2026-09-19T00:00:00Z");
+  assert.equal(cleaned.fullName, undefined, "blank name remains absent at creation");
+  const restored = JSON.parse(JSON.stringify(cleaned));
+  const seeded = editor.profileSeed({ personProfile: restored, answers: { targetName: "お母さん" }, selectedStatus: "preparing" });
+  assert.equal(seeded.fullName, "", "reload never copies nickname to full name");
+  assert.equal(seeded.displayName, "お母さん");
+  assert.equal(editor.missingProfileItems(seeded).includes("フルネーム"), false);
+  assert.equal(editor.profileCompletion(seeded).percent, editor.profileCompletion({ ...seeded, fullName: "架空の氏名" }).percent,
+    "omitting an optional full name never reduces completeness");
+}
+assert.equal(editor.profileSeed({ answers: { targetName: "仮の呼び名" }, selectedStatus: "preparing" }).fullName, "",
+  "legacy targetName is not proof of a legal full name");
+assert.equal(editor.profileSeed({ personProfile: { ...profile, fullName: "入力済みの架空氏名" }, answers: {} }).fullName,
+  "入力済みの架空氏名", "an existing explicitly recorded name is preserved");
+for (const source of [start, home]) {
+  assert.match(source, /フルネーム（任意）/);
+  assert.match(source, /空欄で大丈夫です/);
+  assert.doesNotMatch(source, /まずはフルネーム/);
+}
+console.log("free-first redesign and optional full-name tests passed");

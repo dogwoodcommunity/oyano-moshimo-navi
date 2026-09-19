@@ -234,7 +234,7 @@ export default function StartPage() {
         </div>
         <p className="toc-kicker">無料・カード登録不要</p>
         <h1>まず、管理する人の情報を入れます。</h1>
-        <p>父母、義父母、祖父母、親戚など、誰でも大丈夫です。名前や関係を入れてから、今の状況を1つ選ぶと、その人専用の手帳ができます。</p>
+        <p>父母、義父母、祖父母、親戚など、誰でも大丈夫です。呼び名や関係を入れてから、今の状況を1つ選ぶと、その人専用の手帳ができます。</p>
         <div className="toc-first-step" aria-label="最初にすること">
           <span>今日やること</span>
           <strong>1. 誰の手帳か入力 → 2. 近い状況を選ぶ → 3. 家族ボードで管理</strong>
@@ -330,14 +330,16 @@ export default function StartPage() {
             {missingRequiredFieldSet.has("parentCity") ? <small className="start-field-error" id="parent-city-error">市区町村を入力してください。</small> : null}
           </label>
           <label>
-            <span>フルネーム</span>
+            <span>フルネーム（任意）</span>
             <input
-              autoComplete="name"
+              autoComplete="off"
+              aria-describedby="start-full-name-note"
               inputMode="text"
               onChange={(event) => updateProfileDraft("fullName", event.target.value)}
               placeholder="例：山田 花子"
               value={profileDraft.fullName ?? ""}
             />
+            <small id="start-full-name-note">空欄で大丈夫です。「お母さん」などの呼び名だけで使えます。</small>
           </label>
           <label>
             <span>生年月日（任意）</span>
