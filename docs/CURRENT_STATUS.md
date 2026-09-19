@@ -16,8 +16,9 @@
   「Supabase TENSHOKU（iPhone）」だが、遷移先projectはypnuxyfirlvbsqujocuy。
   本人は認証アプリに該当項目が「ない」と回答。画面もコード不一致でMFA未完了。
   iPhone標準「パスワード」でも本人は「ない」と回答。登録に使ったアプリは記録から特定できず。
-  `SUPABASE_DASHBOARD_ACCESS_SUPPORT_DRAFT.md`に公式support向け下書きを用意（未送信）。
-  本人の指摘で問い合わせは保留。既存Chrome/Safari/アプリ内ブラウザを再確認したが、ChromeはMFA待ち、
+  `SUPABASE_DASHBOARD_ACCESS_SUPPORT_DRAFT.md`に公式support向け下書きを用意。
+  本人から問い合わせ依頼があり、ChromeのGmail作成画面へ入力。送信元の本人確認待ちで未送信（追記409）。
+  既存Chrome/Safari/アプリ内ブラウザを再確認したが、ChromeはMFA待ち、
   Safari/アプリ内はGitHubの再ログイン画面。生きた管理sessionは確認できていない。
   現TENSHOKUの運用記録に9月9日OwnerのSupabase MFA有効化が明記。登録アプリの保存先は未特定。
   本人はGoogle Authenticatorの複数アカウントにもSupabase/TENSHOKU項目がないと回答。

@@ -15272,3 +15272,14 @@ https://mitene.us/
 - 次の切り分けはiPhone標準「パスワード」の名前検索ではなく「コード」一覧の有無。
   Supabase用を特定するまでは既存登録を削除/再登録しない。端末変更、MFA解除、サポート送信は未実施。
   本番・利用者データ・認証設定は変更なし。今回の変更は文書のみ、開発branchへ[skip ci]でpush。
+
+## 2026-09-19 追記 409 — 本人の依頼でSupabase問い合わせを作成、送信元確認待ち
+
+- 本人「問い合わせしてくれるか」に基づき、公式support@supabase.com宛てのGmail作成画面へ件名/本文を入力。
+  GitHub認証後のDashboard MFA待ち、登録アプリ未特定、対象project ref、正規の確認/復旧手順の相談のみ。
+  送信元がSupabase登録メールと一致するか未確認である旨、project/本番データの削除や変更を求めない旨を記載。
+  パスワード・認証コード・QR・APIキー・利用者情報・画面画像は含めない。
+- 既存Gmailの送信元を本人へ非同期質問で確認中。**送信ボタンは押していない。** 問い合わせ受付/復旧は未完了。
+  Chrome tab 596465254をhandoff保持。件名「Unable to complete Dashboard MFA — project ypnuxyfirlvbsqujocuy」。
+  再開時は送信元の回答を確認し、現在の宛先/本文を確認してから一度だけ送信、成功画面を検証する。
+- source/本番/認証設定/利用者データ変更なし。問い合わせ文書と引き継ぎだけ開発branchへ[skip ci]でpush。

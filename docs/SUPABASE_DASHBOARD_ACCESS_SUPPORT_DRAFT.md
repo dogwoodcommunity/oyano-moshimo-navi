@@ -1,11 +1,12 @@
 # Supabase管理画面の本人確認 — 問い合わせ下書き
 
-2026-09-19。未送信。登録アカウント/送信元を確認し、本人承認後に送る。
+2026-09-19。本人から問い合わせ依頼あり。Gmail作成画面へ入力済み、送信元アドレスの確認待ちで未送信。
+Supabase登録メールは未確認と明示する。送信成功の画面を確認するまでは送信済みと扱わない。
 認証コード・パスワード・APIキー・手帳データは添付しない。
 
 宛先: support@supabase.com
 
-件名: Unable to complete Dashboard MFA — guidance on available access recovery options
+件名: Unable to complete Dashboard MFA — project ypnuxyfirlvbsqujocuy
 
 本文:
 
@@ -13,9 +14,11 @@ Hello Supabase Support,
 
 I can complete the GitHub sign-in step, but the Supabase Dashboard then asks for a TOTP code from a factor named "Supabase TENSHOKU（iPhone）".
 
-I cannot locate this factor in my authenticator app or in Apple Passwords on my iPhone. I am not sure which app was used during enrollment. Could you advise what legitimate account-access or ownership-verification options are available in this situation?
+I cannot find an identifiable Supabase/TENSHOKU entry in Google Authenticator after checking my multiple Google accounts, or in Apple Passwords on my iPhone. I do not know which app was used when this factor was enrolled.
 
 The project I need to manage is `ypnuxyfirlvbsqujocuy` (oyano-moshimo-navi).
+
+I have not yet confirmed the email address associated with the GitHub-based Supabase account. Please advise what information you need to verify the account/project ownership and what legitimate access-recovery options are available.
 
 Please do not delete or recreate the project or change any production data. I understand that recovery may not be possible if all second factors have been lost. I am requesting guidance, not a bypass of MFA.
 
