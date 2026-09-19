@@ -15232,3 +15232,8 @@ https://mitene.us/
 - 公開手順/プライバシー/CI/source runnerを更新。開発branchを保存してPR CIへ進めるが、
   認証設定・新版配布・限定実送信の受入までマージ/本番反映しない。正式商用公開の残件も不変。
   保護対象のreview_exports/・未追跡レビュー2文書、現在の記録/写真/相談には触っていない。
+- ソース/検証/引き継ぎを`7796d3c572654ad0fc8ec2342b70c5c6eb21a018`でfeatureへpush。
+  staged 40ファイルのdiff checkとgitleaks検査が成功。draft PR #9を作成・タスク添付。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9
+  GitHub CI `35440317168` は最終確認時in_progress（成功未確認）。main未変更。
+  この記録だけ[skip ci]で追記pushし、再デプロイしない。

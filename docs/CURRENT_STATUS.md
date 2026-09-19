@@ -16,6 +16,9 @@
   「Supabase TENSHOKU（iPhone）」だが、遷移先projectはypnuxyfirlvbsqujocuy。
   本人へ認証アプリの6桁を画面に入力するよう案内。パスワード/コードは収集しない。
   公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406・407。本番は下記追記405のまま。
+  ソースcommit `7796d3c` をpushし、draft PR #9を作成。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9
+  CI `35440317168` は確認時in_progress。マージ/本番配信はしない。
 
 ## 前回完了・本番反映済み
 
