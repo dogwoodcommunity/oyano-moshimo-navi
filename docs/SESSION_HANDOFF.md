@@ -15249,3 +15249,12 @@ https://mitene.us/
   秘密値/保存済み資格情報/ブラウザprofile/実利用者情報は探索しない。公式のsupport@supabase.comを
   確認したが登録メール/送信元は未確認。送信やMFA解除/再登録は本人の確認なしに行わない。
   公式は全要素喪失時の復旧不可を明記しているが、現時点では全要素喪失を断定しない。
+- 本人「過去に開いてたならログインできるはず」で問い合わせ判断を保留し、既存ブラウザから確認。
+  Chrome哲也profileの対象tabはMFA待ち、別の既存Supabase tabはsign-in。Safariとアプリ内browserは
+  対象projectへ通常UIで遷移→Supabase sign-in（LAST USED GitHub）→GitHub再ログイン画面。
+  生きたSupabase管理sessionを確認できていない。ログアウト/cookie削除/credential抽出/認証迂回なし。
+- 現TENSHOKU checkoutのdocs/PRODUCTION_ENVIRONMENT.md:364–365に、2026-09-09のOwnerによる
+  Supabase MFA有効化記録を確認。もしもナビ追記382の9月6日MFA Disabledより後の記録。
+  factor名はTENSHOKUだが、登録アプリ/端末/メールの明示記録はなく保存先は未特定。
+  旧Desktop checkoutだけの検索では不十分だった。アプリの管理者MFAとDashboard MFAを混同しない。
+  問い合わせメールは送っていない。新規アカウント/設定解除/本番配信/利用者データ操作なし。
