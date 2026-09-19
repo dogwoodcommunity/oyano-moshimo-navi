@@ -28,7 +28,7 @@ assert.ok(firstGuard, "component has its loading/empty-state guard");
 // Expose actual lexical handlers inside this VM, including those whose button
 // is hidden/disabled; this tests their own guards independently of the DOM.
 const instrumented = source.slice(0, firstGuard.getStart(ast))
-  + "globalThis.__consultHandlers = { submit, recheckConsultSetup };\n"
+  + "globalThis.__consultHandlers = { submit, startFirstConsult, recheckConsultSetup };\n"
   + source.slice(firstGuard.getStart(ast));
 const compiled = ts.transpileModule(instrumented, {
   fileName: "ConsultPanel.tsx",
@@ -75,6 +75,8 @@ function harness(patch = {}, options = {}) {
     memoryMessage: "", deleteIntent: null, memoryDetailsOpen: false, ...patch
   };
   const requests = [];
+  const preparations = [];
+  let identityChecks = 0;
   const effects = [];
   const timers = [];
   const refs = [];
@@ -116,16 +118,22 @@ function harness(patch = {}, options = {}) {
       const method = init.method ?? "GET";
       requests.push({ url, method, ...init });
       if (method === "POST" && url === "/api/consult") {
+        if (options.postNetworkFailure) throw new Error("合成の通信中断");
+        if (options.postSuccess) return { ok: true, status: 200, json: async () => ({ answer: { summary: "合成の回答" } }) };
         return { ok: false, status: 503, json: async () => ({ message: "合成の送信失敗" }) };
+      }
+      if (method === "POST" && url === "/api/consult/memory/consent") {
+        return { ok: true, status: 200, json: async () => ({ consent: { active: true, revision: 2 }, canManageSharedMemory: true }) };
       }
       assert.equal(method, "GET", "entry/recheck never sends consent, notebook or memory writes");
       if (url.startsWith("/api/consult/memory/consent?")) {
-        return { ok: true, json: async () => ({ consent: { active: true, revision: 1 }, canManageSharedMemory: true }) };
+        return { ok: true, json: async () => ({ consent: { active: options.consentActive !== false, revision: 1 }, canManageSharedMemory: true }) };
       }
       if (url.startsWith("/api/consult/memory?")) {
         return { ok: true, json: async () => ({ ...payload, personId: new URLSearchParams(url.split("?")[1]).get("personId"), history: [] }) };
       }
       assert.equal(url, "/api/consult");
+      if (options.accessReadFailure) throw new Error("合成の利用枠取得失敗");
       return { ok: true, json: async () => clone(access) };
     },
     require(name) {
@@ -136,6 +144,16 @@ function harness(patch = {}, options = {}) {
       if (name === "@/components/NotebookMascot") return { NotebookMascot: () => React.createElement("span", { "aria-hidden": true }) };
       if (name === "@/components/MascotMotionPreference") return { useMascotMotionPreference: () => ({ enabled: false }) };
       if (name === "@/lib/browserSupabase") return { getBrowserSupabase: () => client };
+      if (name === "@/components/ConsultGuestCheck") return { ConsultGuestCheck: () => React.createElement("div", null, "合成の安全確認") };
+      if (name === "@/lib/consultNotebookPreparation") return { prepareConsultNotebook: async (input) => {
+        preparations.push(input);
+        input.assertCurrent();
+        if (options.prepareFailure) throw new Error("合成の保存失敗");
+        return { caseRecord: caseA, guest: Boolean(options.guest), authUserId: "synthetic-user", assertIdentity: async () => {
+          identityChecks++;
+          if (identityChecks === options.failIdentityAt) throw new Error("合成の本人変更");
+        } };
+      } };
       if (name === "@/lib/date") return { japanDateInputValue: () => "2026-09-19" };
       if (name === "@/lib/funnel") return { trackFunnel: () => {} };
       if (name === "@/lib/monitorSession") return { markMonitorActivity: () => {} };
@@ -150,7 +168,7 @@ function harness(patch = {}, options = {}) {
   };
   vm.runInNewContext(compiled, context);
   return {
-    state, requests, effects,
+    state, requests, effects, preparations,
     get handlers() { return context.__consultHandlers; },
     get localReads() { return localReads; },
     setLocalCases(value) { localCases = clone(value); },
@@ -188,8 +206,9 @@ for (const mode of ["temporary", "checking", "consent-required", "durable"]) {
   if (mode === "temporary" || mode === "consent-required") {
     const cta = one(flatten(composer), (node) => node.type === "button" && classIs(node, "consult-submit"), "preparation CTA");
     assert.equal(Boolean(cta.props.disabled), false);
-    cta.props.onClick();
-    assert.equal(h.state.memoryDetailsOpen, true, "CTA opens the explicit preparation disclosure");
+    await cta.props.onClick();
+    assert.equal(h.state.firstUseOpen, true, "CTA opens a brief in-place consent check, not separate setup");
+    assert.equal(h.state.memoryDetailsOpen, false);
     assert.equal(h.requests.length, 0, "preparation CTA must never send the consultation");
   }
   if (mode === "temporary") {
@@ -223,13 +242,68 @@ for (const patch of [
   const send = one(flatten(composer), (node) => node.type === "button" && classIs(node, "consult-submit"), "ready send");
   assert.equal(send.props.disabled, false);
   await send.props.onClick();
-  assert.equal(h.requests.length, 1, "ready explicit send reaches only the mocked consultation endpoint");
-  assert.equal(h.requests[0].method, "POST");
-  assert.deepEqual(JSON.parse(h.requests[0].body), {
+  assert.equal(h.requests.filter((request) => request.method === "POST").length, 1, "ready explicit send rechecks consent and memory before the mocked consultation endpoint");
+  assert.equal(h.requests.at(-1).method, "POST");
+  assert.deepEqual(JSON.parse(h.requests.find((request) => request.method === "POST" && request.url === "/api/consult").body), {
     question: original, personId: caseA.cloudPersonId, memoryConsentVersion: "synthetic-consent-version"
   });
   assert.equal(h.state.question, original, "failed send preserves the original draft");
   assert.equal(h.state.phase, "error");
+}
+
+for (const patch of [{ firstUseAccepted: false }, { requiresGuestSession: true, guestCapability: { enabled: false } },
+  { requiresGuestSession: true, guestCapability: { enabled: true, captchaSiteKey: "synthetic" }, captchaToken: "" },
+  { question: "" }, { phase: "loading" }]) {
+  const h = harness({ firstUseAccepted: true, ...patch });
+  h.render();
+  await h.handlers.startFirstConsult();
+  assert.equal(h.preparations.length, 0, "no preparation without explicit consent, question and safety check");
+  assert.equal(h.requests.length, 0);
+}
+{
+  const h = harness({ firstUseAccepted: true, requiresGuestSession: true,
+    guestCapability: { enabled: true, captchaSiteKey: "synthetic" }, captchaToken: "synthetic-captcha" }, { consentActive: false, guest: true });
+  h.render();
+  const draft = h.state.question;
+  await Promise.all([h.handlers.startFirstConsult(), h.handlers.startFirstConsult()]);
+  assert.equal(h.preparations.length, 1, "double click cannot provision or send twice");
+  assert.equal(h.preparations[0].allowCreate, true);
+  assert.equal(h.requests.filter((request) => request.method === "POST" && request.url === "/api/consult").length, 1);
+  assert.ok(h.requests.findIndex((request) => request.url === "/api/consult/memory/consent")
+    < h.requests.findIndex((request) => request.url === "/api/consult"), "consent persists before AI send");
+  assert.equal(h.state.question, draft, "AI error retains first-use draft");
+  assert.equal(h.state.guestSession, true);
+}
+for (const options of [{ prepareFailure: true }, { failIdentityAt: 1 }, { failIdentityAt: 2 }, { failIdentityAt: 3 }]) {
+  const h = harness({ firstUseAccepted: true }, { consentActive: false, ...options });
+  h.render();
+  const draft = h.state.question;
+  await h.handlers.startFirstConsult();
+  assert.equal(h.requests.filter((request) => request.method === "POST" && request.url === "/api/consult").length, 0,
+    "save/identity failures block the AI request");
+  assert.equal(h.state.question, draft);
+  assert.equal(h.state.phase, "error");
+}
+
+for (const options of [{ postSuccess: true, failIdentityAt: 4 }, { postNetworkFailure: true }]) {
+  const h = harness(ready, options);
+  h.render();
+  const draft = h.state.question;
+  await h.handlers.submit();
+  assert.equal(h.requests.filter((request) => request.method === "POST" && request.url === "/api/consult").length, 1);
+  assert.equal(h.state.question, draft, "uncertain post-send result retains the draft");
+  assert.equal(h.state.phase, "error");
+  assert.match(h.state.errorMessage, /届いている可能性.*再送する前に.*相談履歴/);
+  assert.doesNotMatch(h.state.errorMessage, /送信していません|もう一度相談/);
+}
+{
+  const h = harness(ready, { postSuccess: true, accessReadFailure: true });
+  h.render();
+  await h.handlers.submit();
+  assert.equal(h.state.phase, "done", "quota-read failure must not turn a saved answer into a failed send");
+  assert.equal(h.state.turns.length, 1);
+  assert.equal(h.state.question, "");
+  assert.equal(h.state.errorMessage, "");
 }
 
 for (const patch of [ready, { memoryMode: "checking" }, { phase: "loading" },

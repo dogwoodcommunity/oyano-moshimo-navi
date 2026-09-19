@@ -13,6 +13,7 @@ export type FamilyContext = {
   user: UserClient;
   userId: string;
   email: string | null;
+  isAnonymous: boolean;
 };
 
 export type FamilySelectionErrorCode = "family_selection_required" | "family_access_denied" | "family_not_ready";
@@ -54,7 +55,7 @@ export async function resolveFamilyContext(request: Request): Promise<FamilyCont
   const user = getUserSupabase(token);
   if (!user) return cloudUnavailable();
 
-  return { service, user, userId: data.user.id, email: data.user.email ?? null };
+  return { service, user, userId: data.user.id, email: data.user.email ?? null, isAnonymous: data.user.is_anonymous === true };
 }
 
 /**

@@ -19,6 +19,9 @@ export async function POST(request: Request) {
 
   const context = await resolveFamilyContext(request);
   if (context instanceof NextResponse) return context;
+  if (context.isAnonymous) {
+    return NextResponse.json({ error: "registered_account_required", message: "家族の招待に参加する前に、手帳からメールを登録してください。" }, { status: 403 });
+  }
 
   let payload: { token?: unknown };
   try {

@@ -15156,3 +15156,42 @@ https://mitene.us/
   未送信文は消える仕様は変更なし。本人確認・同意を省略して匿名AIへ戻す変更も行っていない。
 - CURRENT_STATUSと本追記を文書だけ[skip ci]でmainへpushし、再デプロイはしない。
   未追跡Claude_FULL2文書・review_exports/、課金・環境秘密値・正式商用公開の保留条件は変更なし。
+
+## 2026-09-19 追記 406 — 初回メール設定なしの相談を開発、認証互換性の公開ゲートを明示
+
+- 本人の「作り直して」で、main e5032f6からcodex/consult-guest-entryへ分離。
+  入力→その場の短い同意→選択中の手帳を本人の保存先へ同期→長期記憶を使った回答、へ変更。
+  設定ページへの往復を不要にし、メール追加は同じゲスト本人へ後から任意。ゲストを一時AIにはしない。
+  初回同意前・画面表示だけでは作成/保存/AI送信なし。写真の画像は初回同期から除外。
+- consultNotebookPreparationでread-first、authUserId/familyId/personId、ローカル内容・削除状態を
+  各await前後に検証。選択した対象者だけ500件ずつ同期し、scopeをbinding.caseIdsへ永続化。
+  Homeの自動/手動同期にもscopeを適用し、メール追加後も他の手帳を自動送信しない。
+  既存クラウド手帳の失効ログインを新規ゲストで置き換えない。下書きは失敗時に維持する。
+- ConsultPanelは連打防止・明示同意・最新同期・本人照合後に既存相談APIへ送信。
+  POST後の状態変更/通信不明では再送を勧めず、元の保存先の相談履歴確認を案内。
+  回答成功後の利用枠GET失敗は回答の失敗扱いにしない。無料枠・外部AI/長期記憶・権限は従来どおり。
+- 新規/api/consult/guestは既定OFF、同一origin/小さなJSON/Turnstileトークン必須。
+  既存原子的DB rate RPCでIPハッシュ3件/日・API全体50件/日、DB障害時は拒否。
+  Supabase public signInAnonymouslyへCAPTCHAを渡す。service roleはrate RPCのみ、作成には使わない。
+  Auth直接signupはこの上限を迂回できるので、プロバイダー側の濫用制限は別途必須。
+- 家族招待作成/参加・写真アップロードはguest拒否。APIと招待RPC3定義を更新。
+  consult_guest_restrictions.sqlでhome-photosへのguest INSERT/UPDATEをrestrictive policyで拒否。
+  登録済みの既存RLS/他bucket/既存read/delete権限は変更しない。回帰SQLを既存CI runnerに追加。
+- source-only 45/45、Web型・lint・production build成功。lintは既存img/hook警告、エラーなし。
+  prepare実helper70シナリオ、実TSX/SSR/handler、実Home/helperの合成テストを追加。
+  最終の送信後不明/利用枠GET失敗のhandler回帰も成功。git diff --check成功。
+- 隔離Chrome320/390/1280pxで初回同意→相談→回答→reload同一履歴、保存失敗で下書き保持を確認。
+  横溢れ/pageerrorなし。390px同意画面を目視確認。Supabase/Turnstile/APIは代替応答、実外部通信0。
+  一時script /private/tmp/verify-oyano-guest-consult.mjs、画像 oyano-guest-consent/answer-{320,390,1280}.png。
+- 独立担当が隔離PostgreSQL17.11・Unix socketのみでbootstrap→schema/RLS→招待→制限SQL2回→
+  regression→admin_auth_hardening→regression→free_plan_member_limit→regressionを実行しexit0。
+  guest拒否・登録済み互換性・別bucket不変更を確認。DBは停止済み。起動停止ログ
+  /private/tmp/oyano-guest-guard.e9XVIu/postgres.log。SQL個別出力ファイルは未保存。
+- **本番有効化は未完了。** 公式資料/実装を確認し、Supabase CAPTCHAはsignupだけでなくOTP/
+  magic-linkにも適用と判明。現行Web7導線/Mobile3導線はcaptchaToken未対応。
+  設定をONにするだけでは既存ログインを壊すため、追加実装と実環境受入が必要。
+  docs/CONSULT_GUEST_RELEASE.mdに必要作業・適用順・費用/実送信の承認・復元/削除受入を記載。
+  本番認証設定・DB適用・実メール/AI・main統合/デプロイは行わない。flagはfalse。
+- CURRENT_STATUS/本追記と公開手順を更新し、feature branchへcommit/push。
+  GitHub CIはmain/PR限定のため、このbranch pushだけでは未実行。本番は追記405のまま。
+  review_exports/、未追跡レビュー2文書、既存利用者の記録・写真・相談・課金/環境設定は触っていない。

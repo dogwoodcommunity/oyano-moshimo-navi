@@ -101,6 +101,8 @@ export type DiaryEntry = {
 export type NotebookCloudBinding = {
   version: 1;
   authUserId: string;
+  /** When present, only explicitly consented local notebooks may auto-sync. */
+  caseIds?: string[];
   familyId: string | null;
   email?: string;
 };
@@ -563,6 +565,9 @@ export function readNotebookCloudBinding(): NotebookCloudBinding | null {
       version: 1,
       authUserId: parsed.authUserId,
       familyId: typeof parsed.familyId === "string" && parsed.familyId ? parsed.familyId : null,
+      ...(Object.prototype.hasOwnProperty.call(parsed, "caseIds") ? {
+        caseIds: Array.isArray(parsed.caseIds) ? parsed.caseIds.filter((id): id is string => typeof id === "string" && Boolean(id)) : []
+      } : {}),
       ...(typeof parsed.email === "string" && parsed.email ? { email: parsed.email } : {})
     };
   } catch {
@@ -575,7 +580,9 @@ export function writeNotebookCloudBinding(binding: NotebookCloudBinding): boolea
   if (!storage) return false;
   if (reconciliationArchiveFromStorage(storage)?.status === "installing") return false;
   try {
-    storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify(binding));
+    const previous = readNotebookCloudBinding();
+    const scope = binding.caseIds ?? (previous?.authUserId === binding.authUserId ? previous.caseIds : undefined);
+    storage.setItem(NOTEBOOK_CLOUD_BINDING_STORAGE_KEY, JSON.stringify({ ...binding, ...(scope ? { caseIds: scope } : {}) }));
     return true;
   } catch {
     lastNotebookStorageWarning = storageWarningMessage();

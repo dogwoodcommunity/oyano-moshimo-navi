@@ -7,7 +7,7 @@ import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { NotebookMascot } from "@/components/NotebookMascot";
 import { useMascotMotionPreference } from "@/components/MascotMotionPreference";
 import { NotebookReconciliation } from "@/components/NotebookReconciliation";
-import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendNotebookMagicLink } from "@/lib/browserSupabase";
+import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, linkGuestNotebookEmail, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { truncateDisplayText } from "@/lib/displayText";
 import { hasUnsavedDiaryEdit, hasUnsavedNewDiaryInput, UNSAVED_DIARY_WARNING } from "@/lib/diaryUnsavedChanges";
@@ -1219,8 +1219,11 @@ export default function FamilyBoardPage() {
   const [activeNotebookTab, setActiveNotebookTab] = useState<NotebookTab>("record");
   const [loaded, setLoaded] = useState(false);
   const [cloudEmail, setCloudEmail] = useState("");
+  const [cloudEmailSending, setCloudEmailSending] = useState(false);
+  const [cloudEmailMessage, setCloudEmailMessage] = useState("");
   const [cloudUserId, setCloudUserId] = useState<string | null>(null);
   const [cloudUserEmail, setCloudUserEmail] = useState<string | null>(null);
+  const [cloudIsGuest, setCloudIsGuest] = useState(false);
   const [cloudFamilyId, setCloudFamilyId] = useState<string | null>(null);
   const [cloudFamilies, setCloudFamilies] = useState<CloudFamilyOption[]>([]);
   const [cloudMemberRole, setCloudMemberRole] = useState<CloudFamilyOption["role"] | null>(null);
@@ -1307,9 +1310,10 @@ export default function FamilyBoardPage() {
     let mounted = true;
     void completeBrowserSupabaseAuthFromUrl().then(({ handled, session, error }) => {
       if (!mounted) return;
-      if (error) {
+      if (error && !session) {
         setCloudStatus("error");
         setCloudMessage(`メール確認に失敗しました: ${error}`);
+        setCloudEmailMessage(`メール確認に失敗しました: ${error}`);
         return;
       }
       const nextUserId = session?.user.id ?? null;
@@ -1329,13 +1333,20 @@ export default function FamilyBoardPage() {
       }
       lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
+      setCloudIsGuest(session?.user.is_anonymous === true);
       setCloudUserId(nextUserId);
       setCloudEmail((current) => current || session?.user.email || "");
       setCloudStatus("idle");
-      if (handled && session) {
-        setCloudMessage("メール確認できました。この手帳は変更のたびにクラウドへ自動保存されます。");
+      if (error) {
+        setCloudStatus("error");
+        setCloudMessage(`メール確認に失敗しました: ${error}`);
+        setCloudEmailMessage(`メール確認に失敗しました: ${error}`);
+      } else if (session?.user.is_anonymous === true) {
+        setCloudMessage("ゲストとして保存先を確認しています。メール未登録の間は、このブラウザのログイン情報を失うと手帳を復元できません。");
+      } else if (handled && session) {
+        setCloudMessage("メール確認できました。この手帳のクラウド保存先を確認しています。");
       } else if (session) {
-        setCloudMessage("ログイン済みです。この手帳は変更のたびにクラウドへ自動保存されます。");
+        setCloudMessage("ログイン済みです。この手帳のクラウド保存先を確認しています。");
       }
     });
 
@@ -1357,8 +1368,12 @@ export default function FamilyBoardPage() {
       }
       lastAuthUserIdRef.current = nextUserId;
       setCloudUserEmail(session?.user.email ?? null);
+      setCloudIsGuest(session?.user.is_anonymous === true);
       setCloudUserId(nextUserId);
       setCloudEmail((current) => current || session?.user.email || "");
+      if (_event === "USER_UPDATED" && session && session.user.is_anonymous !== true && session.user.email) {
+        setCloudEmailMessage("メール登録を確認できました。クラウドへ保存済みの手帳は、このメールアドレスで復元できます。");
+      }
       if (!session) {
         firstCloudLoadDoneRef.current = false;
         lastSyncedPayloadRef.current = "";
@@ -1386,6 +1401,11 @@ export default function FamilyBoardPage() {
   const cloudRoleIsBound = Boolean(
     cloudUserId && cloudIdentityStatus === "ready" && cloudMemberRole
   );
+  const cloudScopeCaseIds = readNotebookCloudBinding()?.caseIds;
+  const activeCaseInCloudScope = !cloudScopeCaseIds || Boolean(activeCase && cloudScopeCaseIds.includes(activeCase.id));
+  const cloudIsBound = Boolean(cloudUserId && cloudIdentityStatus === "ready"
+    && activeCaseInCloudScope && (!cloudIsGuest || activeCase?.cloudPersonId));
+  const cloudCanRecoverByEmail = Boolean(cloudUserEmail && !cloudIsGuest);
   const cloudContentReadOnly = reconciliationBusy || (cloudRoleIsBound && cloudMemberRole === "viewer");
   const cloudProfileReadOnly = reconciliationBusy || (cloudRoleIsBound
     && (cloudMemberRole === "member" || cloudMemberRole === "viewer"));
@@ -1476,7 +1496,7 @@ export default function FamilyBoardPage() {
   const todayRows = notebookInsight?.alerts.slice(0, 2) ?? [];
   const journeyCards = activeCase ? buildJourneyCards(activeEntries, activeProfile) : [];
   const supportActions = activeCase ? buildSupportActions(activeCase.id, activeEntries, activeProfile, activeTasks, activeProfileCompletion) : [];
-  const isSharedFamilyMember = Boolean(cloudUserEmail && !canManageFamilyBilling);
+  const isSharedFamilyMember = Boolean(cloudUserId && !canManageFamilyBilling);
   const visibleSupportActions = isSharedFamilyMember ? supportActions.filter((action) => action.href !== "/plans") : supportActions;
   const recordDigest = activeCase ? buildRecordDigest(activeEntries, activeProfile) : undefined;
   const openTasks = activeTasks.filter((task) => (task.progress ?? "todo") !== "done");
@@ -1856,7 +1876,7 @@ export default function FamilyBoardPage() {
     const imageFiles = allFiles.filter((file) => file.type.startsWith("image/")).slice(0, slots);
     const ignoredCount = allFiles.length - imageFiles.length;
     const prepared = (await Promise.all(imageFiles.map(prepareLocalPhoto))).filter(Boolean) as PreparedPhoto[];
-    const uploadedPrepared = await Promise.all(prepared.map(uploadPreparedPhoto));
+    const uploadedPrepared = await Promise.all(prepared.map((item) => uploadPreparedPhoto(item, caseId)));
     const warnings = uploadedPrepared.map((item) => item.warning).filter(Boolean) as string[];
     const uploadedCount = uploadedPrepared.filter((item) => item.attachment.uploadStatus === "uploaded").length;
 
@@ -1878,8 +1898,12 @@ export default function FamilyBoardPage() {
     }
   }
 
-  async function uploadPreparedPhoto(item: PreparedPhoto): Promise<PreparedPhoto> {
-    if (!cloudUserEmail) return item;
+  async function uploadPreparedPhoto(item: PreparedPhoto, caseId: string): Promise<PreparedPhoto> {
+    const binding = readNotebookCloudBinding();
+    if (!cloudUserId || cloudIdentityStatus !== "ready"
+        || (binding?.caseIds && !binding.caseIds.includes(caseId))
+        || (cloudIsGuest && !listLocalCases().some((record) => record.id === caseId && record.cloudPersonId))
+        || !notebookCloudBindingMatches(binding, cloudUserId, cloudFamilyId)) return item;
 
     const client = getBrowserSupabase();
     if (!client) return item;
@@ -2701,11 +2725,18 @@ export default function FamilyBoardPage() {
       .filter((caseRecord) => blockedCloudCaseSyncIdsRef.current.has(caseRecord.id)
         || isPersonNotebookCloudSyncBlocked(caseRecord.id))
       .map((caseRecord) => caseRecord.id));
+    // Guest consent applies to each person chosen in Consult. A global auth
+    // binding must not upload other local notebooks, even after email linking.
+    const scopedCaseIds = readNotebookCloudBinding()?.caseIds;
+    const eligibleCases = nextCases.filter((caseRecord) => !blockedCaseIds.has(caseRecord.id)
+      && (!scopedCaseIds || scopedCaseIds.includes(caseRecord.id))
+      && (!cloudIsGuest || Boolean(caseRecord.cloudPersonId)));
+    const eligibleCaseIds = new Set(eligibleCases.map((caseRecord) => caseRecord.id));
     return {
-      cases: nextCases.filter((caseRecord) => !blockedCaseIds.has(caseRecord.id)),
+      cases: eligibleCases,
       diaryEntries: diaryEntriesForNotebookSync(
         diaryEntriesAllowedForCloudSync(nextDiaryEntries)
-          .filter((entry) => !blockedCaseIds.has(entry.caseId)
+          .filter((entry) => (!(cloudIsGuest || scopedCaseIds) || eligibleCaseIds.has(entry.caseId)) && !blockedCaseIds.has(entry.caseId)
             && !blockedCloudCaseSyncIdsRef.current.has(entry.caseId)
             && !isPersonNotebookCloudSyncBlocked(entry.caseId))
       )
@@ -2726,12 +2757,12 @@ export default function FamilyBoardPage() {
 
     const { data } = await client.auth.getSession();
     const token = data.session?.access_token;
-    if (!token) {
+    if (!token || data.session?.user.id !== cloudUserId) {
       if (options.silent) {
         setCloudAutoStatus("idle");
       } else {
         setCloudStatus("error");
-        setCloudMessage("先にメール確認をしてください。確認後、この画面に戻ると保存できます。");
+        setCloudMessage("ログイン状態を確認できません。相談画面またはメール確認から、保存先を確認してください。");
       }
       return null;
     }
@@ -2740,24 +2771,30 @@ export default function FamilyBoardPage() {
   }
 
   async function requestCloudLink() {
+    if (cloudEmailSending) return;
     const email = cloudEmail.trim();
     if (!email) {
-      setCloudStatus("error");
-      setCloudMessage("クラウド保存に使うメールアドレスを入力してください。");
+      setCloudEmailMessage("クラウド保存に使うメールアドレスを入力してください。");
       return;
     }
 
-    setCloudStatus("sending");
-    setCloudMessage("本人確認メールを送っています。");
-    const result = await sendNotebookMagicLink(email);
+    const authGeneration = cloudAuthGenerationRef.current;
+    const linkingGuest = cloudIsGuest && Boolean(cloudUserId);
+    setCloudEmailSending(true);
+    setCloudEmailMessage("本人確認メールを送っています。");
+    const result = linkingGuest && cloudUserId
+      ? await linkGuestNotebookEmail(email, cloudUserId)
+      : await sendNotebookMagicLink(email);
+    setCloudEmailSending(false);
+    if (authGeneration !== cloudAuthGenerationRef.current) return;
     if (!result.ok) {
-      setCloudStatus("error");
-      setCloudMessage(result.error ?? "本人確認メールを送れませんでした。");
+      setCloudEmailMessage(result.error ?? "本人確認メールを送れませんでした。");
       return;
     }
 
-    setCloudStatus("sent");
-    setCloudMessage("本人確認メールを送りました。メール内のリンクを開くと、この手帳をクラウドへ保存できます。");
+    setCloudEmailMessage(linkingGuest
+      ? "メール登録の確認メールを送りました。今のブラウザを残したまま、メール内のリンクを開いてください。確認完了まではブラウザのログイン情報を失うと復元できません。"
+      : "本人確認メールを送りました。メール内のリンクを開くと、この手帳をクラウドへ保存できます。");
   }
 
   function applyFamilyBillingState(result: { canManageFamilyBilling?: unknown; isFamilyOwner?: unknown }) {
@@ -2791,7 +2828,7 @@ export default function FamilyBoardPage() {
   }
 
   function confirmCurrentNotebookCloudBinding() {
-    if (!cloudUserId || !cloudUserEmail) return;
+    if (!cloudUserId || !cloudUserEmail || cloudIsGuest) return;
     const familyName = cloudFamilies.find((family) => family.id === cloudFamilyId)?.name;
     const destination = familyName ? `${familyName}（${cloudUserEmail}）` : cloudUserEmail;
     if (!window.confirm(`この端末にある手帳を「${destination}」のクラウド保存へ紐づけます。よろしいですか？`)) return;
@@ -2809,7 +2846,9 @@ export default function FamilyBoardPage() {
   async function syncNotebookToCloud(options: { silent?: boolean; payload?: NotebookSyncPayload } = {}) {
     if (reconciliationBusy) return;
     const authGeneration = cloudAuthGenerationRef.current;
-    const payload = options.payload ?? notebookSyncPayload();
+    const payload = options.payload
+      ? notebookSyncPayload(options.payload.cases, options.payload.diaryEntries)
+      : notebookSyncPayload();
     if (diaryCloudDeletionInFlightRef.current || personNotebookDeletionInFlightRef.current) {
       if (options.silent) pendingAutoSyncPayloadRef.current = payload;
       return;
@@ -3146,6 +3185,27 @@ export default function FamilyBoardPage() {
       else setCloudMemberRole(null);
       writePlan(typeof result.plan === "string" ? result.plan : null);
       applyFamilyBillingState(result);
+      const currentPayload = notebookSyncPayload();
+      // Unsynced guest notebooks are excluded from the upload payload but must
+      // remain local when restoring the consented notebooks from cloud.
+      const hasLocalNotebook = listLocalCases().length > 0 || currentPayload.diaryEntries.length > 0;
+      const hasRemoteNotebook = restoredCases.length > 0 || restoredEntries.length > 0;
+      const binding = readNotebookCloudBinding();
+      const bindingMatches = notebookCloudBindingMatches(binding, cloudUserId, resolvedFamilyId);
+      if (hasLocalNotebook && binding?.authUserId && binding.authUserId !== cloudUserId) {
+        setCloudIdentityStatus("different-account");
+        setCloudAutoStatus("error");
+        setCloudStatus("error");
+        setCloudMessage("この端末の手帳は別のログインアカウントに紐づいています。今のアカウントへは送信していません。元のアカウントへ戻すか、先に手帳をダウンロードして新規画面へ切り替えてください。");
+        return;
+      }
+      if (cloudIsGuest && !bindingMatches) {
+        setCloudIdentityStatus("blocked");
+        setCloudAutoStatus("idle");
+        setCloudStatus("idle");
+        setCloudMessage("この手帳のゲスト保存への同意を確認できません。相談画面から保存する内容を確認してください。端末の手帳は送信していません。");
+        return;
+      }
       if (options.identityOnly) {
         cloudIdentityOnlyRef.current = false;
         if (!bindNotebookToCurrentIdentity(resolvedFamilyId)) return;
@@ -3154,20 +3214,6 @@ export default function FamilyBoardPage() {
         setCloudMessage("新規画面で表示しています。ここから作る手帳だけを、確認済みのクラウド保存先へ保存します。");
         return;
       }
-      const currentPayload = notebookSyncPayload();
-      const hasLocalNotebook = currentPayload.cases.length > 0 || currentPayload.diaryEntries.length > 0;
-      const hasRemoteNotebook = restoredCases.length > 0 || restoredEntries.length > 0;
-      const binding = readNotebookCloudBinding();
-      const bindingMatches = notebookCloudBindingMatches(binding, cloudUserId, resolvedFamilyId);
-
-      if (hasLocalNotebook && binding?.authUserId && binding.authUserId !== cloudUserId) {
-        setCloudIdentityStatus("different-account");
-        setCloudAutoStatus("error");
-        setCloudStatus("error");
-        setCloudMessage("この端末の手帳は別のログインアカウントに紐づいています。今のアカウントへは送信していません。元のアカウントへ戻すか、先に手帳をダウンロードして新規画面へ切り替えてください。");
-        return;
-      }
-
       const canAdoptExistingIdentity = canAdoptNotebookCloudIdentity({
         remoteCases: restoredCases,
         localCases: currentPayload.cases
@@ -3229,7 +3275,7 @@ export default function FamilyBoardPage() {
   }
 
   useEffect(() => {
-    if (!loaded || !cloudUserEmail || !cloudUserId || reconciliationBusy || firstCloudLoadDoneRef.current) return;
+    if (!loaded || !cloudUserId || reconciliationBusy || firstCloudLoadDoneRef.current) return;
 
     firstCloudLoadDoneRef.current = true;
     if (skipInitialCloudRestoreRef.current) {
@@ -3245,12 +3291,11 @@ export default function FamilyBoardPage() {
     // Always identify the exact auth user/family and read the cloud first.
     // Local data is never POSTed merely because an auth session exists.
     void restoreNotebookFromCloud({ silent: true });
-  }, [loaded, cloudUserEmail, cloudUserId, reconciliationBusy]);
+  }, [loaded, cloudUserId, cloudIsGuest, reconciliationBusy]);
 
   useEffect(() => {
     if (
       !loaded
-      || !cloudUserEmail
       || !cloudUserId
       || cloudIdentityStatus !== "ready"
       || !firstCloudLoadDoneRef.current
@@ -3274,7 +3319,7 @@ export default function FamilyBoardPage() {
         autoSyncTimerRef.current = null;
       }
     };
-  }, [loaded, cloudUserEmail, cloudUserId, cloudIdentityStatus, cloudFamilyId, cases, diaryEntries]);
+  }, [loaded, cloudUserId, cloudIdentityStatus, cloudFamilyId, cases, diaryEntries]);
 
   function downloadNotebookExport() {
     const data = exportNotebookData();
@@ -3414,12 +3459,13 @@ export default function FamilyBoardPage() {
                   <span aria-live="polite">{greetingPulse % 2 ? "よろしく" : "どうぞ"}</span>
                 </button>
                 <p className="notebook-welcome">今日のこと、ひとことから。</p>
-                <p className={`record-first-storage ${cloudUserEmail && cloudIdentityStatus === "ready" ? "is-cloud" : "is-device"}`}>
-                  {cloudUserEmail && cloudIdentityStatus === "ready"
+                <p className={`record-first-storage ${cloudIsBound ? "is-cloud" : "is-device"}`}>
+                  {cloudIsBound
                     ? lastCloudSyncedAt
                       ? `クラウドにも保存済み · ${cloudSyncTimeLabel(lastCloudSyncedAt)}`
                       : "この端末とクラウドに保存"
                     : "今はこの端末に保存"}
+                  {cloudIsBound && cloudIsGuest ? " · メール未登録・ブラウザのログイン情報を失うと復元できません" : ""}
                 </p>
               </div>
               <div className="readable-entry-list" aria-label="手帳でできる3つのこと">
@@ -3540,7 +3586,7 @@ export default function FamilyBoardPage() {
               <summary>
                 <img src="/brand/watch-bird-mark.svg" alt="" aria-hidden="true" />
                 <span>手帳データの保存先</span>
-                <strong>{cloudUserEmail && cloudIdentityStatus === "ready" ? "この端末とクラウドに保存" : "今はこの端末だけに保存"}</strong>
+                <strong>{cloudIsBound ? cloudIsGuest ? "クラウド保存中・メール未登録" : "この端末とクラウドに保存" : "今はこの端末だけに保存"}</strong>
               </summary>
               <article className={`nb-card cloud-backup-card cloud-guard-card is-${cloudStatus}`} aria-label="手帳データの保存先">
                 <div className="cloud-backup-head">
@@ -3549,16 +3595,26 @@ export default function FamilyBoardPage() {
                   </div>
                   <div>
                     <p className="nb-eyebrow">手帳データの保存先</p>
-                    <h2>{cloudUserEmail && cloudIdentityStatus === "ready" ? "この手帳はクラウドにも保存されています" : "今はこの端末だけに保存されています"}</h2>
+                    <h2>{cloudIsBound ? "この手帳はクラウドにも保存されています" : "今はこの端末だけに保存されています"}</h2>
                     <p>
-                      {cloudUserEmail && cloudIdentityStatus === "ready"
-                        ? "プロフィール、日記、写真メモ、確認リストの変更はクラウドへ自動保存されます。"
+                      {cloudIsBound
+                        ? cloudIsGuest
+                          ? "相談で保存したこの人の手帳を、クラウドにも自動保存します。メール未登録の間は、ブラウザのデータ削除・ログイン情報の消失・機種変更のあとに復元できません。メール登録は任意です。"
+                          : "プロフィール、日記、写真メモ、確認リストの変更はクラウドへ自動保存されます。"
+                        : cloudIsGuest || cloudScopeCaseIds
+                          ? `この人の手帳はまだ端末内だけにあります。相談画面でこの人の手帳を選び、保存する内容を確認するとクラウドにも保存できます。${cloudIsGuest ? "メール未登録の間は、ブラウザのログイン情報を失うと復元できません。" : ""}`
                         : "クラウド保存とは、手帳の控えをインターネット上にも残す機能です。記録の変更を自動で控えに残し、履歴削除・機種変更・端末故障のあとも、メール確認で手帳を戻せます。使うかどうかは任意です。"}
                     </p>
                   </div>
                 </div>
-                <ul className="cloud-trust-list" aria-label={cloudUserEmail && cloudIdentityStatus === "ready" ? "クラウド保存でできること" : "クラウド保存をおすすめする理由"}>
-                  {cloudUserEmail && cloudIdentityStatus === "ready" ? (
+                <ul className="cloud-trust-list" aria-label={cloudIsBound ? "クラウド保存でできること" : "クラウド保存をおすすめする理由"}>
+                  {cloudIsGuest ? (
+                    <>
+                      <li>ゲストのログイン情報が残る、このブラウザで利用できます</li>
+                      <li>復元に備えるには、任意のメール登録と確認が必要です</li>
+                      <li>メール登録だけで家族に共有されることはありません</li>
+                    </>
+                  ) : cloudIsBound ? (
                     <>
                       <li>変更のたびにクラウドへ自動保存します</li>
                       <li>機種変更後もメール確認で復元できます</li>
@@ -3572,10 +3628,10 @@ export default function FamilyBoardPage() {
                     </>
                   )}
                 </ul>
-                {cloudUserEmail ? (
+                {cloudUserId ? (
                   <div className="cloud-linked-box">
                     <span>クラウド保存先</span>
-                    <strong>{cloudUserEmail}</strong>
+                    <strong>{cloudIsGuest ? "ゲスト（メール未登録）" : cloudUserEmail ?? "確認済みのアカウント"}</strong>
                     {cloudMemberRole ? (
                       <small>
                         この家族での権限: {cloudMemberRole === "owner"
@@ -3590,7 +3646,9 @@ export default function FamilyBoardPage() {
                     <div className={`cloud-auto-line is-${cloudAutoStatus}`}>
                       <span aria-hidden="true" />
                       <em>
-                        {cloudAutoStatus === "saving"
+                        {(cloudIsGuest || cloudScopeCaseIds) && !cloudIsBound
+                          ? "この人の手帳はまだクラウドに保存していません"
+                          : cloudAutoStatus === "saving"
                           ? "自動保存中です"
                           : cloudAutoStatus === "error"
                             ? "自動保存を確認してください"
@@ -3600,10 +3658,11 @@ export default function FamilyBoardPage() {
                       </em>
                     </div>
                   </div>
-                ) : (
+                ) : null}
+                {!cloudCanRecoverByEmail ? (
                   <div className="cloud-form">
                     <label>
-                      <span>クラウド保存に使うメールアドレス</span>
+                      <span>{cloudIsGuest ? "復元に備えるメールアドレス（任意）" : "クラウド保存に使うメールアドレス"}</span>
                       <input
                         inputMode="email"
                         placeholder="例: family@example.com"
@@ -3612,11 +3671,12 @@ export default function FamilyBoardPage() {
                         onChange={(event) => setCloudEmail(event.target.value)}
                       />
                     </label>
-                    <button type="button" onClick={requestCloudLink} disabled={cloudStatus === "sending"}>
-                      {cloudStatus === "sending" ? "送信中" : "メールでクラウド保存を始める"}
+                    <button type="button" onClick={requestCloudLink} disabled={cloudEmailSending}>
+                      {cloudEmailSending ? "送信中" : cloudIsGuest ? "このゲストにメールを登録する" : "メールでクラウド保存を始める"}
                     </button>
                   </div>
-                )}
+                ) : null}
+                {cloudEmailMessage ? <p className="cloud-message" role="status">{cloudEmailMessage}</p> : null}
                 {cloudIdentityStatus === "family-selection" ? (
                   <div className="cloud-form" aria-label="クラウド保存先の家族を選ぶ">
                     <span>保存先の家族を選んでください</span>
@@ -3627,7 +3687,7 @@ export default function FamilyBoardPage() {
                     ))}
                   </div>
                 ) : null}
-                {cloudIdentityStatus === "needs-confirmation" && cloudUserEmail ? (
+                {cloudIdentityStatus === "needs-confirmation" && cloudCanRecoverByEmail ? (
                   <div className="cloud-form">
                     <button type="button" onClick={confirmCurrentNotebookCloudBinding}>
                       {cloudUserEmail}に紐づけて保存
@@ -3636,10 +3696,10 @@ export default function FamilyBoardPage() {
                 ) : null}
                 <p className="cloud-message">{cloudMessage}</p>
                 <div className="cloud-action-row">
-                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={reconciliationBusy || !cloudUserEmail || cloudIdentityStatus !== "ready" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => syncNotebookToCloud()} disabled={reconciliationBusy || !cloudUserId || cloudIdentityStatus !== "ready" || !cloudIsBound || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     今すぐ保存
                   </button>
-                  <button type="button" onClick={() => restoreNotebookFromCloud({ familyId: cloudFamilyId })} disabled={reconciliationBusy || !cloudUserEmail || cloudIdentityStatus === "different-account" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
+                  <button type="button" onClick={() => restoreNotebookFromCloud({ familyId: cloudFamilyId })} disabled={reconciliationBusy || !cloudUserId || cloudIdentityStatus === "different-account" || cloudStatus === "syncing" || cloudAutoStatus === "saving"}>
                     復元
                   </button>
                   <button type="button" onClick={downloadNotebookExport}>
@@ -4047,7 +4107,7 @@ export default function FamilyBoardPage() {
                   <div>
                     <span>保存しました</span>
                     <strong>{formatLongDate(savedDiaryEntry.date)}の記録をこの端末に保存しました。</strong>
-                    <p>{cloudUserEmail && cloudIdentityStatus === "ready" ? "クラウドにも自動保存します。" : "過去の記録からいつでも見返せます。"}</p>
+                    <p>{cloudIsBound ? "クラウドにも自動保存します。" : "過去の記録からいつでも見返せます。"}</p>
                   </div>
                 </div>
                 <div className="diary-save-complete-body">

@@ -78,6 +78,9 @@ run_sql supabase/family_owner_succession.sql
 run_sql supabase/production_pending_hardening.sql
 run_sql supabase/api_grants.sql
 run_sql supabase/family_invite_contract_regression.sql
+run_sql supabase/consult_guest_restrictions.sql
+run_sql supabase/consult_guest_restrictions.sql
+run_sql supabase/consult_guest_restrictions_regression.sql
 run_sql supabase/family_first_creation_concurrency_setup.sql
 
 docker exec "$REGRESSION_CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c \

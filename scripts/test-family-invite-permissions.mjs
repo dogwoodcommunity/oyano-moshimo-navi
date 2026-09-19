@@ -66,6 +66,8 @@ for (const [name, sql] of [
   ["admin_auth_hardening.sql", adminHardeningSql],
   ["free_plan_member_limit.sql", freePlanSql]
 ]) {
+  assert.equal((sql.match(/if coalesce\(\(auth\.jwt\(\)->>'is_anonymous'\)::boolean, false\) then/g) ?? []).length, 2,
+    `${name} must reject anonymous creation AND acceptance through direct RPC`);
   assert.match(sql, /if v_role not in \('member', 'viewer'\) then/,
     `${name} must only create viewer/member invites`);
   assert.match(sql, /if found then\s+if v_invite\.role not in \('member', 'viewer'\)/,
@@ -109,6 +111,7 @@ let createRpcCalls = [];
 let createRoleOverride = null;
 let resolveFamilyCalls = 0;
 const createContext = {
+  isAnonymous: false,
   email: "owner@example.test",
   user: {
     async rpc(name, params) {
@@ -143,6 +146,16 @@ const createRoute = loadCommonJs("apps/web/app/api/family/invite/route.ts", (spe
   }
   throw new Error(`Unexpected invite-create import: ${specifier}`);
 });
+
+createContext.isAnonymous = true;
+{
+  const response = await createRoute.POST(postRequest({ email: "member@example.test", familyId: "family-1", role: "member" }));
+  assert.equal(response.status, 403);
+  assert.equal(response.body.error, "registered_account_required");
+  assert.equal(createRpcCalls.length, 0, "guest cannot create an invite before account linking");
+  assert.equal(resolveFamilyCalls, 0);
+}
+createContext.isAnonymous = false;
 
 for (const role of [undefined, "", "admin", "owner", 123]) {
   createRpcCalls = [];
@@ -251,6 +264,7 @@ let acceptPreviewRow = { role: "viewer" };
 let acceptPersistedRoleOverride = null;
 let acceptRpcCalls = 0;
 const acceptContext = {
+  isAnonymous: false,
   service: {
     from(table) {
       assert.equal(table, "family_invites");
@@ -288,6 +302,15 @@ const acceptRoute = loadCommonJs("apps/web/app/api/family/invite/accept/route.ts
   }
   throw new Error(`Unexpected invite-accept import: ${specifier}`);
 });
+
+acceptContext.isAnonymous = true;
+{
+  const response = await acceptRoute.POST(postRequest({ token: validToken }));
+  assert.equal(response.status, 403);
+  assert.equal(response.body.error, "registered_account_required");
+  assert.equal(acceptRpcCalls, 0, "guest cannot join a family before account linking");
+}
+acceptContext.isAnonymous = false;
 
 for (const role of ["viewer", "member"]) {
   acceptPreviewRow = { role };
