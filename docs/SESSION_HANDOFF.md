@@ -15243,3 +15243,9 @@ https://mitene.us/
   使用した方法が不明なら公式supportへ相談する手順。新アカウント/認証解除/ログアウトはしない。
   https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
   認証値は保存しない。CI35440317168はこの再確認でもin_progress。本番・データ変更なし。
+- 本人はApple「パスワード」にも「ない」と回答。同じ確認を繰り返さず、公式supportへ相談する
+  下書き`SUPABASE_DASHBOARD_ACCESS_SUPPORT_DRAFT.md`を作成（未送信）。当repoの過去の管理MFA記録と
+  既知のTENSHOKU checkoutのmarkdownを対象限定で検索したが、登録に使ったアプリの明示記録なし。
+  秘密値/保存済み資格情報/ブラウザprofile/実利用者情報は探索しない。公式のsupport@supabase.comを
+  確認したが登録メール/送信元は未確認。送信やMFA解除/再登録は本人の確認なしに行わない。
+  公式は全要素喪失時の復旧不可を明記しているが、現時点では全要素喪失を断定しない。
