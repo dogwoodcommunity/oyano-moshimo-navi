@@ -1,29 +1,12 @@
 import { useEffect } from "react";
 import { Stack } from "expo-router";
-import { Linking } from "react-native";
 import { enableScreens } from "react-native-screens";
-import { handleAuthRedirectUrl } from "@/lib/auth";
 import { markNotificationsOpened } from "@/lib/notifications";
 import { colors } from "@/lib/theme";
 
 enableScreens(false);
 
 export default function RootLayout() {
-  useEffect(() => {
-    void Linking.getInitialURL()
-      .then((url) => {
-        if (url) return handleAuthRedirectUrl(url);
-        return null;
-      })
-      .catch(() => null);
-
-    const subscription = Linking.addEventListener("url", ({ url }) => {
-      void handleAuthRedirectUrl(url).catch(() => null);
-    });
-
-    return () => subscription.remove();
-  }, []);
-
   useEffect(() => {
     let subscription: { remove: () => void } | null = null;
     let mounted = true;
@@ -51,6 +34,7 @@ export default function RootLayout() {
   return (
     <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
       <Stack.Screen name="(auth)/welcome" options={{ title: "はじめに" }} />
+      <Stack.Screen name="auth/complete" options={{ title: "メールの本人確認" }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="consult" options={{ title: "長期相談" }} />
       <Stack.Screen name="crisis/index" options={{ title: "急なとき" }} />

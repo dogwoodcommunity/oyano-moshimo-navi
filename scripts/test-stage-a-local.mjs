@@ -14,7 +14,7 @@ const sourceTests = [
   "admin-delete-access-check", "public-operator-disclosure",
   "family-role-security", "family-invite-permissions", "family-context-selection",
   "family-management", "handoff-security", "consult-memory", "consult-route", "consult-entry",
-  "consult-guest-route", "consult-preparation", "guest-home-identity",
+  "consult-guest-route", "consult-preparation", "guest-home-identity", "auth-captcha", "mobile-auth-captcha",
   "diary-deletion", "notebook-person-deletion"
 ];
 const sqlTests = [

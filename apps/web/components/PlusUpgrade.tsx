@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, sendMagicLink } from "@/lib/browserSupabase";
 import { readNotebookCloudBinding } from "@/lib/store";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 
 type State =
   | "checking"
@@ -16,6 +17,7 @@ type State =
   | "error";
 
 export function PlusUpgrade({ salesReady }: { salesReady: boolean }) {
+  const authCaptcha = useAuthCaptcha();
   const [state, setState] = useState<State>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -86,10 +88,10 @@ export function PlusUpgrade({ salesReady }: { salesReady: boolean }) {
   }, [salesReady]);
 
   async function requestSignIn() {
-    if (!email.trim()) return;
+    if (!email.trim() || state === "sending") return;
     setState("sending");
     setMessage("");
-    const result = await sendMagicLink(email.trim(), "/plans");
+    const result = await sendMagicLink(email.trim(), "/plans", { captchaToken: authCaptcha.consumeToken() });
     if (result.ok) {
       setState("sent");
     } else {
@@ -175,9 +177,10 @@ export function PlusUpgrade({ salesReady }: { salesReady: boolean }) {
               value={email}
             />
           </div>
+          <AuthCaptcha control={authCaptcha} />
           <button
             className="plus-button"
-            disabled={state === "sending" || !email.trim()}
+            disabled={state === "sending" || !email.trim() || !authCaptcha.ready}
             onClick={requestSignIn}
             type="button"
           >

@@ -58,6 +58,7 @@ function browserScenario({ user = guest(), url = "https://example.test/home", up
     require(name) {
       if (name === "@supabase/supabase-js") return { createClient: () => ({ auth }) };
       if (name === "@oyano/shared") return { authErrorMessage: () => "登録できませんでした" };
+      if (name === "@/lib/authCaptcha") return evaluate(read("apps/web/lib/authCaptcha.ts"), context);
       throw new Error(`Unexpected dependency: ${name}`);
     }
   };

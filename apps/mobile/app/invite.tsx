@@ -34,6 +34,7 @@ export default function InviteScreen() {
   }
 
   async function login() {
+    if (submitting) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
@@ -74,8 +75,8 @@ export default function InviteScreen() {
           style={styles.input}
           value={email}
         />
-        <Pressable style={styles.secondaryButton} onPress={login}>
-          <Text style={styles.secondaryButtonText}>ログインメールを送る</Text>
+        <Pressable disabled={submitting} style={[styles.secondaryButton, submitting && styles.buttonDisabled]} onPress={login}>
+          <Text style={styles.secondaryButtonText}>安全確認をしてメールを送る</Text>
         </Pressable>
       </View>
 

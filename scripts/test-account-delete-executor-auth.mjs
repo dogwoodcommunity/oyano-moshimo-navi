@@ -330,7 +330,7 @@ assert.match(tokenControl, /<form[\s\S]*?className="admin-auth-form"[\s\S]*?onSu
 assert.match(tokenControl, /id="admin-email"[\s\S]*?type="email"[\s\S]*?enterKeyHint="send"[\s\S]*?aria-describedby=\{emailError \? "admin-email-error" : undefined\}[\s\S]*?aria-invalid=\{Boolean\(emailError\) \|\| undefined\}[\s\S]*?ref=\{emailInputRef\}[\s\S]*?required/, "the email field must expose mobile completion, required email semantics, and its error relationship");
 assert.match(tokenControl, /showEmailError[\s\S]*?emailInputRef\.current\?\.focus/, "email validation and send errors must return focus to the email field");
 assert.match(tokenControl, /id=\{emailError \? "admin-email-error" : undefined\}[\s\S]*?role=\{emailError \? "alert" : undefined\}/, "email errors must be announced as an alert");
-assert.match(tokenControl, /<button className="button" type="submit" disabled=\{sending\}>/, "the email action must be the form submit button");
+assert.match(tokenControl, /<button className="button" type="submit" disabled=\{sending \|\| !authCaptcha\.ready\}>/, "the email action must be the form submit button and wait for CAPTCHA");
 assert.match(tokenControl, /\^\\d\{6\}\$/, "TOTP input must require exactly six digits");
 assert.match(tokenControl, /localStorage\.setItem\(ADMIN_BEARER_TOKEN_STORAGE_KEY, data\.access_token\)/, "the AAL2 JWT must replace the client Bearer token");
 const verifyStoredAccess = tokenControl.match(

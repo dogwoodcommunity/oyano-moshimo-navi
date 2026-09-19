@@ -21,7 +21,7 @@ assert.match(adminNav, /deleteRequestSetupItem = \{ href: "\/admin\/delete-reque
 assert.match(adminNav, /deletionSetup \? deleteRequestSetupItem\.href/, "the setup brand link must not lead an unprivileged user into deletion requests");
 
 assert.match(setup, /completeBrowserSupabaseAuthFromUrl\(\)/, "the setup route must complete the same-origin magic-link callback");
-assert.match(setup, /sendAdminMagicLink\(nextEmail, setupRedirectPath\)/, "setup login must use the existing-user-only admin magic link");
+assert.match(setup, /sendAdminMagicLink\(nextEmail, setupRedirectPath, \{ captchaToken: authCaptcha\.consumeToken\(\) \}\)/, "setup login must use the existing-user-only admin magic link with a fresh CAPTCHA token");
 assert.match(setup, /const setupRedirectPath = "\/admin\/delete-requests\/setup"/, "the magic link must return to the setup route");
 assert.match(setup, /client\.auth\.getUser\(\)/, "the live Supabase user must be revalidated before enrollment");
 assert.match(setup, /user\.email_confirmed_at/, "unconfirmed email identities must not enroll MFA");

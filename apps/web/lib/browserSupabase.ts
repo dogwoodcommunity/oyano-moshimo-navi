@@ -2,6 +2,7 @@
 
 import { createClient, type Session, type SupabaseClient } from "@supabase/supabase-js";
 import { authErrorMessage } from "@oyano/shared";
+import { AUTH_CAPTCHA_REQUIRED_MESSAGE, getAuthCaptchaConfig, validAuthCaptchaToken, type AuthCaptchaOptions } from "@/lib/authCaptcha";
 
 let browserClient: SupabaseClient | null = null;
 
@@ -158,7 +159,7 @@ export async function completeBrowserSupabaseAuthFromUrl(): Promise<{
   return { handled: false, session: data.session };
 }
 
-export async function sendNotebookMagicLink(email: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendNotebookMagicLink(email: string, options: AuthCaptchaOptions = {}): Promise<{ ok: boolean; error?: string }> {
   // A guest may have signed in in another tab before Home has re-rendered.
   // Never let a stale email form create a separate account for that guest.
   const client = getBrowserSupabase();
@@ -173,7 +174,7 @@ export async function sendNotebookMagicLink(email: string): Promise<{ ok: boolea
       return { ok: false, error: "ログイン状態を確認できません。画面を読み直してから試してください。" };
     }
   }
-  return sendMagicLink(email, "/home?cloud=1");
+  return sendMagicLink(email, "/home?cloud=1", options);
 }
 
 export async function linkGuestNotebookEmail(
@@ -222,7 +223,8 @@ export async function linkGuestNotebookEmail(
 
 export async function sendAdminMagicLink(
   email: string,
-  redirectPath = "/admin/monitor-feedback"
+  redirectPath = "/admin/monitor-feedback",
+  options: AuthCaptchaOptions = {}
 ): Promise<{ ok: boolean; error?: string }> {
   const client = getBrowserSupabase();
   if (!client || typeof window === "undefined") {
@@ -233,15 +235,7 @@ export async function sendAdminMagicLink(
     ? redirectPath
     : "/admin/monitor-feedback";
   const redirectTo = `${window.location.origin}${safeRedirectPath}`;
-  const { error } = await client.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-      shouldCreateUser: false
-    }
-  });
-
-  return error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
+  return sendOtpWithCaptcha(client, email, redirectTo, false, options);
 }
 
 export async function beginTotpEnrollmentUsingAal1Token(input: {
@@ -350,23 +344,36 @@ export async function removeUnverifiedTotpFactorUsingAal1Token(input: {
 /**
  * 確認メールから戻る先を指定できる版。招待の受け取りでは招待ページへ戻す必要がある。
  */
-export async function sendMagicLink(email: string, redirectPath: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendMagicLink(email: string, redirectPath: string, options: AuthCaptchaOptions = {}): Promise<{ ok: boolean; error?: string }> {
   const client = getBrowserSupabase();
   if (!client || typeof window === "undefined") {
     return { ok: false, error: "クラウド保存の設定がまだありません。" };
   }
 
   const redirectTo = `${window.location.origin}${redirectPath}`;
-  const { error } = await client.auth.signInWithOtp({
-    email,
-    options: {
-      emailRedirectTo: redirectTo,
-      shouldCreateUser: true
-    }
-  });
+  return sendOtpWithCaptcha(client, email, redirectTo, true, options);
+}
 
-  // Supabaseのエラーは英語で返る。そのまま出すと利用者には読めないので日本語へ直す。
-  return error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
+async function sendOtpWithCaptcha(
+  client: SupabaseClient,
+  email: string,
+  emailRedirectTo: string,
+  shouldCreateUser: boolean,
+  options: AuthCaptchaOptions
+): Promise<{ ok: boolean; error?: string }> {
+  const captchaToken = validAuthCaptchaToken(options.captchaToken);
+  if (getAuthCaptchaConfig().enabled && !captchaToken) {
+    return { ok: false, error: AUTH_CAPTCHA_REQUIRED_MESSAGE };
+  }
+  try {
+    const { error } = await client.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo, shouldCreateUser, ...(captchaToken ? { captchaToken } : {}) }
+    });
+    return error ? { ok: false, error: authErrorMessage(error) } : { ok: true };
+  } catch {
+    return { ok: false, error: "確認メールの送信結果を確認できませんでした。入力したメールアドレスは残っています。届いたメールを確認し、再送する場合は安全確認をやり直してください。" };
+  }
 }
 
 function stripAuthParamsFromUrl(url: URL) {

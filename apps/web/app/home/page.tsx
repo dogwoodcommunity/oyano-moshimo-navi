@@ -7,6 +7,7 @@ import { MonitorTestReminder } from "@/components/MonitorTestReminder";
 import { NotebookMascot } from "@/components/NotebookMascot";
 import { useMascotMotionPreference } from "@/components/MascotMotionPreference";
 import { NotebookReconciliation } from "@/components/NotebookReconciliation";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 import { completeBrowserSupabaseAuthFromUrl, getBrowserSupabase, linkGuestNotebookEmail, sendNotebookMagicLink } from "@/lib/browserSupabase";
 import { japanDateInputAfterDays, japanDateInputValue } from "@/lib/date";
 import { truncateDisplayText } from "@/lib/displayText";
@@ -1176,6 +1177,7 @@ function buildNotebookInsight(
 }
 
 export default function FamilyBoardPage() {
+  const authCaptcha = useAuthCaptcha();
   const { enabled: mascotMotionEnabled } = useMascotMotionPreference();
   const [greetingPulse, setGreetingPulse] = useState(0);
   const [savedMascotPulse, setSavedMascotPulse] = useState(0);
@@ -2784,7 +2786,7 @@ export default function FamilyBoardPage() {
     setCloudEmailMessage("本人確認メールを送っています。");
     const result = linkingGuest && cloudUserId
       ? await linkGuestNotebookEmail(email, cloudUserId)
-      : await sendNotebookMagicLink(email);
+      : await sendNotebookMagicLink(email, { captchaToken: authCaptcha.consumeToken() });
     setCloudEmailSending(false);
     if (authGeneration !== cloudAuthGenerationRef.current) return;
     if (!result.ok) {
@@ -3671,7 +3673,8 @@ export default function FamilyBoardPage() {
                         onChange={(event) => setCloudEmail(event.target.value)}
                       />
                     </label>
-                    <button type="button" onClick={requestCloudLink} disabled={cloudEmailSending}>
+                    {!cloudIsGuest ? <AuthCaptcha control={authCaptcha} /> : null}
+                    <button type="button" onClick={requestCloudLink} disabled={cloudEmailSending || (!cloudIsGuest && !authCaptcha.ready)}>
                       {cloudEmailSending ? "送信中" : cloudIsGuest ? "このゲストにメールを登録する" : "メールでクラウド保存を始める"}
                     </button>
                   </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 import {
   ADMIN_BEARER_TOKEN_STORAGE_KEY,
   ADMIN_STATIC_TOKEN_STORAGE_KEY,
@@ -59,6 +60,7 @@ export function AdminTokenControl({
   roleLabel = "管理者",
   showEmergencyToken = true
 }: AdminTokenControlProps = {}) {
+  const authCaptcha = useAuthCaptcha();
   const verifyRequestId = useRef(0);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
   const mfaCodeInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,6 +265,7 @@ export function AdminTokenControl({
   }, [enableMfaStepUp, showEmergencyToken, verifyStoredAccess]);
 
   async function sendLink() {
+    if (sending) return;
     const nextEmail = email.trim();
     if (!nextEmail) {
       showEmailError(`${roleLabel}として登録したメールアドレスを入力してください。`);
@@ -276,7 +279,7 @@ export function AdminTokenControl({
     setSending(true);
     setEmailError("");
     setMessage("");
-    const result = await sendAdminMagicLink(nextEmail, redirectPath);
+    const result = await sendAdminMagicLink(nextEmail, redirectPath, { captchaToken: authCaptcha.consumeToken() });
     setSending(false);
     if (!result.ok) {
       showEmailError(result.error ?? "確認メールを送れませんでした。");
@@ -542,7 +545,8 @@ export function AdminTokenControl({
           ref={emailInputRef}
           required
         />
-        <button className="button" type="submit" disabled={sending}>
+        <AuthCaptcha control={authCaptcha} />
+        <button className="button" type="submit" disabled={sending || !authCaptcha.ready}>
           {sending ? "送信しています" : "確認メールを送る"}
         </button>
       </form>

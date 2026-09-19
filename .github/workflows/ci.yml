@@ -173,6 +173,12 @@ jobs:
       - name: Test consult memory
         run: pnpm run test:consult-memory
 
+      - name: Test email authentication CAPTCHA compatibility
+        run: pnpm run test:auth-captcha
+
+      - name: Test mobile authentication CAPTCHA compatibility
+        run: pnpm run test:mobile-auth-captcha
+
       - name: Test consult memory PostgreSQL RLS
         run: pnpm run test:consult-memory:sql
 

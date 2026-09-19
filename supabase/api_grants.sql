@@ -63,6 +63,11 @@ alter default privileges in schema public
 -- compatible with partial schemas that have not installed the RPCs yet.
 do $server_only_rpc_acl$
 begin
+  if to_regprocedure('public.check_public_api_rate_limit(text,integer,integer)') is not null then
+    execute 'revoke all on function public.check_public_api_rate_limit(text, integer, integer) from public, anon, authenticated';
+    execute 'grant execute on function public.check_public_api_rate_limit(text, integer, integer) to service_role';
+  end if;
+
   if to_regprocedure('public.consume_case_handoff(uuid,text,uuid,text,text)') is not null then
     execute 'revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text) from public, anon, authenticated';
     execute 'grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text) to service_role';

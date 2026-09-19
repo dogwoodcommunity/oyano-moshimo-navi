@@ -60,6 +60,7 @@ export default function HandoffScreen() {
   }, [consume]);
 
   async function sendLoginLink() {
+    if (isLoading) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
@@ -70,7 +71,7 @@ export default function HandoffScreen() {
     const redirectPath = `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`;
     const result = await sendMagicLink(trimmedEmail, redirectPath);
     setIsLoading(false);
-    setMessage(result.sent ? "メールを送りました。届いたリンクを開くと保存が続きます。" : result.message);
+    setMessage(result.message);
   }
 
   if (!hasHandoff) {
@@ -107,7 +108,7 @@ export default function HandoffScreen() {
           value={email}
         />
         <Pressable disabled={isLoading} onPress={sendLoginLink} style={[styles.button, isLoading && styles.disabledButton]}>
-          <Text style={styles.buttonText}>本人確認メールを送る</Text>
+          <Text style={styles.buttonText}>安全確認をしてメールを送る</Text>
         </Pressable>
         <Pressable disabled={isLoading} onPress={consume} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>ログイン済みなので保存する</Text>

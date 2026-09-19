@@ -15195,3 +15195,40 @@ https://mitene.us/
 - CURRENT_STATUS/本追記と公開手順を更新し、feature branchへcommit/push。
   GitHub CIはmain/PR限定のため、このbranch pushだけでは未実行。本番は追記405のまま。
   review_exports/、未追跡レビュー2文書、既存利用者の記録・写真・相談・課金/環境設定は触っていない。
+
+## 2026-09-19 追記 407 — 既存メール認証のCAPTCHA互換実装・公開準備、Supabase本人確認待ち
+
+- 本人の「反映して」「続きして」に基づき、codex/consult-guest-entry / 13140b7から継続。
+  本番のReady deploymentはdpl_9u8W9sdTiGCgoMLTs6B1EiMTHjqo（追記405）のまま。
+  Vercel production envの名前だけを確認し、TURNSTILE_SITE_KEY/CONSULT_GUEST_ENABLEDは未設定。
+  秘密値は取得/表示せず、mainへの統合・配信・設定ONは行っていない。
+- Web7導線（Home/家族/招待/プラン/退会/管理/MFA設定）を共通AuthCaptchaへ対応。
+  site keyなしは従来動作、設定ありは使い切りtoken必須。4分で再取得し、provider期限切れ・遮断・
+  通信失敗に日本語の再試行案内。compact widget、入力保持、確認完了による自動送信なし。
+  登録済みのみの管理ログイン、ゲストへの同一本人メール追加は従来の制限を維持。
+- Mobile3導線は端末SecureStoreにメール/遷移先/256bit nonce/15分期限/開始時本人を保持し、
+  専用Web /auth/mobileでメール再入力と安全確認後に送信。URLはnonce fragmentのみ。
+  Webの保存済み本人を読まないclient、固定oyanomoshimo:///auth/complete callbackを使用。
+  nativeはaccess/refresh両方の本人、確認済みメール、開始時/直前の本人を確認後にセッション保存。
+  再送は旧nonceを無効化、消費済みcallbackの再利用拒否。Expo51互換crypto/SecureStoreを追加。
+  **更新binaryのビルド/配布、旧版の利用状況、実機cold/warm復帰は未確認。** CAPTCHA全体ONは保留。
+- 独立監査で既存api_grants.sqlがレートRPCをauthenticatedへ明示GRANTしていたリスクを確認。
+  public_api_rate_limits.sqlとapi_grants.sqlの両方でPUBLIC/anon/authenticated実行権限を取消し、
+  service_roleだけ維持。一般利用者による短時間窓での共有上限リセットを防ぐ。
+  SQL回帰を既存daily-claim runnerへ追加。本番適用は更新rate SQLを使い、broad grants全体は再適用不要。
+- 合成source 47/47、Web/Mobile型・Web build成功。lintは既存img/hook警告のみ。実helper/hook/widget/handlerで
+  未設定/必須/期限切れ/使い切り、入力保持、Mobile誤メール/本人変更/再送/replay等を確認。
+  独立担当がcallback8箇所を読み取り監査し、追加のP0/P1なし。実機/provider受入は別。
+  pnpm9.15.9 frozen installで新規2依存取得成功。lockは新規2依存の25行追加のみ。
+- 隔離PostgreSQL17でrate→api_grantsと逆順/旧ACL修復、anon/guest拒否、service正常3回/4回上限・
+  期限切れ・既存counter不変更とdaily-claim回帰を確認。旧権限で50→1リセットを再現し回帰検出も確認。
+  最終ACL anon=false/authenticated=false/service_role=true。合成行0、専用DB停止済み。
+  Docker未起動のためDockerシェル自体のローカル実行は未実施（同じSQL列をnative PG17で検証）。
+- Supabase管理画面はGitHub認証後のMFA待ち。本人「ログイン情報がわからん」に対して画面を確認し、
+  パスワードでなく認証アプリ「Supabase TENSHOKU（iPhone）」の6桁→Verifyと案内。
+  returnToは対象project ypnuxyfirlvbsqujocuy。コード/パスワードを会話へ送るよう求めていない。
+  Cloudflareタブはloginからaccount/home URLへ変化、権限/Turnstileの設定内容は未確認。
+  本人確認/キー発行/認証設定/SQL適用/実メール/実AI/本番データ操作は実行していない。
+- 公開手順/プライバシー/CI/source runnerを更新。開発branchを保存してPR CIへ進めるが、
+  認証設定・新版配布・限定実送信の受入までマージ/本番反映しない。正式商用公開の残件も不変。
+  保護対象のreview_exports/・未追跡レビュー2文書、現在の記録/写真/相談には触っていない。

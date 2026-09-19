@@ -6,6 +6,16 @@ type MobileSupabaseClient = SupabaseClient<any, "public", any>;
 let cachedClient: MobileSupabaseClient | null = null;
 let cachedKey = "";
 
+/** Verify candidates without reading or writing the saved native session. */
+export function createMobileAuthVerifier() {
+  const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
+  const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return null;
+  return createClient<any, "public", any>(url, key, {
+    auth: { autoRefreshToken: false, detectSessionInUrl: false, persistSession: false, storageKey: "oyano-mobile-auth-verifier" }
+  });
+}
+
 export function getSupabase() {
   const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
   const key = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;

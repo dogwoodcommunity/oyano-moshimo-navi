@@ -18,12 +18,14 @@ export default function WelcomeScreen() {
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const caseId = typeof params.caseId === "string" ? params.caseId : undefined;
   const token = typeof params.token === "string" ? params.token : undefined;
   const hasHandoff = Boolean(caseId && token && caseId !== "demo" && token !== "demo");
   const authTitle = authMode === "login" ? "登録済みの方のログイン" : "新規会員登録";
 
   async function continueToApp() {
+    if (submitting) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
@@ -33,10 +35,12 @@ export default function WelcomeScreen() {
     const redirectPath = hasHandoff
       ? `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`
       : undefined;
+    setSubmitting(true);
     const result = await sendMagicLink(trimmedEmail, redirectPath);
+    setSubmitting(false);
     setMessage(result.message);
 
-    if (result.sent) return;
+    if (!result.demo) return;
 
     const handoff = await consumeWebHandoff(caseId, token);
     if (handoff) {
@@ -165,7 +169,7 @@ export default function WelcomeScreen() {
       {authMode ? (
         <View style={styles.authPanel}>
           <Text style={styles.authTitle}>{authTitle}</Text>
-          <Text style={styles.authLead}>パスワードは使いません。メールに届く確認リンクから入れます。</Text>
+          <Text style={styles.authLead}>ブラウザで安全確認をしたあと、この端末でメールに届く確認リンクを開いてください。</Text>
           <TextInput
             autoCapitalize="none"
             inputMode="email"
@@ -175,8 +179,8 @@ export default function WelcomeScreen() {
             style={styles.input}
             value={email}
           />
-          <Pressable onPress={continueToApp} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>{hasHandoff ? "確認メールを送って保存する" : "確認メールを送る"}</Text>
+          <Pressable disabled={submitting} onPress={continueToApp} style={[styles.primaryButton, submitting && styles.disabledButton]}>
+            <Text style={styles.primaryButtonText}>{submitting ? "準備中…" : "安全確認をしてメールを送る"}</Text>
             <MaterialCommunityIcons color="#fff" name="email-fast-outline" size={20} />
           </Pressable>
           <View style={styles.privacyNote}>

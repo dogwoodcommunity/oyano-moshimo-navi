@@ -14,6 +14,7 @@ import {
 } from "@/lib/familyInvitePermissions";
 import { markMonitorActivity } from "@/lib/monitorSession";
 import { clearNotebookCloudBinding, readNotebookCloudBinding } from "@/lib/store";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 
 type FamilySummary = {
   familyId: string;
@@ -56,6 +57,7 @@ type AuthState = "checking" | "signed-out" | "sending" | "sent" | "signed-in" | 
 type FamilyManagementAction = "transfer-ownership" | "remove-member" | "leave-family" | "cancel-invite";
 
 export function FamilyShare() {
+  const authCaptcha = useAuthCaptcha();
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [signInEmail, setSignInEmail] = useState("");
@@ -114,10 +116,10 @@ export function FamilyShare() {
   }, [loadSummary]);
 
   async function requestSignIn() {
-    if (!signInEmail.trim()) return;
+    if (!signInEmail.trim() || authState === "sending") return;
     setAuthState("sending");
     setMessage("");
-    const result = await sendMagicLink(signInEmail.trim(), "/family");
+    const result = await sendMagicLink(signInEmail.trim(), "/family", { captchaToken: authCaptcha.consumeToken() });
     if (result.ok) {
       setAuthState("sent");
     } else {
@@ -308,9 +310,10 @@ export function FamilyShare() {
             value={signInEmail}
           />
         </div>
+        <AuthCaptcha control={authCaptcha} />
         <button
           className="family-primary"
-          disabled={authState === "sending" || !signInEmail.trim()}
+          disabled={authState === "sending" || !signInEmail.trim() || !authCaptcha.ready}
           onClick={requestSignIn}
           type="button"
         >

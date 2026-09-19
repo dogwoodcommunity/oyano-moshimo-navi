@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 import {
   completeBrowserSupabaseAuthFromUrl,
   getBrowserSupabase,
@@ -53,6 +54,7 @@ function PersistedRoleNotice({ role }: { role: FamilyMemberRole }) {
 }
 
 export function InviteAccept({ token }: { token: string }) {
+  const authCaptcha = useAuthCaptcha();
   const [phase, setPhase] = useState<Phase>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -111,10 +113,10 @@ export function InviteAccept({ token }: { token: string }) {
   }, []);
 
   async function requestSignIn() {
-    if (!email.trim()) return;
+    if (!email.trim() || phase === "sending") return;
     setPhase("sending");
     setMessage("");
-    const result = await sendMagicLink(email.trim(), `/invite/${encodeURIComponent(token)}`);
+    const result = await sendMagicLink(email.trim(), `/invite/${encodeURIComponent(token)}`, { captchaToken: authCaptcha.consumeToken() });
     if (result.ok) {
       setPhase("sent");
     } else {
@@ -211,9 +213,10 @@ export function InviteAccept({ token }: { token: string }) {
             value={email}
           />
         </div>
+        <AuthCaptcha control={authCaptcha} />
         <button
           className="family-primary"
-          disabled={phase === "sending" || !email.trim()}
+          disabled={phase === "sending" || !email.trim() || !authCaptcha.ready}
           onClick={requestSignIn}
           type="button"
         >

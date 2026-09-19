@@ -8,9 +8,14 @@
   入力→その場で短い保存/外部AI送信の同意→本人の保存先作成・選択中の手帳同期→回答表示。
   同じ本人の長期記憶は維持、メール追加は後から任意。別の手帳の自動保存・既存本人の置換はしない。
   source-only 45/45、型/lint/build、隔離Chrome3幅、隔離SQLを確認。すべて合成/ローカル、本番未反映。
-  **有効化は未完了・既定OFF。** SupabaseのCAPTCHAが既存OTPにもかかるため、Web/Mobileの
-  既存ログインにも安全確認対応が必要。その追加実装/受入前に認証設定を切り替えない。
-  次の作業と公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406。本番は下記追記405のまま。
+  **有効化は未完了・既定OFF。** 続行依頼でWeb7導線とMobile3導線のCAPTCHA互換コードを追加。
+  Mobileは専用Web画面→メール→nonce/本人照合付き復帰。新binaryと旧版利用状況の確認が必要。
+  レート制限RPCを一般利用者が直接操作できないようACLも修正。既存カウンタの消去なし。
+  合成source 47/47、Web/Mobile型・Web build、隔離PostgreSQLのACL/既存相談回帰成功。実環境受入とは別。
+  変更は開発ブランチのみ。SupabaseはGitHubログイン後のMFA待ち。表示登録名は
+  「Supabase TENSHOKU（iPhone）」だが、遷移先projectはypnuxyfirlvbsqujocuy。
+  本人へ認証アプリの6桁を画面に入力するよう案内。パスワード/コードは収集しない。
+  公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406・407。本番は下記追記405のまま。
 
 ## 前回完了・本番反映済み
 
