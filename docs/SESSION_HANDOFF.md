@@ -15035,3 +15035,39 @@ https://mitene.us/
 - CURRENT_STATUS/SESSION_HANDOFF更新後、対象ファイルだけfeature branchへcommit/push。
   mainへの統合・CI実行・本番反映は未実施（CIはmain/PR起動）。既存利用者データ、無料相談回数、
   課金/契約、正式商用公開の保留条件、review_exports/と未追跡Claude_FULL2文書は変更なし。
+
+## 2026-09-19 追記 402 — 日記継続支援・地域の相談先を本人承認で既存本番へ反映
+
+- 本人の「反映して」で追記401から再開。公開範囲はスポンサー紹介の分離と先行の日記継続支援。
+  25d2dd0..5781f09の26ファイルを独立担当が読み取り確認。DB/環境変数/API route/lockfile変更、
+  新規依存・有料API呼出し・追加契約なし。実スポンサーを追加せず空カタログを維持する。
+- PR #7を作成し、head `5781f09333027c4d3748f21b7eec441b5c425384` の
+  CI `35436610641` 全ジョブ成功後にmerge。mainは `4159fdd78567a7998a63466e6d4e5460ca57ab57`。
+  Web配布対象のtreeが5781f09と完全一致することも確認。
+  統合後main CI `35436771077` も全ジョブ成功（Web/mobile型、source回帰、隔離SQL、build、smoke）。
+  mainのDeploy workflow `35436771014` はcheck成功・deploy skippedであり、公開の根拠ではない。
+- 既存project `prj_nk3XUTnqSUFsiGZGc4Ifsi9SIr1H` / scope `dogwoodcommunity1` へ手動反映。
+  `/private/tmp/oyano-web-release.iyALPK` にGitからWeb専用archiveを作成し、Git blob hashと照合。
+  apps/web、packages、package/lock/workspace、vercel.json、.vercelignoreのみ。設定例.env.exampleも除外。
+  CLI dry-runは204ファイル・3,950,336 bytes。運用文書/SQL/infra/実データ/環境秘密値/保護対象なし。
+  リポジトリ本体の設定例や保護ファイルは変更していない。
+- `--prod --skip-domain` とmetadata releaseSha=5781f09完全SHAでビルド、Ready後にpromote。
+  新deployment `dpl_HHp82MAKNJ3nCwh4rqES7PPxvgYH`、作成19:11 JST。
+  URL https://oyano-moshimo-navi-axpp9or76-dogwoodcommunity1.vercel.app 。
+  公開 https://oyano-moshimo-navi.vercel.app のinspectも新deploymentへ一致しReady。
+  直前の戻し先は `dpl_FbM8TTKAEfPuy94Up7d9G5ZtUacw` /
+  https://oyano-moshimo-navi-mfma0zrl7-dogwoodcommunity1.vercel.app （戻し操作なし）。
+- 公開GET検証: /api/health、/home、/consult、/providers、/sponsors、/legal/privacy、/crisis の7件が200。
+  相談先フォーム、広告特典説明、改訂privacyの新文言を確認。合成スポンサー情報の混入なし。
+- 本番配信アセットを隔離Chrome・架空手帳だけで確認。API、非GET、外部origin通信、Service Workerを遮断。
+  320/390/1280pxで必須エラー→検索→該当なし→条件変更→再読込、入力非永続/URL非付加、
+  結果focusと見出し位置、横溢れなし、pageerror 0を確認。公開カタログは空のまま。
+  同3幅で記録保存→関連過去記録→任意の「その後」追記→スキップ→再読込を確認。
+  元記録不変・別の対象者へ混入なし・通常日記の下書き保持・AI呼出し0、本番サーバー書込0。
+  ローカル合成保存の確認であり、実認証/本番クラウド同期/実端末での受入を証明したものではない。
+- 一時検証script: /private/tmp/verify-oyano-public-release.mjs、
+  verify-oyano-providers-production.mjs、verify-oyano-continuity-production.mjs。
+  公開390px画像 /private/tmp/oyano-providers-production-390.png を目視確認。
+- CURRENT_STATUSと本追記を更新し、文書だけ[skip ci]でmainへpush。既存記録/写真、本番DB、
+  AI回数・課金・契約・秘密値・正式商用公開の保留条件は変更なし。
+  実スポンサーの掲載合意/地域・業種・期間審査は別途必要。公開準備の残件まで完了したとは言わない。
