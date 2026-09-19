@@ -18,7 +18,8 @@
   iPhone標準「パスワード」でも本人は「ない」と回答。登録に使ったアプリは記録から特定できず。
   `SUPABASE_DASHBOARD_ACCESS_SUPPORT_DRAFT.md`に公式support向け下書きを用意。
   本人から問い合わせ依頼と送信元の承認を得て、Gmailから公式supportへ1通送信済み（追記409）。
-  「メッセージを送信しました」を確認。Supabase側の受付番号・返信・復旧は未確認。
+  22:16 JSTの受付メールとticket `SU-478850`を確認。担当者による復旧手順の回答・復旧は未確認。
+  直接メールは有料組織に紐づかずFree枠扱い・回答保証なしとの案内。実契約の変更を意味しない。
   既存Chrome/Safari/アプリ内ブラウザを再確認したが、ChromeはMFA待ち、
   Safari/アプリ内はGitHubの再ログイン画面。生きた管理sessionは確認できていない。
   現TENSHOKUの運用記録に9月9日OwnerのSupabase MFA有効化が明記。登録アプリの保存先は未特定。
