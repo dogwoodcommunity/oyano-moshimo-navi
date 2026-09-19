@@ -20,6 +20,8 @@
   本人の指摘で問い合わせは保留。既存Chrome/Safari/アプリ内ブラウザを再確認したが、ChromeはMFA待ち、
   Safari/アプリ内はGitHubの再ログイン画面。生きた管理sessionは確認できていない。
   現TENSHOKUの運用記録に9月9日OwnerのSupabase MFA有効化が明記。登録アプリの保存先は未特定。
+  本人はGoogle Authenticatorの複数アカウントにもSupabase/TENSHOKU項目がないと回答。
+  「oyanomoshimo」の数字は不一致との申告。名前だけで別サービス用とは断定しない。
   全認証要素の喪失・復旧可能とは断定しない。
   パスワード/コードは収集せず、MFA解除・別コード試行・ログアウトはしない。
   公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406・407。本番は下記追記405のまま。
