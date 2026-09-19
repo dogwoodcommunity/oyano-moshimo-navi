@@ -14,7 +14,9 @@
   合成source 47/47、Web/Mobile型・Web build、隔離PostgreSQLのACL/既存相談回帰成功。実環境受入とは別。
   変更は開発ブランチのみ。SupabaseはGitHubログイン後のMFA待ち。表示登録名は
   「Supabase TENSHOKU（iPhone）」だが、遷移先projectはypnuxyfirlvbsqujocuy。
-  本人へ認証アプリの6桁を画面に入力するよう案内。パスワード/コードは収集しない。
+  本人は認証アプリに該当項目が「ない」と回答。画面もコード不一致でMFA未完了。
+  次はiPhone標準「パスワード」でSupabaseの保存項目/確認コード有無を本人が確認する。
+  パスワード/コードは収集せず、MFA解除・別コード試行・ログアウトはしない。
   公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406・407。本番は下記追記405のまま。
   ソースcommit `7796d3c` をpushし、draft PR #9を作成。
   https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9

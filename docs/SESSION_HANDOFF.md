@@ -15237,3 +15237,9 @@ https://mitene.us/
   https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9
   GitHub CI `35440317168` は最終確認時in_progress（成功未確認）。main未変更。
   この記録だけ[skip ci]で追記pushし、再デプロイしない。
+- 続く本人「ない」でMFA画面を再確認し、コード不一致・本人確認未完了を確認。再送信せず、
+  iPhone標準「パスワード」のSupabase保存項目も本人が確認する案内へ変更。
+  公式platform MFA資料ではApple Keychainも対応、全要素喪失時の復旧は保証されず、
+  使用した方法が不明なら公式supportへ相談する手順。新アカウント/認証解除/ログアウトはしない。
+  https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
+  認証値は保存しない。CI35440317168はこの再確認でもin_progress。本番・データ変更なし。
