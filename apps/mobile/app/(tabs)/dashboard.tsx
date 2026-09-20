@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
-import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
+import { emptyDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
@@ -150,7 +150,10 @@ function NextActionCard({ action }: { action: NextAction }) {
 }
 
 export default function DashboardScreen() {
-  const [data, setData] = useState<DashboardData>(demoDashboardData());
+  const [data, setData] = useState<DashboardData>(emptyDashboardData);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loadVersion, setLoadVersion] = useState(0);
   const activeTasks = data.tasks.filter((task) => task.status !== "done" && task.status !== "skipped");
   const todayTasks = activeTasks.filter((task) => {
     const days = daysUntil(task.dueDate);
@@ -163,10 +166,45 @@ export default function DashboardScreen() {
   const unassignedTasks = activeTasks.filter((task) => !task.assignedMemberId);
 
   useEffect(() => {
-    fetchDashboardData()
-      .then(setData)
-      .catch(() => setData(demoDashboardData()));
-  }, []);
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    setData(emptyDashboardData());
+
+    async function load() {
+      try {
+        const nextData = await fetchDashboardData();
+        if (active) setData(nextData);
+      } catch {
+        if (active) setLoadError("家族ボードを読み込めませんでした。通信状態を確認して、もう一度お試しください。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [loadVersion]);
+
+  if (loading || loadError) {
+    return (
+      <ScrollView contentContainerStyle={styles.screen}>
+        <CrisisBanner />
+        <View style={styles.card}>
+          <Text accessibilityRole={loadError ? "alert" : undefined} style={styles.body}>
+            {loading ? "家族ボードを読み込んでいます。" : loadError}
+          </Text>
+          {!loading && loadError ? (
+            <Pressable accessibilityRole="button" onPress={() => setLoadVersion((current) => current + 1)} style={styles.nextButton}>
+              <Text style={styles.nextButtonText}>もう一度読み込む</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </ScrollView>
+    );
+  }
 
   if (data.source === "empty") {
     return (

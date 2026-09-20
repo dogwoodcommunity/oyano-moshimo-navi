@@ -1,11 +1,38 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { Link, router } from "expo-router";
+import { useRef, useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadow } from "@/lib/theme";
+import { signOutThisDevice } from "@/lib/auth";
 
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function SettingsScreen() {
+  const loggingOut = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState("");
+
+  async function logout() {
+    if (loggingOut.current) return;
+    loggingOut.current = true;
+    setBusy(true);
+    const result = await signOutThisDevice();
+    if (result.ok) {
+      router.dismissAll();
+      router.replace("/(auth)/welcome");
+      return;
+    }
+    loggingOut.current = false;
+    setBusy(false);
+    setMessage(result.message);
+  }
+
+  function confirmLogout() {
+    Alert.alert("この端末からログアウトしますか？", "クラウドの記録や他の端末のログインは残ります。登録済みの通知は停止しないため、止める場合は端末の設定でこのアプリの通知をオフにしてください。", [
+      { text: "キャンセル", style: "cancel" },
+      { text: "ログアウトする", style: "destructive", onPress: () => { void logout(); } }
+    ]);
+  }
   function openPrivacyPolicy() {
     if (!webBaseUrl) return;
     void Linking.openURL(`${webBaseUrl}/legal/privacy`).catch(() => null);
@@ -16,7 +43,7 @@ export default function SettingsScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>設定</Text>
         <Text style={styles.title}>安心して使うための確認</Text>
-        <Text style={styles.body}>通知、プライバシー、削除依頼、プラン状態をまとめます。</Text>
+        <Text style={styles.body}>通知、プライバシー、削除依頼、利用案内をまとめます。</Text>
       </View>
 
       <MenuCard
@@ -52,11 +79,19 @@ export default function SettingsScreen() {
       />
 
       <MenuCard
-        body="現在の利用状態と発動サポートパックの状態を確認します。"
+        body="無料で使える機能と、AI相談の利用条件を確認します。"
         href="/account/plan"
         icon="clipboard-check-outline"
-        title="プラン状態"
+        title="無料で使える範囲"
       />
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>この端末のログイン</Text>
+        <Text style={styles.body}>ログアウトしても、クラウドの記録と他の端末のログインは残ります。登録済みの端末通知は自動では停止しません。</Text>
+        <Pressable disabled={busy} onPress={confirmLogout} style={styles.secondaryButton}>
+          <Text style={styles.secondaryButtonText}>{busy ? "ログアウトしています…" : "この端末からログアウト"}</Text>
+        </Pressable>
+        {message ? <Text style={styles.body}>{message}</Text> : null}
+      </View>
     </ScrollView>
   );
 }

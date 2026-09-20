@@ -1,58 +1,44 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link } from "expo-router";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
+import { FREE_PLAN_MEMBER_LIMIT, FREE_PLAN_NOTEBOOK_LIMIT } from "@oyano/shared";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function PlanTab() {
   return (
     <ScrollView contentContainerStyle={styles.screen} style={styles.scroll}>
       <View style={styles.header}>
-        <Text style={styles.kicker}>プラン</Text>
-        <Text style={styles.title}>現在の利用状態</Text>
-        <Text style={styles.body}>この画面は、現在使える範囲とサポート状態の確認用です。</Text>
+        <Text style={styles.kicker}>利用案内</Text>
+        <Text style={styles.title}>まずは無料の手帳から</Text>
+        <Text style={styles.body}>日々の記録と家族での確認に使える、無料の提供範囲をご案内します。</Text>
       </View>
 
       <View style={styles.currentCard}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color="#fff" name="account-heart-outline" size={24} />
-          <Text style={styles.cardTitleLight}>Free</Text>
+          <Text style={styles.cardTitleLight}>無料で使えること</Text>
         </View>
-        <Text style={styles.bodyLight}>対象者1名、家族招待はあなたのほかに{FREE_PLAN_MEMBER_LIMIT}人まで、基本の期限通知と家族ボードを使えます。</Text>
-        <View style={styles.usageRow}>
-          <UsageItem label="親の登録" value="1名" />
-          <UsageItem label="家族招待" value={`${FREE_PLAN_MEMBER_LIMIT}名まで`} />
-          <UsageItem label="写真" value="10枚目安" />
-        </View>
-        <Link href="/account/plan" style={styles.linkLight}>詳しい状態を見る</Link>
+        <Text style={styles.bodyLight}>対象者{FREE_PLAN_NOTEBOOK_LIMIT}名の手帳、あなたのほかに{FREE_PLAN_MEMBER_LIMIT}人までの家族招待、日々の記録と確認リストを使えます。カード登録は必要ありません。</Text>
+        <Link href="/account/plan" style={styles.linkLight}>利用できる範囲を見る</Link>
       </View>
 
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color={colors.green} name="account-group-outline" size={23} />
-          <Text style={styles.cardTitle}>Family Plusで扱う範囲</Text>
+          <Text style={styles.cardTitle}>アプリでできること</Text>
         </View>
-        <Feature text="2人目以降を管理する" />
-        <Feature text="家族招待を増やす" />
-        <Feature text="写真容量と履歴を増やす" />
-        <Feature text="AI相談を1日5回・月30回まで使う" />
-        <Feature text="家族会議用PDFを出す" />
+        <Feature text="今日の様子を日記に残し、過去の記録を読む" />
+        <Feature text="確認リストの進み具合と担当者を整理する" />
+        <Feature text="大切な書類の存在と保管場所をメモする" />
+        <Feature text="招待した家族と同じ手帳を確認する" />
+        <Feature text="記録をもとに、1日1回無料でAI相談する" />
       </View>
 
       <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>解約しても読める</Text>
-        <Text style={styles.noticeText}>Plusをやめても、これまで残した基本の記録は読み返せます。追加対象者、容量、PDF、AI相談などのPlus機能だけが止まります。</Text>
+        <Text style={styles.noticeTitle}>AI相談を使うには</Text>
+        <Text style={styles.noticeText}>メール確認と記録の保存設定、送信する内容への同意が必要です。その日の利用可否は相談画面で確認できます。</Text>
       </View>
     </ScrollView>
-  );
-}
-
-function UsageItem({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={styles.usageItem}>
-      <Text style={styles.usageValue}>{value}</Text>
-      <Text style={styles.usageLabel}>{label}</Text>
-    </View>
   );
 }
 
@@ -79,10 +65,6 @@ const styles = StyleSheet.create({
   body: { color: colors.muted, lineHeight: 22 },
   bodyLight: { color: "rgba(255,255,255,0.78)", lineHeight: 22 },
   linkLight: { borderColor: "rgba(255,255,255,0.28)", borderRadius: radius.control, borderWidth: 1, color: "#fff", fontWeight: "900", overflow: "hidden", paddingHorizontal: 14, paddingVertical: 12, textAlign: "center" },
-  usageRow: { flexDirection: "row", gap: 8 },
-  usageItem: { backgroundColor: "rgba(255,255,255,0.1)", borderRadius: radius.control, flex: 1, padding: 10 },
-  usageValue: { color: "#fff", fontSize: 17, fontWeight: "900", lineHeight: 23 },
-  usageLabel: { color: "rgba(255,255,255,0.72)", fontSize: 12, fontWeight: "800" },
   featureRow: { alignItems: "center", backgroundColor: "#fbfdf9", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, flexDirection: "row", gap: 8, padding: 10 },
   featureText: { color: colors.ink, flex: 1, fontWeight: "800", lineHeight: 20 },
   notice: { backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: radius.card, borderWidth: 1, gap: 6, padding: 14 },

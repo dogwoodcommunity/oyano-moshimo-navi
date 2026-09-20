@@ -1,8 +1,20 @@
-# 現在地 — 2026-09-19
+# 現在地 — 2026-09-20
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
 ## 今回完了
+
+- 本人「アプリ申請に向けてすすめよか」「つづけて」で、nativeの申請準備を開始。
+  見本の認証バイパス/架空データへのfallbackを除去し、本人確認Context/保護画面/端末だけのログアウトを追加。
+  未設定や通信失敗を保存成功にしない。実家情報の固定値、添付予定だけの写真/PDF操作、未提供のPlus誘導を整理。
+  skipped件数、日記の端末日付、読込失敗・再試行・未保存入力保持を修正。未使用camera/photo用途宣言を削除。
+  source-only 50/50、Mobile型、両OSのoffline Expo JS/Hermes export成功。実機/署名済みIPA・AAB/本番ではない。
+  `MOBILE_STORE_RELEASE.md`に公開ゲート、`MOBILE_STORE_SUBMISSION_DRAFT.md`にストア素材下書きを作成。
+  `doctor:mobile-store`は現Expo51のSDK移行未完了を検知しBLOCKED（期待通り）。申請可能ではない。
+  次は段階的SDK移行、AI対象者選択/通報、端末通知解除。認証・削除/復元の実環境受入と実機確認は残す。
+  Supabase MFA復旧待ち。EAS/ストア契約・ビルド送信・提出・本番変更は未実施。追記410参照。
+
+## 直前までの作業（本番未反映）
 
 - 本人の「初回設定を省略したい」「作り直して」で、`codex/consult-guest-entry` に初回メールなし相談を実装。
   入力→その場で短い保存/外部AI送信の同意→本人の保存先作成・選択中の手帳同期→回答表示。
@@ -30,7 +42,7 @@
   公開条件は `CONSULT_GUEST_RELEASE.md`、証跡/差分は追記406・407。本番は下記追記405のまま。
   ソースcommit `7796d3c` をpushし、draft PR #9を作成。
   https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9
-  CI `35440317168` は確認時in_progress。マージ/本番配信はしない。
+  CI `35440317168`（source `7796d3c`）は9月20日にcompleted/successを確認。今回native追加分のCIとは別。マージ/本番配信はしない。
 
 ## 前回完了・本番反映済み
 

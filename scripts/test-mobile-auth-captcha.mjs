@@ -13,7 +13,7 @@ const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 function evaluate(source, context = {}) {
   const module = { exports: {} };
   const js = ts.transpileModule(source, { compilerOptions: {
-    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true
+    module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, esModuleInterop: true, jsx: ts.JsxEmit.ReactJSX
   } }).outputText;
   vm.runInNewContext(js, { module, exports: module.exports, URL, URLSearchParams, Date, ...context });
   return module.exports;
@@ -57,7 +57,14 @@ function nativeScenario(options = {}) {
   const calls = [];
   const native = { auth: {
     getSession: async () => ({ data: { session: currentUser ? { user: currentUser } : null }, error: options.sessionError ?? null }),
-    setSession: async (tokens) => { calls.push(["setSession", tokens]); currentUser = user; return { error: options.setError ?? null }; }
+    setSession: async (tokens) => { calls.push(["setSession", tokens]); currentUser = user; return { error: options.setError ?? null }; },
+    signOut: async (input) => {
+      calls.push(["signOut", input]);
+      if (options.pauseSignOut) await options.pauseSignOut;
+      if (options.signOutError) return { error: options.signOutError };
+      currentUser = null;
+      return { error: null };
+    }
   } };
   const verifier = { auth: {
     getUser: async (token) => {
@@ -82,7 +89,7 @@ function nativeScenario(options = {}) {
       if (name === "expo-secure-store") return {
         getItemAsync: async () => stored,
         setItemAsync: async (_key, value) => { if (options.storeFailure) throw Error("locked"); stored = value; calls.push(["store"]); },
-        deleteItemAsync: async () => { stored = null; calls.push(["remove"]); }
+        deleteItemAsync: async (key) => { if (options.removeFailure) throw Error("locked"); stored = null; calls.push(["remove", key]); }
       };
       throw Error(`Unexpected native dependency ${name}`);
     }
@@ -156,7 +163,167 @@ for (const options of [{ openFailure: true }, { storeFailure: true }, { webBase:
   assert.equal(result.demo, false);
   assert.equal(fixture.stored(), null);
 }
-assert.equal((await nativeScenario({ unconfigured: true }).api.sendMagicLink(user.email)).demo, true);
+assert.equal((await nativeScenario({ unconfigured: true }).api.sendMagicLink(user.email)).demo, false, "missing setup must never enable demo entry");
+
+{
+  const fixture = nativeScenario({ currentUser: user });
+  assert.equal((await fixture.api.signOutThisDevice()).ok, true);
+  assert.equal(fixture.stored(), null);
+  assert.equal(fixture.currentUser(), null);
+  assert.deepEqual(JSON.parse(JSON.stringify(fixture.calls)), [
+    ["remove", flow.MOBILE_AUTH_PENDING_KEY], ["signOut", { scope: "local" }]
+  ], "logout removes only its pending nonce and revokes only this session");
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback())).handled, false, "old email cannot log the device back in after logout");
+}
+for (const options of [{ signOutError: Error("offline") }, { removeFailure: true }, { unconfigured: true }]) {
+  const fixture = nativeScenario({ currentUser: user, ...options });
+  assert.equal((await fixture.api.signOutThisDevice()).ok, false);
+  assert.equal(fixture.currentUser().id, user.id, "failed logout must not claim the account is signed out");
+}
+{
+  let finish;
+  const pauseSignOut = new Promise((resolve) => { finish = resolve; });
+  const fixture = nativeScenario({ currentUser: user, pauseSignOut });
+  const logout = fixture.api.signOutThisDevice();
+  assert.equal((await fixture.api.sendMagicLink(user.email)).browserOpened, undefined);
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback())).handled, false);
+  finish();
+  assert.equal((await logout).ok, true, "login and callbacks cannot race local logout");
+}
+{
+  let finish;
+  const pauseVerification = new Promise((resolve) => { finish = resolve; });
+  const fixture = nativeScenario({ pauseVerification });
+  const restoration = fixture.api.handleAuthRedirectUrl(callback());
+  assert.equal((await fixture.api.signOutThisDevice()).ok, false, "an in-flight callback must finish before logout can start");
+  finish();
+  await restoration;
+  assert.equal((await fixture.api.signOutThisDevice()).ok, true);
+}
+
+// Drive the observer used by the real Context with synthetic Auth events.
+function sessionScenario(options = {}) {
+  const states = [];
+  let listener;
+  let finish;
+  let unsubscribeCount = 0;
+  const readSession = new Promise((resolve) => { finish = resolve; });
+  const api = evaluate(read("apps/mobile/lib/session.ts"), {
+    process: { env: { EXPO_PUBLIC_WEB_BASE_URL: options.webBase ?? "https://web.example.test" } },
+    require(name) {
+      if (name === "./authFlow") return flow;
+      if (name === "./supabase") return { getSupabase: () => options.unconfigured ? null : { auth: {
+        getSession: () => readSession,
+        onAuthStateChange(callback) { listener = callback; return { data: { subscription: { unsubscribe() { unsubscribeCount++; } } } }; }
+      } } };
+      throw Error(`Unexpected session dependency ${name}`);
+    }
+  });
+  const stop = api.observeMobileSession((next) => states.push(next));
+  return { api, states, stop, finish, emit: (value) => listener("SYNTHETIC", value), unsubscribeCount: () => unsubscribeCount };
+}
+{
+  const fixture = sessionScenario();
+  fixture.finish({ data: { session }, error: null });
+  await Promise.resolve();
+  assert.equal(fixture.states.at(-1).status, "signed-in", "an existing saved native session can open protected screens");
+  assert.equal(fixture.states.at(-1).userId, user.id);
+  fixture.emit(null);
+  assert.equal(fixture.states.at(-1).status, "signed-out");
+  fixture.emit({ user: { ...user, is_anonymous: true } });
+  assert.equal(fixture.states.at(-1).status, "signed-out", "Web guest identity is not native authentication");
+  fixture.stop();
+  const count = fixture.states.length;
+  fixture.emit(session);
+  assert.equal(fixture.states.length, count);
+  assert.equal(fixture.unsubscribeCount(), 1);
+}
+{
+  const fixture = sessionScenario();
+  fixture.emit(null);
+  fixture.finish({ data: { session }, error: null });
+  await Promise.resolve();
+  assert.equal(fixture.states.at(-1).status, "signed-out", "a stale initial read cannot undo logout");
+  fixture.stop();
+}
+for (const options of [{ unconfigured: true }, { webBase: "http://invalid.test" }]) {
+  assert.equal(sessionScenario(options).states.at(-1).status, "unconfigured");
+}
+
+// Render the actual Context/guard with tiny React stubs; no native surface is used.
+{
+  let state = { status: "loading", userId: null };
+  let effect;
+  let published;
+  let observed;
+  const jsx = (type, props, key) => ({ type, props, key });
+  const api = evaluate(read("apps/mobile/components/MobileSessionProvider.tsx"), {
+    require(name) {
+      if (name === "react/jsx-runtime") return { jsx, jsxs: jsx };
+      if (name === "react") return {
+        createContext: () => ({ Provider: "Provider" }), useContext: () => state,
+        useState: (value) => [value, (next) => { published = next; }], useEffect: (callback) => { effect = callback; }
+      };
+      if (name === "expo-router") return { Redirect: "Redirect" };
+      if (name === "react-native") return { ActivityIndicator: "Spinner", View: "View", Text: "Text", StyleSheet: { create: (styles) => styles } };
+      if (name === "@/lib/theme") return { colors: {} };
+      if (name === "@/lib/session") return { observeMobileSession: (callback) => { observed = callback; return () => "unsubscribed"; } };
+      throw Error(`Unexpected Context dependency ${name}`);
+    }
+  });
+  api.MobileSessionProvider({ children: "app" });
+  const stop = effect();
+  observed({ status: "signed-in", userId: user.id });
+  assert.equal(published.userId, user.id);
+  assert.equal(stop(), "unsubscribed");
+  for (const status of ["signed-out", "unconfigured", "error"]) {
+    state = { status, userId: null };
+    const output = api.ProtectedScreen({ children: "PRIVATE_CONTENT" });
+    assert.equal(output.type, "Redirect");
+    assert.equal(output.props.href, "/(auth)/welcome");
+  }
+  state = { status: "signed-in", userId: user.id };
+  assert.equal(api.ProtectedScreen({ children: "PRIVATE_CONTENT" }).props.children, "PRIVATE_CONTENT");
+  state = { status: "loading", userId: null };
+  assert.doesNotMatch(JSON.stringify(api.ProtectedScreen({ children: "PRIVATE_CONTENT" })), /PRIVATE_CONTENT/);
+}
+
+// Misconfigured data helpers must not manufacture sample records or successful writes.
+{
+  const api = evaluate(read("apps/mobile/lib/mobileData.ts"), {
+    process: { env: {} },
+    require(name) {
+      if (name === "./supabase") return { getSupabase: () => null };
+      if (name === "@/lib/funnel") return { trackFunnel: () => { throw Error("unexpected tracking"); } };
+      if (name === "./demoData" || name === "@oyano/shared") return {};
+      throw Error(`Unexpected data dependency ${name}`);
+    }
+  });
+  for (const name of ["fetchDashboardData", "fetchPerson", "fetchTasks", "fetchFamilyMembers", "fetchTimelineEntries"]) {
+    await assert.rejects(() => api[name]("synthetic-person"), /接続設定/);
+  }
+  for (const operation of [
+    () => api.createInitialFamilyPerson({ displayName: "synthetic", currentStatus: "preparing" }),
+    () => api.createPersonForFamily({ displayName: "synthetic", currentStatus: "preparing", anchorPersonId: "synthetic-person" }),
+    () => api.createFamilyInvite("synthetic-person", user.email),
+    () => api.acceptFamilyInvite("synthetic-token"),
+    () => api.updatePersonStatus("synthetic-person", "preparing", "hospitalized"),
+    () => api.updatePersonProfile("synthetic-person", { displayName: "synthetic" }),
+    () => api.addTimelineEntry({ personId: "synthetic-person", body: "synthetic", mood: "stable" }),
+    () => api.updateTaskStatus("synthetic-task", "done"),
+    () => api.updateTaskAssignee("synthetic-task", "synthetic-member")
+  ]) {
+    const result = await operation();
+    assert.match(result.error, /接続設定/);
+    assert.ok(!result.person && !result.entry && !result.inviteUrl && !result.accepted);
+  }
+}
+for (const file of ["apps/mobile/app/(tabs)/_layout.tsx", "apps/mobile/app/people/_layout.tsx", "apps/mobile/app/account/_layout.tsx", "apps/mobile/app/consult.tsx", "apps/mobile/app/notifications.tsx"]) {
+  assert.match(read(file), /<ProtectedScreen>/, `${file} must guard private children before they mount`);
+}
+assert.doesNotMatch(read("apps/mobile/app/(auth)/welcome.tsx"), /continueDemo|activateDemoSession|consumeWebHandoff/);
+assert.match(read("apps/mobile/app/(tabs)/settings.tsx"), /Alert\.alert[\s\S]*キャンセル[\s\S]*ログアウトする/);
+assert.match(read("apps/mobile/app/(tabs)/settings.tsx"), /router\.dismissAll\(\)[\s\S]*router\.replace\("\/\(auth\)\/welcome"\)/);
 
 function webScenario({ siteKey = "site-key", sendError = null, networkError = false, configured = true } = {}) {
   const calls = [];

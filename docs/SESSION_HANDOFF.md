@@ -15294,3 +15294,28 @@ https://mitene.us/
   契約に応じた優先対応はDashboardのsupport form経由と記載。実契約がFreeになったとは判断しない。
   問い合わせ受付は確認済み、担当者回答/本人確認/復旧は未完了。追加契約・再送信・公開投稿は行わない。
   返信メールのChrome tab 596465260を確認用に保持。問い合わせ記録/現在地のみ更新してpush。
+
+## 2026-09-20 追記 410 — アプリ申請の第一段階、native誤表示/認証保護を修正
+
+- 本人「アプリ申請に向けてすすめよか」「つづけて」で、契約・課金・提出・本番変更なしの準備を実施。
+  branch `codex/consult-guest-entry` / draft PR #9上で継続。保護対象の未追跡2文書とreview_exportsは触らない。
+- MobileSessionProviderでセッション初期取得/認証イベントの競合を抑止。tabs/people/account/consult/notificationsを
+  未認証でmountさせず、別本人への変更ではprivate stateを再生成。Root Stackは常時保持して認証復帰を妨げない。
+  見本へ入る導線とdemoSessionのバイパスを除去。設定不足や読取失敗で架空の人物・タスクを表示しない。
+  設定に確認付き端末ログアウト（scope local）を追加。保留nonceも破棄、進行中の本人確認との競合を拒否。
+  実データ/他端末のセッションは削除しない。端末通知tokenの個別解除は未実装で説明と公開ゲートに明記。
+- 固定の実家情報を記入例へ、添付したふりの写真/PDF操作を文字メモへ整理。既存記録/メタデータは変更なし。
+  プランの未取得Free断定/固定料金/未提供Plus誘導を利用案内へ。カメラ/写真用途宣言を現実装に合わせ削除。
+  skipped件数除外、日記を端末の現地日付で保存、保管場所メモの例文を初期値から除去。
+  通信失敗時の空データ誤認/保存成功誤認を抑え、日記/プロフィール/保管場所メモの入力保持を検証。
+- `MOBILE_STORE_RELEASE.md`（公開ゲート/SDK段階移行/実機表）と `MOBILE_STORE_SUBMISSION_DRAFT.md`
+  （文面・Privacy/Data Safety調査表・画像計画・審査メモ）を追加。未提出・正規審査用アクセスも未準備。
+  offline preflightを追加し旧SDKをBLOCKEDとする。doctorの構成成功を申請Ready扱いしない。
+- source-only 50/50、Mobile tsc、diff check成功。Auth/セッション/失敗時表示と日付境界は合成テスト。
+  iOS/Androidのoffline JS/Hermes exportもexit 0。出力一時先: `oyano-mobile-export-eJnNr3`。
+  実機起動・署名付きnative build・実DB/API/メール・審査ではない。実利用者情報への変更なし。
+  先行source7796d3cのCI35440317168はsuccessを現在確認。今回分のCIと混同しない。
+  初回並行監査は完了したが、追加独立最終レビューは担当の利用制限で未完了。rootで差分/合成回帰を確認。
+- 次の実装: Expo51→段階更新（最低54を中間検証、最終保守SDK/対応iOSは別途確定）、AIの対象者引継ぎ/
+  アプリ内通報、端末token解除。実記録でなく専用試験データで認証/権限/保存/削除/復元・実機受入を行う。
+  Supabase MFA復旧/認証本番整合待ち。契約・費用・内部配布build・ストア送信には実行前に本人確認を挟む。

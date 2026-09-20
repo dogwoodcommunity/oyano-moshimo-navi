@@ -11,7 +11,7 @@ const retryMessage = "本人確認を完了できませんでした。アプリ�
 export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRECT_PATH) {
   if (authBusy) return { sent: false, demo: false, message: "本人確認の準備中です。少しお待ちください。" };
   const supabase = getSupabase();
-  if (!supabase) return { sent: false, demo: true, message: "ログイン準備中です。見本画面で確認できます。" };
+  if (!supabase) return { sent: false, demo: false, message: "アプリの接続設定が不足しています。最新版のアプリでお試しください。" };
   const normalizedEmail = normalizeMobileEmail(email);
   if (!normalizedEmail) return { sent: false, demo: false, message: "メールアドレスを確認してください。" };
   authBusy = true;
@@ -31,6 +31,22 @@ export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRE
   } catch {
     await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY).catch(() => undefined);
     return { sent: false, demo: false, message: "本人確認の画面を開けませんでした。通信とアプリの更新を確認して、もう一度お試しください。" };
+  } finally { authBusy = false; }
+}
+
+/** Only revoke this installation's session; never delete account or family data. */
+export async function signOutThisDevice() {
+  if (authBusy) return { ok: false, message: "本人確認の処理中です。完了してからもう一度ログアウトしてください。" };
+  authBusy = true;
+  try {
+    await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY);
+    const supabase = getSupabase();
+    if (!supabase) return { ok: false, message: "アプリの接続設定を確認できないため、ログアウトを完了できませんでした。" };
+    const { error } = await supabase.auth.signOut({ scope: "local" });
+    if (error) return { ok: false, message: "ログアウトを完了できませんでした。通信を確認してもう一度お試しください。" };
+    return { ok: true, message: "この端末からログアウトしました。" };
+  } catch {
+    return { ok: false, message: "ログアウトを完了できませんでした。もう一度お試しください。" };
   } finally { authBusy = false; }
 }
 

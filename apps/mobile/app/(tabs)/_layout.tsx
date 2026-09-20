@@ -1,42 +1,11 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Redirect, Tabs } from "expo-router";
-import { useEffect, useState } from "react";
-import { isDemoSessionActive } from "@/lib/demoSession";
-import { getSupabase } from "@/lib/supabase";
+import { Tabs } from "expo-router";
+import { ProtectedScreen } from "@/components/MobileSessionProvider";
 import { colors } from "@/lib/theme";
 
 export default function TabsLayout() {
-  const [canEnter, setCanEnter] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function checkEntry() {
-      if (isDemoSessionActive()) {
-        if (mounted) setCanEnter(true);
-        return;
-      }
-
-      const supabase = getSupabase();
-      if (!supabase) {
-        if (mounted) setCanEnter(true);
-        return;
-      }
-
-      const { data } = await supabase.auth.getSession();
-      if (mounted) setCanEnter(Boolean(data.session));
-    }
-
-    void checkEntry();
-    return () => {
-      mounted = false;
-    };
-  }, []);
-
-  if (canEnter === null) return null;
-  if (!canEnter) return <Redirect href="/(auth)/welcome" />;
-
   return (
+    <ProtectedScreen>
     <Tabs
       screenOptions={{
         headerStyle: { backgroundColor: colors.paper },
@@ -57,7 +26,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="plan"
         options={{
-          title: "プラン",
+          title: "利用案内",
           tabBarIcon: ({ color, size }) => <MaterialCommunityIcons color={color} name="calendar-check-outline" size={size} />
         }}
       />
@@ -69,5 +38,6 @@ export default function TabsLayout() {
         }}
       />
     </Tabs>
+    </ProtectedScreen>
   );
 }

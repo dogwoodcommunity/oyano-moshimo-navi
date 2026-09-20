@@ -34,6 +34,7 @@ import {
   type MobileTimelineEntry
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+import { ProtectedScreen } from "@/components/MobileSessionProvider";
 
 const suggestions = [
   "いまの記録から、見落としていることはありますか",
@@ -59,7 +60,7 @@ function birthDateToAgeBand(birthDate?: string) {
   return `${Math.floor(age / 10) * 10}代`;
 }
 
-export default function ConsultScreen() {
+function ConsultScreen() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [person, setPerson] = useState<MobilePerson | null>(null);
   const [entries, setEntries] = useState<MobileTimelineEntry[]>([]);
@@ -94,7 +95,7 @@ export default function ConsultScreen() {
       ]);
       if (!mounted) return;
 
-      const active = data.person ?? data.people[0] ?? null;
+      const active = data.person?.id ? data.person : data.people[0] ?? null;
       setPerson(active);
       setAccess(consultAccess);
       if (active) {
@@ -122,7 +123,13 @@ export default function ConsultScreen() {
       if (mounted) setPhase("ready");
     }
 
-    void load();
+    void load().catch(() => {
+      if (!mounted) return;
+      setPerson(null);
+      setEntries([]);
+      setMessage("手帳を読み込めませんでした。通信とログインを確認して、この画面を開き直してください。");
+      setPhase("error");
+    });
     return () => { mounted = false; };
   }, []);
 
@@ -395,9 +402,9 @@ export default function ConsultScreen() {
   if (!person) {
     return (
       <View style={styles.center}>
-        <Text style={styles.centerTitle}>先に対象者を登録してください</Text>
+        <Text style={styles.centerTitle}>{phase === "error" ? "手帳を確認できませんでした" : "先に対象者を登録してください"}</Text>
         <Text style={styles.centerText}>
-          相談は、その人のプロフィールと記録を前提に整理します。登録がないと、一般論しか返せません。
+          {phase === "error" ? message : "相談は、その人のプロフィールと記録を前提に整理します。登録がないと、一般論しか返せません。"}
         </Text>
         <Link asChild href="/(tabs)/dashboard">
           <Pressable style={styles.primaryButton}>
@@ -652,7 +659,7 @@ export default function ConsultScreen() {
         {!access.canConsult && access.signedIn ? (
           <Link asChild href="/account/plan">
             <Pressable style={styles.plusButton}>
-              <Text style={styles.plusButtonText}>Plusで今日も続けて相談する</Text>
+              <Text style={styles.plusButtonText}>無料で使える内容を確認する</Text>
             </Pressable>
           </Link>
         ) : null}
@@ -669,7 +676,7 @@ export default function ConsultScreen() {
             {message.includes("Plus") ? (
               <Link asChild href="/account/plan">
                 <Pressable style={styles.plusButton}>
-                  <Text style={styles.plusButtonText}>Plusの内容を見る</Text>
+                  <Text style={styles.plusButtonText}>利用範囲を確認する</Text>
                 </Pressable>
               </Link>
             ) : null}
@@ -678,6 +685,10 @@ export default function ConsultScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function ProtectedConsultScreen() {
+  return <ProtectedScreen><ConsultScreen /></ProtectedScreen>;
 }
 
 function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
@@ -703,7 +714,7 @@ function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
     return (
       <View style={styles.accessNoticeMuted}>
         <Text style={styles.accessTitle}>今日の無料相談は利用済みです</Text>
-        <Text style={styles.accessText}>明日0時からまた1回使えます。今すぐ続ける場合はPlusで使えます。</Text>
+        <Text style={styles.accessText}>明日0時からまた1回使えます。次に聞きたいことは、日記に残しておけます。</Text>
       </View>
     );
   }

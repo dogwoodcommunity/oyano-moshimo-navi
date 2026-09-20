@@ -116,5 +116,6 @@ if (resolvedExpo?.owner) ok("Expo owner set");
 else warn("Expo owner not set; set it only after the Expo account/team is confirmed");
 
 console.log(`Mobile root: ${mobileRoot}`);
+warn("構成ファイルの確認のみです。ストア申請・実機動作の合格ではありません。doctor:mobile-store と docs/MOBILE_STORE_RELEASE.md を確認してください。");
 
 if (failed) process.exit(1);

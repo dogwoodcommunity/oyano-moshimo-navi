@@ -1,44 +1,30 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { FREE_PLAN_MEMBER_LIMIT } from "@oyano/shared";
-import { fetchDashboardData } from "@/lib/mobileData";
+import { FREE_PLAN_MEMBER_LIMIT, FREE_PLAN_NOTEBOOK_LIMIT } from "@oyano/shared";
 import { colors, radius, shadow } from "@/lib/theme";
 
 const rows = [
-  ["現在のプラン", "家族手帳に紐づきます"],
-  ["課金単位", "家族手帳ごと"],
-  ["対象者の登録", "1名から"],
+  ["対象者の手帳", `${FREE_PLAN_NOTEBOOK_LIMIT}名分`],
   ["家族招待", `あなたのほかに${FREE_PLAN_MEMBER_LIMIT}人まで`],
-  ["期限通知", "基本通知あり"],
-  ["写真", "10枚目安"],
-  ["AI相談", "1日1回無料"]
+  ["日記", "文字で記録し、過去の内容を見返す"],
+  ["確認リスト", "期限・進み具合・担当者の確認"],
+  ["保管場所メモ", "書類などの存在と場所を記録"],
+  ["AI相談", "1日1回無料。利用可否は相談画面で確認"]
 ];
 
 export default function AccountPlanScreen() {
-  const [allComplete, setAllComplete] = useState(false);
-
-  useEffect(() => {
-    let mounted = true;
-    void fetchDashboardData().then((data) => {
-      if (!mounted) return;
-      setAllComplete(data.tasks.length > 0 && data.tasks.every((task) => task.status === "done" || task.status === "skipped"));
-    });
-    return () => { mounted = false; };
-  }, []);
-
   return (
     <ScrollView contentContainerStyle={styles.screen} style={styles.scroll}>
       <View style={styles.header}>
-        <Text style={styles.kicker}>プラン確認</Text>
-        <Text style={styles.title}>利用状態の詳細</Text>
-        <Text style={styles.body}>手帳を作った家族のプラン状態を確認します。招待された家族は、同じ手帳を追加課金なしで使います。</Text>
+        <Text style={styles.kicker}>利用案内</Text>
+        <Text style={styles.title}>無料で利用できる範囲</Text>
+        <Text style={styles.body}>日々の記録と家族での確認を、無料で始められます。ここでは提供する機能をご案内します。</Text>
       </View>
 
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color={colors.green} name="clipboard-check-outline" size={23} />
-          <Text style={styles.cardTitle}>現在の状態</Text>
+          <Text style={styles.cardTitle}>無料の提供範囲</Text>
         </View>
         {rows.map(([label, value]) => (
           <View key={label} style={styles.row}>
@@ -50,26 +36,16 @@ export default function AccountPlanScreen() {
 
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
-          <MaterialCommunityIcons color={colors.green} name="package-variant-closed" size={23} />
-          <Text style={styles.cardTitle}>Family Plus</Text>
+          <MaterialCommunityIcons color={colors.green} name="notebook-outline" size={23} />
+          <Text style={styles.cardTitle}>記録を続けるために</Text>
         </View>
-        <Text style={styles.body}>月額980円・年額9,800円。Family Plusは家族手帳ごとのプランです。</Text>
-        <Text style={styles.body}>手帳を作った人がPlusなら、招待された家族は同じ手帳を追加課金なしで使えます。アプリでは利用状態だけを表示します。</Text>
-        <View style={styles.statusPill}>
-          <Text style={styles.statusPillText}>解約しても基本の記録は読めます</Text>
-        </View>
+        <Text style={styles.body}>カード登録は必要ありません。家族で同じ手帳を見るには、メール確認と家族招待を済ませてください。</Text>
+        <Text style={styles.body}>AI相談には、記録の保存設定と送信する内容への同意も必要です。今日の無料相談を使った後は、翌日0時からまた1回使えます。</Text>
       </View>
 
-      {allComplete ? (
-        <View style={styles.completeNotice}>
-          <Text style={styles.noticeTitle}>一区切りついたら</Text>
-          <Text style={styles.noticeText}>すべての確認が終わった家族は、Plusを続けるか見直せます。手帳の基本記録は読み返せる前提で設計します。</Text>
-        </View>
-      ) : null}
-
       <View style={styles.notice}>
-        <Text style={styles.noticeTitle}>招待された家族の表示</Text>
-        <Text style={styles.noticeText}>共有された手帳では、決済ではなく記録・確認リスト・写真の更新に集中します。別の支払いボタンは出しません。</Text>
+        <Text style={styles.noticeTitle}>写真・PDFについて</Text>
+        <Text style={styles.noticeText}>このアプリの日記では、写真・PDFファイルの添付はできません。ファイル名や保管場所を文字で残せます。</Text>
       </View>
     </ScrollView>
   );
@@ -88,9 +64,6 @@ const styles = StyleSheet.create({
   label: { color: colors.green, fontWeight: "900" },
   value: { color: colors.ink, fontWeight: "800", lineHeight: 22 },
   body: { color: colors.muted, lineHeight: 22 },
-  statusPill: { alignSelf: "flex-start", backgroundColor: colors.surfaceSoft, borderColor: colors.line, borderRadius: 999, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 7 },
-  statusPillText: { color: colors.greenDark, fontSize: 12, fontWeight: "900" },
-  completeNotice: { backgroundColor: "#eef8ef", borderColor: "#cfe6d4", borderRadius: radius.card, borderWidth: 1, gap: 6, padding: 14 },
   notice: { backgroundColor: "#fff9eb", borderColor: "#ead9b8", borderRadius: radius.card, borderWidth: 1, gap: 6, padding: 14 },
   noticeTitle: { color: colors.greenDark, fontSize: 18, fontWeight: "900" },
   noticeText: { color: "#6f532b", fontWeight: "800", lineHeight: 22 }

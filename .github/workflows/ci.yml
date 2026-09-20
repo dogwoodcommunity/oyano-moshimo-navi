@@ -54,6 +54,12 @@ jobs:
       - name: Typecheck mobile
         run: pnpm --filter mobile run typecheck
 
+      - name: Test offline mobile submission preflight (not store acceptance)
+        run: |
+          pnpm run test:mobile-store-preflight
+          pnpm run test:mobile-empty-states
+          pnpm run test:mobile-screen-readiness
+
       - name: Test local qualification runner safety
         run: pnpm run test:stage-a-local-runner
 

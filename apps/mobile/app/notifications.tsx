@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { ProtectedScreen } from "@/components/MobileSessionProvider";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { fetchNotificationPreferences, registerPushToken, saveNotificationPreferences } from "@/lib/notifications";
 import { colors, radius, shadow } from "@/lib/theme";
 
-export default function NotificationsScreen() {
+function NotificationsScreen() {
   const [enabled, setEnabled] = useState(true);
   const [monthlyEnabled, setMonthlyEnabled] = useState(true);
   const [urgentEnabled, setUrgentEnabled] = useState(true);
@@ -125,6 +126,10 @@ export default function NotificationsScreen() {
       {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
     </ScrollView>
   );
+}
+
+export default function ProtectedNotificationsScreen() {
+  return <ProtectedScreen><NotificationsScreen /></ProtectedScreen>;
 }
 
 function PreferenceCard({

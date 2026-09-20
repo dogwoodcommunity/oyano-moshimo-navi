@@ -45,45 +45,58 @@ export default function AssetsScreen() {
   const [categories, setCategories] = useState<AssetCategory[]>(fallbackCategories);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState("insurance");
   const [existenceStatus, setExistenceStatus] = useState("exists");
-  const [title, setTitle] = useState("保険証券");
-  const [location, setLocation] = useState("実家の茶色い棚");
+  const [title, setTitle] = useState("");
+  const [location, setLocation] = useState("");
   const [ownerNote, setOwnerNote] = useState("");
   const [items, setItems] = useState<AssetItem[]>([]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    void loadCategories();
-    void loadItems();
+    let active = true;
+    setTitle("");
+    setLocation("");
+    setOwnerNote("");
+    setItems([]);
+    setCategories(fallbackCategories);
+    void loadCategories(() => active);
+    void loadItems(() => active);
+    return () => { active = false; };
   }, [params.id]);
 
-  async function loadCategories() {
+  async function loadCategories(isActive = () => true) {
     const client = getSupabase();
     if (!client) return;
-
-    const { data } = await client
-      .from("asset_categories")
-      .select("id, key, label")
-      .order("label", { ascending: true });
-
-    if (data?.length) setCategories(data as AssetCategory[]);
+    try {
+      const { data } = await client.from("asset_categories").select("id, key, label").order("label", { ascending: true });
+      if (isActive() && data?.length) setCategories(data as AssetCategory[]);
+    } catch {
+      // Category labels are generic input choices, never saved personal records.
+    }
   }
 
-  async function loadItems() {
+  async function loadItems(isActive = () => true) {
+    setLoading(true);
+    setLoadError("");
     const client = getSupabase();
-    if (!client) return;
-
-    const { data } = await client
-      .from("asset_items")
-      .select("id, title, existence_status, location_note, owner_note, asset_categories(label)")
-      .eq("person_id", params.id)
-      .order("created_at", { ascending: false })
-      .limit(10);
-
-    setItems((data ?? []) as AssetItem[]);
+    try {
+      if (!client) throw new Error("unconfigured");
+      const { data, error } = await client.from("asset_items")
+        .select("id, title, existence_status, location_note, owner_note, asset_categories(label)")
+        .eq("person_id", params.id).order("created_at", { ascending: false }).limit(10);
+      if (error) throw new Error("read_failed");
+      if (isActive()) setItems((data ?? []) as AssetItem[]);
+    } catch {
+      if (isActive()) setLoadError("登録済みのメモを読み込めませんでした。通信を確認して、もう一度開いてください。");
+    } finally {
+      if (isActive()) setLoading(false);
+    }
   }
 
   async function save() {
+    if (saving) return;
     const trimmedTitle = title.trim();
     if (!trimmedTitle) {
       setMessage("項目名を入力してください。");
@@ -91,8 +104,10 @@ export default function AssetsScreen() {
     }
 
     setSaving(true);
+    setMessage("");
     const client = getSupabase();
-    if (client) {
+    try {
+      if (!client) throw new Error("unconfigured");
       const category = categories.find((item) => item.key === selectedCategoryKey);
       const { error } = await client.from("asset_items").insert({
         person_id: params.id,
@@ -103,17 +118,14 @@ export default function AssetsScreen() {
         owner_note: ownerNote.trim() || null
       });
 
-      if (error) {
-        setSaving(false);
-        setMessage(`保存できませんでした: ${error.message}`);
-        return;
-      }
-
+      if (error) throw new Error("save_failed");
+      setMessage("存在と保管場所を保存しました。暗証番号・パスワードは保存対象外です。");
       await loadItems();
+    } catch {
+      setMessage("保存できませんでした。入力内容は残っています。通信とログインを確認してもう一度お試しください。");
+    } finally {
+      setSaving(false);
     }
-
-    setSaving(false);
-    setMessage("存在と保管場所を保存しました。暗証番号・パスワードは保存対象外です。");
   }
 
   return (
@@ -203,7 +215,8 @@ export default function AssetsScreen() {
           <MaterialCommunityIcons color={colors.green} name="folder-check-outline" size={22} />
           <Text style={styles.cardTitle}>登録済み</Text>
         </View>
-        {items.length === 0 ? (
+        {loading || loadError ? <Text style={styles.body}>{loading ? "登録済みのメモを読み込んでいます。" : loadError}</Text> : null}
+        {!loading && !loadError && items.length === 0 ? (
           <Text style={styles.body}>まだ登録はありません。まずは保険証券、実印、年金証書などから残してください。</Text>
         ) : null}
         {items.map((item) => (

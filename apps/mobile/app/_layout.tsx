@@ -3,6 +3,7 @@ import { Stack } from "expo-router";
 import { enableScreens } from "react-native-screens";
 import { markNotificationsOpened } from "@/lib/notifications";
 import { colors } from "@/lib/theme";
+import { MobileSessionProvider } from "@/components/MobileSessionProvider";
 
 enableScreens(false);
 
@@ -32,6 +33,7 @@ export default function RootLayout() {
   }, []);
 
   return (
+    <MobileSessionProvider>
     <Stack screenOptions={{ headerStyle: { backgroundColor: colors.paper }, headerTintColor: colors.ink }}>
       <Stack.Screen name="(auth)/welcome" options={{ title: "はじめに" }} />
       <Stack.Screen name="auth/complete" options={{ title: "メールの本人確認" }} />
@@ -40,18 +42,11 @@ export default function RootLayout() {
       <Stack.Screen name="crisis/index" options={{ title: "急なとき" }} />
       <Stack.Screen name="crisis/[key]" options={{ title: "急なとき" }} />
       <Stack.Screen name="handoff" options={{ title: "アプリに保存" }} />
-      <Stack.Screen name="people/new" options={{ title: "対象者を追加" }} />
-      <Stack.Screen name="people/[id]/index" options={{ title: "対象者" }} />
-      <Stack.Screen name="people/[id]/tasks" options={{ title: "タスク" }} />
-      <Stack.Screen name="people/[id]/status" options={{ title: "状態変更" }} />
-      <Stack.Screen name="people/[id]/assets" options={{ title: "情報登録" }} />
-      <Stack.Screen name="people/[id]/timeline" options={{ title: "タイムライン" }} />
-      <Stack.Screen name="people/[id]/home" options={{ title: "実家カルテ" }} />
-      <Stack.Screen name="people/[id]/family" options={{ title: "家族共有" }} />
+      <Stack.Screen name="people" options={{ title: "家族の手帳" }} />
       <Stack.Screen name="invite" options={{ title: "家族招待" }} />
       <Stack.Screen name="notifications" options={{ title: "通知設定" }} />
-      <Stack.Screen name="account/plan" options={{ title: "プラン" }} />
-      <Stack.Screen name="account/delete" options={{ title: "削除依頼" }} />
+      <Stack.Screen name="account" options={{ title: "アカウント" }} />
     </Stack>
+    </MobileSessionProvider>
   );
 }

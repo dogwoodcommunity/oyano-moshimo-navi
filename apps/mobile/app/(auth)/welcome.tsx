@@ -2,10 +2,8 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { demoResult } from "@/lib/demoData";
-import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
-import { consumeWebHandoff } from "@/lib/handoff";
+import { useMobileSession } from "@/components/MobileSessionProvider";
 import { colors, radius, shadow } from "@/lib/theme";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
@@ -14,6 +12,7 @@ type AuthMode = "signup" | "login";
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function WelcomeScreen() {
+  const session = useMobileSession();
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [email, setEmail] = useState("");
@@ -40,19 +39,6 @@ export default function WelcomeScreen() {
     setSubmitting(false);
     setMessage(result.message);
 
-    if (!result.demo) return;
-
-    const handoff = await consumeWebHandoff(caseId, token);
-    if (handoff) {
-      setMessage(`Web診断を引き継ぎました。タスク ${handoff.tasksCreated}件`);
-    }
-    router.replace("/(tabs)/dashboard");
-  }
-
-  async function continueDemo() {
-    activateDemoSession();
-    setMessage(`見本で開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
-    router.replace("/(tabs)/dashboard");
   }
 
   function openAuth(mode: AuthMode) {
@@ -116,8 +102,14 @@ export default function WelcomeScreen() {
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>会員登録して続ける</Text>
         <Text style={styles.body}>親の名前と今の状況を入れると、家族ボード、期限、担当、写真メモをこのアプリで管理できます。</Text>
-        <MascotGuide compact message="迷ったら、登録前に見本を開いてください。使うと決めた時だけ、メールで本人確認します。" />
-        <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
+        <MascotGuide compact message="手帳を開くにはメールで本人確認します。急なときの案内は登録なしでも読めます。" />
+        {session.status === "unconfigured" ? <Text style={styles.message}>アプリの接続設定が不足しています。最新版のアプリでお試しください。現在は手帳を開いたり、記録を保存したりできません。</Text> : null}
+        {session.status === "error" ? <Text style={styles.message}>ログイン状態を確認できませんでした。アプリを開き直して、もう一度お試しください。</Text> : null}
+        {session.status === "signed-out" ? <Text style={styles.body}>現在ログインしていません。登録済みの方は、同じメールアドレスでログインしてください。</Text> : null}
+        {session.status === "signed-in" ? <Pressable onPress={() => router.replace("/(tabs)/dashboard")} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>ログイン中の手帳を開く</Text>
+        </Pressable> : null}
+        <Pressable disabled={session.status === "unconfigured" || session.status === "loading"} onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
         </Pressable>
@@ -125,11 +117,7 @@ export default function WelcomeScreen() {
           <MaterialCommunityIcons color={colors.greenDark} name="book-open-page-variant-outline" size={20} />
           <Text style={styles.webButtonText}>使い方・安心設計を読む</Text>
         </Pressable>
-        <Pressable onPress={continueDemo} style={styles.previewButton}>
-          <MaterialCommunityIcons color={colors.greenDark} name="eye-outline" size={20} />
-          <Text style={styles.previewButtonText}>登録前に見本を見る</Text>
-        </Pressable>
-        <Pressable onPress={() => openAuth("login")} style={styles.loginButton}>
+        <Pressable disabled={session.status === "unconfigured" || session.status === "loading"} onPress={() => openAuth("login")} style={styles.loginButton}>
           <Text style={styles.loginText}>登録済みの方はログイン</Text>
         </Pressable>
       </View>

@@ -1,5 +1,8 @@
 # Expo app test build checklist
 
+> 2026-09-20追記: 申請準備の現在地は `MOBILE_STORE_RELEASE.md`、申請文面は `MOBILE_STORE_SUBMISSION_DRAFT.md`。
+> 本書は過去の内部テスト用。下記の3組/ログイン状態/SDK・料金記述は現在の申請準備完了を意味しません。
+
 家族3組テスト前に、Expoアプリを実機で確認するためのチェックリスト。
 
 ## 現在のアプリ定義

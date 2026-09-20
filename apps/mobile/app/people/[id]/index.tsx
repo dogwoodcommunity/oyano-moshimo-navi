@@ -4,7 +4,7 @@ import { Link, useLocalSearchParams } from "expo-router";
 import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
 import {
-  demoDashboardData,
+  emptyDashboardData,
   fetchPerson,
   fetchTasks,
   fetchTimelineEntries,
@@ -88,36 +88,51 @@ function unassignedTaskCount(tasks: MobileTask[]) {
 
 export default function PersonScreen() {
   const params = useLocalSearchParams<{ id: string }>();
-  const fallback = demoDashboardData();
-  const [person, setPerson] = useState<MobilePerson>(fallback.person);
-  const [profile, setProfile] = useState<MobilePersonProfile>(defaultProfile(fallback.person));
-  const [tasks, setTasks] = useState<MobileTask[]>(fallback.tasks);
+  const [person, setPerson] = useState<MobilePerson>(() => emptyDashboardData().person);
+  const [profile, setProfile] = useState<MobilePersonProfile>({});
+  const [tasks, setTasks] = useState<MobileTask[]>([]);
   const [timeline, setTimeline] = useState<MobileTimelineEntry[]>([]);
   const [message, setMessage] = useState("");
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError("");
+    setMessage("");
+    setPerson(emptyDashboardData().person);
+    setProfile({});
+    setTasks([]);
+    setTimeline([]);
 
     async function load() {
-      const nextPerson = await fetchPerson(params.id);
-      const [nextTasks, nextTimeline] = await Promise.all([
-        fetchTasks(params.id),
-        fetchTimelineEntries(params.id)
-      ]);
+      try {
+        const nextPerson = await fetchPerson(params.id);
+        const [nextTasks, nextTimeline] = await Promise.all([
+          fetchTasks(params.id),
+          fetchTimelineEntries(params.id)
+        ]);
 
-      if (!active) return;
-      setPerson(nextPerson);
-      setProfile(defaultProfile(nextPerson));
-      setTasks(nextTasks);
-      setTimeline(nextTimeline);
+        if (!active) return;
+        setPerson(nextPerson);
+        setProfile(defaultProfile(nextPerson));
+        setTasks(nextTasks);
+        setTimeline(nextTimeline);
+      } catch {
+        if (active) setLoadError("手帳を読み込めませんでした。通信状態を確認して、もう一度お試しください。");
+      } finally {
+        if (active) setLoading(false);
+      }
     }
 
     void load();
     return () => {
       active = false;
     };
-  }, [params.id]);
+  }, [params.id, loadVersion]);
 
   const profileCompletion = useMemo(() => completion(profile), [profile]);
   // まだ空いている「重要」項目のうち、フォーム順で最初のもの＝次に埋めるとよいもの。
@@ -132,20 +147,43 @@ export default function PersonScreen() {
   }
 
   async function saveProfile() {
-    if (saving) return;
+    if (saving || loading || loadError || person.id !== params.id) return;
     setMessage("");
     setSaving(true);
-    const result = await updatePersonProfile(params.id, profile);
-    setSaving(false);
+    try {
+      const result = await updatePersonProfile(params.id, profile);
 
-    if (result.error || !result.person) {
-      setMessage(result.error ?? "プロフィールを保存できませんでした。");
-      return;
+      if (result.error || !result.person) {
+        setMessage(result.error ?? "プロフィールを保存できませんでした。");
+        return;
+      }
+
+      setPerson(result.person);
+      setProfile(defaultProfile(result.person));
+      setMessage("プロフィールを保存しました。家族で見返せる情報が増えました。");
+    } catch {
+      setMessage("プロフィールを保存できませんでした。入力内容は残っています。通信状態を確認して、もう一度お試しください。");
+    } finally {
+      setSaving(false);
     }
+  }
 
-    setPerson(result.person);
-    setProfile(defaultProfile(result.person));
-    setMessage("プロフィールを保存しました。家族で見返せる情報が増えました。");
+  if (loading || loadError || person.id !== params.id) {
+    return (
+      <ScrollView contentContainerStyle={styles.screen} style={styles.scroll}>
+        <View style={styles.card}>
+          <Text accessibilityRole={loadError ? "alert" : undefined} style={styles.body}>
+            {loadError || "手帳を読み込んでいます。"}
+          </Text>
+          {loadError ? (
+            <Pressable accessibilityRole="button" onPress={() => setLoadVersion((current) => current + 1)} style={styles.saveButton}>
+              <Text style={styles.saveButtonText}>もう一度読み込む</Text>
+            </Pressable>
+          ) : null}
+          <Link href="/(tabs)/dashboard" style={styles.secondaryButton}>家族ボードに戻る</Link>
+        </View>
+      </ScrollView>
+    );
   }
 
   return (
@@ -255,35 +293,35 @@ export default function PersonScreen() {
 
       <View style={styles.card}>
         <View style={styles.sectionTitleRow}>
-          <MaterialCommunityIcons color={colors.gold} name="star-circle-outline" size={23} />
-          <Text style={styles.cardTitle}>Plusで広げる</Text>
+          <MaterialCommunityIcons color={colors.gold} name="notebook-outline" size={23} />
+          <Text style={styles.cardTitle}>無料の手帳で続けられること</Text>
         </View>
         <Text style={styles.body}>
-          2人目以降の対象者、家族共有の拡張、AI相談、家族会議用PDFは有料プランで提案します。まず1人目の手帳をしっかり作る導線です。
+          日々の記録を残し、家族と確認しながら、必要なときに相談できます。無料で使える範囲は利用案内で確認できます。
         </Text>
         <View style={styles.plusGrid}>
           <View style={styles.plusItem}>
-            <MaterialCommunityIcons color={colors.greenDark} name="account-multiple-plus-outline" size={22} />
-            <Text style={styles.plusText}>別の親・親戚を追加</Text>
+            <MaterialCommunityIcons color={colors.greenDark} name="notebook-outline" size={22} />
+            <Text style={styles.plusText}>今日の様子を日記に残す</Text>
           </View>
           <View style={styles.plusItem}>
             <MaterialCommunityIcons color={colors.greenDark} name="chat-question-outline" size={22} />
-            <Text style={styles.plusText}>この人の記録をもとにAI相談</Text>
+            <Text style={styles.plusText}>記録をもとに1日1回無料のAI相談</Text>
           </View>
           <View style={styles.plusItem}>
-            <MaterialCommunityIcons color={colors.greenDark} name="file-pdf-box" size={22} />
-            <Text style={styles.plusText}>家族会議用PDF</Text>
+            <MaterialCommunityIcons color={colors.greenDark} name="account-group-outline" size={22} />
+            <Text style={styles.plusText}>招待した家族と同じ手帳を確認</Text>
           </View>
         </View>
       </View>
 
       <View style={styles.navGrid}>
         <Link href={`/people/${params.id}/tasks`} style={styles.navTile}>期限と担当</Link>
-        <Link href={`/people/${params.id}/assets`} style={styles.navTile}>書類・写真</Link>
+        <Link href={`/people/${params.id}/assets`} style={styles.navTile}>保管場所メモ</Link>
         <Link href={`/people/${params.id}/family`} style={styles.navTile}>家族共有</Link>
         <Link href={`/people/${params.id}/home`} style={styles.navTile}>実家カルテ</Link>
         <Link href={`/people/${params.id}/status`} style={styles.navTile}>状態を更新</Link>
-        <Link href="/account/plan" style={styles.navTile}>有料プラン</Link>
+        <Link href="/account/plan" style={styles.navTile}>利用案内</Link>
       </View>
     </ScrollView>
   );
