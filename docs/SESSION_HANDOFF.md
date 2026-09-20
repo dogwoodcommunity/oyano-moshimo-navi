@@ -15353,3 +15353,21 @@ https://mitene.us/
 - source `1a5acba24cdc080c4c81ef785ca2d497ecef2475` をGitHubへpush確認。CI `35513187211` は全ジョブsuccess。
   Linuxでのnative設定生成/両OSexport、隔離SQL、Web build/smokeを含む。通知の限定修正も独立再レビューで
   新たなmust-fixなし、残ゲートは未解決のまま。draft PR #9を更新、main/本番への統合・ストア提出なし。
+
+## 2026-09-21 追記 412 — 既存開発者アカウント確認と通知修正の設計
+
+- 本人がApple Developer / Google Play ConsoleのBEECH名義登録について「登録済み」と回答。
+  新規契約/課金をせず既存登録を使う。本人申告と管理画面での実確認は区別する。
+- Chrome「📦 もしもナビ申請」でPlay Consoleを開き、株式会社BEECHの組織アカウントを確認。
+  全アプリ一覧は既存別アプリ1件のみ。親のもしもナビは未登録でソースのpackage ID予約も未確認。
+  作成フォームの必須項目とポリシー/米国輸出法の宣言を読取確認後、未入力・未送信でキャンセル。
+  Android開発者認証の案内は確認したが、もしもナビのパッケージ/署名鍵登録や要件完了とは扱わない。
+- App Store Connectはログイン画面。既存Apple Accountでの本人ログインを依頼しタブを保持。
+  Appleの組織・権限・契約確認は未完。パスワード/認証コードをチャットへ送らないよう案内。
+- 通知担当が既存schema/RLS/APIと通信競合の残件を再確認し、最小設計を
+  `MOBILE_PUSH_INSTALLATION_PROTOCOL.md` に保存。installation識別とサーバー世代だけでは足りず、
+  旧API/直接upsert経路と旧登録の移行も必要。設計のみであり実装/受入済みではない。
+- ローカルNode20.20.2、PATHのeas/pod未検出、Android API35/build-tools34・35、NDKなしを再確認。
+  ビルド送信/SDK導入/署名/IPA・AAB/実機受入はしていない。アプリソースは1a5acbaのまま。
+  文書のみ更新のため同一ソースの自動テストは再実行しない。前回CI証跡と未達ゲートは追記411。
+  Supabase MFA復旧の新たな確認なし。本番/実利用者データ/既存別アプリを変更していない。
