@@ -107,3 +107,4 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 - 現在tokenが取得できる場合は別ownerの同一token残存を検知し解除成功としない。他owner/他端末の行を削除しない。登録APIのwrite前拒否は明示receiptで再試行可、通信断/書込開始後の不明応答は未確定保持。
 - ローカルtoolchain: Xcode26.6とiOS26.5 Simulatorあり、アプリは未起動。CocoaPods未検出。AndroidはAPI35/build-tools34・35とJDK17あり、API36/NDK未検出。端末利用/署名/実APIテストは未実施。
 - 前回CI `35512152991` (b7daff9) は両ジョブsuccess。今回差分のCIはcommit後に別記する。本番/ストアへは出していない。
+- 今回source `1a5acba24cdc080c4c81ef785ca2d497ecef2475` をpushし、CI `35513187211` のweb-and-mobile / personal-data-infrastructure全successを確認。Linuxでの両OSexport/native設定生成、既存隔離SQL、Web build/smokeも通過。旧端末通知・実機・運用ゲートを解消した証拠ではない。

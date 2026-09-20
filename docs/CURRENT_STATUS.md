@@ -13,6 +13,7 @@
   SDK54は中間地点。nativeコンパイル・実機・本番受入・提出は未実施。通報の運営確認/保管期間も未確定。
   Apple/Google開発者登録の有無を本人へ確認中。Supabase MFA復旧と認証配信整合も必要。追記411参照。
   前回source `b7daff9` のCI `35512152991` は両ジョブsuccessを確認（今回追加差分の結果ではない）。
+  今回source `1a5acba` をpush済み。CI `35513187211` も全ジョブsuccess（offline bundle/native設定生成、隔離SQL、Web build/smoke含む）。main/本番/ストアは未変更。
 
 ## 前回の申請準備
 

@@ -15350,3 +15350,6 @@ https://mitene.us/
 - 前回source b7daff9のCI35512152991は両ジョブsuccessを確認。今回差分のCIはpush後に別記。
   Apple/Google開発者登録済みか本人へ質問済み、回答未受領。Supabase SU-478850は新たな復旧確認なし。
   最新の残件/検証境界はMOBILE_STORE_RELEASE.md、通報はAI_ANSWER_REPORTING.md。実利用者データ変更なし。
+- source `1a5acba24cdc080c4c81ef785ca2d497ecef2475` をGitHubへpush確認。CI `35513187211` は全ジョブsuccess。
+  Linuxでのnative設定生成/両OSexport、隔離SQL、Web build/smokeを含む。通知の限定修正も独立再レビューで
+  新たなmust-fixなし、残ゲートは未解決のまま。draft PR #9を更新、main/本番への統合・ストア提出なし。
