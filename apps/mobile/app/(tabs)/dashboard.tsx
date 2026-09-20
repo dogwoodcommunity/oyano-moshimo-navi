@@ -33,11 +33,11 @@ function dueLabel(value?: string) {
  * Link asChild は子へ style を渡すため、Pressable の関数形式の style が壊れて
  * 背景も並びも消える。押した時の反応を残したいので、遷移は router.push で行う。
  */
-function ConsultCard() {
+function ConsultCard({ personId }: { personId: string }) {
   const router = useRouter();
   return (
     <Pressable
-      onPress={() => router.push("/consult")}
+      onPress={() => router.push({ pathname: "/consult", params: { personId } })}
       style={({ pressed }) => [styles.consultCard, pressed && styles.consultCardPressed]}
     >
       <MaterialCommunityIcons color={colors.blue} name="comment-question-outline" size={26} />
@@ -306,7 +306,7 @@ export default function DashboardScreen() {
           <Link href={`/people/new?anchorPersonId=${data.person.id}`} style={styles.secondaryButton}>対象者を追加</Link>
         </View>
       </View>
-      <ConsultCard />
+      <ConsultCard personId={data.person.id} />
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
           <View style={styles.summaryText}>

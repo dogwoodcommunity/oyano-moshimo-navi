@@ -1,7 +1,7 @@
 # アプリ申請準備 — 2026-09-20
 
 **状態: 準備中 / 提出不可。** この資料はストア申請の作業台帳。Web公開、型チェック、CI成功をアプリの審査合格とは扱わない。
-本人の依頼は「アプリ申請に向けてすすめよか」。ローカル修正・検証・資料作成を進める。契約、課金、EASリモートビルド、ストア提出、本番設定変更はまだ実行しない。
+最新依頼は「テストしてはよ申請しよ」。提出の意向は確認済みだが、未達の安全性/実機/運用条件を省略しない。新規契約・課金・有料EASビルドは別に確認する。本番変更・ストア提出は未実施。
 
 ## 最初の配信範囲
 
@@ -24,11 +24,11 @@
 
 | 優先 | 項目 | 完了に必要な証跡 |
 | --- | --- | --- |
-| 必須 | Expo SDK更新 | 現51/RN0.74から段階移行、対応依存・lock・型・bundle・native buildの成功 |
+| 必須 | Expo SDK更新 | 51→52→53→54の型/両OSbundle PASS。54は中間地点、最終保守SDKとnative build/実機が未完 |
 | 必須 | サーバーと認証の整合 | Web `/auth/mobile` 配信、Supabase URL許可/CAPTCHA設定、新binaryのメール復帰と別人分離 |
-| 必須 | 複数手帳のAI対象 | 対象者選択とID引継ぎ、先頭の手帳へ勝手に相談しない実機試験 |
-| 必須 | AI回答のアプリ内通報 | 画面を離れず報告、所有権確認・受付保存・運営確認・削除/保存期間の運用。メールリンクだけでは代替しない |
-| 必須 | ログアウト後の通知 | その端末のtokenのみ解除する仕組みと受信停止。他端末を巻き添えにしない |
+| 必須 | 複数手帳のAI対象 | 選択/ID引継ぎ/状態分離/遅延応答抑止を実装・合成PASS、実機は未 |
+| 必須 | AI回答のアプリ内通報 | 同意付き報告/所有権確認/重複防止を実装・合成PASS、運営確認経路/担当/保存期間と実受入は未 |
+| 必須 | ログアウト後の通知 | 端末限定解除は合成PASS。ただし下記旧登録/不明応答の回復条件が未解決でBLOCKED |
 | 必須 | 削除・復元・権限 | 専用試験データでAuth/DB/Storage削除完了とバックアップ復元。viewer/owner・複数家族の漏えい防止 |
 | 必須 | 実機受入 | 下記iPhone/Android表。JS/合成テストだけでは閉じない |
 | 必須 | 申請情報 | 実developer組織、規約、Privacy/Data Safety/年齢区分、審査用ログイン、実画面画像、提出承認 |
@@ -42,7 +42,7 @@ CLIや管理キーでMFAを迂回しない。既存ユーザーの削除・パ�
 2. 各段で `expo install --check`、型チェック、両OSのJS export、既存認証/記憶/通知回帰を実行する。ネット接続・installが必要になっても課金ビルドは別承認。
 3. SDK55以降のNew Architecture、React19、Metroのworkspace解決を確認。WebのReact18を巻き込まない。旧RN固定のgradle-plugin/assets-registryも整合させる。
 4. 最終候補は保守中SDK。9月20日公式表では57が最新。57はNode22.13+ / iOS16.4+、55はiOS15.1+。対応端末を狭める判断は配信前に確認する。
-5. Xcode、Android toolchain、dev-client、SecureStoreのbackup除外設定、Privacy manifestを移行先SDKの仕様で確認する。今のSecureStore13のpluginを新しい説明だけで設定しない。
+5. Xcode、Android toolchain、dev-client、SecureStoreのbackup除外設定、Privacy manifestを移行先SDKの仕様で確認する。現SecureStore15はinstalled pluginを確認し、backup除外を明示した。FaceID利用は追加しない。
 6. 最後に生成IPA/AABを検査する。configのtarget値変更だけ、Xcodeがインストール済みだけでは完了にしない。
 
 確認した現在の要件（2026-09-20）:
@@ -78,15 +78,15 @@ node scripts/test-mobile-store-preflight.mjs
 corepack pnpm@9.15.9 --filter mobile run typecheck
 ```
 
-`doctor:mobile-store` のexit 1は現SDK51を検知した意図した停止。テスト失敗を隠すために0へ変更しない。
-将来宣言依存が一致しても結果は `SOURCE_CHECKS_ONLY` / `NOT_VERIFIED`。実機・実binary・Consoleの検証とは別。
+現SDK54の `doctor:mobile-store` はexit 0だが `SOURCE_CHECKS_ONLY` / `NOT_VERIFIED`。
+旧SDK検出の回帰も維持する。実機・実binary・Consoleの検証とは別。
 
 ## 次の区切り
 
-ローカル修正/SDK移行 → 認証の本番整合（別承認）→ 署名付き内部テストビルド（費用/配布承認）→ 実機受入 → 申請情報の確定 → 本人が提出承認 → 審査。
+ローカル残件/最終SDK → 認証の本番整合 → 署名付き内部テストビルド（費用/配布確認）→ 実機受入 → 申請情報の確定 → 意向確認済みの提出 → 審査。
 ストア文面・スクリーンショット計画は `MOBILE_STORE_SUBMISSION_DRAFT.md`。承認済み/提出済みと誤認しないこと。
 
-## 今回の検証結果
+## 前回の検証結果（source b7daff9）
 
 - source-only 50/50 PASS（Auth・画面の合成回帰を含む）。Mobile型チェック、`git diff --check` PASS。
 - `EXPO_OFFLINE=1` / telemetry OFF / 実環境の変数とdotenvなしで、既存Expo51のiOS・Android JS/Hermes exportが両方exit 0。
@@ -94,3 +94,16 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 - `doctor:mobile-store`: BLOCKED / NOT_VERIFIED / exit 1（現SDK51の検出）。依存更新はまだ実行していない。
 - 先行する認証互換変更 `7796d3c` のGitHub CI `35440317168` はsuccessを再確認。今回追加分のCI結果とは分ける。
 - 初回の並行監査で問題を抽出して修正した。追加の独立最終レビューは担当の利用制限で未完了。主担当で差分/テストを確認したが、第三者レビュー済みとはしない。
+
+## 今回の検証結果と残件（追記411）
+
+- SDK52・53・54の型/公式同梱依存チェック（offline）/iOS・Android JS/Hermes export成功。52/53 Routerの未宣言依存を一時補完し、54では公式依存に含まれるため撤去。54最終出力 `apps/mobile/dist/qualification-i29ADj`。
+- Web React18とlockのWeb依存解決は維持。MobileはReact19.1/RN0.81.5、Metro既定設定、New Architectureとautolinking解決を使用。dev-client/font/constants/metro-runtimeの対応版を明示。
+- `test:mobile-bundle` と `test:mobile-native-config` を追加しCIへ。dotenv/秘密環境変数を排除、offline、prebuildは一時コピーのみ。CocoaPods/Gradleのinstallや署名はしない。
+- 隔離native設定生成でSecureStore backup除外、未使用camera/photo/FaceID用途なし、Android外部storage/overlay権限の除外、ATSの任意HTTP不許可、iOS最小15.1を確認。最終merged manifest/実binaryの証拠ではない。
+- source-only 53/53、Web/Mobile型、Web lint/build、diff check PASS。lint既存warning、Node20のSupabase非推奨warningあり。Node22+/最終SDKは次の更新対象。
+- 独立レビュー: AI通報とSDKチェックポイントでmust-fixなし。通知レビューは旧本人の同一token残存と書込前拒否の回復問題を発見し限定修正。通報の運用は `AI_ANSWER_REPORTING.md`。
+- **通知は未完了**: 対応表のない別端末登録を旧登録と区別できない。送信結果不明が後でcommitする競合を現schemaでは回復できない。現在のOS tokenも取得できない旧本人の登録は、本人のactive=0だけでは否定不能。新規の通知拒否端末を一律ログアウト不能にする変更は採用しない。このため旧版移行/共有端末を安全とせず、installation識別と世代付きサーバー更新・移行手順が必要。
+- 現在tokenが取得できる場合は別ownerの同一token残存を検知し解除成功としない。他owner/他端末の行を削除しない。登録APIのwrite前拒否は明示receiptで再試行可、通信断/書込開始後の不明応答は未確定保持。
+- ローカルtoolchain: Xcode26.6とiOS26.5 Simulatorあり、アプリは未起動。CocoaPods未検出。AndroidはAPI35/build-tools34・35とJDK17あり、API36/NDK未検出。端末利用/署名/実APIテストは未実施。
+- 前回CI `35512152991` (b7daff9) は両ジョブsuccess。今回差分のCIはcommit後に別記する。本番/ストアへは出していない。

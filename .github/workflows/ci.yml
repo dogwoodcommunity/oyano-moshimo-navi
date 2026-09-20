@@ -59,6 +59,14 @@ jobs:
           pnpm run test:mobile-store-preflight
           pnpm run test:mobile-empty-states
           pnpm run test:mobile-screen-readiness
+          pnpm run test:mobile-consult-target
+          pnpm run test:mobile-push-logout
+          pnpm run test:consult-report
+
+      - name: Export mobile JS and Hermes offline (not native acceptance)
+        run: |
+          pnpm run test:mobile-bundle
+          pnpm run test:mobile-native-config
 
       - name: Test local qualification runner safety
         run: pnpm run test:stage-a-local-runner

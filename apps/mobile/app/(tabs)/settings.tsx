@@ -28,7 +28,7 @@ export default function SettingsScreen() {
   }
 
   function confirmLogout() {
-    Alert.alert("この端末からログアウトしますか？", "クラウドの記録や他の端末のログインは残ります。登録済みの通知は停止しないため、止める場合は端末の設定でこのアプリの通知をオフにしてください。", [
+    Alert.alert("この端末からログアウトしますか？", "この端末の通知登録を解除してからログアウトします。解除を確認できない場合はログアウトを中止します。クラウドの記録や他の端末のログイン・通知は残ります。すでに配信中の通知は届くことがあります。", [
       { text: "キャンセル", style: "cancel" },
       { text: "ログアウトする", style: "destructive", onPress: () => { void logout(); } }
     ]);
@@ -86,7 +86,7 @@ export default function SettingsScreen() {
       />
       <View style={styles.card}>
         <Text style={styles.cardTitle}>この端末のログイン</Text>
-        <Text style={styles.body}>ログアウトしても、クラウドの記録と他の端末のログインは残ります。登録済みの端末通知は自動では停止しません。</Text>
+        <Text style={styles.body}>この端末の通知登録を解除してからログアウトします。クラウドの記録と他の端末のログイン・通知は残ります。旧版の通知登録を確認できない場合や通信できない場合は中止します。すでに配信中の通知は届くことがあります。</Text>
         <Pressable disabled={busy} onPress={confirmLogout} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>{busy ? "ログアウトしています…" : "この端末からログアウト"}</Text>
         </Pressable>

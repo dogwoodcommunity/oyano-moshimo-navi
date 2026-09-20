@@ -25,13 +25,16 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#276447"
       },
-      "permissions": ["POST_NOTIFICATIONS"]
+      "permissions": ["POST_NOTIFICATIONS"],
+      "blockedPermissions": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.SYSTEM_ALERT_WINDOW"]
     },
     "notification": {
       "icon": "./assets/notification-icon.png",
       "color": "#276447"
     },
-    "plugins": ["expo-router", "expo-notifications"],
+    "newArchEnabled": true,
+    "experiments": { "autolinkingModuleResolution": true },
+    "plugins": ["expo-router", "expo-notifications", ["expo-secure-store", { "configureAndroidBackup": true, "faceIDPermission": false }]],
     "extra": {
       "router": {
         "origin": false

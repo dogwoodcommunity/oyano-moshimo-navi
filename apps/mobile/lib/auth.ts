@@ -2,6 +2,7 @@ import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
 import { getSupabase, createMobileAuthVerifier } from "./supabase";
+import { withDevicePushRevoked } from "./notifications";
 import { DEFAULT_REDIRECT_PATH, MOBILE_AUTH_PENDING_KEY, mobileAuthBrowserUrl, normalizeMobileEmail, parseMobileAuthCallback, parsePendingMobileAuth, sanitizeRedirectPath, type PendingMobileAuth } from "./authFlow";
 
 let authBusy = false;
@@ -42,7 +43,9 @@ export async function signOutThisDevice() {
     await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY);
     const supabase = getSupabase();
     if (!supabase) return { ok: false, message: "アプリの接続設定を確認できないため、ログアウトを完了できませんでした。" };
-    const { error } = await supabase.auth.signOut({ scope: "local" });
+    const revoked = await withDevicePushRevoked(() => supabase.auth.signOut({ scope: "local" }));
+    if (!revoked.completed) return { ok: false, message: revoked.message };
+    const { error } = revoked.result;
     if (error) return { ok: false, message: "ログアウトを完了できませんでした。通信を確認してもう一度お試しください。" };
     return { ok: true, message: "この端末からログアウトしました。" };
   } catch {

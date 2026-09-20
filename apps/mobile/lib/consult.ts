@@ -7,7 +7,7 @@ import {
 import { getSupabase } from "./supabase";
 
 export type ConsultOutcome =
-  | { ok: true; answer: ConsultAnswer; disclaimer: string }
+  | { ok: true; answer: ConsultAnswer; disclaimer: string; persistedTurnId?: string }
   | { ok: false; code?: string; message: string };
 
 export type ConsultAccess = {
@@ -313,6 +313,7 @@ export async function requestConsult(payload: ConsultRequest): Promise<ConsultOu
       disclaimer?: string;
       error?: string;
       message?: string;
+      memory?: { personId?: string; persistedTurnId?: string | null };
     } | null;
 
     if (!response.ok) {
@@ -328,7 +329,11 @@ export async function requestConsult(payload: ConsultRequest): Promise<ConsultOu
       return { ok: false, message: "うまく整理できませんでした。相談内容を少し変えてお試しください。" };
     }
 
-    return { ok: true, answer, disclaimer: data?.disclaimer ?? "" };
+    const persistedTurnId = Boolean(payload.personId) && data?.memory?.personId === payload.personId
+      && typeof data?.memory?.persistedTurnId === "string"
+      && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(data.memory.persistedTurnId)
+        ? data.memory.persistedTurnId : undefined;
+    return { ok: true, answer, disclaimer: data?.disclaimer ?? "", persistedTurnId };
   } catch {
     return { ok: false, message: "通信できませんでした。電波のよい場所でお試しください。" };
   }

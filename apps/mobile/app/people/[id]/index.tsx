@@ -202,6 +202,7 @@ export default function PersonScreen() {
         <View style={styles.heroActions}>
           <Link href={`/people/${params.id}/timeline`} style={styles.primaryButton}>今日の記録を書く</Link>
           <Link href={`/people/${params.id}/tasks`} style={styles.secondaryButton}>今やること</Link>
+          <Link href={{ pathname: "/consult", params: { personId: person.id } }} style={styles.secondaryButton}>この人の記録で相談する</Link>
         </View>
       </View>
 

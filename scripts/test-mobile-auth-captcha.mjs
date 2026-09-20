@@ -83,6 +83,7 @@ function nativeScenario(options = {}) {
     process: { env: { EXPO_PUBLIC_WEB_BASE_URL: options.webBase ?? "https://web.example.test" } },
     require(name) {
       if (name === "./authFlow") return flow;
+      if (name === "./notifications") return { withDevicePushRevoked: async (signOut) => ({ completed: true, result: await signOut() }) };
       if (name === "./supabase") return { getSupabase: () => options.unconfigured ? null : native, createMobileAuthVerifier: () => verifier };
       if (name === "expo-crypto") return { getRandomBytesAsync: async () => new Uint8Array(32).fill(++randomness) };
       if (name === "expo-linking") return { openURL: async (url) => { calls.push(["openURL", url]); if (options.openFailure) throw Error("offline"); } };

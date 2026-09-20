@@ -15321,3 +15321,32 @@ https://mitene.us/
   Supabase MFA復旧/認証本番整合待ち。契約・費用・内部配布build・ストア送信には実行前に本人確認を挟む。
 - source commit `b7daff9365a2ce03875d09a7a79646331909a3a6` をGitHubへpush確認。
   CI `35512152991` はqueued。既存draft PR #9へ追加、mainへのマージ・本番配信はしていない。
+
+## 2026-09-20 追記 411 — 申請前テスト、SDK54チェックポイントとAI/通知の安全対策
+
+- 本人「テストしてはよ申請しよ」で続行。提出の意向は確認済みだが、未達条件を省略して提出しない。
+  branch/draft PR #9を維持。本番/DB/配信/ストア操作なし。保護対象の未追跡2文書・review_exportsは不変。
+- Expo51→52→53→54を一段ずつ更新し、各段のMobile型・公式同梱依存確認（offline）・iOS/Android
+  JS/Hermes exportを確認。52/53のquery-string不足を補完後に通過、54は公式依存で解消し補完を撤去。
+  RN0.81.5/React19.1、対応Expo modules、Metro既定化、New Architecture/autolinking解決を採用。
+  WebはReact18維持、独立レビューでもWeb lock依存版/整合値/解決不変を確認。54は最終SDKではない。
+- AI相談の対象者IDを閲覧可能一覧で検証。複数人は選択待ち、無効IDを先頭人物にfallbackしない。
+  切替確認とkey再生成で入力/同意/記憶/履歴を分離し、遅延非同期8経路を失効。dashboard/personリンクでID継承。
+  保存済み回答から同意付き通報を追加。Bearer/本人のprivate相談/現在の家族権限をserverで確認し、
+  audit_logsへ理由+回答IDのみ保存。本文コピーなし、決定的UUIDで重複防止。運営画面/担当/保存期間は未確定。
+- 通知はSecureStoreに端末token/本人/未確定通信を追跡、登録とlogoutを直列化。本人+指定tokenだけ解除し再検証。
+  独立レビューで同一tokenの旧本人残存とwrite前401拒否からの回復不足を発見し修正。
+  取得できた現在tokenに別owner active行が残る場合は成功にせず、別owner行は変更しない。
+  登録write前に拒否した明示receiptだけpendingを解除。通信断/後commitし得る不明応答は保持。
+  **未解決**: local対応表なしの複数端末/旧登録判別、通信未確定登録の自動回復、OS tokenも取れない旧本人登録。
+  新規通知拒否端末のlogoutは維持するため、この不明状態を全て解消済みとはできない。installation識別/
+  server世代管理と旧版移行を次の実装ゲートとする。通知全体を申請Readyとしない。
+- source-only 53/53、Web/Mobile型、Web lint/build、diff check PASS。両OSoffline export最終出力は
+  `apps/mobile/dist/qualification-i29ADj`。`test:mobile-bundle`/`test:mobile-native-config`をCIへ追加。
+  native設定は一時コピーだけ生成し、SecureStore backup規則、未使用権限除外、ATS/iOS最小値を検査。
+  一時コピー `oyano-native-config-2Y33NP`。native compile/署名/merged manifest/実機ではない。
+  CocoaPods未検出、Android API36/NDK未検出。Xcode26.6/Simulator26.5/JDK17/API35は存在。
+  lint既存warningとNode20のSupabase非推奨warningあり。最終保守SDK/Node22+更新は次段階。
+- 前回source b7daff9のCI35512152991は両ジョブsuccessを確認。今回差分のCIはpush後に別記。
+  Apple/Google開発者登録済みか本人へ質問済み、回答未受領。Supabase SU-478850は新たな復旧確認なし。
+  最新の残件/検証境界はMOBILE_STORE_RELEASE.md、通報はAI_ANSWER_REPORTING.md。実利用者データ変更なし。
