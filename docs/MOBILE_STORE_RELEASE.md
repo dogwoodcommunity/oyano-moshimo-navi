@@ -1,7 +1,7 @@
 # アプリ申請準備 — 2026-09-21
 
 **状態: 準備中 / 提出不可。** この資料はストア申請の作業台帳。Web公開、型チェック、CI成功をアプリの審査合格とは扱わない。
-最新依頼は「テストしてはよ申請しよ」。提出の意向は確認済みだが、未達の安全性/実機/運用条件を省略しない。新規契約・課金・有料EASビルドは別に確認する。本番変更・ストア提出は未実施。
+最新依頼は「申請までやってくれ」。iOS 16.4以降への変更も本人承認済み。未達の安全性/実機/運用条件を省略しない。新規契約・課金・有料EASビルドは別に確認する。本番変更・ストア提出は未実施。
 
 ## 最初の配信範囲
 
@@ -22,7 +22,7 @@
 - 専用のExplicit App ID `jp.beech.oyanomoshimo`（Description: Oyano Moshimo Navi）を登録済み。ソースの通知用途に合わせ通常のPush Notificationsを選択。APNs鍵/証明書/プロファイルの発行は未実施。In-App PurchaseはApple画面の既定チェックだが、有料契約/商品は作成しない。
 - App Store Connectに日本語/iOSの「親のもしもナビ」を作成。Apple ID `6814299610`、SKU `oyano-moshimo-navi-ios`。ユーザアクセスは制限あり（本人選択、Admin等の既定アクセスは変更しない）。既存別アプリは変更なし。
 - [申請用レコード](https://appstoreconnect.apple.com/apps/6814299610/distribution/ios/version/inflight)は既定版1.0の「提出準備中」。ソース0.3.0と最終版番号の整合は未完。署名/build送信/審査提出/公開とは別段階。配信国/価格/プライバシー/年齢区分の宣言は未設定、EUトレーダー案内も未対応。
-- 通知残ゲートの次の設計は `MOBILE_PUSH_INSTALLATION_PROTOCOL.md`。設計だけで旧端末移行/通信競合の問題を解消済みとしない。
+- 通知の世代管理はローカル実装/隔離SQL確認済み。旧端末移行/保持期間/本番有効化は未完。`MOBILE_PUSH_INSTALLATION_PROTOCOL.md`参照。
 
 ## 今回のローカル修正
 
@@ -37,11 +37,11 @@
 
 | 優先 | 項目 | 完了に必要な証跡 |
 | --- | --- | --- |
-| 必須 | Expo SDK更新 | 51→52→53→54の型/両OSbundle PASS。54は中間地点、最終保守SDKとnative build/実機が未完 |
+| 必須 | Expo SDK更新 | 51→57の段階更新/型/両OSbundle PASS。iOS16.4+は本人承認済み。署名build/両実機が未完 |
 | 必須 | サーバーと認証の整合 | Web `/auth/mobile` 配信、Supabase URL許可/CAPTCHA設定、新binaryのメール復帰と別人分離 |
 | 必須 | 複数手帳のAI対象 | 選択/ID引継ぎ/状態分離/遅延応答抑止を実装・合成PASS、実機は未 |
-| 必須 | AI回答のアプリ内通報 | 同意付き報告/所有権確認/重複防止を実装・合成PASS、運営確認経路/担当/保存期間と実受入は未 |
-| 必須 | ログアウト後の通知 | 端末限定解除は合成PASS。ただし下記旧登録/不明応答の回復条件が未解決でBLOCKED |
+| 必須 | AI回答のアプリ内通報 | 同意付き報告/限定管理画面/AAL2/監査/競合防止を実装・合成PASS。担当/保存期間/実受入は未 |
+| 必須 | ログアウト後の通知 | v2の世代管理/不明応答再送/消去統合は隔離SQL含めPASS。旧登録の本番調査・移行/保持期間/実配送が未完で既定OFF |
 | 必須 | 削除・復元・権限 | 専用試験データでAuth/DB/Storage削除完了とバックアップ復元。viewer/owner・複数家族の漏えい防止 |
 | 必須 | 実機受入 | 下記iPhone/Android表。JS/合成テストだけでは閉じない |
 | 必須 | 申請情報 | 実developer組織、規約、Privacy/Data Safety/年齢区分、審査用ログイン、実画面画像、提出承認 |
@@ -54,7 +54,7 @@ CLIや管理キーでMFAを迂回しない。既存ユーザーの削除・パ�
 1. 51 → 52 → 53 → 54 を一段ずつ更新・検証する。最初に54でAPI36対応のビルド経路を確認するが、54を最終採用とはしない。
 2. 各段で `expo install --check`、型チェック、両OSのJS export、既存認証/記憶/通知回帰を実行する。ネット接続・installが必要になっても課金ビルドは別承認。
 3. SDK55以降のNew Architecture、React19、Metroのworkspace解決を確認。WebのReact18を巻き込まない。旧RN固定のgradle-plugin/assets-registryも整合させる。
-4. 最終候補は保守中SDK。9月20日公式表では57が最新。57はNode22.13+ / iOS16.4+、55はiOS15.1+。対応端末を狭める判断は配信前に確認する。
+4. 9月21日も公式表で57を確認し採用。57はNode22.13+ / iOS16.4+。本人がiOS16.4以降を明示承認、Node24を使用。
 5. Xcode、Android toolchain、dev-client、SecureStoreのbackup除外設定、Privacy manifestを移行先SDKの仕様で確認する。現SecureStore15はinstalled pluginを確認し、backup除外を明示した。FaceID利用は追加しない。
 6. 最後に生成IPA/AABを検査する。configのtarget値変更だけ、Xcodeがインストール済みだけでは完了にしない。
 
@@ -91,7 +91,7 @@ node scripts/test-mobile-store-preflight.mjs
 corepack pnpm@9.15.9 --filter mobile run typecheck
 ```
 
-現SDK54の `doctor:mobile-store` はexit 0だが `SOURCE_CHECKS_ONLY` / `NOT_VERIFIED`。
+現SDK57の `doctor:mobile-store` も宣言検査のみで `SOURCE_CHECKS_ONLY` / `NOT_VERIFIED`。
 旧SDK検出の回帰も維持する。実機・実binary・Consoleの検証とは別。
 
 ## 次の区切り
@@ -108,7 +108,7 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 - 先行する認証互換変更 `7796d3c` のGitHub CI `35440317168` はsuccessを再確認。今回追加分のCI結果とは分ける。
 - 初回の並行監査で問題を抽出して修正した。追加の独立最終レビューは担当の利用制限で未完了。主担当で差分/テストを確認したが、第三者レビュー済みとはしない。
 
-## 今回の検証結果と残件（追記411）
+## 過去の検証結果と残件（SDK54時点・追記411）
 
 - SDK52・53・54の型/公式同梱依存チェック（offline）/iOS・Android JS/Hermes export成功。52/53 Routerの未宣言依存を一時補完し、54では公式依存に含まれるため撤去。54最終出力 `apps/mobile/dist/qualification-i29ADj`。
 - Web React18とlockのWeb依存解決は維持。MobileはReact19.1/RN0.81.5、Metro既定設定、New Architectureとautolinking解決を使用。dev-client/font/constants/metro-runtimeの対応版を明示。

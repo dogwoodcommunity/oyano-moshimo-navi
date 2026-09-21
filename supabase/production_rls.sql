@@ -439,10 +439,9 @@ with check (
   )
 );
 
-create policy "push_tokens own"
-on push_tokens for all
-using (user_id = auth.uid())
-with check (user_id = auth.uid());
+create policy "push_tokens own read"
+on push_tokens for select
+using (user_id = auth.uid());
 
 create policy "notification_preferences own"
 on notification_preferences for all

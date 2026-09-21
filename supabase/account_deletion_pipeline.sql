@@ -1794,6 +1794,10 @@ begin
     + (select count(*) from public.scheduled_notifications where user_id = p_target_user_id)
   into v_db_residual_count;
 
+  if to_regclass('push_private.installations') is not null then
+    execute 'select $1 + count(*) from push_private.installations where owner_id = $2'
+      into v_db_residual_count using v_db_residual_count, p_target_user_id;
+  end if;
   if to_regclass('public.notebook_sync_receipts') is not null then
     execute 'select $1 + count(*) from public.notebook_sync_receipts where actor_user_id = $2'
       into v_db_residual_count using v_db_residual_count, p_target_user_id;

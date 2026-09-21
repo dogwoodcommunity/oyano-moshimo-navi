@@ -265,7 +265,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.paper, gap: 14, padding: 16 },
   header: { borderRadius: 18, gap: 8, justifyContent: "flex-end", minHeight: 220, overflow: "hidden", padding: 18, ...shadow },
   headerImage: { borderRadius: 18 },
-  headerShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.28)" },
+  headerShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.28)" },
   headerBrand: { alignItems: "center", alignSelf: "flex-start", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
   kicker: { color: colors.greenDark, fontWeight: "900" },
   title: { color: "#fffdf7", fontSize: 32, fontWeight: "900", lineHeight: 37, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },

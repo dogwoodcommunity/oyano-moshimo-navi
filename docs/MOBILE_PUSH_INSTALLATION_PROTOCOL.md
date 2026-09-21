@@ -1,92 +1,108 @@
-# 端末通知登録の世代管理案 — 2026-09-21
+# 端末通知登録の世代管理 — 2026-09-21
 
-**設計のみ・未実装。本番DB/通知/アカウントへの操作なし。申請可否の判定ではない。**
+**ローカル実装・合成/隔離SQL検証済み。本番未適用・有効化は既定OFF。旧登録移行と保管期間は公開ゲートのまま。**
 
-現行はSecureStoreにtokenを保存するが、DBは`unique(user_id, expo_push_token)`だけ。
-登録の通信結果不明、旧tokenの端末識別、同一tokenの別本人登録を完全には解決できない。
-現RLSは本人の直接upsertも許す。新APIだけ世代管理しても、この旧経路が残れば解除をすり抜ける。
+旧方式の「送信結果が不明なら永久にログアウトできない」を、新方式の世代つき解除で解消する。
+旧rowの本人/端末を推測して移管する機能は実装しない。実機・実配送・本番受入とは区別する。
 
-## 新方式の最小構成
+## 実装箇所と状態
 
-- アプリはランダムな`installation_id`と256-bitの`installation_secret`を生成し、SecureStoreに保持する。
-  ログアウトで消さず、本人の切替後も同じ端末登録の履歴を継続する。token/secretをログに出さない。
-- 操作ごとに`revision`を単調増加させ、`request_id`と送信内容を**送信前**にSecureStoreへ保存する。
-  同じ操作の再送は同じrevision/request_id/内容。解除は未確定の登録より大きなrevisionを使う。
-- private schemaに`push_installations`を追加する。
-  最低限の列は`installation_id PK / secret_hash / revision / owner_id / state / last_request_id / last_request_hash`。
-  raw secret・メール・記録本文は保存しない。`state`はactive/revoked。解除後も世代を消さない。
-- `push_tokens`にnullableな`installation_id`と`installation_revision`を追加する。
-  NULLは旧方式。新方式は1 installationにつき有効tokenを最大1件とする。
-  有効なExpo tokenも全体で1件に制約する。既存重複を勝手に無効化してindexを通さない。
+- native: `apps/mobile/lib/pushInstallation.ts`（通知helperから再export）。
+  `oyano.push-installation.v2`へinstallation ID、256-bit secret、revision、保留操作をSecureStore保存する。
+  ログアウトではID/secretを消さない。v1の未解除/未確定tokenがある場合は移管せず案内する。
+- API: register/unregisterは`apps/web/lib/pushInstallation.ts`へ集約。
+  protocol 2、入力、bearer本人を検証し、RPCへ渡す。本文のuser_idを信用しない。
+  `PUSH_INSTALLATION_V2_ENABLED=true`でのみ処理する。未設定は503、旧protocolは426。
+  初回プロフィールだけ作成可能とし、既存氏名等を上書きしない。既存の消去後再作成guardは維持する。
+- DB: `supabase/push_installation_protocol.sql`。
+  private ledger、登録/解除RPC、配送宛先RPC、配送失効RPC、RLS/ACLをまとめる。
+  `api_grants.sql`再適用で直接書込みや一般利用者のRPC実行を復活させない。
+- 配送: cron/family両経路は宛先RPCと世代を指定する失効RPCを使う。
+- 消去: 既存profile削除のFKと新triggerへ統合し、既存finalizerにもledgerの本人残存検査を追加した。
 
-## 単一トランザクションのRPC
+## DBの境界
 
-`apply_push_installation_operation(user_id, installation_id, secret, revision, request_id, action, token?)`
-をregister/unregisterの共通入口とする。Webはbearerを検証し、本文のuser_idを信用しない。
-RPCはservice_role専用、固定search_pathのSECURITY DEFINERとし、PUBLIC/anon/authenticatedからEXECUTEを剥奪する。
-RPC内でも対象プロフィールの存在・削除済みでないことを検証する。
+`push_private.installations`はpostgres所有、FORCE RLS、API roleから直接参照/更新不可。
+列はid、secret_hash、revision、active_revision、owner_id、state、request_id、request_hash、last_error。
+raw secret、メール、記録本文、Expo token本文はledgerに保存しない。
 
-installation行を作成/lockしてsecret_hash・本人・revisionを照合し、token更新と世代更新を同時にcommitする。
-初回の解除が登録より先に到着しても、解除の世代を持つrevoked行を作れることが必要。
-新旧tokenの競合判定もDB内で行い、同じtokenを別installation/別本人が同時取得できないよう制約とlockで守る。
+`push_tokens`のinstallation_id/installation_revisionがNULLのrowは旧方式のまま。
+migrationは旧rowを変更しない。有効token全体の重複や1 installationの有効重複はunique indexで拒否する。
+既存重複があればmigration全体が失敗し、自動的な無効化/削除で通過させない。
 
-| 到着した操作 | DBの処理 |
+登録/解除RPCの署名：
+
+`apply_push_installation_operation_v2(user_id, installation_id, secret, revision, request_id, action, token?, platform?)`
+
+service_roleのみEXECUTE可能。Webで確認した本人を使用し、DBでもプロフィール存在を再確認する。
+`account-erasure-target:<本人>`のadvisory lock→profile→installationの順で、既存消去処理と順序を揃える。
+異なるinstallation同士の同一token取得も、token lockとunique制約で直列化する。
+
+## 再送・遅延・本人切替
+
+送信前にnativeがrevision/request_id/内容を永続化する。同じ操作は同じID/世代/内容で再送する。
+解除は未確定の登録より大きなrevisionを持つ。初回登録より解除が先でもrevoked tombstoneを作る。
+
+| 到着順/操作 | 結果 |
 | --- | --- |
-| register 11 → revoke 12 | 11を登録し、12でそのinstallationだけ無効化 |
-| revoke 12 → 遅れてregister 11 | 12の解除を保持し、11はstaleとして書込みなし |
-| 同じrevision/request_id/内容の再送 | 再適用せず現在の確定状態を返す |
-| 同じrevisionで別内容／別request_id | conflictとして書込みなし |
+| register 11 → revoke 12 | 12でそのinstallationだけ解除 |
+| revoke 12 → 遅れたregister 11 | 11はstale、再登録しない |
+| 同revision/request_id/内容の再送 | 確定状態・確定した拒否を再返却 |
+| 同revisionで内容/ID変更 | conflict、書込みなし |
+| token交換が競合で拒否 | 操作revisionを記録し、以前のactive_revisionの配送を維持 |
 
-成功応答にはinstallation_id・確定revision・現在stateを含め、nativeは自身の保留操作と照合する。
-以前の登録要求が未確定でも、より新しい解除が確定すれば旧要求は再有効化できず、ログアウトできる。
-応答消失時は同じ解除を再送する。通信できない間は解除成功とせず、ログインと保留操作を保持する。
-新方式で通知登録要求を一度も送っていないことが確認済みの端末は、通知許可なしでもログアウトできる。
+成功応答のinstallation ID/revision/request ID/stateをnativeが照合し、SecureStore保存後にsign outする。
+解除応答が失われても同じ解除を再送できる。通信不可/保存失敗/応答不一致は成功にしない。
+登録/ログアウトを直列化するため、解除後に待機中の登録が古い本人を再登録しない。
+新方式の通知許可なし端末でも、OS token取得を要求せず解除/ログアウトできる。
 
-本人切替は、同じsecretであることに加え、前の本人の登録がrevokedの場合だけ新しい本人をbindできる。
-activeな別本人/別installationのtokenを乗っ取らない。本人ごとの全端末解除は実装しない。
-token交換は同じinstallationの旧token無効化と新token登録を1 transactionで行う。
+activeな別本人のinstallationは、新しい本人から変更できない。
+前の本人がrevokedの場合だけ、同じsecretを持つ端末を新しい本人へbindできる。
+アカウント消去済みのIDは永久retired。serverがretiredを返した場合だけnativeは新IDを作る。
+通信断・所有者競合・旧版不明を理由にIDを作り直して制約を迂回しない。
 
-## 書込み経路と配送側
+## token行と配送結果
 
-- `push_tokens own`のALL policyを見直し、一般利用者の直接INSERT/UPDATE/DELETEを停止する。
-  新ledgerの直接参照/更新も許可しない。必要な本人向け参照だけ別policyにする。
-- service_roleからの従来の直接upsertも停止し、登録/解除はRPCへ限定する。
-  旧register API/旧binaryからの要求は`upgrade_required`を返す。旧fallbackが書けないことを実SQLで確認する。
-- cron/family通知の失効処理も、小さいservice_role専用RPCへ移す。
-  `(installation_id, revision, token)`が現在と一致する配送結果だけ無効化し、遅れた旧世代の結果で新登録を止めない。
-  送信対象のSELECTもledgerの本人・世代・active状態と一致する行だけにする。
-- すでにExpoへ渡した通知はこの解除では回収できない。配送中の通知と、新規配送を止めたことを区別する。
+新方式の通常解除/交換は、**同じinstallation・当該本人のmanaged token行だけ**除去する。
+過去本人のinactive tokenを履歴として残さず、世代はprivate ledgerに残して遅延要求を拒否する。
+installation_id=NULLの旧rowは解除/交換RPCで削除しない。他本人/他端末の一括解除もない。
 
-## 旧登録の移行と受入条件
+`list_deliverable_push_tokens_v2`はmanaged行のowner/active_revision/state一致を確認する。
+旧方式の配送を勝手に止めないため、旧active行もそのまま返す。これを旧方式の安全性確認とは扱わない。
+`invalidate_push_delivery_v2`は送信時のrow ID/revision/tokenが一致した場合だけ失効する。
+遅れて届いた旧世代の失効結果で新登録を止めない。旧rowの配送失効は従来どおり無効化し、削除しない。
+すでにExpoへ渡した通知は回収できない。「新規配送対象から外した」と「配送中通知の取消し」を区別する。
 
-1. 本番適用前にread-onlyで、旧方式active件数・同一token重複・本人不明行を集計する。
-   token本文や利用者一覧をチャット/ログへ出さない。重複があれば自動削除せずmigrationを止める。
-2. 新規column追加だけで旧rowへinstallation_idを推測して埋めない。
-   旧登録が0件と確認できた場合は、旧経路の停止確認後、新方式の新規登録から開始できる。
-3. 旧登録がある場合、本人認証と実端末の一致が確認できた**その1件だけ**移行する。
-   OSから取得した現在tokenだけでは過去に回転したtokenや旧本人の登録まで特定できない。
-   token文字列の所持だけを別所有者の変更権限としない。
-   必要な端末到達challenge等の本人/端末確認手順は別途設計・受入が必要で、自動移管はまだ承認しない。
-4. 別端末の旧登録を理由に本人の全通知を解除しない。旧本人のrowも新本人の要求では変更しない。
-   対応表なし・現在token取得不可・旧本人登録の組合せは、新規インストールと確実に区別できない。
-   この状態が残る場合、世代管理の導入だけで「通知の公開ゲート完了」としない。
+## 旧登録移行・本番有効化の条件
 
-## 実装順と検証
+1. read-onlyで旧rowのactive/inactive件数、重複token、本人不明行を集計する。
+   token本文・利用者一覧・secretをチャット/ログへ出さない。既存rowを削除しない。
+2. 旧rowが存在する場合、当該本人と実端末の一致を確認する移行方法を別途受入する。
+   OSの現在tokenだけでは、回転前tokenや旧本人を特定できない。
+   token文字列の所持だけで別所有者の変更を認めず、必要な端末到達challenge等は未実装。
+3. 旧直接upsertを拒否するDB権限、旧APIの426、新API/配送RPCを揃えて適用する。
+   migration前に新版Webだけ公開しない。旧binary利用状況と更新案内を確認する。
+4. 旧移行・下記保管期間・消去整合・実機受入を確認してから、環境変数をtrueへ変更する。
+   旧row 0件の証拠も、今回のローカル検証だけでは取得していない。
+   対応表なし/OS token取得不可/旧本人登録が残る状態は未解決の公開ゲートである。
 
-1. 隔離PostgreSQLで新ledger/制約/RPC/権限と既存row保持を実装・検証する。本番migrationは別承認の工程。
-2. WebをRPCへ置換し、配送SELECT/失効RPCと旧APIの拒否を揃える。
-3. nativeの永続化・同一操作再送・新世代解除・本人切替を実装する。
-   旧方式の移行判定は新方式から分離し、未対応状態を成功に変換しない。
-4. API/native合成テストに加え、独立したDB接続で実際の同時実行を検証する。
-   登録11/解除12の両到着順、commit後応答消失、解除再送、同revision内容改変、旧register遅延、
-   token交換と遅延失効応答、二端末/別本人/secret不一致、プロセス再起動、SecureStore失敗を含める。
-5. 旧直接upsert拒否、別端末保持、旧row未変更、通知拒否の新規端末、二実機の本人切替/受信を受入する。
-   API応答だけで実配送停止・旧版移行完了とは扱わない。
+## 検証と残条件
 
-## tombstoneとアカウント削除 — 未決事項
+- `node scripts/test-mobile-push-logout.mjs`：実API/native helperを合成transportで実行。
+  永続化失敗、401再試行、登録遅延、解除応答消失/再起動、本人/端末分離、token交換、
+  古い配送結果、ログアウト競合、旧v1状態保持、消去後ID再作成を確認。
+- `bash scripts/test-push-installation-sql.sh`：ネットワークなしの使い捨てPostgreSQL。
+  実RPC/ACL/旧row保持/失敗再送/active_revision、独立接続5競合を確認。
+  別DBで既存account-erasure回帰を無変更実行し、v2→v1 executorのdatabase_erasedと
+  finalizer completedの両段階でtoken消去、tombstone最小化、別本人保持を検査した。
+- 本番migration、旧登録移行、二実機の受信/解除・本人切替、通知許可拒否、実署名ビルド受入は未実施。
 
-解除の世代を削除すると古い登録を再受理するため、通常ログアウトでledgerを削除しない。
-一方、owner_idやtokenを無期限に残す設計にはしない。
-アカウント削除では同じinstallation lockの順序を使い、登録を失効させ、tokenと本人への紐付けを除去する必要がある。
-再送拒否に必要なランダムID/hash/revisionだけを残す場合の保管期間・削除後再登録規則・既存削除executorへの統合は未決。
-**この整合と旧登録移行の受入を決めるまでは、本番適用・通知ゲート解除をしない。**
+## tombstoneの消去整合と保管期間
+
+profile削除時にraw tokenは既存CASCADEで消える。
+private ledgerはFK SET NULLのtriggerでstate=erasedとし、owner/secret hash/request ID/fingerprint/last_error/
+active_revisionをNULLにする。ランダムinstallation ID、revision、erased状態だけを残し、再使用を拒否する。
+profile削除と登録が重なる両順序、既存executorとfinalizerでこの動作を実SQL確認した。
+
+tombstoneを消すと旧IDの再受理が可能になるため、今回のコードに自動purgeはない。
+**この最小tombstoneを保持する期間と運用・プライバシー判断は未承認。本番有効化の条件として残す。**

@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextResponse } from "next/server";
 import { verifyCron } from "@/lib/cronAuth";
 import { getServerSupabase } from "@/lib/serverSupabase";
+import { invalidatePushDelivery, type DeliverablePushToken } from "@/lib/pushInstallation";
 
 export const dynamic = "force-dynamic";
 
@@ -26,10 +27,7 @@ type ScheduledNotificationRow = {
   }> | null;
 };
 
-type PushTokenRow = {
-  user_id: string;
-  expo_push_token: string;
-};
+type PushTokenRow = DeliverablePushToken;
 
 type ProfileRow = {
   id: string;
@@ -213,11 +211,7 @@ export async function GET(request: Request) {
   const claimedIds = claimedRows.map((row) => row.id);
   const userIds = [...new Set(claimedRows.map((row) => row.user_id))];
   const [tokenResult, profileResult, preferenceResult, deliveryStateResult] = await Promise.all([
-    supabase
-      .from("push_tokens")
-      .select("user_id, expo_push_token")
-      .in("user_id", userIds)
-      .eq("is_active", true),
+    supabase.rpc("list_deliverable_push_tokens_v2", { p_user_ids: userIds }),
     supabase
       .from("profiles")
       .select("id, email")
@@ -365,10 +359,7 @@ export async function GET(request: Request) {
           .map(({ token }) => token as string);
 
         if (inactiveTokens.length > 0) {
-          await supabase
-            .from("push_tokens")
-            .update({ is_active: false })
-            .in("expo_push_token", inactiveTokens);
+          await invalidatePushDelivery(supabase, tokenRows, inactiveTokens);
         }
 
         if (deliveryTrackingAvailable) {

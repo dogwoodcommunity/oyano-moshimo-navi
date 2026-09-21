@@ -475,7 +475,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.paper, gap: 14, padding: 16, paddingBottom: 28 },
   hero: { borderRadius: 18, gap: 10, minHeight: 240, justifyContent: "flex-end", overflow: "hidden", padding: 18, ...shadow },
   heroImage: { borderRadius: 18 },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.26)" },
+  heroShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.26)" },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 39, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   heroBody: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },

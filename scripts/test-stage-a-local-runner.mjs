@@ -23,8 +23,8 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 53);
-assert.equal(plan.length, 67);
+assert.equal(createPlan({ sourceOnly: true }).length, 55);
+assert.equal(plan.length, 70);
 for (const name of ["notebook-mascot", "mascot-motion-preference"]) {
   assert.ok(plan.some((step) => step.id === `source:${name}`));
 }
@@ -35,13 +35,15 @@ assert.ok(plan.some((step) => step.id === "source:notebook-sync-text-retry"));
 assert.ok(plan.some((step) => step.id === "source:notebook-diary-text"));
 assert.ok(plan.some((step) => step.id === "source:unicode-display-text"));
 assert.ok(plan.some((step) => step.id === "source:readable-design-b"));
-assert.equal(plan.filter((step) => step.id.startsWith("sql:")).length, 10);
+assert.equal(plan.filter((step) => step.id.startsWith("sql:")).length, 11);
+assert.ok(plan.some((step) => step.id === "source:ai-report-review"));
+assert.ok(plan.some((step) => step.id === "sql:push-installation"));
 assert.ok(plan.some((step) => step.id === "source:family-role-security"));
 assert.ok(plan.some((step) => step.id === "source:notebook-sync-runtime"));
 assert.ok(plan.some((step) => step.id === "lint:web"));
 assert.equal(plan.at(-1).id, "build:web");
 assert.ok(createPlan({ sourceOnly: true }).every((step) => step.id.startsWith("source:")));
-assert.equal(createPlan({ sqlOnly: true }).length, 10);
+assert.equal(createPlan({ sqlOnly: true }).length, 11);
 assert.ok(createPlan({ sqlOnly: true }).every((step) => step.id.startsWith("sql:")));
 assert.doesNotMatch(JSON.stringify(plan), /smoke-|vercel|deploy|supabase (?:db|link)|https:\/\//);
 for (const step of createPlan({ sqlOnly: true })) {

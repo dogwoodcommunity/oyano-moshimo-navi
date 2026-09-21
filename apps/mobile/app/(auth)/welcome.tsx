@@ -226,7 +226,7 @@ const styles = StyleSheet.create({
   screen: { gap: 16, padding: 16, paddingBottom: 36, paddingTop: 16 },
   photoHero: { borderRadius: 18, minHeight: 390, overflow: "hidden", ...shadow },
   heroPhoto: { borderRadius: 18 },
-  photoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.22)" },
+  photoShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.22)" },
   heroContent: { flex: 1, gap: 12, justifyContent: "flex-end", padding: 20 },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   brandPill: { alignItems: "center", backgroundColor: "rgba(255,253,247,0.94)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/serverSupabase";
 import { checkPublicRateLimit } from "@/lib/publicRateLimit";
+import { invalidatePushDelivery, type DeliverablePushToken } from "@/lib/pushInstallation";
 
 export const dynamic = "force-dynamic";
 
@@ -90,12 +91,10 @@ export async function POST(request: Request) {
     return NextResponse.json(SILENT_OK);
   }
 
-  const { data: tokens } = await supabase
-    .from("push_tokens")
-    .select("expo_push_token")
-    .in("user_id", recipientIds)
-    .eq("is_active", true);
-  const pushTokens = ((tokens ?? []) as Array<{ expo_push_token: string }>)
+  const { data: tokens, error: tokenError } = await supabase.rpc("list_deliverable_push_tokens_v2", { p_user_ids: recipientIds });
+  if (tokenError) return NextResponse.json({ error: "push_unavailable" }, { status: 503 });
+  const tokenRows = (tokens ?? []) as DeliverablePushToken[];
+  const pushTokens = tokenRows
     .map((row) => row.expo_push_token)
     .filter((token): token is string => Boolean(token));
   if (pushTokens.length === 0) {
@@ -151,7 +150,7 @@ export async function POST(request: Request) {
     .map(({ token }) => token as string);
 
   if (inactiveTokens.length > 0) {
-    await supabase.from("push_tokens").update({ is_active: false }).in("expo_push_token", inactiveTokens);
+    await invalidatePushDelivery(supabase, tokenRows, inactiveTokens);
   }
 
   return NextResponse.json({ ok: true, sent: pushTokens.length - inactiveTokens.length });

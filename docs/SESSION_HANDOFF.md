@@ -15401,3 +15401,39 @@ https://mitene.us/
 - アプリソース1a5acbaは不変、同一テストは再実行せず文書差分検査のみ。署名build/アップロード/
   TestFlight配信/審査提出/公開/本番DB変更なし。通知の世代管理/旧版移行、通報運用、本番認証、
   最終SDKとnative compile/実機受入の未達ゲートを維持。CURRENT_STATUSと申請台帳/素材表を更新。
+
+## 2026-09-21 追記 415 — SDK57・通知世代管理・AI通報管理のローカル実装
+
+- 本人「申請までやってくれ」で継続。非同期回答で **iOS 16.4以降** を明示承認。提出の未達条件は省略しない。
+  branch `codex/consult-guest-entry` / draft PR #9。保護対象の未追跡2文書・review_exportsは触らない。
+- Expo54→55→56→57を段階更新。各段の公式同梱依存チェック（offline）、型、両OS JS/Hermes export、
+  隔離native設定生成PASS。SDK56のRNによるabsoluteFillObject削除へ追従し3画面をabsoluteFillに変更。
+  現Expo57.0.24/RN0.86.3/React19.2.3/TS6.0.3。Node24.19.0で検証、CIもNode24へ。
+  pnpm9.15.9を明示。既存の標準Node/pnpm設定は変更せず、pnpm11が生成したworkspace設定は撤去した。
+  Web React18/TS5.9/Next14を維持。lockのWeb importer一致、独立レビューで到達369依存の版/接続一致。
+  SDK57最終bundleは `apps/mobile/dist/qualification-X3Xxte`、生成設定は `oyano-native-config-5wyqaa`。
+- 通知v2はinstallation ID/256-bit secret/revision/保留操作を送信前にSecureStoreへ保存。
+  private ledgerとservice-only RPCで遅延登録より新しい解除を優先し、不明応答は同じ操作として再送可能。
+  token交換競合、別本人/端末分離、世代付き配送失効、旧直接DML禁止、アカウント消去/finalizerへ統合。
+  新方式の当該token行のみ解除/交換時に除去。旧rowは推測移管/削除しない。本番変更ではない。
+  合成回帰、ネットワークなしPostgreSQLの独立接続5競合、既存消去executor/finalizer統合PASS。
+  独立最終レビューで新must-fixなし。`PUSH_INSTALLATION_V2_ENABLED`は既定OFF。
+  旧登録の本番read-only調査・移行、最小tombstone保持期間、二実機の配送/本人切替受入が未完。
+- AI通報の `/admin/ai-reports` を既存app_admins+本人Bearer+AAL2へ限定して追加。
+  一覧は本文なし。明示操作時に同意された本人の当該1件だけを現所有権/家族権限で確認し、閲覧監査成功後に返す。
+  対応はappend-onlyの版番号で競合防止。本文のコピーや新規権限付与なし。プライバシー説明に限定閲覧を追記。
+  独立レビューのP1（保存PATCHの401/403後に古い本文が残る）を修正。401/403/404の即時消去、
+  JSON解析不能、409再取得、再認証、旧セッションの遅延拒否を回帰確認。正式担当/保管期間/本番AAL2受入は未完。
+- 最新の統合ローカル70項目PASS（source55、Web lint/両型3、隔離SQL11、Web build1）。
+  最後の通報UI修正後もAPI/UI合成・Web型・preflight回帰・diff check PASS。preflightはNOT_VERIFIEDのまま。
+  ローカル/合成試験を本番・実機・審査結果とは扱わない。旧sourceのCI成功と今回の結果を混同しない。
+- CocoaPods1.16.2/Ruby3.3をタスク専用tmpへ導入。JSON3の非互換をGemfile/lockのJSON2系固定で解消。
+  `test-mobile-ios-compile.mjs`はdotenv/秘密envを排除した一時コピーでPods→署名なしRelease Simulator buildのみ。
+  SDK55のコンパイルは最新SDK選択に伴い自分の処理だけ停止し、成功扱いにしない。SDK57は現在compile中。
+  API36/build-tools36.0.0はofficial sdkmanagerで導入/一覧確認。NDK/Android native build/16KB実行は未完。
+- EASの既存owner `oyanomosimonavi` とproject `8ed038b0-28d1-42e1-8ef6-e7e2098c11d3` をread-only確認。
+  送信/署名資格発行/課金なし。Appleは追記414の提出準備中、ソース版0.3.0/ASC版1.0の最終整合も未完。
+- SupabaseはGitHubログイン後も登録名「Supabase TENSHOKU（iPhone）」のMFA待ちを再確認。
+  コード入力/迂回/本番設定変更なし。Gmailでticket SU-478850を絞り込み、9月19日の受付のみ・新返信なしを確認。
+  本番認証・DB・旧通知移行・実機・署名済みbuild・運用宣言が揃わず、審査提出/公開はまだしていない。
+  管理画面へのアクセス復旧が次の外部依存。実利用者情報・既存別アプリ・本番を変更しない。

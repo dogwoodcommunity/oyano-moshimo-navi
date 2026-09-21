@@ -4,6 +4,20 @@
 
 ## 今回完了
 
+- 本人「申請までやってくれ」、最新SDKのiOS最小16.4も明示承認。Expo54→55→56→57を段階更新。
+  現SDK57.0.24 / RN0.86.3 / React19.2.3、ローカル検証とCIをNode24へ。Web依存は変更なし。
+  SDK55/56/57の両OS bundle/型/設定生成、最新70項目（source55・型/lint3・隔離SQL11・Web build）PASS。
+  iOSの署名なしReleaseシミュレーターコンパイルは進行中。実機・IPA/AAB・ストア提出の成功ではない。
+- 通知のinstallation ID/secret/世代管理と再送・解除・配送失効・アカウント消去を実装。
+  独立DB接続5競合と既存消去executor/finalizer回帰PASS。既定OFF、本番適用/旧登録調査・移行/実配送/保持期間は未完。
+- AI通報の管理画面を既存app_admins＋AAL2に限定して実装。本人が同意した1件だけ明示閲覧、閲覧監査・対応履歴・競合防止。
+  API/UI合成試験PASS。独立レビューで権限失効後の表示消去を追加修正し回帰PASS。正式担当/保管期間/本番受入は未確定。
+- EASの既存アカウント/専用projectを読取確認。ビルド送信・課金・署名資格変更はしていない。
+  SupabaseはGitHub認証後も「Supabase TENSHOKU（iPhone）」のMFA待ちを再確認。管理アクセス復旧は未完。
+  本番/利用者データ・Apple/Google配信は不変。詳細は追記415。開発branch/draft PR #9を維持する。
+
+## 前回完了（Apple申請レコード）
+
 - Apple Developer / Google Play ConsoleのBEECH名義登録について本人「登録済み」。新規契約はしない。
   ChromeでGoogle Playの株式会社BEECH・組織アカウントを実確認。一覧は既存別アプリ1件のみで、
   親のもしもナビは未登録。新規作成フォームを読取確認したが、ポリシー/輸出法の宣言は未送信。
@@ -11,7 +25,7 @@
   本人「同意した」後、Appleの未同意警告が消えたことを実確認。専用App ID `jp.beech.oyanomoshimo` を登録。
   App Store Connectに「親のもしもナビ」（日本語/iOS）を作成済み。Apple ID `6814299610`、SKU `oyano-moshimo-navi-ios`。
   状態は既定版1.0の「提出準備中」。ソース0.3.0と最終版番号の整合が必要。署名/build送信/審査提出/公開は未実施。追記414参照。
-  通知の残件は `MOBILE_PUSH_INSTALLATION_PROTOCOL.md` に最小修正案を整理（設計のみ・未実装）。
+  当時の通知の設計は上記追記415でローカル実装済み。旧版移行/本番有効化は引き続き未完。
   今回はAppleの専用ID/申請レコードのみ新規作成。ソース/本番/DB/既存別アプリは不変。同一ソースのテストは再実行しない。
 
 ## 前回完了（SDK54チェックポイント）

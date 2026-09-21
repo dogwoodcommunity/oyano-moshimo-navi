@@ -201,6 +201,7 @@ const notifySupabase = {
 
 const notifyRoutePath = path.join(repoRoot, "apps/web/app/api/family/notify/route.ts");
 const notifyRoute = loadCommonJs(notifyRoutePath, (specifier) => {
+  if (specifier === "@/lib/pushInstallation") return { invalidatePushDelivery: async () => { throw new Error("Viewer reached delivery mutation"); } };
   if (specifier === "next/server") return { NextResponse: MockNextResponse };
   if (specifier === "@/lib/publicRateLimit") return { checkPublicRateLimit: async () => null };
   if (specifier === "@/lib/serverSupabase") return { getServerSupabase: () => notifySupabase };

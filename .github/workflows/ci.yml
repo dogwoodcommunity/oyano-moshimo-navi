@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -62,6 +62,7 @@ jobs:
           pnpm run test:mobile-consult-target
           pnpm run test:mobile-push-logout
           pnpm run test:consult-report
+          pnpm run test:ai-report-review
 
       - name: Export mobile JS and Hermes offline (not native acceptance)
         run: |
@@ -153,6 +154,9 @@ jobs:
 
       - name: Test verified account erasure PostgreSQL pipeline
         run: pnpm run test:account-erasure:sql
+
+      - name: Push installation SQL isolation and concurrency
+        run: pnpm run test:push-installation:sql
 
       - name: Test commercial release gates
         run: pnpm run test:commercial-release-gates

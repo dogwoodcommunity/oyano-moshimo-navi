@@ -85,7 +85,8 @@ assert.doesNotMatch(scopedVerifier, /verifyStaticAdminToken|ADMIN_ACCESS_TOKEN|x
 const apiDirectory = path.join(repoRoot, "apps/web/app/api/admin");
 const allAdminRoutes = routeFiles(apiDirectory).sort();
 const scopedRoutes = allAdminRoutes.filter((routePath) => routePath.includes("/delete-requests/"));
-const genericRoutes = allAdminRoutes.filter((routePath) => !routePath.includes("/delete-requests/"));
+const reportRoutes = allAdminRoutes.filter((routePath) => routePath.includes("/ai-reports/"));
+const genericRoutes = allAdminRoutes.filter((routePath) => !scopedRoutes.includes(routePath) && !reportRoutes.includes(routePath));
 
 assert.deepEqual(scopedRoutes, [
   "apps/web/app/api/admin/delete-requests/auth-status/route.ts",
@@ -101,6 +102,39 @@ for (const routePath of genericRoutes) {
   const source = read(routePath);
   assert.match(source, /\bverifyAdminRequest\b/, `${routePath} must retain generic Admin auth`);
   assert.doesNotMatch(source, /verifyAccountDeleteOperatorRequest/, `${routePath} must reject delete-only authority`);
+}
+
+assert.deepEqual(reportRoutes, [
+  "apps/web/app/api/admin/ai-reports/[reportId]/route.ts",
+  "apps/web/app/api/admin/ai-reports/auth-status/route.ts",
+  "apps/web/app/api/admin/ai-reports/route.ts"
+], "the narrower report API surface must be fully enumerated rather than exempted from Admin authorization checks");
+const reportVerifier = read("apps/web/lib/aiReportOperator.ts");
+assert.match(reportVerifier, /import \{ verifyAdminRequest \} from "@\/lib\/adminAuth"/, "report auth must reuse verified existing app_admin allowlist checks");
+assert.match(reportVerifier, /await verifyAdminRequest\(request\)/, "the exact request must reach the verified Admin authenticator");
+assert.match(reportVerifier, /request\.headers\.get\("authorization"\).*Bearer/, "report auth must require a Bearer even when a static key is present");
+assert.match(reportVerifier, /auth\.admin\.method !== "supabase_app_admin" \|\| !auth\.admin\.userId[\s\S]*?throw new AiReportOperatorError\([\s\S]*?403\)/,
+  "report auth must reject both static-token and deletion-only executor methods, retaining a named app_admin identity");
+assert.match(reportVerifier, /authorizeAiReportOperator\(request: Request, requireMfa = true\)/, "report reads and writes must default to requiring AAL2");
+assert.ok(reportVerifier.indexOf("await verifyAdminRequest(request)") < reportVerifier.indexOf('Buffer.from(token.split(".")[1]'),
+  "the report helper may read AAL only after verification of that exact Bearer JWT");
+assert.match(reportVerifier, /requireMfa && aal !== "aal2"[\s\S]*?throw new AiReportOperatorError\("mfa_required"[\s\S]*?403\)/,
+  "report data must fail closed at AAL1");
+assert.doesNotMatch(reportVerifier, /verifyAccountDeleteOperatorRequest|account_delete_executors|verifyStaticAdminToken/,
+  "report auth must never adopt deletion-only capabilities or its own static-token path");
+for (const routePath of reportRoutes) {
+  const source = read(routePath);
+  assert.match(source, /from "@\/lib\/aiReportOperator"/, `${routePath} must use the checked narrow report helper`);
+  assert.doesNotMatch(source, /verifyAccountDeleteOperatorRequest|verifyAdminRequest/, `${routePath} must not bypass the narrow helper`);
+  const handlerCount = [...source.matchAll(/export async function (?:GET|POST|PATCH|DELETE)\(/g)].length;
+  const authCallCount = [...source.matchAll(/await authorizeAiReportOperator\(request(?:, false)?\)/g)].length;
+  assert.equal(authCallCount, handlerCount, `${routePath} must authorize each exported handler`);
+  if (routePath.includes("/auth-status/")) {
+    assert.match(source, /authorizeAiReportOperator\(request, false\)/, "only the minimal auth-status route allows an AAL1 operator to step up");
+    assert.doesNotMatch(source, /listAiReports|readAiReportDetail|writeAiReportReview|\.from\(|\.rpc\(/, "AAL1 auth-status must not read report data or perform mutations");
+  } else {
+    assert.doesNotMatch(source, /authorizeAiReportOperator\(request, false\)/, `${routePath} must retain AAL2 for every data operation`);
+  }
 }
 
 const deleteRoute = read("apps/web/app/api/admin/delete-requests/route.ts");
@@ -370,4 +404,4 @@ assert.match(browserSupabase, /redirectPath = "\/admin\/monitor-feedback"/, "gen
 assert.match(browserSupabase, /window\.location\.origin\}\$\{safeRedirectPath\}/, "the configured same-origin redirect must be used");
 assert.match(adminNav, /deletionSetup[\s\S]*?\? \[deleteRequestSetupItem\][\s\S]*?: deletionOnly[\s\S]*?\? \[deleteRequestItem\][\s\S]*?: items/, "deletion and setup pages must each expose only their own navigation section");
 
-console.log(`account delete executor auth tests passed (${scopedRoutes.length} scoped routes, ${genericRoutes.length} generic routes)`);
+console.log(`account delete executor auth tests passed (${scopedRoutes.length} deletion routes, ${reportRoutes.length} restricted report routes, ${genericRoutes.length} generic routes)`);
