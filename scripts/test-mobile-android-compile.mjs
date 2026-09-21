@@ -21,7 +21,7 @@ const source = join(repoRoot, "apps/mobile");
 // deep pnpm store produces >255-byte Android resource names (ENAMETOOLONG).
 // This ignored directory is outside apps/*, so it is not a duplicate workspace.
 const copy = mkdtempSync(join(repoRoot, ".native-android-qualification-"));
-for (const name of ["app", "components", "lib", "assets", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"]) {
+for (const name of ["app", "components", "lib", "assets", "plugins", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"]) {
   cpSync(join(source, name), join(copy, name), { recursive: true });
 }
 symlinkSync(join(source, "node_modules"), join(copy, "node_modules"), "dir");
@@ -48,9 +48,10 @@ function run(name, command, args, cwd, timeout) {
 console.log(`Disposable copy: ${copy}`);
 run("prebuild", process.execPath, [join(source, "node_modules/expo/bin/cli"), "prebuild", "--no-install", "--platform", "android", "--skip-dependency-update", "react-native,react"], copy, 120_000);
 run("compile", "./gradlew", [":app:assembleRelease", ":app:bundleRelease", "-PreactNativeArchitectures=arm64-v8a", "--no-daemon", "--max-workers=2", "--console=plain", "-Dorg.gradle.jvmargs=-Xmx3g -XX:MaxMetaspaceSize=1g"], join(copy, "android"), 1_800_000);
-for (const artifact of ["apk/release/app-release.apk", "bundle/release/app-release.aab"]) {
-  const file = join(copy, "android/app/build/outputs", artifact);
-  if (!existsSync(file)) throw new Error(`Missing qualification artifact: ${artifact}`);
-  console.log(`Test artifact: ${file}`);
-}
+const artifacts = ["apk/release/app-release.apk", "bundle/release/app-release.aab"]
+  .map((artifact) => join(copy, "android/app/build/outputs", artifact));
+for (const file of artifacts) if (!existsSync(file)) throw new Error(`Missing qualification artifact: ${file}`);
+run("inspect-apk", process.execPath, [join(repoRoot, "scripts/check-mobile-android-apk.mjs"),
+  artifacts[0]], copy, 120_000);
+for (const file of artifacts) console.log(`Test artifact: ${file}`);
 console.log("ARM64 test-key artifacts only. Store signing, other ABIs, 16KB runtime, real devices and production acceptance are NOT verified.");

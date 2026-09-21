@@ -15482,3 +15482,25 @@ https://mitene.us/
 - source `80f33d91f845df10c7a8b9ede93141612f8cb025` をpush、CI `35564004158` は全ジョブsuccess。
   両OS export/設定生成・隔離SQL・Web build/smokeを含むが、実APKのRELRO FAILを解消した意味ではない。
   最終結果のみ文書commit `[skip ci]` で保存する。main/本番/ストアは変更せず、申請完了とは報告しない。
+
+## 2026-09-21 追記 417 — Android16KBの誤判定訂正とビルド設定修正
+
+- 本人「修正して」。前回21/23の不適合と報告したが、再調査で安全な全LOAD RELRO配置まで拒否する検査の誤判定と判明。
+  AOSP Android15通常リンカーと全LOAD例外を照合し、独立した別担当2名も確認。ユーザーにも誤判定を説明した。
+  誤判定の履歴は残すが、追記416を現在の不適合件数として引用しない。具体的な根拠はMOBILE_STORE_RELEASEの追記417。
+- チェッカーを限定修正。LOAD16KB条件は維持し、全LOADに同じファイル/開始位置が対応する場合の安全なパディングだけ許容。
+  4KB/16KBの両ページ範囲・他LOAD/実行領域との非重複・RELRO外書込領域非保護を検査。危険なprefix等の拒否回帰も追加。
+  提供済みバイナリの書換えや検査対象除外、RELRO無効化はしていない。依存バージョン変更も不要だった。
+- Expo pluginでsource native linkにmax/common-page-size=16384を付与。
+  最初のfooter登録では適用されないことを実CMakeで検出、root plugin前に移して実build.ninjaで確認。
+  pluginを隔離コピーに含め、テンプレート/順序/重複回帰を追加。compile runnerには完成APK検査を必須化。
+- 最終ARM64 Release APK/AAB実生成成功。APKの全23部品PASS（終端整列10、全LOAD保護13）、署名/ZIP/権限PASS。
+  AAB validate/target36/PAGE_ALIGNMENT_16K PASS、23部品のELF検査とAPKとのバイト一致も確認。
+  前回copy fBChGD内の生成物を更新。最終ハッシュ・ログはMOBILE_STORE_RELEASEへ記録。
+- 16KB専用emulator-5580で互換モードOFF、install/cold起動/JS main/前面Activity/process存続を確認、crash bufferなし。
+  OS debugger/ashmem警告は記録。実機/4KB実行環境/認証後全機能の受入ではない。正式test-key artifactsのみ、申請用署名なし。
+- ローカルsource57/57、設定生成、最終差分runner安全性/合成APK検査PASS。CIはpush後に確認する。
+  branch codex/consult-guest-entry、draft PR #9のまま。保護対象未追跡2文書とreview_exports不変。
+  本番/利用者の記録、DB、クラウド設定、料金、申請提出は変更しない。Supabase復旧・実機/正式署名等の残件は維持。
+- 別担当が最終APK全23個をllvm-readelfで独立検査、10/13の分類・4KB/16KB範囲と非重複を再確認してPASS。
+  検証終了時に専用emulatorだけ停止。AVDと生成物は保持した。

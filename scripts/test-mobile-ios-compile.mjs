@@ -12,7 +12,7 @@ if (process.argv.length > 2) throw new Error("This command accepts no arguments"
 checkLocalFiles(repoRoot, { sourceOnly: true });
 const source = join(repoRoot, "apps/mobile");
 const copy = mkdtempSync(join(tmpdir(), "oyano-ios-compile-"));
-for (const name of ["app", "components", "lib", "assets", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"]) {
+for (const name of ["app", "components", "lib", "assets", "plugins", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"]) {
   cpSync(join(source, name), join(copy, name), { recursive: true });
 }
 symlinkSync(join(source, "node_modules"), join(copy, "node_modules"), "dir");

@@ -12,7 +12,7 @@ const NODE = "/synthetic/node/bin/node";
 const SDK = "/synthetic/android-sdk";
 const JAVA = "/synthetic/jdk";
 const SECRET = "SYNTHETIC_DO_NOT_INHERIT";
-const sourceNames = ["app", "components", "lib", "assets", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"];
+const sourceNames = ["app", "components", "lib", "assets", "plugins", "app.json", "app.config.js", "package.json", "index.js", "metro.config.js", "tsconfig.json", "env.d.ts"];
 assert.match(readFileSync(path.join(repoRoot, ".gitignore"), "utf8"), /^\/?\.native-android-qualification-\*\/$/m,
   "Local Android builds must not be committed");
 const secretKeys = [
@@ -159,7 +159,8 @@ for (const platform of ["ios", "android"]) {
     assert.doesNotMatch(args.join(" "), /archive|exportArchive|allowProvisioning|upload|submit/i);
     assert.match(calls.output.at(-1), /Real devices, production, IPA, TestFlight and store review are NOT verified/);
   } else {
-    assert.deepEqual(calls.spawned.map((item) => item.command), [NODE, "./gradlew"]);
+    assert.deepEqual(calls.spawned.map((item) => item.command), [NODE, "./gradlew", NODE]);
+    assert.deepEqual(calls.spawned[2].args, [`${ROOT}/scripts/check-mobile-android-apk.mjs`, `${copy}/android/app/build/outputs/apk/release/app-release.apk`]);
     for (const command of calls.spawned) {
       assert.equal(command.env.GRADLE_USER_HOME, `${copy}/.gradle-home`);
       assert.equal(command.env.ANDROID_HOME, SDK);

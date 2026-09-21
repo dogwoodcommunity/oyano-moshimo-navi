@@ -3,6 +3,7 @@ import { cpSync, mkdtempSync, readdirSync, readFileSync, symlinkSync } from "nod
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawnSync } from "node:child_process";
+import vm from "node:vm";
 import { checkLocalFiles, localEnvironment, repoRoot } from "./test-stage-a-local.mjs";
 
 // Generate only a disposable copy: no pods/Gradle install, build, signing or provider access.
@@ -10,13 +11,29 @@ checkLocalFiles(repoRoot, { sourceOnly: true });
 const source = join(repoRoot, "apps/mobile");
 const blockedPermissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW", "USE_BIOMETRIC", "USE_FINGERPRINT"];
 const sourceConfig = JSON.parse(readFileSync(join(source, "app.json"), "utf8"));
+assert.ok(sourceConfig.expo.plugins.includes("./plugins/withAndroidPageSize"));
+const pluginModule = { exports: {} };
+vm.runInNewContext(readFileSync(join(source, "plugins/withAndroidPageSize.js"), "utf8"), {
+  module: pluginModule,
+  require(name) {
+    assert.equal(name, "expo/config-plugins");
+    return { withProjectBuildGradle: (config, callback) => callback(config) };
+  }
+}, { timeout: 1000 });
+const syntheticGradle = { modResults: { language: "groovy", contents: 'apply plugin: "expo-root-project"\napply plugin: "com.facebook.react.rootproject"' } };
+pluginModule.exports(syntheticGradle);
+const once = syntheticGradle.modResults.contents;
+pluginModule.exports(syntheticGradle);
+assert.equal(syntheticGradle.modResults.contents, once, "Page-size plugin is idempotent");
+assert.throws(() => pluginModule.exports({ modResults: { language: "kotlin", contents: "" } }), /new Gradle template/);
+assert.throws(() => pluginModule.exports({ modResults: { language: "groovy", contents: "changed template" } }), /root plugin order/);
 for (const permission of blockedPermissions) {
   const fullName = `android.permission.${permission}`;
   assert.ok(sourceConfig.expo.android.blockedPermissions?.includes(fullName), `${permission} must be explicitly blocked before manifest merging`);
   assert.ok(!(sourceConfig.expo.android.permissions ?? []).some((name) => name === permission || name === fullName), `${permission} must not be explicitly requested`);
 }
 const copy = mkdtempSync(join(tmpdir(), "oyano-native-config-"));
-for (const file of ["app.json", "app.config.js", "package.json", "assets"]) {
+for (const file of ["app.json", "app.config.js", "package.json", "assets", "plugins"]) {
   cpSync(join(source, file), join(copy, file), { recursive: true });
 }
 symlinkSync(join(source, "node_modules"), join(copy, "node_modules"), "dir");
@@ -43,6 +60,11 @@ for (const permission of blockedPermissions) {
     `unused ${permission} must not be requested`);
 }
 assert.match(read("android/gradle.properties"), /newArchEnabled=true/);
+const rootGradle = read("android/build.gradle");
+assert.match(rootGradle, /androidComponents.*finalizeDsl/);
+assert.match(rootGradle, /max-page-size=16384 -Wl,-z,common-page-size=16384/);
+assert.equal(rootGradle.split("// oyano-16kb-source-linking").length - 1, 1);
+assert.ok(rootGradle.indexOf("// oyano-16kb-source-linking") < rootGradle.indexOf('apply plugin: "expo-root-project"'), "Register callbacks before Expo/React evaluate child projects");
 const iosDirectory = readdirSync(join(copy, "ios"), { withFileTypes: true })
   .filter((item) => item.isDirectory())
   .map((item) => item.name)

@@ -152,6 +152,8 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 
 ## Android実ビルドの検証手順（追記416）
 
+この節の初回RELRO FAIL判定は、下記追記417で訂正した。生の終端剰余だけで安全な全LOAD保護を拒否していたため、現在の不適合件数として引用しない。
+
 - `test:mobile-android-compile` はAPI36/NDK27.1.12297006/JDK17を前提に、ARM64のRelease APK/AABをローカル生成する。
   `ANDROID_HOME` / `JAVA_HOME` を明示しNode24で実行する。公式公開依存は取得するが、秘密env/dotenvは取り込まない。
   Expoの公開テスト鍵を使う検証専用生成物で、ストア用の署名・アップロード・審査提出はしない。
@@ -197,3 +199,35 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
   合成PASSと実APKのRELRO FAILは別結果。通過しない実検査を合格扱いにしない。
   source `80f33d9` のCI `35564004158` も全ジョブsuccess（両OS export/設定生成、隔離SQL、Web build/smokeを含む）。
   正式署名・実機受入・本番反映・ストア提出は未実施。上記RELRO不適合と外部依存を残件として維持する。
+
+## Android16KB判定の訂正・ビルド設定修正（追記417）
+
+- 前回の「21/23不適合」は実際のクラッシュを確認した結果ではなく、検査の誤検出だった。
+  Android公式ガイドの終端剰余チェックだけでは、LLDの別LOAD配置と末尾パディングを扱えない。
+  [AOSP Android15通常リンカー](https://raw.githubusercontent.com/aosp-mirror/platform_bionic/android15-release/linker/linker_phdr.cpp)の
+  `_extend_gnu_relro_prot_end` / `_phdr_table_set_gnu_relro_prot`、
+  [AOSP全LOAD例外](https://android.googlesource.com/platform/bionic/+/android16-qpr2-release/linker/linker_phdr_16kib_compat.cpp)の
+  `phdr_table_get_relro_min_align` を照合。これは互換モードONでのみ動く条件ではない。
+  別担当2名も実ELFとAOSPを独立確認した。API24通常リンカーもページ単位保護である。
+- `inspectElf` はLOAD>=16KB/アドレスとファイル位置の整合性を維持し、終端整列または限定的な全LOAD保護を確認する。
+  全LOAD例外は同じ開始位置とファイル範囲、LOAD全体を覆い既存4KBページ内までの末尾余白に限定。
+  4KB/16KB両方で保護先の範囲内・別LOADページ非重複・実行領域非重複・RELRO外書込領域非保護を確認する。
+  4KB LOAD、危険な部分RELRO、空/複数RELRO、ファイル不一致、丸めoverflow等は合成試験で拒否。
+  安全な配置を許容する修正であり、RELRO無効化・ELF書換え・互換モード・除外リストによる回避はしない。
+- `apps/mobile/plugins/withAndroidPageSize.js` が、ソースから組み立てるnative moduleにmax/common-page-size=16384を設定。
+  root plugin後に登録すると遅く適用されないことを実ビルドで検出し、Expo/React root plugin前への登録へ修正した。
+  最終app/worklets/reanimatedのCMakeCache/build.ninjaで両指定を確認。既存の他linker flagsは保持し、競合指定は停止。
+  native-config回帰で登録位置・重複適用防止・未知template拒否も確認。iOSには設定変更を適用しない。
+  ローカルcompile runnerは生成後のAPK検査まで必須化。APK検査失敗時に成功の成果物案内を出さない合成回帰を追加。
+- 最終copy `.native-android-qualification-fBChGD` を再使用（前回の生成APK/AABはこの検証成果物に更新）。
+  logs: `qualification-logs/prebuild-page-size-final.log` / `compile-page-size-final.log`。
+  最終BUILD SUCCESSFUL、APKの全23 ARM64部品PASS（終端整列10、全LOAD保護13）、権限25件/ZIP16KB/公開test署名PASS。
+  AABはbundletool1.18.3 validate/target36/PAGE_ALIGNMENT_16K PASS、全23部品を別にELF検査しAPKとバイト一致。
+  APK SHA256 `8fae7b9ba6b03d62d68b80ce2131dd24e372378c807aca0ec54f4ea3519cbadf`。
+  AAB SHA256 `09cede61c13c0676d15905cd2dab53b22c93ef608d199a86760ed310ac8a236f`。
+  別担当の`llvm-readelf -Wl`による最終APK全23個の独立検査も同じ10/13件・整列/範囲/非重複PASS。
+- 専用AVD/emulator-5580、PAGE_SIZE16384、linker app_compat=false/pm app_compat.disabled=trueで更新・cold起動成功。
+  MainActivity topResumed、JS Running main、PID存続、crash bufferなし。OSのdebugger/ashmem非推奨ログはあり、無ログとは扱わない。
+  これは起動の限定検証。4KB実行環境・実機操作・認証後全機能・本番保存/削除/通知・正式署名・ストア提出は未完。
+  Supabase問い合わせの再送や本番接続/実利用者情報の操作はしていない。
+  検証終了時に専用エミュレーターだけ停止、AVDと成果物は保持した。

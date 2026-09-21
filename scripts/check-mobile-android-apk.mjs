@@ -31,9 +31,11 @@ export function inspectElf(buffer, expectedAbi) {
       && sectionSize === 64 && sectionCount > 0 && sectionCount < 0xff00
       && stringSection < sectionCount && sectionOffset + sectionSize * sectionCount <= buffer.length,
   "Invalid ELF section headers");
-  let loads = 0, relro = 0;
+  let loads = 0, relro = 0, relroEndAligned = 0, relroFullLoad = 0;
   const loadRanges = [], relroRanges = [];
   const limit = 1n << 64n;
+  const pageStart = (address, page) => address / page * page;
+  const pageEnd = (address, page) => (address + page - 1n) / page * page;
   for (let i = 0; i < count; i++) {
     const at = offset + size * i, type = buffer.readUInt32LE(at);
     if (type === 0) continue; // PT_NULL entries have no defined segment fields.
@@ -48,17 +50,60 @@ export function inspectElf(buffer, expectedAbi) {
       assert.ok(fileSize <= memorySize, "LOAD file size exceeds memory size");
       assert.ok(alignment >= 16384n, "LOAD alignment is below 16KB");
       assert.equal((address - fileOffset) % alignment, 0n, "LOAD address/offset are not congruent with alignment");
-      loadRanges.push({ start: address, end: address + memorySize });
+      loadRanges.push({ start: address, end: address + memorySize, fileStart: fileOffset,
+        fileEnd: fileOffset + fileSize, flags: buffer.readUInt32LE(at + 4) });
     }
     if (type === 0x6474e552) {
       relro++;
-      assert.equal((address + memorySize) % 16384n, 0n, "GNU_RELRO end is not 16KB aligned");
-      relroRanges.push({ start: address, end: address + memorySize });
+      assert.ok(memorySize > 0n && fileSize <= memorySize, "Invalid GNU_RELRO memory/file size");
+      relroRanges.push({ start: address, end: address + memorySize,
+        fileStart: fileOffset, fileEnd: fileOffset + fileSize });
     }
   }
   assert.ok(loads > 0, "Missing LOAD segments");
-  for (const range of relroRanges) assert.ok(loadRanges.some((load) => range.start >= load.start && range.end <= load.end), "GNU_RELRO is outside LOAD memory");
-  return { loads, relro };
+  assert.ok(relro <= 1, "Multiple GNU_RELRO segments are not qualified");
+  for (const range of relroRanges) {
+    // AOSP normally protects [page_start(vaddr), page_end(vaddr + memsz)),
+    // including the minimum supported API24 loader's PAGE_START/PAGE_END:
+    // https://android.googlesource.com/platform/bionic/+/android-7.0.0_r1/linker/linker_phdr.cpp
+    // https://android.googlesource.com/platform/bionic/+/android16-release/linker/linker_phdr.cpp
+    // phdr_table_get_relro_min_align explicitly exempts a whole LOAD from the
+    // end-alignment condition (same vaddr, LOAD.memsz <= RELRO.memsz):
+    // https://android.googlesource.com/platform/bionic/+/android16-qpr2-release/linker/linker_phdr_16kib_compat.cpp
+    // Older LLD pads only RELRO.memsz, beyond the raw LOAD end. Bound that
+    // padding to its existing 4KB mapping as well, preserving 4KB compatibility.
+    const owner = loadRanges.find((load) => range.start >= load.start && range.start < load.end
+      && (range.end <= load.end || (range.start === load.start && range.end <= pageEnd(load.end, 4096n))));
+    assert.ok(owner, "GNU_RELRO is outside LOAD memory or bounded page padding");
+    assert.ok(range.fileStart >= owner.fileStart && range.fileEnd <= owner.fileEnd
+      && range.start - owner.start === range.fileStart - owner.fileStart,
+    "GNU_RELRO file range does not match its LOAD");
+    const alignedEnd = range.end % 16384n === 0n;
+    const fullLoad = range.start === owner.start && range.end >= owner.end
+      && range.fileStart === owner.fileStart && range.fileEnd === owner.fileEnd;
+    assert.ok(alignedEnd || fullLoad, "GNU_RELRO end is not 16KB aligned and does not cover a whole LOAD");
+    // A modulo check alone misses damage at the rounded start and overlapping
+    // mappings. Check both supported page sizes, including the host's real RW
+    // bytes, so neither full-LOAD nor already-aligned cases can bypass them.
+    for (const page of [4096n, 16384n]) {
+      const start = pageStart(range.start, page), end = pageEnd(range.end, page);
+      assert.ok(end < limit && start >= pageStart(owner.start, page) && end <= pageEnd(owner.end, page),
+        "GNU_RELRO protection is outside mapped LOAD pages");
+      for (const load of loadRanges) {
+        if (load.start === load.end) continue;
+        const overlaps = pageStart(load.start, page) < end && pageEnd(load.end, page) > start;
+        assert.ok(!overlaps || !(load.flags & 1), "GNU_RELRO protection overlaps executable LOAD pages");
+        assert.ok(!overlaps || load === owner, "GNU_RELRO protection overlaps another LOAD mapping");
+        if (!(load.flags & 2)) continue;
+        assert.ok(!(start < range.start && load.start < range.start && load.end > start)
+          && !(range.end < end && load.end > range.end && load.start < end),
+        "GNU_RELRO protection covers writable bytes outside RELRO");
+      }
+    }
+    if (alignedEnd) relroEndAligned++;
+    else relroFullLoad++;
+  }
+  return { loads, relro, relroEndAligned, relroFullLoad };
 }
 
 const approvedPermissions = new Set([
@@ -124,6 +169,8 @@ export function inspectApk(apk, sdk, java) {
   });
   assert.equal(failures.length, 0, `16KB ELF checks failed: ${JSON.stringify(failures)}`);
   return { targetSdk: target, permissions, zip16KB: "PASS", elf16KB: "PASS", libraryCount: elf.length,
+    relro16KB: { endAligned: elf.reduce((sum, entry) => sum + entry.relroEndAligned, 0),
+      fullLoadPageProtected: elf.reduce((sum, entry) => sum + entry.relroFullLoad, 0) },
     abis: [...new Set(libraries.map((name) => name.split("/")[1]))],
     signature: testKey ? "PUBLIC_TEST_KEY_NOT_FOR_STORE" : "VERIFIED_NOT_CLASSIFIED",
     realDeviceAcceptance: "NOT_TESTED", storeSubmission: "NOT_VERIFIED" };

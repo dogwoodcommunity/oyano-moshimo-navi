@@ -34,7 +34,7 @@
     },
     "newArchEnabled": true,
     "experiments": { "autolinkingModuleResolution": true },
-    "plugins": ["expo-router", "expo-asset", "expo-font", "expo-notifications", ["expo-secure-store", { "configureAndroidBackup": true, "faceIDPermission": false }]],
+    "plugins": ["expo-router", "expo-asset", "expo-font", "expo-notifications", ["expo-secure-store", { "configureAndroidBackup": true, "faceIDPermission": false }], "./plugins/withAndroidPageSize"],
     "extra": {
       "router": {
         "origin": false

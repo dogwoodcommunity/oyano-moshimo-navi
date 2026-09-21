@@ -4,6 +4,18 @@
 
 ## 今回完了
 
+- 本人「修正して」でAndroid16KB判定を再調査。前回の「21/23不適合」は、LOAD全体を保護する安全な配置も拒否する検査の誤判定だった。
+  AOSP通常リンカー/別担当2名の独立確認を根拠に、4KB/16KBの保護範囲・ファイル対応・他領域非重複を条件とする限定許容へ修正。
+  危険な部分RELRO/書込領域や実行領域への重複/範囲外は拒否し、合成回帰を追加。
+  ソースビルドにはmax/common-page-size=16384の両指定を追加。Expo/React root plugin前に登録し、実build.ninjaでも適用確認。
+  修正後のARM64 Release APK/AAB生成成功。APK全23部品PASS（終端整列10・安全な全LOAD保護13）、ZIP整列/権限/署名検証PASS。
+  AAB構造/target36/PAGE_ALIGNMENT_16K PASS、全23部品のバイト列がAPKと一致。
+  専用16KBエミュレーターで互換モードOFFのcold起動/JS main/process存続/クラッシュなしを確認。実機・全機能の操作確認ではない。
+  ローカルsource57/57と最終差分の設定生成/runner安全性/合成APK検査PASS。CIは今回push後に確認する。
+  本番/既存記録不変。正式署名・本番認証等の受入・実機・提出は未完。詳細は追記417。
+
+## 前回完了（Android初回検証・判定は追記417で訂正）
+
 - 「それ以外では進められない？」「すすめてくれ」で、Supabase復旧待ちとは独立にAndroid実ビルドを検証。
   API36/NDK27.1/JDK17でARM64 Release APK/AAB生成・16KB専用エミュレーターのcold起動/JS main開始を確認。
   深いpnpm参照でresource名が長くなるbuild失敗を、ignored一時コピーの配置修正で解消。
