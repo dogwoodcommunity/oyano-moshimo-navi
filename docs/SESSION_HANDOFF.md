@@ -15507,3 +15507,22 @@ https://mitene.us/
 - source `4b8fc383177ec8d1b9a2510c546dbadb025b86aa` をpush。CI `35566065837` の全ジョブsuccessを確認。
   両OS export/設定生成・隔離SQL・Web build/smoke含む。最終記録だけ文書commit `[skip ci]` でpush。
   今回のAndroid互換性チェック修正は完了、正式リリース/申請の完了ではない。
+
+## 2026-09-21 追記 418 — Supabaseログインの別経路を再確認
+
+- 本人「前ログインできた」「他に方法ないの」で読取調査。現在のChromeの対象projectへの遷移は
+  GitHub認証後のDashboard MFAで停止。表示名は `Supabase TENSHOKU（iPhone）`。
+  代替factor選択は現画面になく、コード入力/強制サインアウト/cookie削除はしない。
+- 正規の候補は、以前登録した予備factor・別端末に同期済みの認証、残存認証セッション、
+  既に同じSupabase組織/projectへ招待済みの別管理者の本人ログイン。
+  過去に各ブラウザの通常UIを確認済みだが、今回はSafari等を再確認していない。
+  別管理者の招待/アクセス実在も未確認。アプリのapp_adminsや削除担当とDashboardメンバーを混同しない。
+- 公式MFA/喪失案内を再確認。Dashboardにはrecovery codeがなく、全factor喪失時は復元不可と記載。
+  パスワード再設定等をMFA回避策とは案内しない。「サポートを待てば必ず復旧」とも約束しない。
+  登録先不明について既存問い合わせSU-478850は維持。今回メール返信確認/再送は行っていない。
+- 本人へ、知也氏がアプリ管理画面ではなくSupabase自体に別アカウントで入れるかを確認する。
+  認証設定/権限/課金/本番データ/申請に変更なし。保護対象未追跡ファイルは不変。
+  文書のみbranchへ保存し、source検証再実行やmain配信は不要。
+- 参照: https://supabase.com/docs/guides/platform/multi-factor-authentication
+  / https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
+  / https://supabase.com/docs/guides/platform/access-control
