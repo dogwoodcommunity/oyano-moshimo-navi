@@ -16,6 +16,7 @@ const sourceTests = [
   "family-management", "handoff-security", "consult-memory", "consult-route", "consult-entry",
   "consult-guest-route", "consult-preparation", "guest-home-identity", "auth-captcha", "mobile-auth-captcha",
   "mobile-store-preflight", "mobile-empty-states", "mobile-screen-readiness",
+  "mobile-native-compile-safety", "mobile-android-apk",
   "mobile-consult-target", "mobile-push-logout", "consult-report", "ai-report-review", "ai-report-review-ui",
   "diary-deletion", "notebook-person-deletion"
 ];

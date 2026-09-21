@@ -15452,3 +15452,30 @@ https://mitene.us/
 - 最終source `37ca7d0`のCI `35548989941`も全ジョブsuccess。両OS JS/Hermes export/native設定、
   隔離SQL、Web build/smokeを含む。ローカル/CI/Simulatorまでの確認で、本番/実機/提出は未完のまま。
   最終検証記録だけを文書commit `[skip ci]` でpushし、main/本番配信はしない。
+
+## 2026-09-21 追記 416 — Android実ビルド・権限修正、16KBの追加課題
+
+- 本人「それ以外では進められない？」「すすめてくれ」で、Supabase復旧と独立に進めるAndroid検証/申請素材を実施。
+  昨日の問い合わせは再送しない。今回サポート返信を新たに確認したわけではなく、管理アクセス復旧とも扱わない。
+  branch `codex/consult-guest-entry` / draft PR #9を維持。保護対象の未追跡2文書・review_exportsは不変。
+- 公式SDK ManagerでNDK27.1.12297006/CMake3.30.5/Emulator37.1.11/API36 Google APIs16KB ARM64 imageを導入。
+  新しいlicense同意画面は出ず、yes自動入力はしていない。既存JDK17/API36/build-tools36を使用、課金buildなし。
+- `test-mobile-android-compile.mjs`を追加。秘密env/dotenvを排除、公開test鍵でARM64 Release APK/AABだけローカル生成。
+  /tmp＋深いpnpm参照でresource名が長すぎるENAMETOOLONGを実検出。ignored repo直下の専用コピーへ変更して解消。
+  Metro/runtime/asset pluginには手を入れず、同名workspaceも追加しない。最大asset filename217byteのexportとnative buildが成功。
+- 実merged manifestでAndroidX由来の不要な指紋/生体認証権限を発見。app.jsonで除外、再生成・再コンパイル後の実APKでも消失。
+  通知SDK由来のメーカーbadge16件は必要範囲として明示allowlist、未知権限は拒否。正式権限申告を完了扱いにしない。
+- 最終copy `.native-android-qualification-fBChGD`、logsはその`qualification-logs/compile-permissions.log`。
+  APK/AABとも生成成功（0.3.0/1・target36）、APK ZIP16KB/公開Debug署名検証、公式bundletoolのAAB validate/target36/PAGE_ALIGNMENT_16KはPASS。
+  しかし **最終APKのELF詳細検査はFAIL、23部品中21がRELRO終端の16KB条件を満たさない**。件数はcacheの検査と別。
+  別担当がllvm-readelfでも独立再現。NDK27のcommon-page-size不足とprebuilt依存の問題を分離し、検査を緩和しない。
+  修正候補・例・ハッシュは `MOBILE_STORE_RELEASE.md` の追記416節。NDK変更だけで全prebuiltが直るとは判断しない。
+- 専用AVD `oyano_sdk57_16k`、serial emulator-5580、AVD home `/tmp/oyano-android-emulator.dKezmc/avd`。
+  16KBを確認し4KB互換モードをOFF。install成功、cold start Status ok、MainActivity前面・JS Running main・起動後process存続を確認。
+  crash buffer/当該processのerrorなし。実機/認証後操作/全機能の成功ではなく、上記ELF FAILも解消していない。
+  CUAがAndroid Emulatorを選択できず視覚確認は未実施。終了時に専用emulatorだけ停止し、AVDは保持。
+- 合成native-runner安全性/ELF・権限検査をCIへ追加、source57/57 PASS。最終差分の合成/安全性/両OS設定生成/preflightもPASS。
+  合成PASSを実APK不適合の免除にしない。Web/DB/利用者データ/本番設定は変更なし。実AI/通知配送/有料build/正式署名/提出なし。
+- 並行担当が申請説明・無料枠・AI通報・Privacy/Data Safety調査表をnative実装に合わせ改訂。
+  公開Privacy/削除案内はGET200だけ確認。送信・削除実行/本番内容整合/正式宣言は未完。
+  次はAndroid依存部品の16KB適合対策、復旧後の本番認証・旧通知調査/移行・通報運用、両実機、署名/申請設定を切り分けて進める。

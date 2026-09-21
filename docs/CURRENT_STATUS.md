@@ -4,6 +4,18 @@
 
 ## 今回完了
 
+- 「それ以外では進められない？」「すすめてくれ」で、Supabase復旧待ちとは独立にAndroid実ビルドを検証。
+  API36/NDK27.1/JDK17でARM64 Release APK/AAB生成・16KB専用エミュレーターのcold起動/JS main開始を確認。
+  深いpnpm参照でresource名が長くなるbuild失敗を、ignored一時コピーの配置修正で解消。
+  実manifestの未使用USE_BIOMETRIC/USE_FINGERPRINTを除外し、最終APKで消失を確認。
+  APK署名/ZIP整列、AAB構造/target36/PAGE_ALIGNMENT_16KはPASS。ただし **ELFのRELRO境界が21/23部品で未達**。
+  起動成功でこの不適合を免除しない。NDK設定だけではビルド済み依存を直せず、適合版/再ビルドの確認が次の課題。
+  ローカルsource57/57、最終の安全性/設定生成/合成APK/申請preflight回帰PASS。CIは今回commit後に確認する。
+  ストア素材・Privacy/Data Safetyの調査表を実native機能へ整理、公開Privacy/削除案内GETは200。
+  すべてテスト用、正式署名/実機操作/本番受入/提出は未完。本番データ不変。詳細は追記416とMOBILE_STORE_RELEASE。
+
+## 前回完了（SDK57・iOS・通知/通報）
+
 - 本人「申請までやってくれ」、最新SDKのiOS最小16.4も明示承認。Expo54→55→56→57を段階更新。
   現SDK57.0.24 / RN0.86.3 / React19.2.3、ローカル検証とCIをNode24へ。Web依存は変更なし。
   SDK55/56/57の両OS bundle/型/設定生成、最新70項目（source55・型/lint3・隔離SQL11・Web build）PASS。
@@ -17,7 +29,7 @@
   SupabaseはGitHub認証後も「Supabase TENSHOKU（iPhone）」のMFA待ちを再確認。管理アクセス復旧は未完。
   復旧問い合わせSU-478850も9月19日の受付のみで新返信なし。ソース`0ac6a2c`のCI`35548532460`全ジョブsuccess。
   最後の文言修正`37ca7d0`もCI`35548989941`全ジョブsuccess、差分native compile/再インストール/起動/UI確認済み。
-  専用Simulatorは停止し保持。Supabaseサポートへの追伸送信を本人に確認中（まだ送信しない）。
+  専用Simulatorは停止し保持。本人は昨日の問い合わせを指摘済み。同じ内容の追伸は再送せず、復旧待ちと切り離せるローカル検証を先行する。
   本番/利用者データ・Apple/Google配信は不変。詳細は追記415。開発branch/draft PR #9を維持する。
 
 ## 前回完了（Apple申請レコード）

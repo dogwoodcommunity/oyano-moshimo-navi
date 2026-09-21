@@ -38,6 +38,7 @@
 | 優先 | 項目 | 完了に必要な証跡 |
 | --- | --- | --- |
 | 必須 | Expo SDK更新 | 51→57の段階更新/型/両OSbundle PASS。iOS16.4+は本人承認済み。署名build/両実機が未完 |
+| 必須 | Android 16KB内部ライブラリ | ARM64実APKはZIP/LOAD整列とcold起動PASSだが、23部品中21のRELRO境界が未達。適合する依存版/再ビルドを確認し、最終APK/AABを再検証 |
 | 必須 | サーバーと認証の整合 | Web `/auth/mobile` 配信、Supabase URL許可/CAPTCHA設定、新binaryのメール復帰と別人分離 |
 | 必須 | 複数手帳のAI対象 | 選択/ID引継ぎ/状態分離/遅延応答抑止を実装・合成PASS、実機は未 |
 | 必須 | AI回答のアプリ内通報 | 同意付き報告/限定管理画面/AAL2/監査/競合防止を実装・合成PASS。担当/保存期間/実受入は未 |
@@ -148,3 +149,49 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 - EASの既存owner/project一致をread-only確認。費用/署名資格/クラウドbuild/IPA・AAB送信/審査提出は未実施。
   Supabase MFAは再確認でも未完。ticket SU-478850は9月19日の受付だけで新しい復旧案内なし。
   本番認証/通知旧版調査・移行/通報運用/実機受入/正式版番号と申請宣言が残る。
+
+## Android実ビルドの検証手順（追記416）
+
+- `test:mobile-android-compile` はAPI36/NDK27.1.12297006/JDK17を前提に、ARM64のRelease APK/AABをローカル生成する。
+  `ANDROID_HOME` / `JAVA_HOME` を明示しNode24で実行する。公式公開依存は取得するが、秘密env/dotenvは取り込まない。
+  Expoの公開テスト鍵を使う検証専用生成物で、ストア用の署名・アップロード・審査提出はしない。
+- コピーはrepo直下のignored `.native-android-qualification-*`。`apps/*` の外なので同名workspaceを増やさない。
+  /tmpから深いpnpmストアへsymlinkするとAndroidのresource名が255byteを超え、最初の実buildはENAMETOOLONGで失敗した。
+  配置を近づけて依存assetの相対パスを短くし、Metro/asset plugin/アプリ表示コードは変更していない。
+  配置修正後のAndroid embed exportは成功、assetファイル名の最大217byteを確認。これ単独をnative build成功とは扱わない。
+- `test:mobile-native-compile-safety` は実runnerをmock FS/processで検査。コピー対象、秘密env排除、専用Gradle home、
+  署名/アップロードしないcommand、前提不足/timeout/途中失敗/成果物不足の停止を確認する。実ビルドとは別。
+- `check-mobile-android-apk.mjs /absolute/test.apk` は生成APKを読取検査する（同じSDK/JDK環境変数が必要）。
+  target API36以上、non-debuggable、既知の必要権限だけ、署名検証、ZIPの16KB alignment、全対象64bit `.so` の
+  ELF/header/ABI/segment範囲/2冪LOAD alignment/RELROを検査。未知権限と不正ELFは拒否する。
+  `test:mobile-android-apk` は不正例を含む合成回帰であり、実APK検査/実端末/審査合格ではない。
+- AABはGoogle公式bundletool1.18.3のvalidate/dumpで別に確認する。APKだけの検査をAABの証拠にしない。
+  公開JARのSHA256はGitHub release digestと照合する。資格情報/署名鍵/利用者データは渡さない。
+
+### 実測結果（9月21日・本番未接続）
+
+- 修正後の `.native-android-qualification-fBChGD` でRelease APK/AAB作成成功。最終の権限除外後もnative再生成→再コンパイル成功。
+  app ID `jp.beech.oyanomoshimo`、versionName0.3.0/versionCode1、min24/target36。
+  公開Debug鍵による署名を検証。store upload用鍵ではなく、このAPK/AABを申請へ使わない。
+- 最終APKの権限は既知25件（通信/通知/内部receiver/インストール参照9件＋通知SDK由来の端末メーカーbadge16件）。
+  未使用の指紋/生体認証はAndroidX Biometric由来とmerge reportで特定し、configで除外、実APKでも消失。
+  写真/カメラ/マイク/位置情報/広告ID/外部storage/overlay等は追加していない。未知権限は検査で拒否。
+- APK ZIP16KB整列と署名検証PASS。公式bundletool1.18.3のAAB validate exit0、AAB target36とPAGE_ALIGNMENT_16Kを確認。
+  APK SHA256 `c471443c4e76261fc0834d4ebff92e52c0c35124daccda369558f1137cc7cb60`。
+  AAB SHA256 `812cda340f625a3b5bba1812fa8c0cbfdbc276d3ec583eb894d7f90c7f09cbaf`。
+- **ELF全体判定はFAIL（exit1）**。最終APKの23部品中21がGNU_RELROの終端16KB境界を満たさない。
+  appmodules/reactnative本体は通過。Hermes/JSI/libc++/fbjni/Fresco/AndroidX/Expo/gesture/screens/reanimated/worklets等は未達。
+  事前cacheでの別担当のllvm-readelf独立計算でも再現（cache23 pathsは別の集計であり最終APK23件と混同しない）。
+  例: Hermesの終端0x261000、libc++0x143000、JSI0x69000は16KBで余りが出る。
+- NDK27のflexible-page-size設定/生成ninjaはmax-page-sizeを付けるがcommon-page-sizeはない。
+  sourceリンク対象には両指定または互換性確認済みNDK28+が候補。ただしprebuilt AARの.soはNDK指定だけで変わらず、
+  適合する同系修正版または同版ソース再ビルド/再取込を確認する必要がある。無根拠の更新/ELF書換え/RELRO無効化はしない。
+  [Android公式のRELRO条件](https://developer.android.com/guide/practices/page-sizes#relro-flag)と
+  [NDK27以前の指定](https://developer.android.com/guide/practices/page-sizes#compile-r27-lower)を照合した。
+- 専用AVD `oyano_sdk57_16k` / emulator-5580（Android36 Google APIs arm64 16KB）へインストール成功。
+  `getconf PAGE_SIZE=16384`、`bionic.linker.16kb.app_compat.enabled=false` / `pm.16kb.app_compat.disabled=true` を確認。
+  cold startがStatus ok、MainActivityがtopResumed、JSログはRunning main、起動後のprocess存続、crash bufferと当該processのerrorはなし。
+  これは起動の限定検証であり全機能/長時間/全機種の成功ではない。画面操作ツールがAndroid Emulatorを認識せず、視覚確認・操作導線は未検証。
+  実利用者データ/本番Auth/AI/通知配送は使わず、実機受入表は未のまま維持。
+- 新規の合成検査をCI/Stage Aへ追加。source57/57 PASS、追加差分後の合成ELF/権限、native runner安全性、両OS設定生成、preflightもPASS。
+  合成PASSと実APKのRELRO FAILは別結果。通過しない実検査を合格扱いにしない。

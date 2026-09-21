@@ -13,3 +13,4 @@ build/
 .env*
 .pnpm-store/
 work/
+.native-android-qualification-*/

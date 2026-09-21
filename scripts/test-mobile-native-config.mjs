@@ -8,6 +8,13 @@ import { checkLocalFiles, localEnvironment, repoRoot } from "./test-stage-a-loca
 // Generate only a disposable copy: no pods/Gradle install, build, signing or provider access.
 checkLocalFiles(repoRoot, { sourceOnly: true });
 const source = join(repoRoot, "apps/mobile");
+const blockedPermissions = ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW", "USE_BIOMETRIC", "USE_FINGERPRINT"];
+const sourceConfig = JSON.parse(readFileSync(join(source, "app.json"), "utf8"));
+for (const permission of blockedPermissions) {
+  const fullName = `android.permission.${permission}`;
+  assert.ok(sourceConfig.expo.android.blockedPermissions?.includes(fullName), `${permission} must be explicitly blocked before manifest merging`);
+  assert.ok(!(sourceConfig.expo.android.permissions ?? []).some((name) => name === permission || name === fullName), `${permission} must not be explicitly requested`);
+}
 const copy = mkdtempSync(join(tmpdir(), "oyano-native-config-"));
 for (const file of ["app.json", "app.config.js", "package.json", "assets"]) {
   cpSync(join(source, file), join(copy, file), { recursive: true });
@@ -29,8 +36,10 @@ const manifest = read("android/app/src/main/AndroidManifest.xml");
 assert.match(manifest, /android:fullBackupContent="@xml\/secure_store_backup_rules"/);
 assert.match(manifest, /android:dataExtractionRules="@xml\/secure_store_data_extraction_rules"/);
 const permissions = manifest.match(/<uses-permission\b[^>]*>/g) ?? [];
-for (const permission of ["READ_EXTERNAL_STORAGE", "WRITE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW"]) {
-  assert.ok(!permissions.some((entry) => entry.includes(`android.permission.${permission}"`) && !entry.includes('tools:node="remove"')),
+for (const permission of blockedPermissions) {
+  const entries = permissions.filter((entry) => entry.includes(`android.permission.${permission}"`));
+  assert.ok(entries.some((entry) => entry.includes('tools:node="remove"')), `${permission} needs a removal marker for transitive library permissions`);
+  assert.ok(!entries.some((entry) => !entry.includes('tools:node="remove"')),
     `unused ${permission} must not be requested`);
 }
 assert.match(read("android/gradle.properties"), /newArchEnabled=true/);

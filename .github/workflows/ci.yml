@@ -70,7 +70,10 @@ jobs:
           pnpm run test:mobile-native-config
 
       - name: Test local qualification runner safety
-        run: pnpm run test:stage-a-local-runner
+        run: |
+          pnpm run test:stage-a-local-runner
+          pnpm run test:mobile-native-compile-safety
+          pnpm run test:mobile-android-apk
 
       - name: Test personal-data storage policies and offline planner
         run: pnpm run test:personal-data-infra

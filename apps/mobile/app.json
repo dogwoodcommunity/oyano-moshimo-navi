@@ -26,7 +26,7 @@
         "backgroundColor": "#276447"
       },
       "permissions": ["POST_NOTIFICATIONS"],
-      "blockedPermissions": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.SYSTEM_ALERT_WINDOW"]
+      "blockedPermissions": ["android.permission.READ_EXTERNAL_STORAGE", "android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.SYSTEM_ALERT_WINDOW", "android.permission.USE_BIOMETRIC", "android.permission.USE_FINGERPRINT"]
     },
     "notification": {
       "icon": "./assets/notification-icon.png",
