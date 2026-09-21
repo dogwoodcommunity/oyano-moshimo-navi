@@ -15383,3 +15383,21 @@ https://mitene.us/
 - 新規アプリフォームを読取確認。並行担当がソース4ファイルのみ照合し、名前/ID/対象OSに齟齬なし。
   version0.3.0、両OS build既定1、SKU未確定を下書きへ反映。ID予約/署名/提出は未実施。
   アプリソース不変、文書差分検査のみ。実機・通知・通報運用・本番認証等の残ゲートは維持。
+
+## 2026-09-21 追記 414 — Apple契約の本人同意確認、専用ID・申請レコード作成
+
+- 本人「同意した」後、同じChromeでDeveloper/App Store Connectの未同意警告消失を確認。
+  本人が契約操作を実施。代理同意/有料契約/決済/既存別アプリ変更はしていない。
+- BEECHのTeam ID `P58FA4CC7R` にExplicit App ID `jp.beech.oyanomoshimo` を登録。
+  Descriptionは `Oyano Moshimo Navi`。ソース/生成entitlementsを並行担当が読取照合し、
+  通常のPush Notificationsのみ明示選択。broadcast等は付けず、APNs鍵/証明書/署名profileは未発行。
+  Apple既定のIn-App Purchaseチェックを有料商品/契約の導入と扱わない。
+- App Store Connectに「親のもしもナビ」・日本語・iOSのみを作成。Apple ID `6814299610`、
+  SKU `oyano-moshimo-navi-ios`。アクセス制限ありで本人を選択、Admin等の既定権限は変更しない。
+  作成後の専用URLと「1.0 提出準備中」を実確認。入力しただけ・作成中の状態を成功扱いにしていない。
+  https://appstoreconnect.apple.com/apps/6814299610/distribution/ios/version/inflight
+- ASC既定版1.0とソース0.3.0は最終build前に整合が必要。価格/配信国/年齢/プライバシー宣言は未設定。
+  EUトレーダー案内は残る。Google側は追記412のまま未登録。App ID/レコード作成は審査提出ではない。
+- アプリソース1a5acbaは不変、同一テストは再実行せず文書差分検査のみ。署名build/アップロード/
+  TestFlight配信/審査提出/公開/本番DB変更なし。通知の世代管理/旧版移行、通報運用、本番認証、
+  最終SDKとnative compile/実機受入の未達ゲートを維持。CURRENT_STATUSと申請台帳/素材表を更新。

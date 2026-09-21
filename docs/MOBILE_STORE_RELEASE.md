@@ -17,9 +17,11 @@
 - Google Play Consoleで「株式会社BEECH」「組織アカウント」を実確認。全アプリ一覧は既存別アプリ1件だけで、親のもしもナビは未登録。
 - 新規アプリ作成画面の項目（名前、パッケージ名、言語、アプリ/無料、ポリシー/輸出法の宣言）を読取確認。何も送信せず閉じた。パッケージ予約/署名/新規アプリ作成/審査提出はしていない。
 - Android開発者認証の画面にパッケージ/署名鍵登録の案内あり。このアプリの完了を意味しない。Identity欄は既存開発者アカウント由来の情報であり、全要件の合格判定とは扱わない。
-- 本人ログイン後、Apple DeveloperのBEECH, K.K.・組織・Account Holderを実確認。メンバーシップ更新日は2027-06-23。App Store Connectの一覧は既存別アプリのみで、もしもナビの登録はまだない。
-- Appleは更新されたDeveloper Program License Agreementへの同意が未完了。App Store Connectに新規提出/更新前の同意要求、Developerに2026-10-02までの同意案内が表示された。契約確認画面を開き本人操作を依頼し、代理同意/契約変更はしていない。
-- 新規アプリの登録項目とソースを照合。名前/IDは下書きと一致しiPhone向け。SKUは未確定、bundle IDの予約・署名付きbuildは未確認。契約同意だけでは提出可能にならない。
+- 本人ログイン後、Apple DeveloperのBEECH, K.K.・組織・Account Holderを実確認。Team ID `P58FA4CC7R`、メンバーシップ更新日は2027-06-23。
+- 更新されたDeveloper Program License Agreementについて本人「同意した」後、Developer/App Store Connectの未同意警告消失を確認。代理同意はしていない。
+- 専用のExplicit App ID `jp.beech.oyanomoshimo`（Description: Oyano Moshimo Navi）を登録済み。ソースの通知用途に合わせ通常のPush Notificationsを選択。APNs鍵/証明書/プロファイルの発行は未実施。In-App PurchaseはApple画面の既定チェックだが、有料契約/商品は作成しない。
+- App Store Connectに日本語/iOSの「親のもしもナビ」を作成。Apple ID `6814299610`、SKU `oyano-moshimo-navi-ios`。ユーザアクセスは制限あり（本人選択、Admin等の既定アクセスは変更しない）。既存別アプリは変更なし。
+- [申請用レコード](https://appstoreconnect.apple.com/apps/6814299610/distribution/ios/version/inflight)は既定版1.0の「提出準備中」。ソース0.3.0と最終版番号の整合は未完。署名/build送信/審査提出/公開とは別段階。配信国/価格/プライバシー/年齢区分の宣言は未設定、EUトレーダー案内も未対応。
 - 通知残ゲートの次の設計は `MOBILE_PUSH_INSTALLATION_PROTOCOL.md`。設計だけで旧端末移行/通信競合の問題を解消済みとしない。
 
 ## 今回のローカル修正
