@@ -15437,3 +15437,11 @@ https://mitene.us/
   コード入力/迂回/本番設定変更なし。Gmailでticket SU-478850を絞り込み、9月19日の受付のみ・新返信なしを確認。
   本番認証・DB・旧通知移行・実機・署名済みbuild・運用宣言が揃わず、審査提出/公開はまだしていない。
   管理画面へのアクセス復旧が次の外部依存。実利用者情報・既存別アプリ・本番を変更しない。
+- 続き: source `0ac6a2caccc8b97b32b505d2e8f5cc813c99fbf7`をpush、CI `35548532460`の全ジョブsuccessを確認。
+  SDK57の署名なしRelease Simulator compileも成功。生成Info.plistはMinimumOSVersion16.4/
+  iphonesimulator26.5/Bundle ID一致。実機用IPAではない。copy `oyano-ios-compile-aeGrgl`。
+  専用Simulator `Oyano SDK57 Qualification`（iPhone17/iOS26.5、ID `0D494888-95AF-4A65-B370-66A3A9B72451`）
+  を新規作成しインストール/起動成功。既存の別Simulatorは変更しない。
+  初回画面・未設定時の操作制限・未ログインの急なとき/詳細/チェック0→1をUI確認。外部送信/電話/実データ入力なし。
+  初回画面に残っていた未提供の写真機能の案内を日々の記録に修正。呼び名表記/記録アイコンも整合し、
+  native画面回帰/型PASS。上記CIより後の変更なので、別commit/CIとして確認する。

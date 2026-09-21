@@ -121,3 +121,27 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
 - ローカルtoolchain: Xcode26.6とiOS26.5 Simulatorあり、アプリは未起動。CocoaPods未検出。AndroidはAPI35/build-tools34・35とJDK17あり、API36/NDK未検出。端末利用/署名/実APIテストは未実施。
 - 前回CI `35512152991` (b7daff9) は両ジョブsuccess。今回差分のCIはcommit後に別記する。本番/ストアへは出していない。
 - 今回source `1a5acba24cdc080c4c81ef785ca2d497ecef2475` をpushし、CI `35513187211` のweb-and-mobile / personal-data-infrastructure全successを確認。Linuxでの両OSexport/native設定生成、既存隔離SQL、Web build/smokeも通過。旧端末通知・実機・運用ゲートを解消した証拠ではない。
+
+## 最新の検証結果（SDK57・追記415）
+
+- Expo54→55→56→57の型/依存チェック/両OS export/一時native設定生成を確認。iOS16.4+は本人承認済み。
+  RN0.86.3/React19.2.3/TS6.0.3。ローカルNode24.19.0、CI Node24、pnpm9.15.9。Web依存は維持。
+- ローカル70項目PASS（source55・Web lint/両型3・隔離SQL11・Web build1）。通報画面の最終修正後もAPI/UI/型PASS。
+  通報の認証失効時に本文を消す回帰と、再認証/競合後の再取得も確認。
+  source `0ac6a2c` のCI `35548532460` は全ジョブsuccess。最後の初回画面の文言修正は後続commitで管理。
+- 通知v2の永続installation/revision、遅延/再送/本人切替/旧row維持/アカウント消去を実装。
+  隔離PostgreSQLの独立接続5競合と既存executor/finalizer統合PASS。実配送ではない。既定OFFと旧版移行等のゲートは維持。
+- Ruby3.3.6/CocoaPods1.16.2を一時領域へ導入。Gemfile/lockはJSON2系を固定しCocoaPodsのJSON3非互換を回避。
+  `test:mobile-ios-compile`はmacOS/Xcode用。先に`BUNDLE_GEMFILE`を`scripts/native-build/Gemfile`、
+  `BUNDLE_PATH`を専用の一時ディレクトリにして`bundle install`し、同じRuby/Node24のPATHで実行する。
+  dotenv/秘密env/利用者データはコピーせず、public依存取得だけ。ソースのアップロードや署名・ストア送信はしない。
+- Xcode26.6/iOS Simulator SDK26.5で署名なしReleaseをコンパイル成功。
+  生成Info.plistでMinimumOSVersion16.4、Bundle ID `jp.beech.oyanomoshimo`を確認。
+  一時コピー `oyano-ios-compile-aeGrgl`、`DerivedData/Build/Products/Release-iphonesimulator/app.app`。
+  専用iPhone17/iOS26.5 Simulatorで起動し、初回画面、接続未設定時の登録/保存不可、
+  未ログインの急なとき→詳細→チェック0/3から1/3への反応を確認。送信/電話/実データ入力なし。
+  未提供の写真メモ/添付機能を初回画面が案内していたため、日々の記録/書類の場所へ修正し回帰と型PASS。
+- Android API36/build-tools36.0.0をofficial sdkmanagerで導入し一覧で確認。NDK/native compile/16KB実行は未完。
+- EASの既存owner/project一致をread-only確認。費用/署名資格/クラウドbuild/IPA・AAB送信/審査提出は未実施。
+  Supabase MFAは再確認でも未完。ticket SU-478850は9月19日の受付だけで新しい復旧案内なし。
+  本番認証/通知旧版調査・移行/通報運用/実機受入/正式版番号と申請宣言が残る。

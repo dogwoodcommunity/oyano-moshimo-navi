@@ -39,7 +39,7 @@ function harness(relative, initial = {}, dependencies = {}, params = {}) {
     useEffect(fn) { effects.push(fn); }
   };
   const native = Object.fromEntries(['Text', 'View', 'ScrollView', 'Pressable', 'ImageBackground', 'Modal', 'TextInput'].map((name) => [name, name]));
-  native.StyleSheet = { create: (styles) => styles, absoluteFillObject: {} };
+  native.StyleSheet = { create: (styles) => styles, absoluteFill: {} };
   const compiled = ts.transpileModule(source, { fileName: relative, compilerOptions: {
     module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022, jsx: ts.JsxEmit.ReactJSX
   }}).outputText;
@@ -110,6 +110,13 @@ const homeText = text(harness('apps/mobile/app/people/[id]/home.tsx').render());
 assert.ok(homeText.includes('この家の保存済み情報ではありません'));
 assert.ok(!homeText.includes('長男が保管'));
 assert.ok(!homeText.includes('現在のメモ'));
+
+// Native currently saves text records, not photo files. The entry screen must
+// not advertise the Web-only attachment feature or demand a parent's full name.
+const welcomeSource = fs.readFileSync(path.join(root, 'apps/mobile/app/(auth)/welcome.tsx'), 'utf8');
+assert.match(welcomeSource, /親御さんの呼び名と今の状況/);
+assert.match(welcomeSource, /日々の記録、書類の場所、実家のメモ/);
+assert.doesNotMatch(welcomeSource, /写真メモ|書類の場所、写真|親の名前と/);
 
 for (const file of ['apps/mobile/app/(tabs)/plan.tsx', 'apps/mobile/app/account/plan.tsx']) {
   const copy = text(harness(file).render());

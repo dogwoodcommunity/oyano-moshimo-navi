@@ -101,7 +101,7 @@ export default function WelcomeScreen() {
       <View style={styles.startPanel}>
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>会員登録して続ける</Text>
-        <Text style={styles.body}>親の名前と今の状況を入れると、家族ボード、期限、担当、写真メモをこのアプリで管理できます。</Text>
+        <Text style={styles.body}>親御さんの呼び名と今の状況を登録すると、家族ボード、期限、担当、日々の記録をこのアプリで管理できます。</Text>
         <MascotGuide compact message="手帳を開くにはメールで本人確認します。急なときの案内は登録なしでも読めます。" />
         {session.status === "unconfigured" ? <Text style={styles.message}>アプリの接続設定が不足しています。最新版のアプリでお試しください。現在は手帳を開いたり、記録を保存したりできません。</Text> : null}
         {session.status === "error" ? <Text style={styles.message}>ログイン状態を確認できませんでした。アプリを開き直して、もう一度お試しください。</Text> : null}
@@ -140,8 +140,8 @@ export default function WelcomeScreen() {
           title="家族の担当"
         />
         <FeatureRow
-          icon="image-multiple-outline"
-          text="書類の場所、写真、実家のメモ"
+          icon="notebook-outline"
+          text="日々の記録、書類の場所、実家のメモ"
           title="あとで必要になる記録"
         />
       </View>
