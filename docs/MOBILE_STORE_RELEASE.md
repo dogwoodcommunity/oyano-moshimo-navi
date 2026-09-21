@@ -141,6 +141,9 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
   専用iPhone17/iOS26.5 Simulatorで起動し、初回画面、接続未設定時の登録/保存不可、
   未ログインの急なとき→詳細→チェック0/3から1/3への反応を確認。送信/電話/実データ入力なし。
   未提供の写真メモ/添付機能を初回画面が案内していたため、日々の記録/書類の場所へ修正し回帰と型PASS。
+  `37ca7d0`の修正文言を同じ一時コピーで差分コンパイルし、専用Simulatorへの再インストール/起動/UI反映も確認。
+  テスト終了後はこのSimulatorだけ停止、データを残して再確認可能にした。
+  同sourceのCI `35548989941`も全ジョブsuccess（両OS export/native設定、隔離SQL、Web build/smoke含む）。
 - Android API36/build-tools36.0.0をofficial sdkmanagerで導入し一覧で確認。NDK/native compile/16KB実行は未完。
 - EASの既存owner/project一致をread-only確認。費用/署名資格/クラウドbuild/IPA・AAB送信/審査提出は未実施。
   Supabase MFAは再確認でも未完。ticket SU-478850は9月19日の受付だけで新しい復旧案内なし。

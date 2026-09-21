@@ -16,7 +16,8 @@
 - EASの既存アカウント/専用projectを読取確認。ビルド送信・課金・署名資格変更はしていない。
   SupabaseはGitHub認証後も「Supabase TENSHOKU（iPhone）」のMFA待ちを再確認。管理アクセス復旧は未完。
   復旧問い合わせSU-478850も9月19日の受付のみで新返信なし。ソース`0ac6a2c`のCI`35548532460`全ジョブsuccess。
-  最後の初回画面の文言修正はこのCIの後。新CI/起動結果は追記415へ追記する。
+  最後の文言修正`37ca7d0`もCI`35548989941`全ジョブsuccess、差分native compile/再インストール/起動/UI確認済み。
+  専用Simulatorは停止し保持。Supabaseサポートへの追伸送信を本人に確認中（まだ送信しない）。
   本番/利用者データ・Apple/Google配信は不変。詳細は追記415。開発branch/draft PR #9を維持する。
 
 ## 前回完了（Apple申請レコード）
