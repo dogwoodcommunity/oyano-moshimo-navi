@@ -15479,3 +15479,6 @@ https://mitene.us/
 - 並行担当が申請説明・無料枠・AI通報・Privacy/Data Safety調査表をnative実装に合わせ改訂。
   公開Privacy/削除案内はGET200だけ確認。送信・削除実行/本番内容整合/正式宣言は未完。
   次はAndroid依存部品の16KB適合対策、復旧後の本番認証・旧通知調査/移行・通報運用、両実機、署名/申請設定を切り分けて進める。
+- source `80f33d91f845df10c7a8b9ede93141612f8cb025` をpush、CI `35564004158` は全ジョブsuccess。
+  両OS export/設定生成・隔離SQL・Web build/smokeを含むが、実APKのRELRO FAILを解消した意味ではない。
+  最終結果のみ文書commit `[skip ci]` で保存する。main/本番/ストアは変更せず、申請完了とは報告しない。

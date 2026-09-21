@@ -195,3 +195,5 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
   実利用者データ/本番Auth/AI/通知配送は使わず、実機受入表は未のまま維持。
 - 新規の合成検査をCI/Stage Aへ追加。source57/57 PASS、追加差分後の合成ELF/権限、native runner安全性、両OS設定生成、preflightもPASS。
   合成PASSと実APKのRELRO FAILは別結果。通過しない実検査を合格扱いにしない。
+  source `80f33d9` のCI `35564004158` も全ジョブsuccess（両OS export/設定生成、隔離SQL、Web build/smokeを含む）。
+  正式署名・実機受入・本番反映・ストア提出は未実施。上記RELRO不適合と外部依存を残件として維持する。

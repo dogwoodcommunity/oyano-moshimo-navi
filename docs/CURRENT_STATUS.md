@@ -10,7 +10,8 @@
   実manifestの未使用USE_BIOMETRIC/USE_FINGERPRINTを除外し、最終APKで消失を確認。
   APK署名/ZIP整列、AAB構造/target36/PAGE_ALIGNMENT_16KはPASS。ただし **ELFのRELRO境界が21/23部品で未達**。
   起動成功でこの不適合を免除しない。NDK設定だけではビルド済み依存を直せず、適合版/再ビルドの確認が次の課題。
-  ローカルsource57/57、最終の安全性/設定生成/合成APK/申請preflight回帰PASS。CIは今回commit後に確認する。
+  ローカルsource57/57、最終の安全性/設定生成/合成APK/申請preflight回帰PASS。
+  source `80f33d9` をpush、CI `35564004158` 全ジョブsuccess。CI成功でも実APKのRELRO未達は未解消。
   ストア素材・Privacy/Data Safetyの調査表を実native機能へ整理、公開Privacy/削除案内GETは200。
   すべてテスト用、正式署名/実機操作/本番受入/提出は未完。本番データ不変。詳細は追記416とMOBILE_STORE_RELEASE。
 
