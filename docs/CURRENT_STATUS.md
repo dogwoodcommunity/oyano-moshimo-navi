@@ -11,7 +11,8 @@
   修正後のARM64 Release APK/AAB生成成功。APK全23部品PASS（終端整列10・安全な全LOAD保護13）、ZIP整列/権限/署名検証PASS。
   AAB構造/target36/PAGE_ALIGNMENT_16K PASS、全23部品のバイト列がAPKと一致。
   専用16KBエミュレーターで互換モードOFFのcold起動/JS main/process存続/クラッシュなしを確認。実機・全機能の操作確認ではない。
-  ローカルsource57/57と最終差分の設定生成/runner安全性/合成APK検査PASS。CIは今回push後に確認する。
+  ローカルsource57/57と最終差分の設定生成/runner安全性/合成APK検査PASS。
+  source `4b8fc38` をpush、CI `35566065837` 全ジョブsuccess（両OS export/設定生成、隔離SQL、Web build/smoke含む）。
   本番/既存記録不変。正式署名・本番認証等の受入・実機・提出は未完。詳細は追記417。
 
 ## 前回完了（Android初回検証・判定は追記417で訂正）

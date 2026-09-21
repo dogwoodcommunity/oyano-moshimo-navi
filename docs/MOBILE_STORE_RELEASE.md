@@ -231,3 +231,5 @@ corepack pnpm@9.15.9 --filter mobile run typecheck
   これは起動の限定検証。4KB実行環境・実機操作・認証後全機能・本番保存/削除/通知・正式署名・ストア提出は未完。
   Supabase問い合わせの再送や本番接続/実利用者情報の操作はしていない。
   検証終了時に専用エミュレーターだけ停止、AVDと成果物は保持した。
+- source `4b8fc38` のCI `35566065837` は全ジョブsuccess。両OS export/設定生成、合成回帰、隔離SQL、Web build/smokeを含む。
+  最終結果だけ文書commitで保存し、本番/ストアには反映しない。

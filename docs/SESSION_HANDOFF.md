@@ -15504,3 +15504,6 @@ https://mitene.us/
   本番/利用者の記録、DB、クラウド設定、料金、申請提出は変更しない。Supabase復旧・実機/正式署名等の残件は維持。
 - 別担当が最終APK全23個をllvm-readelfで独立検査、10/13の分類・4KB/16KB範囲と非重複を再確認してPASS。
   検証終了時に専用emulatorだけ停止。AVDと生成物は保持した。
+- source `4b8fc383177ec8d1b9a2510c546dbadb025b86aa` をpush。CI `35566065837` の全ジョブsuccessを確認。
+  両OS export/設定生成・隔離SQL・Web build/smoke含む。最終記録だけ文書commit `[skip ci]` でpush。
+  今回のAndroid互換性チェック修正は完了、正式リリース/申請の完了ではない。
