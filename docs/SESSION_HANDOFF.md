@@ -15526,3 +15526,23 @@ https://mitene.us/
 - 参照: https://supabase.com/docs/guides/platform/multi-factor-authentication
   / https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
   / https://supabase.com/docs/guides/platform/access-control
+
+## 2026-09-23 追記 419 — Sol/Astraの切替運用を保存
+
+- 本人の共通指示を既存 `AGENTS.md` に追加。既存項目は維持し、節約/安全性の共通部分は参照する形に整理。
+  通常Sol、重要設計/広い影響/重大不確実性/検証付き修正2回連続失敗/重要処理レビュー/主要公開前はAstra。
+  両方向の指定案内文、引き継ぎ項目、本人の切替完了返答まで停止、無断モデル/API/課金変更禁止を明記。
+  独立レビュー・並列作業・テスト・既存承認要件は緩和せず、切替後の「続けて」を本番等の包括承認としない。
+- 次工程の判断: 指示保存と認証状態の読取確認はSol範囲。現在の選択モデルは環境から未確認、設定変更も行わない。
+  本人「知也がログインしてた」は申告として記録し、現在のDashboardアクセス復旧とは扱わない。
+  正規の本人ログインで対象project/権限が見えるかを確認するのが次。まだ新たなブラウザ/メール確認はしていない。
+  認証や権限の仕組み変更が必要なら、その前にAstraの判断工程を案内する。
+- OpenAI DocsスキルでAGENTS.mdの公式案内を確認し、既存projectの指示ファイルへ追記する方式を使用。
+  https://learn.chatgpt.com/docs/agent-configuration/agents-md
+  指示ファイルの更新でありモデル設定変更ではない。独立担当は同じ継承設定で文書照合だけを行い、Astraレビューとは扱わない。
+- 変更対象は `AGENTS.md` / `docs/CURRENT_STATUS.md` / `docs/SESSION_HANDOFF.md` のみ。
+  `codex/consult-guest-entry`、開始HEAD `68c4bc0`。保護対象の未追跡2文書/review_exportsを変更しない。
+  文書差分/整合を確認後 `[skip ci]` commitでpushする。アプリコード不変のためbuild/機能試験の再実行は不要。
+  本番反映・認証設定・データ操作・ストア提出は実施しない。
+- 文書照合の独立レビューは重要な抜け/既存要件緩和なし。`git diff --check` PASS、変更3文書のみ、
+  本番deploy workflowはmain対象と確認。文書のみのためアプリ試験/CIは再実行せず、既存PASSと混同しない。
