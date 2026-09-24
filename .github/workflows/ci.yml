@@ -23,7 +23,7 @@ jobs:
       - name: Install pinned official template validator
         run: python -m pip install cfn-lint==1.53.3
       - name: Validate Tokyo storage template without AWS credentials or deployment
-        run: cfn-lint -t infra/aws-personal-data/backup-vault.cfn.json -r ap-northeast-1
+        run: cfn-lint -t infra/aws-personal-data/backup-vault.cfn.json infra/aws-personal-data/backup-verifier.cfn.json -r ap-northeast-1
 
   web-and-mobile:
     runs-on: ubuntu-latest
@@ -39,7 +39,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: pnpm
 
       - name: Install dependencies
@@ -54,14 +54,44 @@ jobs:
       - name: Typecheck mobile
         run: pnpm --filter mobile run typecheck
 
+      - name: Test offline mobile submission preflight (not store acceptance)
+        run: |
+          pnpm run test:mobile-store-preflight
+          pnpm run test:mobile-empty-states
+          pnpm run test:mobile-screen-readiness
+          pnpm run test:mobile-consult-target
+          pnpm run test:mobile-push-logout
+          pnpm run test:consult-report
+          pnpm run test:ai-report-review
+
+      - name: Export mobile JS and Hermes offline (not native acceptance)
+        run: |
+          pnpm run test:mobile-bundle
+          pnpm run test:mobile-native-config
+
       - name: Test local qualification runner safety
-        run: pnpm run test:stage-a-local-runner
+        run: |
+          pnpm run test:stage-a-local-runner
+          pnpm run test:mobile-native-compile-safety
+          pnpm run test:mobile-android-apk
 
       - name: Test personal-data storage policies and offline planner
         run: pnpm run test:personal-data-infra
 
       - name: Test backup byte integrity and interrupted completion
         run: pnpm run test:backup-generation
+
+      - name: Test v2 source and baseline artifact binding
+        run: pnpm run test:backup-generation-v2
+
+      - name: Test synthetic backup collection failures and separate verification
+        run: pnpm run test:backup-synthetic-collector
+
+      - name: Test backup privacy checkpoint and restore admission
+        run: pnpm run test:backup-privacy-checkpoint
+
+      - name: Test backup source catalog fail-closed classification
+        run: pnpm run test:backup-source-catalog
 
       - name: Test monitor timeline
         run: pnpm run test:monitor-timeline
@@ -140,6 +170,9 @@ jobs:
       - name: Test verified account erasure PostgreSQL pipeline
         run: pnpm run test:account-erasure:sql
 
+      - name: Push installation SQL isolation and concurrency
+        run: pnpm run test:push-installation:sql
+
       - name: Test commercial release gates
         run: pnpm run test:commercial-release-gates
 
@@ -172,6 +205,12 @@ jobs:
 
       - name: Test consult memory
         run: pnpm run test:consult-memory
+
+      - name: Test email authentication CAPTCHA compatibility
+        run: pnpm run test:auth-captcha
+
+      - name: Test mobile authentication CAPTCHA compatibility
+        run: pnpm run test:mobile-auth-captcha
 
       - name: Test consult memory PostgreSQL RLS
         run: pnpm run test:consult-memory:sql

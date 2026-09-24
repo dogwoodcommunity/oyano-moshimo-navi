@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 import {
   ADMIN_BEARER_TOKEN_STORAGE_KEY,
   ADMIN_STATIC_TOKEN_STORAGE_KEY,
@@ -28,6 +29,9 @@ type AdminTokenControlProps = {
   redirectPath?: string;
   roleLabel?: string;
   showEmergencyToken?: boolean;
+  mfaInstruction?: string;
+  mfaSetupHref?: string | null;
+  protectedDataLabel?: string;
 };
 
 type TotpFactor = {
@@ -57,8 +61,12 @@ export function AdminTokenControl({
   enableMfaStepUp = false,
   redirectPath = "/admin/monitor-feedback",
   roleLabel = "管理者",
-  showEmergencyToken = true
+  showEmergencyToken = true,
+  mfaInstruction = "完全削除を実行するには、登録済みの認証アプリで追加確認してください。削除前確認はこのまま利用できます。",
+  mfaSetupHref = "/admin/delete-requests/setup",
+  protectedDataLabel = "削除依頼"
 }: AdminTokenControlProps = {}) {
+  const authCaptcha = useAuthCaptcha();
   const verifyRequestId = useRef(0);
   const emailInputRef = useRef<HTMLInputElement | null>(null);
   const mfaCodeInputRef = useRef<HTMLInputElement | null>(null);
@@ -263,6 +271,7 @@ export function AdminTokenControl({
   }, [enableMfaStepUp, showEmergencyToken, verifyStoredAccess]);
 
   async function sendLink() {
+    if (sending) return;
     const nextEmail = email.trim();
     if (!nextEmail) {
       showEmailError(`${roleLabel}として登録したメールアドレスを入力してください。`);
@@ -276,7 +285,7 @@ export function AdminTokenControl({
     setSending(true);
     setEmailError("");
     setMessage("");
-    const result = await sendAdminMagicLink(nextEmail, redirectPath);
+    const result = await sendAdminMagicLink(nextEmail, redirectPath, { captchaToken: authCaptcha.consumeToken() });
     setSending(false);
     if (!result.ok) {
       showEmailError(result.error ?? "確認メールを送れませんでした。");
@@ -315,7 +324,7 @@ export function AdminTokenControl({
     }
     if (signOutFailed) {
       setAuthState("denied");
-      setMessage("ログアウト完了を確認できませんでした。削除依頼は非表示にしました。通信を確認してもう一度押すか、このブラウザを閉じてください。");
+      setMessage(`ログアウト完了を確認できませんでした。${protectedDataLabel}は非表示にしました。通信を確認してもう一度押すか、このブラウザを閉じてください。`);
       return;
     }
 
@@ -412,14 +421,14 @@ export function AdminTokenControl({
           ) : null}
           {enableMfaStepUp && authStatus.aal === "aal1" ? (
             <div className="admin-auth-form">
-              <p>完全削除を実行するには、登録済みの認証アプリで追加確認してください。削除前確認はこのまま利用できます。</p>
+              <p>{mfaInstruction}</p>
               {totpFactors === null ? <p>登録済みの認証アプリを確認しています。</p> : null}
               {totpFactors?.length === 0 ? (
                 <div className="admin-auth-warning">
                   <p>認証アプリがまだ登録されていません。初回の本人確認設定を完了してください。</p>
-                  <a className="admin-auth-setup-link" href="/admin/delete-requests/setup">
+                  {mfaSetupHref ? <a className="admin-auth-setup-link" href={mfaSetupHref}>
                     認証アプリを登録する
-                  </a>
+                  </a> : <p>管理者の本人確認設定が完了してから、この画面を開き直してください。</p>}
                 </div>
               ) : null}
               {totpFactors && totpFactors.length > 0 ? (
@@ -502,10 +511,10 @@ export function AdminTokenControl({
       {authState === "denied" && (
         <div className="admin-auth-warning">
           <p>現在のログインでは{roleLabel}権限を確認できませんでした。</p>
-          {enableMfaStepUp && !showEmergencyToken ? (
+          {enableMfaStepUp && !showEmergencyToken && mfaSetupHref ? (
             <p>
               招待を受け取った初回設定中の方は、先に
-              <a className="admin-auth-inline-link" href="/admin/delete-requests/setup">本人確認設定</a>
+              <a className="admin-auth-inline-link" href={mfaSetupHref}>本人確認設定</a>
               を完了してください。
             </p>
           ) : (
@@ -542,7 +551,8 @@ export function AdminTokenControl({
           ref={emailInputRef}
           required
         />
-        <button className="button" type="submit" disabled={sending}>
+        <AuthCaptcha control={authCaptcha} />
+        <button className="button" type="submit" disabled={sending || !authCaptcha.ready}>
           {sending ? "送信しています" : "確認メールを送る"}
         </button>
       </form>

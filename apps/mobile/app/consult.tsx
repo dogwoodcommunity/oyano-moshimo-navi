@@ -1,7 +1,7 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { Link } from "expo-router";
+import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import {
   consultAnswerToDiaryBody,
   consultAnswerToHistoryTurn,
@@ -26,6 +26,7 @@ import {
   type MobileConsultMemory
 } from "@/lib/consult";
 import { trackFunnel } from "@/lib/funnel";
+import { createConsultTargetScope, resolveConsultTarget } from "@/lib/consultTarget";
 import {
   addTimelineEntry,
   fetchDashboardData,
@@ -34,6 +35,8 @@ import {
   type MobileTimelineEntry
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
+import { ProtectedScreen } from "@/components/MobileSessionProvider";
+import { ReportAiAnswer } from "@/components/ReportAiAnswer";
 
 const suggestions = [
   "いまの記録から、見落としていることはありますか",
@@ -48,7 +51,7 @@ const IMPORTANT_CHANGES_PAGE_SIZE = 20;
 type Phase = "loading" | "ready" | "asking" | "done" | "error";
 
 /** 画面に積み上がる、1回ぶんの相談と回答。クラウド側でも対象者ごとの履歴として保存する。 */
-type ConsultTurn = { id: string; question: string; answer: ConsultAnswer; saved: boolean };
+type ConsultTurn = { id: string; question: string; answer: ConsultAnswer; saved: boolean; persistedTurnId?: string };
 
 function birthDateToAgeBand(birthDate?: string) {
   if (!birthDate) return undefined;
@@ -59,9 +62,89 @@ function birthDateToAgeBand(birthDate?: string) {
   return `${Math.floor(age / 10) * 10}代`;
 }
 
-export default function ConsultScreen() {
+function ConsultScreen() {
+  const params = useLocalSearchParams<{ personId?: string | string[] }>();
+  const router = useRouter();
+  const [people, setPeople] = useState<MobilePerson[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [choosing, setChoosing] = useState(false);
+
+  useEffect(() => {
+    let mounted = true;
+    void fetchDashboardData().then((data) => {
+      if (mounted) setPeople(data.people);
+    }).catch(() => {
+      if (mounted) setLoadError(true);
+    }).finally(() => {
+      if (mounted) setLoading(false);
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  const target = resolveConsultTarget(people, params.personId);
+  function selectPerson(personId: string) {
+    if (!people.some((candidate) => candidate.id === personId)) return;
+    if (target.person?.id === personId) {
+      setChoosing(false);
+      return;
+    }
+    const change = () => {
+      router.setParams({ personId });
+      setChoosing(false);
+    };
+    if (!target.person) return change();
+    Alert.alert("相談する人を切り替えますか？", "入力中の相談・補足と、この画面の回答表示は消えます。保存済みの記録と相談履歴は残ります。", [
+      { text: "やめる", style: "cancel" },
+      { text: "切り替える", onPress: change }
+    ]);
+  }
+
+  if (loading || loadError || people.length === 0) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.centerTitle}>{loading ? "読み込み中です" : loadError ? "手帳を確認できませんでした" : "先に対象者を登録してください"}</Text>
+        {!loading ? <>
+          <Text style={styles.centerText}>{loadError
+            ? "通信とログインを確認して、この画面を開き直してください。"
+            : "相談する人の手帳を家族ボードから登録してください。"}</Text>
+          <Link asChild href="/(tabs)/dashboard"><Pressable style={styles.primaryButton}><Text style={styles.primaryButtonText}>家族ボードへ</Text></Pressable></Link>
+        </> : null}
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <View style={styles.targetBox}>
+        <Text style={styles.cardTitle}>{target.person ? `${target.person.displayName}さんの相談` : "相談する人を選んでください"}</Text>
+        {target.reason === "unavailable" ? <Text style={styles.error}>指定された手帳を確認できません。閲覧できる人を選び直してください。</Text> : null}
+        {target.person && people.length > 1 ? <Pressable onPress={() => setChoosing((value) => !value)} style={styles.memorySmallButton}>
+          <Text style={styles.memorySmallButtonText}>{choosing ? "選択を閉じる" : "相談する人を変更"}</Text>
+        </Pressable> : null}
+        {!target.person || choosing ? <ScrollView style={styles.targetChoices} contentContainerStyle={styles.targetChoiceContent}>
+          {people.map((candidate) => <Pressable
+            key={candidate.id}
+            accessibilityRole="button"
+            accessibilityState={{ selected: candidate.id === target.person?.id }}
+            onPress={() => selectPerson(candidate.id)}
+            style={styles.targetChoice}
+          >
+            <Text style={styles.secondaryButtonText}>{candidate.displayName}さん</Text>
+            <Text style={styles.hint}>{candidate.relationship ?? "対象者"}</Text>
+          </Pressable>)}
+        </ScrollView> : null}
+      </View>
+      {/* The key discards the previous person's drafts, answers, consent and memory together. */}
+      {target.person ? <PersonConsultScreen key={target.person.id} person={target.person} /> : null}
+    </View>
+  );
+}
+
+function PersonConsultScreen({ person }: { person: MobilePerson }) {
   const [phase, setPhase] = useState<Phase>("loading");
-  const [person, setPerson] = useState<MobilePerson | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [targetScope] = useState(createConsultTargetScope);
   const [entries, setEntries] = useState<MobileTimelineEntry[]>([]);
   const [consent, setConsent] = useState(false);
   const [consentChanging, setConsentChanging] = useState(false);
@@ -85,55 +168,52 @@ export default function ConsultScreen() {
   });
 
   useEffect(() => {
-    let mounted = true;
+    const isCurrent = targetScope.begin();
 
     async function load() {
-      const [data, consultAccess] = await Promise.all([
-        fetchDashboardData(),
+      const [timeline, consultAccess] = await Promise.all([
+        fetchTimelineEntries(person.id),
         fetchConsultAccess()
       ]);
-      if (!mounted) return;
-
-      const active = data.person ?? data.people[0] ?? null;
-      setPerson(active);
+      if (!isCurrent()) return;
+      setEntries(timeline);
       setAccess(consultAccess);
-      if (active) {
-        const consentResult = await readConsultConsent(active.id);
-        const activeConsent = consentResult.ok ? consentResult.data.active : false;
-        if (mounted && consentResult.ok) {
-          setConsent(activeConsent);
-          setConsentRevision(consentResult.data.revision);
-          setConsentCanManageSharedMemory(consentResult.data.canManageSharedMemory);
-        }
-        if (mounted && !consentResult.ok) setMessage(consentResult.message);
-        if (activeConsent) {
-          const memoryResult = await fetchConsultMemory(active.id);
-          if (mounted && memoryResult.ok) {
-            setMemory(memoryResult.data);
-            setMemoryDraft(memoryResult.data.memory.userSummary);
-          }
+      const consentResult = await readConsultConsent(person.id);
+      if (!isCurrent()) return;
+      const activeConsent = consentResult.ok ? consentResult.data.active : false;
+      if (consentResult.ok) {
+        setConsent(activeConsent);
+        setConsentRevision(consentResult.data.revision);
+        setConsentCanManageSharedMemory(consentResult.data.canManageSharedMemory);
+      }
+      if (!consentResult.ok) setMessage(consentResult.message);
+      if (activeConsent) {
+        const memoryResult = await fetchConsultMemory(person.id);
+        if (!isCurrent()) return;
+        if (memoryResult.ok) {
+          setMemory(memoryResult.data);
+          setMemoryDraft(memoryResult.data.memory.userSummary);
+        } else {
+          setMessage(memoryResult.message);
         }
       }
 
-      if (active) {
-        const timeline = await fetchTimelineEntries(active.id);
-        if (mounted) setEntries(timeline);
-      }
-      if (mounted) setPhase("ready");
+      if (isCurrent()) setPhase("ready");
     }
 
-    void load();
-    return () => { mounted = false; };
-  }, []);
+    void load().catch(() => {
+      if (!isCurrent()) return;
+      setEntries([]);
+      setLoadFailed(true);
+      setMessage("手帳を読み込めませんでした。通信とログインを確認して、この画面を開き直してください。");
+      setPhase("error");
+    });
+    return () => { targetScope.invalidate(); };
+  }, [person.id, targetScope]);
 
-  useEffect(() => {
-    // 対象者を切り替えた時に、前の人で開いていた表示件数を引き継がない。
-    setVisibleImportantChangeCount(IMPORTANT_CHANGES_PAGE_SIZE);
-  }, [person?.id]);
-
-  const profile = person?.profile;
+  const profile = person.profile;
   const payloadPerson = {
-    relationship: profile?.relationship ?? person?.relationship,
+    relationship: profile?.relationship ?? person.relationship,
     careStatus: profile?.careStatus,
     birthDate: birthDateToAgeBand(profile?.birthDate),
     hospitalOrFacility: profile?.hospitalOrFacility,
@@ -148,17 +228,20 @@ export default function ConsultScreen() {
   const canAsk = access.canConsult && consent && !consentChanging && hasSubstance && question.trim().length >= 4 && phase !== "asking";
 
   async function toggleConsent() {
-    if (!person || consentChanging) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || consentChanging) return;
     const next = !consent;
     setConsentChanging(true);
     if (!next) setConsent(false);
     const saved = await writeConsultConsent(person.id, next, consentRevision);
+    if (!isCurrent()) return;
     if (saved.ok) {
       setConsent(saved.data.active);
       setConsentRevision(saved.data.revision);
       setConsentCanManageSharedMemory(saved.data.canManageSharedMemory);
       if (next) {
         const memoryResult = await fetchConsultMemory(person.id);
+        if (!isCurrent()) return;
         if (memoryResult.ok) {
           setMemory(memoryResult.data);
           setMemoryDraft(memoryResult.data.memory.userSummary);
@@ -176,6 +259,7 @@ export default function ConsultScreen() {
         : "この人の長期記憶への同意を取り消しました。別の端末にも反映されます。");
     } else {
       const current = await readConsultConsent(person.id);
+      if (!isCurrent()) return;
       if (current.ok) {
         setConsent(current.data.active);
         setConsentRevision(current.data.revision);
@@ -189,8 +273,10 @@ export default function ConsultScreen() {
   }
 
   async function refreshMemory() {
-    if (!person || !consent) return null;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || !consent) return null;
     const result = await fetchConsultMemory(person.id);
+    if (!isCurrent()) return null;
     if (result.ok) {
       setMemory(result.data);
       setMemoryDraft(result.data.memory.userSummary);
@@ -202,18 +288,21 @@ export default function ConsultScreen() {
   }
 
   async function saveMemoryCorrection() {
-    if (!person || !memory || !memory.canEditSharedMemory) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || memoryBusy || !memory || !memory.canEditSharedMemory) return;
     const attemptedSummary = memoryDraft.trim();
     setMemoryBusy(true);
     const result = await patchConsultMemory(person.id, memory.memory.memoryVersion, {
       userSummary: attemptedSummary
     });
+    if (!isCurrent()) return;
     if (result.ok) {
       setMemory(result.data);
       setMemoryDraft(result.data.memory.userSummary);
       setMessage("補足・訂正を専用AIの記憶へ反映しました。");
     } else if (result.code === "memory_conflict") {
       const latest = await fetchConsultMemory(person.id);
+      if (!isCurrent()) return;
       if (latest.ok) {
         setMemory(latest.data);
         // 入力途中の訂正文は消さず、最新versionへ載せ替えて再実行できるようにする。
@@ -227,16 +316,19 @@ export default function ConsultScreen() {
   }
 
   async function toggleMemorySource(sourceEventId: string, excluded: boolean) {
-    if (!person || !memory || !memory.canEditSharedMemory) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || memoryBusy || !memory || !memory.canEditSharedMemory) return;
     setMemoryBusy(true);
     const result = await patchConsultMemory(person.id, memory.memory.memoryVersion, excluded
       ? { includeEventId: sourceEventId }
       : { excludeEventId: sourceEventId });
+    if (!isCurrent()) return;
     if (result.ok) {
       setMemory(result.data);
       setMemoryDraft(result.data.memory.userSummary);
     } else if (result.code === "memory_conflict") {
       const latest = await fetchConsultMemory(person.id);
+      if (!isCurrent()) return;
       if (latest.ok) {
         setMemory(latest.data);
         setMemoryDraft(latest.data.memory.userSummary);
@@ -249,9 +341,12 @@ export default function ConsultScreen() {
   }
 
   async function confirmMemoryDelete() {
-    if (!person || !deleteScope) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || memoryBusy || !deleteScope) return;
+    if (deleteScope !== "history" && !(memory?.canManageSharedMemory ?? consentCanManageSharedMemory)) return;
     setMemoryBusy(true);
     const result = await deleteConsultMemory(person.id, deleteScope);
+    if (!isCurrent()) return;
     if (result.ok) {
       setMemory(result.data);
       setMemoryDraft(result.data?.memory.userSummary ?? "");
@@ -273,9 +368,11 @@ export default function ConsultScreen() {
   }
 
   async function loadOlderHistory() {
-    if (!person || !memory?.historyHasMore || memoryBusy) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || !memory?.historyHasMore || memoryBusy) return;
     setMemoryBusy(true);
     const result = await fetchConsultMemory(person.id, memory.history.length);
+    if (!isCurrent()) return;
     if (result.ok) {
       const byId = new Map([...result.data.history, ...memory.history].map((turn) => [turn.id, turn]));
       setMemory({
@@ -329,7 +426,8 @@ export default function ConsultScreen() {
   }
 
   async function ask() {
-    if (!person) return;
+    const isCurrent = targetScope.capture();
+    if (!isCurrent() || !canAsk) return;
     const asked = question.trim();
     setPhase("asking");
     setMessage("");
@@ -348,6 +446,7 @@ export default function ConsultScreen() {
       tasks: [],
       history
     });
+    if (!isCurrent()) return;
 
     if (!result.ok) {
       setMessage(result.message);
@@ -357,19 +456,22 @@ export default function ConsultScreen() {
 
     setTurns((prev) => [
       ...prev,
-      { id: `${Date.now()}-${prev.length}`, question: asked, answer: result.answer, saved: false }
+      { id: `${Date.now()}-${prev.length}`, question: asked, answer: result.answer, saved: false, persistedTurnId: result.persistedTurnId }
     ]);
     setDisclaimer(result.disclaimer);
     setQuestion("");
-    setAccess(await fetchConsultAccess());
+    const nextAccess = await fetchConsultAccess();
+    if (!isCurrent()) return;
+    setAccess(nextAccess);
     void refreshMemory();
     void trackFunnel("consult_asked");
     setPhase("done");
   }
 
   async function saveTurnToTimeline(index: number) {
+    const isCurrent = targetScope.capture();
     const turn = turns[index];
-    if (!person || !turn) return;
+    if (!isCurrent() || !turn || turn.saved) return;
     const result = await addTimelineEntry({
       personId: person.id,
       body: consultAnswerToDiaryBody(turn.question, turn.answer),
@@ -379,31 +481,19 @@ export default function ConsultScreen() {
       notifyFamily: false,
       title: "相談メモ"
     });
+    if (!isCurrent()) return;
     if (!result.error) {
       setTurns((prev) => prev.map((item, i) => (i === index ? { ...item, saved: true } : item)));
     }
   }
 
-  if (phase === "loading") {
+  if (phase === "loading" || loadFailed) {
     return (
       <View style={styles.center}>
-        <Text style={styles.centerText}>読み込み中です</Text>
-      </View>
-    );
-  }
-
-  if (!person) {
-    return (
-      <View style={styles.center}>
-        <Text style={styles.centerTitle}>先に対象者を登録してください</Text>
-        <Text style={styles.centerText}>
-          相談は、その人のプロフィールと記録を前提に整理します。登録がないと、一般論しか返せません。
-        </Text>
-        <Link asChild href="/(tabs)/dashboard">
-          <Pressable style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>家族ボードへ</Text>
-          </Pressable>
-        </Link>
+        <Text style={styles.centerText}>{loadFailed ? message : "読み込み中です"}</Text>
+        {loadFailed ? <Link asChild href="/(tabs)/dashboard">
+          <Pressable style={styles.primaryButton}><Text style={styles.primaryButtonText}>家族ボードへ</Text></Pressable>
+        </Link> : null}
       </View>
     );
   }
@@ -578,6 +668,7 @@ export default function ConsultScreen() {
                   <Text style={styles.memoryChangeMeta}>{turn.createdAt?.slice(0, 10) ?? "日付なし"}</Text>
                   <Text style={styles.turnQuestionText}>{turn.question}</Text>
                   <Text style={styles.body}>AIの整理: {turn.answer.situation}</Text>
+                  <ReportAiAnswer turnId={turn.id} />
                 </View>
               ))}
               {memory.historyHasMore ? (
@@ -599,6 +690,7 @@ export default function ConsultScreen() {
           disclaimer={index === turns.length - 1 ? disclaimer : ""}
           key={turn.id}
           onSave={() => saveTurnToTimeline(index)}
+          persistedTurnId={turn.persistedTurnId}
           question={turn.question}
           saved={turn.saved}
           turnNumber={index + 1}
@@ -652,7 +744,7 @@ export default function ConsultScreen() {
         {!access.canConsult && access.signedIn ? (
           <Link asChild href="/account/plan">
             <Pressable style={styles.plusButton}>
-              <Text style={styles.plusButtonText}>Plusで今日も続けて相談する</Text>
+              <Text style={styles.plusButtonText}>無料で使える内容を確認する</Text>
             </Pressable>
           </Link>
         ) : null}
@@ -669,7 +761,7 @@ export default function ConsultScreen() {
             {message.includes("Plus") ? (
               <Link asChild href="/account/plan">
                 <Pressable style={styles.plusButton}>
-                  <Text style={styles.plusButtonText}>Plusの内容を見る</Text>
+                  <Text style={styles.plusButtonText}>利用範囲を確認する</Text>
                 </Pressable>
               </Link>
             ) : null}
@@ -678,6 +770,10 @@ export default function ConsultScreen() {
       </View>
     </ScrollView>
   );
+}
+
+export default function ProtectedConsultScreen() {
+  return <ProtectedScreen><ConsultScreen /></ProtectedScreen>;
 }
 
 function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
@@ -703,7 +799,7 @@ function ConsultAccessNotice({ access }: { access: ConsultAccess }) {
     return (
       <View style={styles.accessNoticeMuted}>
         <Text style={styles.accessTitle}>今日の無料相談は利用済みです</Text>
-        <Text style={styles.accessText}>明日0時からまた1回使えます。今すぐ続ける場合はPlusで使えます。</Text>
+        <Text style={styles.accessText}>明日0時からまた1回使えます。次に聞きたいことは、日記に残しておけます。</Text>
       </View>
     );
   }
@@ -720,6 +816,7 @@ function AnswerCard({
   answer,
   disclaimer,
   onSave,
+  persistedTurnId,
   question,
   saved,
   turnNumber
@@ -727,6 +824,7 @@ function AnswerCard({
   answer: ConsultAnswer;
   disclaimer: string;
   onSave: () => void;
+  persistedTurnId?: string;
   question: string;
   saved: boolean;
   turnNumber: number;
@@ -770,6 +868,7 @@ function AnswerCard({
         </Text>
       </Pressable>
       {disclaimer ? <Text style={styles.disclaimer}>{disclaimer}</Text> : null}
+      {persistedTurnId ? <ReportAiAnswer turnId={persistedTurnId} /> : null}
     </View>
   );
 }
@@ -790,7 +889,12 @@ function AnswerList({ items, title }: { items: string[]; title: string }) {
 }
 
 const styles = StyleSheet.create({
-  screen: { backgroundColor: colors.paper },
+  container: { backgroundColor: colors.paper, flex: 1 },
+  screen: { backgroundColor: colors.paper, flex: 1 },
+  targetBox: { backgroundColor: colors.surface, borderBottomColor: colors.line, borderBottomWidth: 1, gap: 8, padding: 16 },
+  targetChoices: { maxHeight: 230 },
+  targetChoiceContent: { gap: 8 },
+  targetChoice: { borderColor: colors.line, borderWidth: 1, borderRadius: radius.control, padding: 12 },
   content: { gap: 14, padding: 20, paddingBottom: 48 },
   center: { alignItems: "center", backgroundColor: colors.paper, flex: 1, gap: 12, justifyContent: "center", padding: 28 },
   centerTitle: { color: colors.ink, fontSize: 18, fontWeight: "900", textAlign: "center" },

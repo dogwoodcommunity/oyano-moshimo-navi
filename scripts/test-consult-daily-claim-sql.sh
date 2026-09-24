@@ -48,4 +48,14 @@ run_sql supabase/api_grants.sql
 run_sql supabase/consult_daily_claim.sql
 run_sql supabase/consult_daily_claim_regression.sql
 
+# Applying the broad grants after the limiter must preserve its server-only ACL.
+run_sql supabase/public_api_rate_limits.sql
+run_sql supabase/api_grants.sql
+run_sql supabase/public_api_rate_limits_regression.sql
+# The limiter migration must also repair legacy explicit grants when run last.
+docker exec "$REGRESSION_CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U postgres -d postgres \
+  -c 'grant execute on function public.check_public_api_rate_limit(text, integer, integer) to public, anon, authenticated'
+run_sql supabase/public_api_rate_limits.sql
+run_sql supabase/public_api_rate_limits_regression.sql
+
 echo "AI consultation daily claim PostgreSQL regression: ok"

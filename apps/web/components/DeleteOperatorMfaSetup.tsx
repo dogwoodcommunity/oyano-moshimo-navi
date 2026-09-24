@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 import { ADMIN_BEARER_TOKEN_STORAGE_KEY } from "@/lib/adminClientAuth";
 import {
   beginTotpEnrollmentUsingAal1Token,
@@ -109,6 +110,7 @@ function collectTotpFactors(allFactors: readonly ListedMfaFactor[]) {
 }
 
 export function DeleteOperatorMfaSetup() {
+  const authCaptcha = useAuthCaptcha();
   const requestGeneration = useRef(0);
   const activeUserId = useRef("");
   const authInitializationPending = useRef(true);
@@ -398,6 +400,7 @@ export function DeleteOperatorMfaSetup() {
   }, [clearSensitiveState, loadIdentityWithTimeout, showMessage, showSignedOut]);
 
   async function sendLoginLink() {
+    if (working) return;
     const nextEmail = loginEmail.trim();
     if (!nextEmail) {
       showMessage("招待を受け取った個別メールアドレスを入力してください。", "error", "email");
@@ -411,7 +414,7 @@ export function DeleteOperatorMfaSetup() {
     const requestId = ++requestGeneration.current;
     setWorking(true);
     showMessage("");
-    const result = await sendAdminMagicLink(nextEmail, setupRedirectPath);
+    const result = await sendAdminMagicLink(nextEmail, setupRedirectPath, { captchaToken: authCaptcha.consumeToken() });
     if (requestId !== requestGeneration.current) return;
     setWorking(false);
     showMessage(
@@ -705,7 +708,8 @@ export function DeleteOperatorMfaSetup() {
             }}
             placeholder="name@example.com"
           />
-          <button className="button" type="submit" disabled={working}>
+          <AuthCaptcha control={authCaptcha} />
+          <button className="button" type="submit" disabled={working || !authCaptcha.ready}>
             {working ? "送信しています" : "確認メールを送る"}
           </button>
         </form>

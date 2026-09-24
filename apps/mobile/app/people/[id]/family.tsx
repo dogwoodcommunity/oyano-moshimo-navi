@@ -59,10 +59,22 @@ export default function FamilyScreen() {
   const freeSlotsLeft = Math.max(0, FREE_PLAN_MEMBER_LIMIT - invitedFamilyCount);
 
   useEffect(() => {
-    fetchFamilyMembers(params.id).then(setMembers);
-    fetchTimelineEntries(params.id)
-      .then((entries) => setActivity(entries.slice(0, 5)))
-      .catch(() => setActivity([]));
+    let active = true;
+    setMembers([]);
+    setActivity([]);
+    setInviteUrl("");
+    setFallbackUrl("");
+    setMessage("");
+    void Promise.all([fetchFamilyMembers(params.id), fetchTimelineEntries(params.id)])
+      .then(([nextMembers, entries]) => {
+        if (!active) return;
+        setMembers(nextMembers);
+        setActivity(entries.slice(0, 5));
+      })
+      .catch(() => {
+        if (active) setMessage("家族情報を読み込めませんでした。通信とログインを確認して、この画面を開き直してください。");
+      });
+    return () => { active = false; };
   }, [params.id]);
 
   async function invite() {
@@ -122,8 +134,14 @@ export default function FamilyScreen() {
       return;
     }
 
-    const refreshedMembers = await fetchFamilyMembers(params.id);
-    setMembers(refreshedMembers);
+    try {
+      const refreshedMembers = await fetchFamilyMembers(params.id);
+      setMembers(refreshedMembers);
+    } catch {
+      setMembers([]);
+      setMessage("家族情報を再確認できませんでした。この画面を開き直してください。");
+      return;
+    }
     setMessage("共同管理者にしました。もしもの時も家族ボードを引き継げます。");
   }
 

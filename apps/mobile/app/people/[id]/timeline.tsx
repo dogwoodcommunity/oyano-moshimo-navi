@@ -8,7 +8,6 @@ import {
   fetchTimelineEntries,
   type MobileDiaryMood,
   type MobilePerson,
-  type MobileTimelineAttachment,
   type MobileTimelineEntry
 } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
@@ -47,7 +46,11 @@ const exclusivePairs: string[][] = [
 ];
 
 function todayString() {
-  return new Date().toISOString().slice(0, 10);
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = String(today.getMonth() + 1).padStart(2, "0");
+  const day = String(today.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function moodLabel(mood?: MobileDiaryMood) {
@@ -73,22 +76,28 @@ export default function TimelineScreen() {
   const [mood, setMood] = useState<MobileDiaryMood>("stable");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [body, setBody] = useState("");
-  const [attachments, setAttachments] = useState<MobileTimelineAttachment[]>([]);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
     let active = true;
+    setPerson(null);
+    setEntries([]);
+    setMessage("");
 
     async function load() {
-      const [nextPerson, nextEntries] = await Promise.all([
-        fetchPerson(params.id),
-        fetchTimelineEntries(params.id)
-      ]);
+      try {
+        const [nextPerson, nextEntries] = await Promise.all([
+          fetchPerson(params.id),
+          fetchTimelineEntries(params.id)
+        ]);
 
-      if (!active) return;
-      setPerson(nextPerson);
-      setEntries(nextEntries);
+        if (!active) return;
+        setPerson(nextPerson);
+        setEntries(nextEntries);
+      } catch {
+        if (active) setMessage("日記を読み込めませんでした。通信状況を確かめて、もう一度開いてください。");
+      }
     }
 
     void load();
@@ -110,37 +119,24 @@ export default function TimelineScreen() {
     setMessage("");
   }
 
-  function addAttachmentMemo(type: "photo" | "pdf") {
-    const label = type === "photo" ? "写真" : "PDF";
-    setAttachments((current) => [
-      ...current,
-      {
-        name: `${label}を追加予定 ${current.length + 1}`,
-        type
-      }
-    ]);
-    setBody((current) => current ? `${current}\n・${label}をあとで添付` : `・${label}をあとで添付`);
-  }
-
   // タップで選んだ様子と、任意のひとことを1つの本文にまとめる。
   // これで「何も打たずタップだけ」でも記録が成立する。
   const tagLines = selectedTags.map((tag) => `・${tag}`).join("\n");
   const composedBody = [tagLines, body.trim()].filter((part) => part.length > 0).join("\n");
-  const canSave = composedBody.length > 0 || attachments.length > 0;
+  const canSave = composedBody.length > 0;
 
   async function saveEntry() {
     if (saving || !canSave) return;
     setMessage("");
     setSaving(true);
+    try {
     const result = await addTimelineEntry({
-      attachments,
       body: composedBody,
       date: todayString(),
       mood,
       personId: params.id,
       title: defaultTitle(mood)
     });
-    setSaving(false);
 
     if (result.error || !result.entry) {
       setMessage(result.error ?? "記録を保存できませんでした。");
@@ -150,9 +146,13 @@ export default function TimelineScreen() {
     setEntries((current) => [result.entry as MobileTimelineEntry, ...current]);
     setSelectedTags([]);
     setBody("");
-    setAttachments([]);
     setMood("stable");
     setMessage("今日の記録を保存しました。あとで家族と見返せます。");
+    } catch {
+      setMessage("記録を保存できませんでした。入力内容は残っています。通信を確認してもう一度お試しください。");
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -220,24 +220,7 @@ export default function TimelineScreen() {
         />
         <Text style={styles.voiceHint}>キーボードのマイクボタンで、話すだけでも書けます。</Text>
 
-        <View style={styles.attachmentRow}>
-          <Pressable onPress={() => addAttachmentMemo("photo")} style={styles.attachmentButton}>
-            <MaterialCommunityIcons color={colors.greenDark} name="image-plus" size={19} />
-            <Text style={styles.attachmentText}>写真メモ</Text>
-          </Pressable>
-          <Pressable onPress={() => addAttachmentMemo("pdf")} style={styles.attachmentButton}>
-            <MaterialCommunityIcons color={colors.greenDark} name="file-pdf-box" size={19} />
-            <Text style={styles.attachmentText}>PDFメモ</Text>
-          </Pressable>
-        </View>
-
-        {attachments.length ? (
-          <View style={styles.attachmentList}>
-            {attachments.map((attachment) => (
-              <Text key={attachment.name} style={styles.attachmentName}>・{attachment.name}</Text>
-            ))}
-          </View>
-        ) : null}
+        <Text style={styles.body}>この画面で保存できるのは文字の記録です。写真・PDFファイルは添付できません。書類の保管場所などは、ひとこと補足に書けます。</Text>
 
         {message ? <Text style={styles.noticeText}>{message}</Text> : null}
 
@@ -268,8 +251,11 @@ export default function TimelineScreen() {
             {entry.body ? <Text style={styles.body}>{entry.body}</Text> : null}
             {entry.attachments.length ? (
               <View style={styles.attachmentList}>
+                <Text style={styles.attachmentName}>写真・書類に関する情報</Text>
                 {entry.attachments.map((attachment) => (
-                  <Text key={attachment.name} style={styles.attachmentName}>・{attachment.name}</Text>
+                  <Text key={attachment.name} style={styles.attachmentName}>
+                    ・{attachment.name}（{attachment.storagePath || attachment.uri ? "この画面ではファイルを開けません" : "文字メモのみ・ファイルなし"}）
+                  </Text>
                 ))}
               </View>
             ) : null}
@@ -308,9 +294,6 @@ const styles = StyleSheet.create({
   quickChipActive: { backgroundColor: colors.greenDark, borderColor: colors.greenDark },
   quickChipText: { color: colors.greenDark, fontSize: 13.5, fontWeight: "900" },
   quickChipTextActive: { color: "#fff" },
-  attachmentRow: { flexDirection: "row", gap: 8 },
-  attachmentButton: { alignItems: "center", backgroundColor: "#fff9eb", borderColor: "#ead9b8", borderRadius: radius.control, borderWidth: 1, flex: 1, flexDirection: "row", gap: 7, justifyContent: "center", minHeight: 48 },
-  attachmentText: { color: colors.greenDark, fontWeight: "900" },
   attachmentList: { backgroundColor: "#fbfdf9", borderColor: colors.line, borderRadius: radius.control, borderWidth: 1, gap: 4, padding: 10 },
   attachmentName: { color: colors.muted, fontWeight: "800", lineHeight: 20 },
   noticeText: { color: colors.green, fontWeight: "900", lineHeight: 22 },

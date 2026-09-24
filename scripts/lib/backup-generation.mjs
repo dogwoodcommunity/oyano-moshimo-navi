@@ -1,5 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 import { types } from "node:util";
+import { validatePrivacyCheckpoint } from "./backup-privacy-checkpoint.mjs";
+import { classifySourceCatalog } from "./backup-source-catalog.mjs";
 
 // This module has no storage, credentials or deployment adapter. Its evidence is
 // byte integrity only: it cannot certify a DB snapshot, deletion replay or restore.
@@ -26,6 +28,11 @@ const ID = /^[a-f0-9]{32}$/;
 const SHA256 = /^[a-f0-9]{64}$/;
 const VERSION = /^[A-Za-z0-9._~+/=-]{1,256}$/;
 const GENERATION_KEYS = ["schemaVersion", "runId", "startedAt", "finishedAt", "releaseSha", "inventoryBefore", "inventoryAfter", "artifacts"];
+const SOURCE_BINDING_KEYS = ["sourceId", "sourceEpoch", "schemaHash", "allowlistSha256", "snapshotId",
+  "pgMajor", "sealedTables", "excludedTables", "roleCatalogSha256", "storageCatalogSha256",
+  "globalScopeHash", "baselineRowCount"];
+const SOURCE_ID = /^[A-Za-z0-9._:-]{1,128}$/;
+const TABLE = /^(?:public|auth|storage|account_delete_private|push_private)\.[a-z_][a-z0-9_]*$/;
 const DEADLINES = new WeakMap();
 const typedArrayByteLength = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(Uint8Array.prototype), "byteLength").get;
 const signalAborted = Object.getOwnPropertyDescriptor(AbortSignal.prototype, "aborted").get;
@@ -70,11 +77,40 @@ function photoReference(value) {
   return Object.freeze({ id: value.id, version: value.version });
 }
 
-function inventory(value) {
-  exactArray(value, LIMITS.maxArtifacts - 3);
+function inventory(value, reservedArtifacts = 3) {
+  exactArray(value, LIMITS.maxArtifacts - reservedArtifacts);
   const result = value.map(photoReference).sort((left, right) => left.id.localeCompare(right.id));
   requireValue(new Set(result.map((photo) => photo.id)).size === result.length, "DUPLICATE_INVENTORY");
   return Object.freeze(result);
+}
+
+function sourceBinding(value) {
+  exactObject(value, SOURCE_BINDING_KEYS);
+  for (const field of ["sourceId", "sourceEpoch", "snapshotId"])
+    requireValue(typeof value[field] === "string" && SOURCE_ID.test(value[field]));
+  for (const field of ["schemaHash", "allowlistSha256", "roleCatalogSha256", "storageCatalogSha256", "globalScopeHash"])
+    requireValue(typeof value[field] === "string" && SHA256.test(value[field]));
+  requireValue(value.pgMajor === 17 && Number.isSafeInteger(value.baselineRowCount)
+    && value.baselineRowCount >= 0 && value.baselineRowCount <= 250_000);
+  exactArray(value.sealedTables, 150);
+  const sealedTables = [...value.sealedTables].sort();
+  requireValue(sealedTables.length > 0 && sealedTables.every((name) => typeof name === "string" && TABLE.test(name))
+    && new Set(sealedTables).size === sealedTables.length);
+  exactArray(value.excludedTables, 150);
+  const excludedTables = value.excludedTables.map((entry) => {
+    exactObject(entry, ["name", "reason"]);
+    requireValue(typeof entry.name === "string" && TABLE.test(entry.name)
+      && ["rebuildable", "secret"].includes(entry.reason));
+    return Object.freeze({ name: entry.name, reason: entry.reason });
+  }).sort((a, b) => a.name.localeCompare(b.name));
+  requireValue(new Set(excludedTables.map((item) => item.name)).size === excludedTables.length);
+  requireValue(excludedTables.every((item) => !sealedTables.includes(item.name)));
+  return Object.freeze({ sourceId: value.sourceId, sourceEpoch: value.sourceEpoch,
+    schemaHash: value.schemaHash, allowlistSha256: value.allowlistSha256,
+    snapshotId: value.snapshotId, pgMajor: 17, sealedTables: Object.freeze(sealedTables),
+    excludedTables: Object.freeze(excludedTables),
+    roleCatalogSha256: value.roleCatalogSha256, storageCatalogSha256: value.storageCatalogSha256,
+    globalScopeHash: value.globalScopeHash, baselineRowCount: value.baselineRowCount });
 }
 
 export function createOpaqueId() { return randomBytes(16).toString("hex"); }
@@ -92,19 +128,24 @@ export function manifestKey(runId) {
 // Take a deeply frozen copy before the first await. Later caller mutations cannot
 // substitute a path, expected digest, source inventory, or the final manifest.
 function validateGenerationInput(input) {
-  exactObject(input, GENERATION_KEYS);
-  requireValue(input.schemaVersion === 1 && isId(input.runId));
+  requireValue(input !== null && typeof input === "object" && !types.isProxy(input)
+    && Object.getPrototypeOf(input) === Object.prototype);
+  const version = Object.getOwnPropertyDescriptor(input, "schemaVersion")?.value;
+  exactObject(input, version === 2 ? [...GENERATION_KEYS, "sourceBinding"] : GENERATION_KEYS);
+  requireValue((version === 1 || version === 2) && isId(input.runId));
+  const binding = version === 2 ? sourceBinding(input.sourceBinding) : null;
   requireValue(typeof input.releaseSha === "string" && /^[a-f0-9]{40}$/.test(input.releaseSha));
   const duration = timestamp(input.finishedAt) - timestamp(input.startedAt);
   requireValue(duration >= 0 && duration <= LIMITS.maxDurationMs);
-  const before = inventory(input.inventoryBefore);
-  const after = inventory(input.inventoryAfter);
+  const before = inventory(input.inventoryBefore, version === 2 ? 5 : 3);
+  const after = inventory(input.inventoryAfter, version === 2 ? 5 : 3);
   requireValue(JSON.stringify(before) === JSON.stringify(after), "INVENTORY_CHANGED");
   exactArray(input.artifacts, LIMITS.maxArtifacts);
-  requireValue(input.artifacts.length === before.length + 3, "ARTIFACT_INVENTORY_MISMATCH");
+  requireValue(input.artifacts.length === before.length + (version === 2 ? 5 : 3), "ARTIFACT_INVENTORY_MISMATCH");
   const ids = new Set();
   const photos = new Map();
-  const counts = { database: 0, roles: 0, storage_catalog: 0, photo: 0 };
+  const counts = { database: 0, roles: 0, storage_catalog: 0,
+    source_contract: 0, baseline_checkpoint: 0, photo: 0 };
   let total = 0;
   const artifacts = input.artifacts.map((artifact) => {
     exactObject(artifact, ["id", "kind", "key", "versionId", "bytes", "sha256", "photo"]);
@@ -128,10 +169,18 @@ function validateGenerationInput(input) {
       versionId: artifact.versionId, bytes: artifact.bytes, sha256: artifact.sha256, photo });
   }).sort((left, right) => left.id.localeCompare(right.id));
   requireValue(counts.database === 1 && counts.roles === 1 && counts.storage_catalog === 1, "REQUIRED_ARTIFACT_MISSING");
+  requireValue(counts.source_contract === (version === 2 ? 1 : 0)
+    && counts.baseline_checkpoint === (version === 2 ? 1 : 0), "REQUIRED_ARTIFACT_MISSING");
+  if (binding) {
+    requireValue(artifacts.find((item) => item.kind === "roles").sha256 === binding.roleCatalogSha256
+      && artifacts.find((item) => item.kind === "storage_catalog").sha256 === binding.storageCatalogSha256,
+    "SOURCE_BINDING_MISMATCH");
+  }
   requireValue(photos.size === before.length && before.every((photo) => photos.get(photo.id) === photo.version), "ARTIFACT_INVENTORY_MISMATCH");
-  return Object.freeze({ schemaVersion: 1, runId: input.runId, startedAt: input.startedAt,
+  return Object.freeze({ schemaVersion: version, runId: input.runId, startedAt: input.startedAt,
     finishedAt: input.finishedAt, releaseSha: input.releaseSha, inventoryBefore: before,
-    inventoryAfter: after, artifacts: Object.freeze(artifacts) });
+    inventoryAfter: after, artifacts: Object.freeze(artifacts),
+    ...(binding ? { sourceBinding: binding } : {}) });
 }
 
 export function validateGeneration(input) {
@@ -201,9 +250,10 @@ function validateOptions(options, finalize) {
   }
 }
 
-async function verifyObject(expected, readObject, signal) {
+async function verifyObject(expected, readObject, signal, capture = false) {
   let iterator;
   let finished = false;
+  const captured = [];
   try {
     checkSignal(signal);
     const response = await readObject(Object.freeze({ key: expected.key, versionId: expected.versionId }), { signal });
@@ -228,10 +278,15 @@ async function verifyObject(expected, readObject, signal) {
       bytes += chunkBytes;
       chunks += 1;
       requireValue(bytes <= expected.bytes && chunks <= LIMITS.maxChunks, "OBJECT_SIZE_MISMATCH");
+      if (capture) {
+        requireValue(bytes <= 8 * 1024 * 1024, "SEMANTIC_ARTIFACT_TOO_LARGE");
+        captured.push(Buffer.from(chunk));
+      }
       hash.update(chunk);
     }
     requireValue(bytes === expected.bytes, "OBJECT_SIZE_MISMATCH");
     requireValue(hash.digest("hex") === expected.sha256, "OBJECT_HASH_MISMATCH");
+    return capture ? Buffer.concat(captured) : null;
   } catch (error) {
     if (error instanceof ProtocolError) throw error;
     fail("OBJECT_READ_FAILED");
@@ -244,8 +299,53 @@ async function verifyObject(expected, readObject, signal) {
 }
 
 async function verifyArtifacts(generation, readObject, signal) {
-  for (const artifact of generation.artifacts) await verifyObject(artifact, readObject, signal);
+  const semantic = new Map();
+  for (const artifact of generation.artifacts) {
+    const capture = generation.schemaVersion === 2
+      && ["source_contract", "baseline_checkpoint"].includes(artifact.kind);
+    const bytes = await verifyObject(artifact, readObject, signal, capture);
+    if (capture) semantic.set(artifact.kind, bytes);
+  }
   checkSignal(signal);
+  if (generation.schemaVersion === 2) verifyV2Evidence(generation, semantic);
+}
+
+function parseSemantic(bytes, code) {
+  try { return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)); }
+  catch { fail(code); }
+}
+
+function verifyV2Evidence(generation, semantic) {
+  try {
+    const source = parseSemantic(semantic.get("source_contract"), "SOURCE_CONTRACT_INVALID");
+    exactObject(source, ["binding", "allowlist"], "SOURCE_CONTRACT_INVALID");
+    const binding = sourceBinding(source.binding);
+    requireValue(SOURCE_BINDING_KEYS.every((key) =>
+      JSON.stringify(binding[key]) === JSON.stringify(generation.sourceBinding[key])), "SOURCE_BINDING_MISMATCH");
+    exactArray(source.allowlist, 150);
+    const observed = source.allowlist.map((table) => {
+      exactObject(table, ["name", "columns", "primaryKey", "classification"], "SOURCE_CONTRACT_INVALID");
+      return { name: table.name, columns: table.columns, primaryKey: table.primaryKey };
+    });
+    const catalog = classifySourceCatalog(observed, source.allowlist);
+    requireValue(catalog.allowlistSha256 === binding.allowlistSha256
+      && JSON.stringify(catalog.sealed.map((item) => item.name)) === JSON.stringify(binding.sealedTables)
+      && JSON.stringify(catalog.excluded.map((item) => ({ name: item.name,
+        reason: item.classification === "secret_excluded" ? "secret" : "rebuildable" })))
+        === JSON.stringify(binding.excludedTables), "SOURCE_BINDING_MISMATCH");
+    const baseline = parseSemantic(semantic.get("baseline_checkpoint"), "BASELINE_INVALID");
+    validatePrivacyCheckpoint(baseline);
+    requireValue(baseline.sourceId === binding.sourceId && baseline.sourceEpoch === binding.sourceEpoch
+      && baseline.schemaHash === binding.schemaHash && baseline.snapshotId === binding.snapshotId
+      && baseline.rowCount === binding.baselineRowCount
+      && JSON.stringify(baseline.expectedTables) === JSON.stringify(binding.sealedTables)
+      && baseline.tables.every((table) => table.rows.every((row) => row.scopes.includes(binding.globalScopeHash))),
+    "BASELINE_BINDING_MISMATCH");
+  } catch (error) {
+    if (error instanceof ProtocolError) throw error;
+    // Do not expose parsed content, paths or underlying checkpoint failures.
+    fail("SEMANTIC_EVIDENCE_INVALID");
+  }
 }
 
 export async function verifyGeneration(input, adapterOptions) {

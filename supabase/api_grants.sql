@@ -63,6 +63,30 @@ alter default privileges in schema public
 -- compatible with partial schemas that have not installed the RPCs yet.
 do $server_only_rpc_acl$
 begin
+  -- The cron service claims and resets notification rows through SECURITY DEFINER.
+  -- A later broad function grant must not give these mutations to API users.
+  if to_regprocedure('public.claim_due_scheduled_notifications(integer)') is not null then
+    execute 'revoke all on function public.claim_due_scheduled_notifications(integer) from public, anon, authenticated';
+    execute 'grant execute on function public.claim_due_scheduled_notifications(integer) to service_role';
+  end if;
+  if to_regprocedure('public.reset_stale_sending_notifications(interval)') is not null then
+    execute 'revoke all on function public.reset_stale_sending_notifications(interval) from public, anon, authenticated';
+    execute 'grant execute on function public.reset_stale_sending_notifications(interval) to service_role';
+  end if;
+  if to_regclass('push_private.installations') is not null then
+    execute 'revoke insert, update, delete, truncate, references, trigger on public.push_tokens from public, anon, authenticated, service_role';
+    execute 'revoke all on function public.apply_push_installation_operation_v2(uuid,uuid,text,bigint,uuid,text,text,text) from public, anon, authenticated';
+    execute 'revoke all on function public.list_deliverable_push_tokens_v2(uuid[]) from public, anon, authenticated';
+    execute 'revoke all on function public.invalidate_push_delivery_v2(uuid,bigint,text) from public, anon, authenticated';
+    execute 'revoke all on schema push_private from public, anon, authenticated, service_role';
+    execute 'revoke all on all tables in schema push_private from public, anon, authenticated, service_role';
+    execute 'revoke all on all functions in schema push_private from public, anon, authenticated, service_role';
+  end if;
+  if to_regprocedure('public.check_public_api_rate_limit(text,integer,integer)') is not null then
+    execute 'revoke all on function public.check_public_api_rate_limit(text, integer, integer) from public, anon, authenticated';
+    execute 'grant execute on function public.check_public_api_rate_limit(text, integer, integer) to service_role';
+  end if;
+
   if to_regprocedure('public.consume_case_handoff(uuid,text,uuid,text,text)') is not null then
     execute 'revoke all on function public.consume_case_handoff(uuid, text, uuid, text, text) from public, anon, authenticated';
     execute 'grant execute on function public.consume_case_handoff(uuid, text, uuid, text, text) to service_role';

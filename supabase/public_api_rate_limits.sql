@@ -58,7 +58,9 @@ begin
 end;
 $$;
 
-revoke all on function public.check_public_api_rate_limit(text, integer, integer) from public;
+-- A prior api_grants.sql may have granted authenticated EXECUTE explicitly.
+-- Revoke every public API role so clients cannot reset or exhaust shared keys.
+revoke all on function public.check_public_api_rate_limit(text, integer, integer) from public, anon, authenticated;
 grant execute on function public.check_public_api_rate_limit(text, integer, integer) to service_role;
 
 create index if not exists idx_public_api_rate_limits_updated_at

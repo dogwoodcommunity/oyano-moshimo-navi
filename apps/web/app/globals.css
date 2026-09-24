@@ -15123,6 +15123,38 @@ textarea {
   line-height: 1.8;
 }
 
+.consult-first-use {
+  padding: 16px;
+  margin: 12px 0;
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: #243a43;
+  line-height: 1.7;
+}
+
+.consult-first-use > p,
+.consult-first-use details p,
+.consult-recovery-note {
+  color: #334b55;
+  font-size: 16px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.consult-first-use summary {
+  cursor: pointer;
+  padding: 10px 0;
+  font-weight: 600;
+}
+
+.consult-recovery-note a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.consult-guest-check { max-width: 100%; overflow: hidden; }
+
 .consult-composer h2 {
   color: var(--ink);
   font-size: 20px;

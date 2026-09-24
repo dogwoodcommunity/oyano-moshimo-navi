@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { ProtectedScreen } from "@/components/MobileSessionProvider";
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from "react-native";
 import { fetchNotificationPreferences, registerPushToken, saveNotificationPreferences } from "@/lib/notifications";
 import { colors, radius, shadow } from "@/lib/theme";
 
-export default function NotificationsScreen() {
+function NotificationsScreen() {
   const [enabled, setEnabled] = useState(true);
   const [monthlyEnabled, setMonthlyEnabled] = useState(true);
   const [urgentEnabled, setUrgentEnabled] = useState(true);
@@ -52,7 +53,7 @@ export default function NotificationsScreen() {
 
   async function register() {
     const result = await registerPushToken();
-    setToken(result.token);
+    setToken(result.saved ? result.token : null);
     if (result.saved) {
       setMessage("この端末で通知を受け取れるようにしました。");
       return;
@@ -63,7 +64,11 @@ export default function NotificationsScreen() {
         ? "通知登録にはログインが必要です。メールで本人確認をしてからもう一度お試しください。"
         : result.reason === "permission_denied"
           ? "通知が許可されていません。端末の通知設定を確認してください。"
-          : "通知を有効にできませんでした。時間をおいてもう一度お試しください。";
+          : result.reason === "legacy_registration_unknown"
+            ? "以前の通知登録をこの端末のものと確認できませんでした。端末の通知設定を確認し、サポートへお問い合わせください。"
+            : result.reason === "registration_unverified"
+              ? "通知登録の結果を確認できませんでした。通信を確認して「この端末で通知を受け取る」をもう一度押すと確認できます。ログアウトする場合は、この端末の登録を解除してから進みます。"
+              : "通知を有効にできませんでした。時間をおいてもう一度お試しください。";
     setMessage(nextMessage);
   }
 
@@ -97,7 +102,7 @@ export default function NotificationsScreen() {
           <MaterialCommunityIcons color={colors.green} name="cellphone-check" size={22} />
           <Text style={styles.cardTitle}>この端末で受け取る</Text>
         </View>
-        <Text style={styles.body}>端末の通知許可を確認し、push tokenを保存します。</Text>
+        <Text style={styles.body}>端末の通知許可を確認して、この端末を登録します。ログアウト時はこの端末の登録を解除します。</Text>
         <Pressable disabled={!enabled} style={[styles.button, !enabled ? styles.buttonDisabled : null]} onPress={register}>
           <Text style={styles.buttonText}>この端末で通知を受け取る</Text>
         </Pressable>
@@ -125,6 +130,10 @@ export default function NotificationsScreen() {
       {message ? <View style={styles.notice}><Text style={styles.noticeText}>{message}</Text></View> : null}
     </ScrollView>
   );
+}
+
+export default function ProtectedNotificationsScreen() {
+  return <ProtectedScreen><NotificationsScreen /></ProtectedScreen>;
 }
 
 function PreferenceCard({

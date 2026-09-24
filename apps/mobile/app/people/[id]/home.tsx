@@ -4,12 +4,12 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { colors, radius, shadow } from "@/lib/theme";
 
 const rows = [
-  ["物件種別", "戸建て"],
-  ["空き家状況", "近日空き家"],
-  ["鍵", "長男が保管"],
-  ["ライフライン", "電気・水道は契約中"],
-  ["家財量", "多い"],
-  ["方針", "売却・管理・解体は未定"]
+  ["物件種別", "例: 戸建て・マンション"],
+  ["空き家状況", "例: 居住中・空き家・確認が必要"],
+  ["鍵", "誰が、どこで保管しているか"],
+  ["ライフライン", "電気・水道・ガスの契約状況"],
+  ["家財量", "片付けが必要な部屋や物の量"],
+  ["方針", "本人の希望と、まだ決まっていないこと"]
 ];
 
 const photoTargets = [
@@ -27,7 +27,7 @@ export default function HomeChartScreen() {
       <View style={styles.header}>
         <Text style={styles.kicker}>実家カルテ</Text>
         <Text style={styles.title}>離れていても状況が分かるように</Text>
-        <Text style={styles.body}>鍵、ライフライン、家財量、方針を家族で共有します。写真は必要な場所だけ、個人情報が写らない形で残します。</Text>
+        <Text style={styles.body}>実家について家族で確認する項目をまとめました。分かったことは、保管場所メモや日記に残せます。</Text>
       </View>
 
       <View style={styles.summaryCard}>
@@ -43,8 +43,9 @@ export default function HomeChartScreen() {
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color={colors.green} name="clipboard-list-outline" size={22} />
-          <Text style={styles.cardTitle}>現在のメモ</Text>
+          <Text style={styles.cardTitle}>確認項目と記入例</Text>
         </View>
+        <Text style={styles.body}>以下は確認のための例です。この家の保存済み情報ではありません。</Text>
         {rows.map(([label, value]) => (
           <View style={styles.row} key={label}>
             <Text style={styles.label}>{label}</Text>
@@ -56,13 +57,13 @@ export default function HomeChartScreen() {
       <View style={styles.card}>
         <View style={styles.cardTitleRow}>
           <MaterialCommunityIcons color={colors.green} name="camera-outline" size={22} />
-          <Text style={styles.cardTitle}>写真で残す場所</Text>
+          <Text style={styles.cardTitle}>写真を用意するときの確認例</Text>
         </View>
-        <Text style={styles.body}>遠方の家族が判断しやすくなる場所だけ撮ります。表札、住所、郵便物、車のナンバーは写さないでください。</Text>
+        <Text style={styles.body}>撮影する場合は、遠方の家族が判断しやすくなる場所に絞ります。この画面から写真を添付することはできません。表札、住所、郵便物、車のナンバーは写さないでください。</Text>
         <View style={styles.photoGrid}>
           {photoTargets.map((target) => (
             <View key={target} style={styles.photoTarget}>
-              <MaterialCommunityIcons color={colors.greenDark} name="check-circle-outline" size={18} />
+              <MaterialCommunityIcons color={colors.greenDark} name="circle-outline" size={18} />
               <Text style={styles.photoTargetText}>{target}</Text>
             </View>
           ))}

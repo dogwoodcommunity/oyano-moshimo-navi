@@ -23,8 +23,8 @@ assert.equal(env.pnpm_config_verify_deps_before_run, "error", "never auto-instal
 
 const plan = createPlan();
 assert.equal(new Set(plan.map((step) => step.id)).size, plan.length);
-assert.equal(createPlan({ sourceOnly: true }).length, 42);
-assert.equal(plan.length, 56);
+assert.equal(createPlan({ sourceOnly: true }).length, 57);
+assert.equal(plan.length, 72);
 for (const name of ["notebook-mascot", "mascot-motion-preference"]) {
   assert.ok(plan.some((step) => step.id === `source:${name}`));
 }
@@ -35,13 +35,15 @@ assert.ok(plan.some((step) => step.id === "source:notebook-sync-text-retry"));
 assert.ok(plan.some((step) => step.id === "source:notebook-diary-text"));
 assert.ok(plan.some((step) => step.id === "source:unicode-display-text"));
 assert.ok(plan.some((step) => step.id === "source:readable-design-b"));
-assert.equal(plan.filter((step) => step.id.startsWith("sql:")).length, 10);
+assert.equal(plan.filter((step) => step.id.startsWith("sql:")).length, 11);
+assert.ok(plan.some((step) => step.id === "source:ai-report-review"));
+assert.ok(plan.some((step) => step.id === "sql:push-installation"));
 assert.ok(plan.some((step) => step.id === "source:family-role-security"));
 assert.ok(plan.some((step) => step.id === "source:notebook-sync-runtime"));
 assert.ok(plan.some((step) => step.id === "lint:web"));
 assert.equal(plan.at(-1).id, "build:web");
 assert.ok(createPlan({ sourceOnly: true }).every((step) => step.id.startsWith("source:")));
-assert.equal(createPlan({ sqlOnly: true }).length, 10);
+assert.equal(createPlan({ sqlOnly: true }).length, 11);
 assert.ok(createPlan({ sqlOnly: true }).every((step) => step.id.startsWith("sql:")));
 assert.doesNotMatch(JSON.stringify(plan), /smoke-|vercel|deploy|supabase (?:db|link)|https:\/\//);
 for (const step of createPlan({ sqlOnly: true })) {
@@ -58,12 +60,17 @@ for (const step of createPlan({ sqlOnly: true })) {
 }
 const ci = fs.readFileSync(path.join(repoRoot, ".github/workflows/ci.yml"), "utf8");
 const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
+for (const name of ["auth-captcha", "mobile-auth-captcha", "mobile-store-preflight", "mobile-empty-states", "mobile-screen-readiness", "mobile-consult-target", "mobile-push-logout", "consult-report"]) {
+  assert.ok(plan.some((step) => step.id === `source:${name}`));
+  assert.equal(packageJson.scripts[`test:${name}`], `node scripts/test-${name}.mjs`);
+  assert.ok(ci.includes(`pnpm run test:${name}`));
+}
 assert.equal(packageJson.scripts["test:personal-data-infra"], "node scripts/test-personal-data-infra.mjs");
 assert.equal(packageJson.scripts["test:backup-generation"], "node scripts/test-backup-generation.mjs");
 assert.match(ci, /pnpm run test:backup-generation/);
 assert.match(ci, /pnpm run test:personal-data-infra/);
 assert.match(ci, /cfn-lint==1\.53\.3/);
-assert.match(ci, /cfn-lint -t infra\/aws-personal-data\/backup-vault\.cfn\.json -r ap-northeast-1/);
+assert.match(ci, /cfn-lint -t infra\/aws-personal-data\/backup-vault\.cfn\.json infra\/aws-personal-data\/backup-verifier\.cfn\.json -r ap-northeast-1/);
 assert.equal(packageJson.scripts["test:diary-unsaved-changes"], "node scripts/test-diary-unsaved-changes.mjs");
 assert.match(ci, /pnpm run test:diary-unsaved-changes/, "unsaved diary guard must remain in CI as well as local qualification");
 assert.match(ci, /docker pull docker\.io\/library\/postgres:16-bookworm/, "fresh CI must explicitly prepare the image before offline SQL scripts");

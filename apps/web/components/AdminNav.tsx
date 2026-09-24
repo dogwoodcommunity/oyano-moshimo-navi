@@ -7,6 +7,7 @@ const items = [
   { href: "/admin", label: "管理トップ" },
   { href: "/admin/monitor-feedback", label: "モニター回答" },
   { href: "/admin/ai-usage", label: "AI利用・原価" },
+  { href: "/admin/ai-reports", label: "AI回答の通報" },
   { href: "/admin/support-packs", label: "サポート依頼" },
   { href: "/admin/sponsor-applications", label: "スポンサー申請" },
   { href: "/admin/env", label: "本番設定" }

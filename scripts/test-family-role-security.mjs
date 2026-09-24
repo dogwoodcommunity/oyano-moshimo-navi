@@ -100,11 +100,12 @@ const homeRoute = loadCommonJs(homeRoutePath, (specifier) => {
 
 let notebookRole = "viewer";
 let notebookSignedUrlCalls = 0;
+let notebookIsAnonymous = false;
 const notebookSupabase = {
   auth: {
     async getUser(token) {
       assert.equal(token, "valid-token");
-      return { data: { user: { id: "user-1" } }, error: null };
+      return { data: { user: { id: "user-1", is_anonymous: notebookIsAnonymous } }, error: null };
     }
   },
   from(table) {
@@ -144,6 +145,15 @@ const notebookRoute = loadCommonJs(notebookRoutePath, (specifier) => {
   throw new Error(`Unexpected notebook-photo route import: ${specifier}`);
 });
 
+notebookRole = "owner";
+notebookIsAnonymous = true;
+{
+  const response = await notebookRoute.POST(request({ fileName: "guest.jpg", contentType: "image/jpeg", fileSizeBytes: 100 }));
+  assert.equal(response.status, 403, "guest owners cannot mint paid-storage upload access");
+  assert.equal((await response.json()).error, "registered_account_required");
+  assert.equal(notebookSignedUrlCalls, 0);
+}
+notebookIsAnonymous = false;
 notebookRole = "viewer";
 notebookSignedUrlCalls = 0;
 {
@@ -191,6 +201,7 @@ const notifySupabase = {
 
 const notifyRoutePath = path.join(repoRoot, "apps/web/app/api/family/notify/route.ts");
 const notifyRoute = loadCommonJs(notifyRoutePath, (specifier) => {
+  if (specifier === "@/lib/pushInstallation") return { invalidatePushDelivery: async () => { throw new Error("Viewer reached delivery mutation"); } };
   if (specifier === "next/server") return { NextResponse: MockNextResponse };
   if (specifier === "@/lib/publicRateLimit") return { checkPublicRateLimit: async () => null };
   if (specifier === "@/lib/serverSupabase") return { getServerSupabase: () => notifySupabase };

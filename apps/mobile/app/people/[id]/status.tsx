@@ -2,20 +2,28 @@ import { useEffect, useState } from "react";
 import { useLocalSearchParams } from "expo-router";
 import { ScrollView, StyleSheet, Text, Pressable, View } from "react-native";
 import { STATUSES, statusLabel, type ParentStatus } from "@oyano/shared";
-import { demoPerson } from "@/lib/demoData";
 import { fetchPerson, updatePersonStatus } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function StatusScreen() {
   const params = useLocalSearchParams<{ id: string }>();
-  const [status, setStatus] = useState<ParentStatus>(demoPerson.currentStatus);
+  const [status, setStatus] = useState<ParentStatus | null>(null);
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    fetchPerson(params.id).then((person) => setStatus(person.currentStatus));
+    let active = true;
+    setStatus(null);
+    setMessage("");
+    void fetchPerson(params.id).then((person) => {
+      if (active) setStatus(person.currentStatus);
+    }).catch(() => {
+      if (active) setMessage("状態を読み込めませんでした。通信とログインを確認して、この画面を開き直してください。");
+    });
+    return () => { active = false; };
   }, [params.id]);
 
   async function save(nextStatus: ParentStatus) {
+    if (!status) return;
     const previousStatus = status;
     setStatus(nextStatus);
     const result = await updatePersonStatus(params.id, previousStatus, nextStatus);
@@ -38,10 +46,10 @@ export default function StatusScreen() {
       </View>
       <View style={styles.currentCard}>
         <Text style={styles.currentLabel}>現在の状態</Text>
-        <Text style={styles.currentTitle}>{statusLabel(status)}</Text>
+        <Text style={styles.currentTitle}>{status ? statusLabel(status) : "確認中"}</Text>
       </View>
       {STATUSES.map((item) => (
-        <Pressable key={item.key} onPress={() => save(item.key)} style={[styles.option, item.key === status && styles.active]}>
+        <Pressable disabled={!status} key={item.key} onPress={() => save(item.key)} style={[styles.option, item.key === status && styles.active]}>
           <Text style={styles.optionText}>{item.label}</Text>
         </Pressable>
       ))}

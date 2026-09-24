@@ -1,11 +1,7 @@
-import { Platform } from "react-native";
 import { getSupabase } from "./supabase";
 
-export type PushRegistrationResult = {
-  token: string | null;
-  saved: boolean;
-  reason?: "permission_denied" | "token_failed" | "login_required" | "save_failed";
-};
+export { registerPushToken, withDevicePushRevoked } from "./pushInstallation";
+export type { PushRegistrationResult } from "./pushInstallation";
 
 export type NotificationPreferences = {
   remindersEnabled: boolean;
@@ -19,10 +15,6 @@ const defaultNotificationPreferences: NotificationPreferences = {
   urgentEnabled: true
 };
 
-async function loadNotifications() {
-  return import("expo-notifications");
-}
-
 async function getAccessToken() {
   const client = getSupabase();
   const { data: sessionResult } = client ? await client.auth.getSession() : { data: { session: null } };
@@ -31,68 +23,6 @@ async function getAccessToken() {
     client,
     userId: sessionResult.session?.user.id
   };
-}
-
-export async function registerPushToken(): Promise<PushRegistrationResult> {
-  const Notifications = await loadNotifications();
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("default", {
-      name: "default",
-      importance: Notifications.AndroidImportance.DEFAULT
-    });
-  }
-
-  const permission = await Notifications.requestPermissionsAsync();
-  if (!permission.granted) return { token: null, saved: false, reason: "permission_denied" };
-
-  let expoPushToken: string;
-  try {
-    const projectId = process.env.EXPO_PUBLIC_EAS_PROJECT_ID;
-    const token = await Notifications.getExpoPushTokenAsync(projectId ? { projectId } : undefined);
-    expoPushToken = token.data;
-  } catch {
-    return { token: null, saved: false, reason: "token_failed" };
-  }
-
-  const { accessToken, client, userId } = await getAccessToken();
-  if (!client || !userId || !accessToken) {
-    return { token: expoPushToken, saved: false, reason: "login_required" };
-  }
-
-  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
-  if (webBaseUrl) {
-    try {
-      const response = await fetch(`${webBaseUrl}/api/push-tokens/register`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          expoPushToken,
-          platform: Platform.OS,
-          deviceName: Platform.OS
-        })
-      });
-
-      if (response.ok) return { token: expoPushToken, saved: true };
-    } catch {
-      // Fall back to direct Supabase upsert for local development.
-    }
-  }
-
-  const { error } = await client.from("push_tokens").upsert({
-      user_id: userId,
-      expo_push_token: expoPushToken,
-      platform: Platform.OS,
-      device_name: Platform.OS,
-      is_active: true,
-      updated_at: new Date().toISOString()
-    }, { onConflict: "user_id,expo_push_token" });
-
-  if (error) return { token: expoPushToken, saved: false, reason: "save_failed" };
-  return { token: expoPushToken, saved: true };
 }
 
 export async function fetchNotificationPreferences(): Promise<NotificationPreferences & { source: "supabase" | "web" | "default" }> {

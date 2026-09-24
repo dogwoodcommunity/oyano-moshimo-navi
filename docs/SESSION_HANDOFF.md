@@ -15156,3 +15156,783 @@ https://mitene.us/
   未送信文は消える仕様は変更なし。本人確認・同意を省略して匿名AIへ戻す変更も行っていない。
 - CURRENT_STATUSと本追記を文書だけ[skip ci]でmainへpushし、再デプロイはしない。
   未追跡Claude_FULL2文書・review_exports/、課金・環境秘密値・正式商用公開の保留条件は変更なし。
+
+## 2026-09-19 追記 406 — 初回メール設定なしの相談を開発、認証互換性の公開ゲートを明示
+
+- 本人の「作り直して」で、main e5032f6からcodex/consult-guest-entryへ分離。
+  入力→その場の短い同意→選択中の手帳を本人の保存先へ同期→長期記憶を使った回答、へ変更。
+  設定ページへの往復を不要にし、メール追加は同じゲスト本人へ後から任意。ゲストを一時AIにはしない。
+  初回同意前・画面表示だけでは作成/保存/AI送信なし。写真の画像は初回同期から除外。
+- consultNotebookPreparationでread-first、authUserId/familyId/personId、ローカル内容・削除状態を
+  各await前後に検証。選択した対象者だけ500件ずつ同期し、scopeをbinding.caseIdsへ永続化。
+  Homeの自動/手動同期にもscopeを適用し、メール追加後も他の手帳を自動送信しない。
+  既存クラウド手帳の失効ログインを新規ゲストで置き換えない。下書きは失敗時に維持する。
+- ConsultPanelは連打防止・明示同意・最新同期・本人照合後に既存相談APIへ送信。
+  POST後の状態変更/通信不明では再送を勧めず、元の保存先の相談履歴確認を案内。
+  回答成功後の利用枠GET失敗は回答の失敗扱いにしない。無料枠・外部AI/長期記憶・権限は従来どおり。
+- 新規/api/consult/guestは既定OFF、同一origin/小さなJSON/Turnstileトークン必須。
+  既存原子的DB rate RPCでIPハッシュ3件/日・API全体50件/日、DB障害時は拒否。
+  Supabase public signInAnonymouslyへCAPTCHAを渡す。service roleはrate RPCのみ、作成には使わない。
+  Auth直接signupはこの上限を迂回できるので、プロバイダー側の濫用制限は別途必須。
+- 家族招待作成/参加・写真アップロードはguest拒否。APIと招待RPC3定義を更新。
+  consult_guest_restrictions.sqlでhome-photosへのguest INSERT/UPDATEをrestrictive policyで拒否。
+  登録済みの既存RLS/他bucket/既存read/delete権限は変更しない。回帰SQLを既存CI runnerに追加。
+- source-only 45/45、Web型・lint・production build成功。lintは既存img/hook警告、エラーなし。
+  prepare実helper70シナリオ、実TSX/SSR/handler、実Home/helperの合成テストを追加。
+  最終の送信後不明/利用枠GET失敗のhandler回帰も成功。git diff --check成功。
+- 隔離Chrome320/390/1280pxで初回同意→相談→回答→reload同一履歴、保存失敗で下書き保持を確認。
+  横溢れ/pageerrorなし。390px同意画面を目視確認。Supabase/Turnstile/APIは代替応答、実外部通信0。
+  一時script /private/tmp/verify-oyano-guest-consult.mjs、画像 oyano-guest-consent/answer-{320,390,1280}.png。
+- 独立担当が隔離PostgreSQL17.11・Unix socketのみでbootstrap→schema/RLS→招待→制限SQL2回→
+  regression→admin_auth_hardening→regression→free_plan_member_limit→regressionを実行しexit0。
+  guest拒否・登録済み互換性・別bucket不変更を確認。DBは停止済み。起動停止ログ
+  /private/tmp/oyano-guest-guard.e9XVIu/postgres.log。SQL個別出力ファイルは未保存。
+- **本番有効化は未完了。** 公式資料/実装を確認し、Supabase CAPTCHAはsignupだけでなくOTP/
+  magic-linkにも適用と判明。現行Web7導線/Mobile3導線はcaptchaToken未対応。
+  設定をONにするだけでは既存ログインを壊すため、追加実装と実環境受入が必要。
+  docs/CONSULT_GUEST_RELEASE.mdに必要作業・適用順・費用/実送信の承認・復元/削除受入を記載。
+  本番認証設定・DB適用・実メール/AI・main統合/デプロイは行わない。flagはfalse。
+- CURRENT_STATUS/本追記と公開手順を更新し、feature branchへcommit/push。
+  GitHub CIはmain/PR限定のため、このbranch pushだけでは未実行。本番は追記405のまま。
+  review_exports/、未追跡レビュー2文書、既存利用者の記録・写真・相談・課金/環境設定は触っていない。
+
+## 2026-09-19 追記 407 — 既存メール認証のCAPTCHA互換実装・公開準備、Supabase本人確認待ち
+
+- 本人の「反映して」「続きして」に基づき、codex/consult-guest-entry / 13140b7から継続。
+  本番のReady deploymentはdpl_9u8W9sdTiGCgoMLTs6B1EiMTHjqo（追記405）のまま。
+  Vercel production envの名前だけを確認し、TURNSTILE_SITE_KEY/CONSULT_GUEST_ENABLEDは未設定。
+  秘密値は取得/表示せず、mainへの統合・配信・設定ONは行っていない。
+- Web7導線（Home/家族/招待/プラン/退会/管理/MFA設定）を共通AuthCaptchaへ対応。
+  site keyなしは従来動作、設定ありは使い切りtoken必須。4分で再取得し、provider期限切れ・遮断・
+  通信失敗に日本語の再試行案内。compact widget、入力保持、確認完了による自動送信なし。
+  登録済みのみの管理ログイン、ゲストへの同一本人メール追加は従来の制限を維持。
+- Mobile3導線は端末SecureStoreにメール/遷移先/256bit nonce/15分期限/開始時本人を保持し、
+  専用Web /auth/mobileでメール再入力と安全確認後に送信。URLはnonce fragmentのみ。
+  Webの保存済み本人を読まないclient、固定oyanomoshimo:///auth/complete callbackを使用。
+  nativeはaccess/refresh両方の本人、確認済みメール、開始時/直前の本人を確認後にセッション保存。
+  再送は旧nonceを無効化、消費済みcallbackの再利用拒否。Expo51互換crypto/SecureStoreを追加。
+  **更新binaryのビルド/配布、旧版の利用状況、実機cold/warm復帰は未確認。** CAPTCHA全体ONは保留。
+- 独立監査で既存api_grants.sqlがレートRPCをauthenticatedへ明示GRANTしていたリスクを確認。
+  public_api_rate_limits.sqlとapi_grants.sqlの両方でPUBLIC/anon/authenticated実行権限を取消し、
+  service_roleだけ維持。一般利用者による短時間窓での共有上限リセットを防ぐ。
+  SQL回帰を既存daily-claim runnerへ追加。本番適用は更新rate SQLを使い、broad grants全体は再適用不要。
+- 合成source 47/47、Web/Mobile型・Web build成功。lintは既存img/hook警告のみ。実helper/hook/widget/handlerで
+  未設定/必須/期限切れ/使い切り、入力保持、Mobile誤メール/本人変更/再送/replay等を確認。
+  独立担当がcallback8箇所を読み取り監査し、追加のP0/P1なし。実機/provider受入は別。
+  pnpm9.15.9 frozen installで新規2依存取得成功。lockは新規2依存の25行追加のみ。
+- 隔離PostgreSQL17でrate→api_grantsと逆順/旧ACL修復、anon/guest拒否、service正常3回/4回上限・
+  期限切れ・既存counter不変更とdaily-claim回帰を確認。旧権限で50→1リセットを再現し回帰検出も確認。
+  最終ACL anon=false/authenticated=false/service_role=true。合成行0、専用DB停止済み。
+  Docker未起動のためDockerシェル自体のローカル実行は未実施（同じSQL列をnative PG17で検証）。
+- Supabase管理画面はGitHub認証後のMFA待ち。本人「ログイン情報がわからん」に対して画面を確認し、
+  パスワードでなく認証アプリ「Supabase TENSHOKU（iPhone）」の6桁→Verifyと案内。
+  returnToは対象project ypnuxyfirlvbsqujocuy。コード/パスワードを会話へ送るよう求めていない。
+  Cloudflareタブはloginからaccount/home URLへ変化、権限/Turnstileの設定内容は未確認。
+  本人確認/キー発行/認証設定/SQL適用/実メール/実AI/本番データ操作は実行していない。
+- 公開手順/プライバシー/CI/source runnerを更新。開発branchを保存してPR CIへ進めるが、
+  認証設定・新版配布・限定実送信の受入までマージ/本番反映しない。正式商用公開の残件も不変。
+  保護対象のreview_exports/・未追跡レビュー2文書、現在の記録/写真/相談には触っていない。
+- ソース/検証/引き継ぎを`7796d3c572654ad0fc8ec2342b70c5c6eb21a018`でfeatureへpush。
+  staged 40ファイルのdiff checkとgitleaks検査が成功。draft PR #9を作成・タスク添付。
+  https://github.com/dogwoodcommunity/oyano-moshimo-navi/pull/9
+  GitHub CI `35440317168` は最終確認時in_progress（成功未確認）。main未変更。
+  この記録だけ[skip ci]で追記pushし、再デプロイしない。
+- 続く本人「ない」でMFA画面を再確認し、コード不一致・本人確認未完了を確認。再送信せず、
+  iPhone標準「パスワード」のSupabase保存項目も本人が確認する案内へ変更。
+  公式platform MFA資料ではApple Keychainも対応、全要素喪失時の復旧は保証されず、
+  使用した方法が不明なら公式supportへ相談する手順。新アカウント/認証解除/ログアウトはしない。
+  https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
+  認証値は保存しない。CI35440317168はこの再確認でもin_progress。本番・データ変更なし。
+- 本人はApple「パスワード」にも「ない」と回答。同じ確認を繰り返さず、公式supportへ相談する
+  下書き`SUPABASE_DASHBOARD_ACCESS_SUPPORT_DRAFT.md`を作成（未送信）。当repoの過去の管理MFA記録と
+  既知のTENSHOKU checkoutのmarkdownを対象限定で検索したが、登録に使ったアプリの明示記録なし。
+  秘密値/保存済み資格情報/ブラウザprofile/実利用者情報は探索しない。公式のsupport@supabase.comを
+  確認したが登録メール/送信元は未確認。送信やMFA解除/再登録は本人の確認なしに行わない。
+  公式は全要素喪失時の復旧不可を明記しているが、現時点では全要素喪失を断定しない。
+- 本人「過去に開いてたならログインできるはず」で問い合わせ判断を保留し、既存ブラウザから確認。
+  Chrome哲也profileの対象tabはMFA待ち、別の既存Supabase tabはsign-in。Safariとアプリ内browserは
+  対象projectへ通常UIで遷移→Supabase sign-in（LAST USED GitHub）→GitHub再ログイン画面。
+  生きたSupabase管理sessionを確認できていない。ログアウト/cookie削除/credential抽出/認証迂回なし。
+- 現TENSHOKU checkoutのdocs/PRODUCTION_ENVIRONMENT.md:364–365に、2026-09-09のOwnerによる
+  Supabase MFA有効化記録を確認。もしもナビ追記382の9月6日MFA Disabledより後の記録。
+  factor名はTENSHOKUだが、登録アプリ/端末/メールの明示記録はなく保存先は未特定。
+  旧Desktop checkoutだけの検索では不十分だった。アプリの管理者MFAとDashboard MFAを混同しない。
+  問い合わせメールは送っていない。新規アカウント/設定解除/本番配信/利用者データ操作なし。
+
+## 2026-09-19 追記 408 — MFA保存先の履歴確認、Googleのアカウント切替でも見つからず
+
+- 本人はGoogle Authenticatorに複数アカウントがあり、「oyanomoshimo」の数字ではエラーになると申告。
+  別アカウントのSupabase/TENSHOKU項目も「ない」と回答。名前だけで別サービスのコードとは断定しない。
+  認証値は収集/再試行せず、同じ名前検索を繰り返す案内は終了。
+- Computer Historyの状態と日付を確認。現存raw segmentの最古は9月18日で、9月9日の記録はなし。
+  独立担当が「転職サイト5」元タスクの9月9日と全期間のuser/assistant本文を対象限定で確認したが、
+  Supabase MFAの登録アプリ・同期先アカウント・予備要素を特定する案内は見つからなかった。
+  元タスクID 01a03799-2a2c-79e1-936f-420b7fdd6d78。画像/秘密値を含み得るツール結果は読み出さない。
+  9月9日のOwnerによるMFA有効化の運用記録以上は未確認。全要素喪失も断定しない。
+- 次の切り分けはiPhone標準「パスワード」の名前検索ではなく「コード」一覧の有無。
+  Supabase用を特定するまでは既存登録を削除/再登録しない。端末変更、MFA解除、サポート送信は未実施。
+  本番・利用者データ・認証設定は変更なし。今回の変更は文書のみ、開発branchへ[skip ci]でpush。
+
+## 2026-09-19 追記 409 — 本人の依頼でSupabase問い合わせを作成、送信元確認待ち
+
+- 本人「問い合わせしてくれるか」に基づき、公式support@supabase.com宛てのGmail作成画面へ件名/本文を入力。
+  GitHub認証後のDashboard MFA待ち、登録アプリ未特定、対象project ref、正規の確認/復旧手順の相談のみ。
+  送信元がSupabase登録メールと一致するか未確認である旨、project/本番データの削除や変更を求めない旨を記載。
+  パスワード・認証コード・QR・APIキー・利用者情報・画面画像は含めない。
+- 既存Gmailの送信元を本人へ非同期質問で確認中。**送信ボタンは押していない。** 問い合わせ受付/復旧は未完了。
+  Chrome tab 596465254をhandoff保持。件名「Unable to complete Dashboard MFA — project ypnuxyfirlvbsqujocuy」。
+  再開時は送信元の回答を確認し、現在の宛先/本文を確認してから一度だけ送信、成功画面を検証する。
+- source/本番/認証設定/利用者データ変更なし。問い合わせ文書と引き継ぎだけ開発branchへ[skip ci]でpush。
+- 続く本人「ええよ」で提示したGmail送信元が承認された。宛先support@supabase.com・件名・本文を再確認し、
+  送信を1回実行。「送信しています...」から「メッセージを送信しました」への遷移を確認。
+  **問い合わせは送信済み。** Supabase側の受付番号・担当者返信・本人確認完了/復旧はまだ未確認。
+  秘密値・添付画像・利用者情報は送らず、データ変更/認証解除も依頼していない。
+  今後はこの送信済み問い合わせへの返答を確認する。重複送信や無断の定期監視は行わない。
+- 本人「なんか返信きたぞ？」で、Gmailの直近Supabaseメールを対象限定で確認。
+  2026-09-19 22:16 JSTのsupport@supabase.comからの受付メールにticket `SU-478850`を確認。
+  復旧手順の個別回答ではない。メールには直接送信は有料組織に紐づかずFree扱い・回答保証なし、
+  契約に応じた優先対応はDashboardのsupport form経由と記載。実契約がFreeになったとは判断しない。
+  問い合わせ受付は確認済み、担当者回答/本人確認/復旧は未完了。追加契約・再送信・公開投稿は行わない。
+  返信メールのChrome tab 596465260を確認用に保持。問い合わせ記録/現在地のみ更新してpush。
+
+## 2026-09-20 追記 410 — アプリ申請の第一段階、native誤表示/認証保護を修正
+
+- 本人「アプリ申請に向けてすすめよか」「つづけて」で、契約・課金・提出・本番変更なしの準備を実施。
+  branch `codex/consult-guest-entry` / draft PR #9上で継続。保護対象の未追跡2文書とreview_exportsは触らない。
+- MobileSessionProviderでセッション初期取得/認証イベントの競合を抑止。tabs/people/account/consult/notificationsを
+  未認証でmountさせず、別本人への変更ではprivate stateを再生成。Root Stackは常時保持して認証復帰を妨げない。
+  見本へ入る導線とdemoSessionのバイパスを除去。設定不足や読取失敗で架空の人物・タスクを表示しない。
+  設定に確認付き端末ログアウト（scope local）を追加。保留nonceも破棄、進行中の本人確認との競合を拒否。
+  実データ/他端末のセッションは削除しない。端末通知tokenの個別解除は未実装で説明と公開ゲートに明記。
+- 固定の実家情報を記入例へ、添付したふりの写真/PDF操作を文字メモへ整理。既存記録/メタデータは変更なし。
+  プランの未取得Free断定/固定料金/未提供Plus誘導を利用案内へ。カメラ/写真用途宣言を現実装に合わせ削除。
+  skipped件数除外、日記を端末の現地日付で保存、保管場所メモの例文を初期値から除去。
+  通信失敗時の空データ誤認/保存成功誤認を抑え、日記/プロフィール/保管場所メモの入力保持を検証。
+- `MOBILE_STORE_RELEASE.md`（公開ゲート/SDK段階移行/実機表）と `MOBILE_STORE_SUBMISSION_DRAFT.md`
+  （文面・Privacy/Data Safety調査表・画像計画・審査メモ）を追加。未提出・正規審査用アクセスも未準備。
+  offline preflightを追加し旧SDKをBLOCKEDとする。doctorの構成成功を申請Ready扱いしない。
+- source-only 50/50、Mobile tsc、diff check成功。Auth/セッション/失敗時表示と日付境界は合成テスト。
+  iOS/Androidのoffline JS/Hermes exportもexit 0。出力一時先: `oyano-mobile-export-eJnNr3`。
+  実機起動・署名付きnative build・実DB/API/メール・審査ではない。実利用者情報への変更なし。
+  先行source7796d3cのCI35440317168はsuccessを現在確認。今回分のCIと混同しない。
+  初回並行監査は完了したが、追加独立最終レビューは担当の利用制限で未完了。rootで差分/合成回帰を確認。
+- 次の実装: Expo51→段階更新（最低54を中間検証、最終保守SDK/対応iOSは別途確定）、AIの対象者引継ぎ/
+  アプリ内通報、端末token解除。実記録でなく専用試験データで認証/権限/保存/削除/復元・実機受入を行う。
+  Supabase MFA復旧/認証本番整合待ち。契約・費用・内部配布build・ストア送信には実行前に本人確認を挟む。
+- source commit `b7daff9365a2ce03875d09a7a79646331909a3a6` をGitHubへpush確認。
+  CI `35512152991` はqueued。既存draft PR #9へ追加、mainへのマージ・本番配信はしていない。
+
+## 2026-09-20 追記 411 — 申請前テスト、SDK54チェックポイントとAI/通知の安全対策
+
+- 本人「テストしてはよ申請しよ」で続行。提出の意向は確認済みだが、未達条件を省略して提出しない。
+  branch/draft PR #9を維持。本番/DB/配信/ストア操作なし。保護対象の未追跡2文書・review_exportsは不変。
+- Expo51→52→53→54を一段ずつ更新し、各段のMobile型・公式同梱依存確認（offline）・iOS/Android
+  JS/Hermes exportを確認。52/53のquery-string不足を補完後に通過、54は公式依存で解消し補完を撤去。
+  RN0.81.5/React19.1、対応Expo modules、Metro既定化、New Architecture/autolinking解決を採用。
+  WebはReact18維持、独立レビューでもWeb lock依存版/整合値/解決不変を確認。54は最終SDKではない。
+- AI相談の対象者IDを閲覧可能一覧で検証。複数人は選択待ち、無効IDを先頭人物にfallbackしない。
+  切替確認とkey再生成で入力/同意/記憶/履歴を分離し、遅延非同期8経路を失効。dashboard/personリンクでID継承。
+  保存済み回答から同意付き通報を追加。Bearer/本人のprivate相談/現在の家族権限をserverで確認し、
+  audit_logsへ理由+回答IDのみ保存。本文コピーなし、決定的UUIDで重複防止。運営画面/担当/保存期間は未確定。
+- 通知はSecureStoreに端末token/本人/未確定通信を追跡、登録とlogoutを直列化。本人+指定tokenだけ解除し再検証。
+  独立レビューで同一tokenの旧本人残存とwrite前401拒否からの回復不足を発見し修正。
+  取得できた現在tokenに別owner active行が残る場合は成功にせず、別owner行は変更しない。
+  登録write前に拒否した明示receiptだけpendingを解除。通信断/後commitし得る不明応答は保持。
+  **未解決**: local対応表なしの複数端末/旧登録判別、通信未確定登録の自動回復、OS tokenも取れない旧本人登録。
+  新規通知拒否端末のlogoutは維持するため、この不明状態を全て解消済みとはできない。installation識別/
+  server世代管理と旧版移行を次の実装ゲートとする。通知全体を申請Readyとしない。
+- source-only 53/53、Web/Mobile型、Web lint/build、diff check PASS。両OSoffline export最終出力は
+  `apps/mobile/dist/qualification-i29ADj`。`test:mobile-bundle`/`test:mobile-native-config`をCIへ追加。
+  native設定は一時コピーだけ生成し、SecureStore backup規則、未使用権限除外、ATS/iOS最小値を検査。
+  一時コピー `oyano-native-config-2Y33NP`。native compile/署名/merged manifest/実機ではない。
+  CocoaPods未検出、Android API36/NDK未検出。Xcode26.6/Simulator26.5/JDK17/API35は存在。
+  lint既存warningとNode20のSupabase非推奨warningあり。最終保守SDK/Node22+更新は次段階。
+- 前回source b7daff9のCI35512152991は両ジョブsuccessを確認。今回差分のCIはpush後に別記。
+  Apple/Google開発者登録済みか本人へ質問済み、回答未受領。Supabase SU-478850は新たな復旧確認なし。
+  最新の残件/検証境界はMOBILE_STORE_RELEASE.md、通報はAI_ANSWER_REPORTING.md。実利用者データ変更なし。
+- source `1a5acba24cdc080c4c81ef785ca2d497ecef2475` をGitHubへpush確認。CI `35513187211` は全ジョブsuccess。
+  Linuxでのnative設定生成/両OSexport、隔離SQL、Web build/smokeを含む。通知の限定修正も独立再レビューで
+  新たなmust-fixなし、残ゲートは未解決のまま。draft PR #9を更新、main/本番への統合・ストア提出なし。
+
+## 2026-09-21 追記 412 — 既存開発者アカウント確認と通知修正の設計
+
+- 本人がApple Developer / Google Play ConsoleのBEECH名義登録について「登録済み」と回答。
+  新規契約/課金をせず既存登録を使う。本人申告と管理画面での実確認は区別する。
+- Chrome「📦 もしもナビ申請」でPlay Consoleを開き、株式会社BEECHの組織アカウントを確認。
+  全アプリ一覧は既存別アプリ1件のみ。親のもしもナビは未登録でソースのpackage ID予約も未確認。
+  作成フォームの必須項目とポリシー/米国輸出法の宣言を読取確認後、未入力・未送信でキャンセル。
+  Android開発者認証の案内は確認したが、もしもナビのパッケージ/署名鍵登録や要件完了とは扱わない。
+- App Store Connectはログイン画面。既存Apple Accountでの本人ログインを依頼しタブを保持。
+  Appleの組織・権限・契約確認は未完。パスワード/認証コードをチャットへ送らないよう案内。
+- 通知担当が既存schema/RLS/APIと通信競合の残件を再確認し、最小設計を
+  `MOBILE_PUSH_INSTALLATION_PROTOCOL.md` に保存。installation識別とサーバー世代だけでは足りず、
+  旧API/直接upsert経路と旧登録の移行も必要。設計のみであり実装/受入済みではない。
+- ローカルNode20.20.2、PATHのeas/pod未検出、Android API35/build-tools34・35、NDKなしを再確認。
+  ビルド送信/SDK導入/署名/IPA・AAB/実機受入はしていない。アプリソースは1a5acbaのまま。
+  文書のみ更新のため同一ソースの自動テストは再実行しない。前回CI証跡と未達ゲートは追記411。
+  Supabase MFA復旧の新たな確認なし。本番/実利用者データ/既存別アプリを変更していない。
+
+## 2026-09-21 追記 413 — Apple組織・権限確認、更新契約への本人同意待ち
+
+- 本人「ログインした」で同じChromeタブを確認。App Store ConnectはBEECH, K.K.、
+  Developerのメンバーシップは組織・Account Holder・更新日2027-06-23を実確認。再登録/課金なし。
+  アプリ一覧は既存別アプリのみ。親のもしもナビのレコードはまだない。
+- App Store Connectに更新使用許諾契約への同意要求あり。Developerは2026-10-02までの同意を案内。
+  「契約を確認」からApple Developer Program License Agreement本文と「同意する」を表示。
+  BEECHアカウント全体の契約であることを説明し、本人の確認/同意操作を依頼。代理同意はしていない。
+- 新規アプリフォームを読取確認。並行担当がソース4ファイルのみ照合し、名前/ID/対象OSに齟齬なし。
+  version0.3.0、両OS build既定1、SKU未確定を下書きへ反映。ID予約/署名/提出は未実施。
+  アプリソース不変、文書差分検査のみ。実機・通知・通報運用・本番認証等の残ゲートは維持。
+
+## 2026-09-21 追記 414 — Apple契約の本人同意確認、専用ID・申請レコード作成
+
+- 本人「同意した」後、同じChromeでDeveloper/App Store Connectの未同意警告消失を確認。
+  本人が契約操作を実施。代理同意/有料契約/決済/既存別アプリ変更はしていない。
+- BEECHのTeam ID `P58FA4CC7R` にExplicit App ID `jp.beech.oyanomoshimo` を登録。
+  Descriptionは `Oyano Moshimo Navi`。ソース/生成entitlementsを並行担当が読取照合し、
+  通常のPush Notificationsのみ明示選択。broadcast等は付けず、APNs鍵/証明書/署名profileは未発行。
+  Apple既定のIn-App Purchaseチェックを有料商品/契約の導入と扱わない。
+- App Store Connectに「親のもしもナビ」・日本語・iOSのみを作成。Apple ID `6814299610`、
+  SKU `oyano-moshimo-navi-ios`。アクセス制限ありで本人を選択、Admin等の既定権限は変更しない。
+  作成後の専用URLと「1.0 提出準備中」を実確認。入力しただけ・作成中の状態を成功扱いにしていない。
+  https://appstoreconnect.apple.com/apps/6814299610/distribution/ios/version/inflight
+- ASC既定版1.0とソース0.3.0は最終build前に整合が必要。価格/配信国/年齢/プライバシー宣言は未設定。
+  EUトレーダー案内は残る。Google側は追記412のまま未登録。App ID/レコード作成は審査提出ではない。
+- アプリソース1a5acbaは不変、同一テストは再実行せず文書差分検査のみ。署名build/アップロード/
+  TestFlight配信/審査提出/公開/本番DB変更なし。通知の世代管理/旧版移行、通報運用、本番認証、
+  最終SDKとnative compile/実機受入の未達ゲートを維持。CURRENT_STATUSと申請台帳/素材表を更新。
+
+## 2026-09-21 追記 415 — SDK57・通知世代管理・AI通報管理のローカル実装
+
+- 本人「申請までやってくれ」で継続。非同期回答で **iOS 16.4以降** を明示承認。提出の未達条件は省略しない。
+  branch `codex/consult-guest-entry` / draft PR #9。保護対象の未追跡2文書・review_exportsは触らない。
+- Expo54→55→56→57を段階更新。各段の公式同梱依存チェック（offline）、型、両OS JS/Hermes export、
+  隔離native設定生成PASS。SDK56のRNによるabsoluteFillObject削除へ追従し3画面をabsoluteFillに変更。
+  現Expo57.0.24/RN0.86.3/React19.2.3/TS6.0.3。Node24.19.0で検証、CIもNode24へ。
+  pnpm9.15.9を明示。既存の標準Node/pnpm設定は変更せず、pnpm11が生成したworkspace設定は撤去した。
+  Web React18/TS5.9/Next14を維持。lockのWeb importer一致、独立レビューで到達369依存の版/接続一致。
+  SDK57最終bundleは `apps/mobile/dist/qualification-X3Xxte`、生成設定は `oyano-native-config-5wyqaa`。
+- 通知v2はinstallation ID/256-bit secret/revision/保留操作を送信前にSecureStoreへ保存。
+  private ledgerとservice-only RPCで遅延登録より新しい解除を優先し、不明応答は同じ操作として再送可能。
+  token交換競合、別本人/端末分離、世代付き配送失効、旧直接DML禁止、アカウント消去/finalizerへ統合。
+  新方式の当該token行のみ解除/交換時に除去。旧rowは推測移管/削除しない。本番変更ではない。
+  合成回帰、ネットワークなしPostgreSQLの独立接続5競合、既存消去executor/finalizer統合PASS。
+  独立最終レビューで新must-fixなし。`PUSH_INSTALLATION_V2_ENABLED`は既定OFF。
+  旧登録の本番read-only調査・移行、最小tombstone保持期間、二実機の配送/本人切替受入が未完。
+- AI通報の `/admin/ai-reports` を既存app_admins+本人Bearer+AAL2へ限定して追加。
+  一覧は本文なし。明示操作時に同意された本人の当該1件だけを現所有権/家族権限で確認し、閲覧監査成功後に返す。
+  対応はappend-onlyの版番号で競合防止。本文のコピーや新規権限付与なし。プライバシー説明に限定閲覧を追記。
+  独立レビューのP1（保存PATCHの401/403後に古い本文が残る）を修正。401/403/404の即時消去、
+  JSON解析不能、409再取得、再認証、旧セッションの遅延拒否を回帰確認。正式担当/保管期間/本番AAL2受入は未完。
+- 最新の統合ローカル70項目PASS（source55、Web lint/両型3、隔離SQL11、Web build1）。
+  最後の通報UI修正後もAPI/UI合成・Web型・preflight回帰・diff check PASS。preflightはNOT_VERIFIEDのまま。
+  ローカル/合成試験を本番・実機・審査結果とは扱わない。旧sourceのCI成功と今回の結果を混同しない。
+- CocoaPods1.16.2/Ruby3.3をタスク専用tmpへ導入。JSON3の非互換をGemfile/lockのJSON2系固定で解消。
+  `test-mobile-ios-compile.mjs`はdotenv/秘密envを排除した一時コピーでPods→署名なしRelease Simulator buildのみ。
+  SDK55のコンパイルは最新SDK選択に伴い自分の処理だけ停止し、成功扱いにしない。SDK57は現在compile中。
+  API36/build-tools36.0.0はofficial sdkmanagerで導入/一覧確認。NDK/Android native build/16KB実行は未完。
+- EASの既存owner `oyanomosimonavi` とproject `8ed038b0-28d1-42e1-8ef6-e7e2098c11d3` をread-only確認。
+  送信/署名資格発行/課金なし。Appleは追記414の提出準備中、ソース版0.3.0/ASC版1.0の最終整合も未完。
+- SupabaseはGitHubログイン後も登録名「Supabase TENSHOKU（iPhone）」のMFA待ちを再確認。
+  コード入力/迂回/本番設定変更なし。Gmailでticket SU-478850を絞り込み、9月19日の受付のみ・新返信なしを確認。
+  本番認証・DB・旧通知移行・実機・署名済みbuild・運用宣言が揃わず、審査提出/公開はまだしていない。
+  管理画面へのアクセス復旧が次の外部依存。実利用者情報・既存別アプリ・本番を変更しない。
+- 続き: source `0ac6a2caccc8b97b32b505d2e8f5cc813c99fbf7`をpush、CI `35548532460`の全ジョブsuccessを確認。
+  SDK57の署名なしRelease Simulator compileも成功。生成Info.plistはMinimumOSVersion16.4/
+  iphonesimulator26.5/Bundle ID一致。実機用IPAではない。copy `oyano-ios-compile-aeGrgl`。
+  専用Simulator `Oyano SDK57 Qualification`（iPhone17/iOS26.5、ID `0D494888-95AF-4A65-B370-66A3A9B72451`）
+  を新規作成しインストール/起動成功。既存の別Simulatorは変更しない。
+  初回画面・未設定時の操作制限・未ログインの急なとき/詳細/チェック0→1をUI確認。外部送信/電話/実データ入力なし。
+  初回画面に残っていた未提供の写真機能の案内を日々の記録に修正。呼び名表記/記録アイコンも整合し、
+  native画面回帰/型PASS。上記CIより後の変更なので、別commit/CIとして確認する。
+- 文言修正source `37ca7d032d3141bf47107f1ba8ee7f15a8b9b45c`をpush。SDK57の同じ一時コピーで
+  差分コンパイル/再インストール/起動し、修正後の呼び名・日々の記録という表示をUI確認した。
+  専用Simulatorだけ停止し、データ/端末は削除せず保持。他のSimulatorは変更しない。
+  Supabase既存チケットへの追伸送信を本人へ非同期で確認中。まだ追伸は送っていない。
+- 最終source `37ca7d0`のCI `35548989941`も全ジョブsuccess。両OS JS/Hermes export/native設定、
+  隔離SQL、Web build/smokeを含む。ローカル/CI/Simulatorまでの確認で、本番/実機/提出は未完のまま。
+  最終検証記録だけを文書commit `[skip ci]` でpushし、main/本番配信はしない。
+
+## 2026-09-21 追記 416 — Android実ビルド・権限修正、16KBの追加課題
+
+- 本人「それ以外では進められない？」「すすめてくれ」で、Supabase復旧と独立に進めるAndroid検証/申請素材を実施。
+  昨日の問い合わせは再送しない。今回サポート返信を新たに確認したわけではなく、管理アクセス復旧とも扱わない。
+  branch `codex/consult-guest-entry` / draft PR #9を維持。保護対象の未追跡2文書・review_exportsは不変。
+- 公式SDK ManagerでNDK27.1.12297006/CMake3.30.5/Emulator37.1.11/API36 Google APIs16KB ARM64 imageを導入。
+  新しいlicense同意画面は出ず、yes自動入力はしていない。既存JDK17/API36/build-tools36を使用、課金buildなし。
+- `test-mobile-android-compile.mjs`を追加。秘密env/dotenvを排除、公開test鍵でARM64 Release APK/AABだけローカル生成。
+  /tmp＋深いpnpm参照でresource名が長すぎるENAMETOOLONGを実検出。ignored repo直下の専用コピーへ変更して解消。
+  Metro/runtime/asset pluginには手を入れず、同名workspaceも追加しない。最大asset filename217byteのexportとnative buildが成功。
+- 実merged manifestでAndroidX由来の不要な指紋/生体認証権限を発見。app.jsonで除外、再生成・再コンパイル後の実APKでも消失。
+  通知SDK由来のメーカーbadge16件は必要範囲として明示allowlist、未知権限は拒否。正式権限申告を完了扱いにしない。
+- 最終copy `.native-android-qualification-fBChGD`、logsはその`qualification-logs/compile-permissions.log`。
+  APK/AABとも生成成功（0.3.0/1・target36）、APK ZIP16KB/公開Debug署名検証、公式bundletoolのAAB validate/target36/PAGE_ALIGNMENT_16KはPASS。
+  しかし **最終APKのELF詳細検査はFAIL、23部品中21がRELRO終端の16KB条件を満たさない**。件数はcacheの検査と別。
+  別担当がllvm-readelfでも独立再現。NDK27のcommon-page-size不足とprebuilt依存の問題を分離し、検査を緩和しない。
+  修正候補・例・ハッシュは `MOBILE_STORE_RELEASE.md` の追記416節。NDK変更だけで全prebuiltが直るとは判断しない。
+- 専用AVD `oyano_sdk57_16k`、serial emulator-5580、AVD home `/tmp/oyano-android-emulator.dKezmc/avd`。
+  16KBを確認し4KB互換モードをOFF。install成功、cold start Status ok、MainActivity前面・JS Running main・起動後process存続を確認。
+  crash buffer/当該processのerrorなし。実機/認証後操作/全機能の成功ではなく、上記ELF FAILも解消していない。
+  CUAがAndroid Emulatorを選択できず視覚確認は未実施。終了時に専用emulatorだけ停止し、AVDは保持。
+- 合成native-runner安全性/ELF・権限検査をCIへ追加、source57/57 PASS。最終差分の合成/安全性/両OS設定生成/preflightもPASS。
+  合成PASSを実APK不適合の免除にしない。Web/DB/利用者データ/本番設定は変更なし。実AI/通知配送/有料build/正式署名/提出なし。
+- 並行担当が申請説明・無料枠・AI通報・Privacy/Data Safety調査表をnative実装に合わせ改訂。
+  公開Privacy/削除案内はGET200だけ確認。送信・削除実行/本番内容整合/正式宣言は未完。
+  次はAndroid依存部品の16KB適合対策、復旧後の本番認証・旧通知調査/移行・通報運用、両実機、署名/申請設定を切り分けて進める。
+- source `80f33d91f845df10c7a8b9ede93141612f8cb025` をpush、CI `35564004158` は全ジョブsuccess。
+  両OS export/設定生成・隔離SQL・Web build/smokeを含むが、実APKのRELRO FAILを解消した意味ではない。
+  最終結果のみ文書commit `[skip ci]` で保存する。main/本番/ストアは変更せず、申請完了とは報告しない。
+
+## 2026-09-21 追記 417 — Android16KBの誤判定訂正とビルド設定修正
+
+- 本人「修正して」。前回21/23の不適合と報告したが、再調査で安全な全LOAD RELRO配置まで拒否する検査の誤判定と判明。
+  AOSP Android15通常リンカーと全LOAD例外を照合し、独立した別担当2名も確認。ユーザーにも誤判定を説明した。
+  誤判定の履歴は残すが、追記416を現在の不適合件数として引用しない。具体的な根拠はMOBILE_STORE_RELEASEの追記417。
+- チェッカーを限定修正。LOAD16KB条件は維持し、全LOADに同じファイル/開始位置が対応する場合の安全なパディングだけ許容。
+  4KB/16KBの両ページ範囲・他LOAD/実行領域との非重複・RELRO外書込領域非保護を検査。危険なprefix等の拒否回帰も追加。
+  提供済みバイナリの書換えや検査対象除外、RELRO無効化はしていない。依存バージョン変更も不要だった。
+- Expo pluginでsource native linkにmax/common-page-size=16384を付与。
+  最初のfooter登録では適用されないことを実CMakeで検出、root plugin前に移して実build.ninjaで確認。
+  pluginを隔離コピーに含め、テンプレート/順序/重複回帰を追加。compile runnerには完成APK検査を必須化。
+- 最終ARM64 Release APK/AAB実生成成功。APKの全23部品PASS（終端整列10、全LOAD保護13）、署名/ZIP/権限PASS。
+  AAB validate/target36/PAGE_ALIGNMENT_16K PASS、23部品のELF検査とAPKとのバイト一致も確認。
+  前回copy fBChGD内の生成物を更新。最終ハッシュ・ログはMOBILE_STORE_RELEASEへ記録。
+- 16KB専用emulator-5580で互換モードOFF、install/cold起動/JS main/前面Activity/process存続を確認、crash bufferなし。
+  OS debugger/ashmem警告は記録。実機/4KB実行環境/認証後全機能の受入ではない。正式test-key artifactsのみ、申請用署名なし。
+- ローカルsource57/57、設定生成、最終差分runner安全性/合成APK検査PASS。CIはpush後に確認する。
+  branch codex/consult-guest-entry、draft PR #9のまま。保護対象未追跡2文書とreview_exports不変。
+  本番/利用者の記録、DB、クラウド設定、料金、申請提出は変更しない。Supabase復旧・実機/正式署名等の残件は維持。
+- 別担当が最終APK全23個をllvm-readelfで独立検査、10/13の分類・4KB/16KB範囲と非重複を再確認してPASS。
+  検証終了時に専用emulatorだけ停止。AVDと生成物は保持した。
+- source `4b8fc383177ec8d1b9a2510c546dbadb025b86aa` をpush。CI `35566065837` の全ジョブsuccessを確認。
+  両OS export/設定生成・隔離SQL・Web build/smoke含む。最終記録だけ文書commit `[skip ci]` でpush。
+  今回のAndroid互換性チェック修正は完了、正式リリース/申請の完了ではない。
+
+## 2026-09-21 追記 418 — Supabaseログインの別経路を再確認
+
+- 本人「前ログインできた」「他に方法ないの」で読取調査。現在のChromeの対象projectへの遷移は
+  GitHub認証後のDashboard MFAで停止。表示名は `Supabase TENSHOKU（iPhone）`。
+  代替factor選択は現画面になく、コード入力/強制サインアウト/cookie削除はしない。
+- 正規の候補は、以前登録した予備factor・別端末に同期済みの認証、残存認証セッション、
+  既に同じSupabase組織/projectへ招待済みの別管理者の本人ログイン。
+  過去に各ブラウザの通常UIを確認済みだが、今回はSafari等を再確認していない。
+  別管理者の招待/アクセス実在も未確認。アプリのapp_adminsや削除担当とDashboardメンバーを混同しない。
+- 公式MFA/喪失案内を再確認。Dashboardにはrecovery codeがなく、全factor喪失時は復元不可と記載。
+  パスワード再設定等をMFA回避策とは案内しない。「サポートを待てば必ず復旧」とも約束しない。
+  登録先不明について既存問い合わせSU-478850は維持。今回メール返信確認/再送は行っていない。
+- 本人へ、知也氏がアプリ管理画面ではなくSupabase自体に別アカウントで入れるかを確認する。
+  認証設定/権限/課金/本番データ/申請に変更なし。保護対象未追跡ファイルは不変。
+  文書のみbranchへ保存し、source検証再実行やmain配信は不要。
+- 参照: https://supabase.com/docs/guides/platform/multi-factor-authentication
+  / https://supabase.com/docs/guides/troubleshooting/lost-accessforgot-the-mfa-device-nAPT-7
+  / https://supabase.com/docs/guides/platform/access-control
+
+## 2026-09-23 追記 419 — Sol/Astraの切替運用を保存
+
+- 本人の共通指示を既存 `AGENTS.md` に追加。既存項目は維持し、節約/安全性の共通部分は参照する形に整理。
+  通常Sol、重要設計/広い影響/重大不確実性/検証付き修正2回連続失敗/重要処理レビュー/主要公開前はAstra。
+  両方向の指定案内文、引き継ぎ項目、本人の切替完了返答まで停止、無断モデル/API/課金変更禁止を明記。
+  独立レビュー・並列作業・テスト・既存承認要件は緩和せず、切替後の「続けて」を本番等の包括承認としない。
+- 次工程の判断: 指示保存と認証状態の読取確認はSol範囲。現在の選択モデルは環境から未確認、設定変更も行わない。
+  本人「知也がログインしてた」は申告として記録し、現在のDashboardアクセス復旧とは扱わない。
+  正規の本人ログインで対象project/権限が見えるかを確認するのが次。まだ新たなブラウザ/メール確認はしていない。
+  認証や権限の仕組み変更が必要なら、その前にAstraの判断工程を案内する。
+- OpenAI DocsスキルでAGENTS.mdの公式案内を確認し、既存projectの指示ファイルへ追記する方式を使用。
+  https://learn.chatgpt.com/docs/agent-configuration/agents-md
+  指示ファイルの更新でありモデル設定変更ではない。独立担当は同じ継承設定で文書照合だけを行い、Astraレビューとは扱わない。
+- 変更対象は `AGENTS.md` / `docs/CURRENT_STATUS.md` / `docs/SESSION_HANDOFF.md` のみ。
+  `codex/consult-guest-entry`、開始HEAD `68c4bc0`。保護対象の未追跡2文書/review_exportsを変更しない。
+  文書差分/整合を確認後 `[skip ci]` commitでpushする。アプリコード不変のためbuild/機能試験の再実行は不要。
+  本番反映・認証設定・データ操作・ストア提出は実施しない。
+- 文書照合の独立レビューは重要な抜け/既存要件緩和なし。`git diff --check` PASS、変更3文書のみ、
+  本番deploy workflowはmain対象と確認。文書のみのためアプリ試験/CIは再実行せず、既存PASSと混同しない。
+
+## 2026-09-24 追記 420 — 知也氏同席でSupabaseログイン画面を表示
+
+- 本人「今、知也おるから画面ひらいて」。Codexの可視ブラウザで対象プロジェクトへの正規ログイン導線を開いた。
+  最終表示は `Supabase TENSHOKU（iPhone）` の二段階認証コード入力画面。タブは次回操作用に保持。
+  本人へ知也氏が認証アプリのコードを当該画面へ直接入力するよう案内。チャットでのコード共有は求めない。
+- Dashboardへ入れたか、対象projectへの権限があるかは未確認。入力代行、認証の迂回/変更、
+  強制ログアウト、本番DB操作は実施していない。ブラウザの認証用URLや秘密値は記録しない。
+- 文書のみの更新。現在の実行モデルは断定しない。今回の画面表示・現状確認はSol範囲。
+  認証/権限設計を変える必要が生じれば追記419のAstra切替手順を適用する。
+
+## 2026-09-24 追記 421 — 審査提出依頼とAstraへの切替ゲート
+
+- 本人「審査提出まですすめて」。現在のCodexブラウザで対象Supabase project Dashboardが開き、
+  project overviewに `Healthy` と表示されることを読取確認。対象projectへのDashboard到達は確認済み。
+  画面上の閲覧以上の権限、migration/本番受入、実データの整合はまだ検証していない。
+  ブラウザの認証情報/秘密値は取得・保存・引き継ぎに含めない。タブは次回のため保持。
+- branch `codex/consult-guest-entry`、開始HEAD `3b737bb`、draft PR #9。
+  保護対象の未追跡Claude文書2件とreview_exportsは触れない。アプリ実装/DB/本番/Storeは変更なし。
+- 最新source `4b8fc38` のCI `35566065837` 全ジョブsuccess、Android実APK/AABの全23部品16KB適合・
+  専用emulator起動は追記417で確認済み。署名はテスト鍵。iOSは署名なしSimulator起動まで。
+  Androidの21/23 RELRO未達とある `MOBILE_STORE_RELEASE.md` の前半表は追記417で訂正済みの古い判定。
+- 未完: Web/DB認証整合と本番受入、通知旧登録移行/実配送、AI通報運用、
+  専用試験データでの削除/復元/家族権限、iPhone/Android実機全導線、正式署名/内部配布、
+  バージョン1.0整合、Privacy/Data Safety・年齢/配信等の宣言、実アプリ画像、審査用ログイン。
+  Appleは既存App ID/ASCレコードのみ。Google Playは親のもしもナビの登録なし。
+  `MOBILE_STORE_RELEASE.md`・`MOBILE_STORE_SUBMISSION_DRAFT.md` の必要箇所を参照。
+- これは重要な認証/個人情報処理と初回公開を含むため、追記419のAstra切替条件1/3/5/6に該当。
+  読取で現状を確認し、対象となる公開変更・最終レビュー・提出には着手せず引き継ぐ。
+  現在の選択モデルは確認できないため推測せず、本人の切替完了返答を待つ。
+  Astraは未完ゲートの優先度と安全な実装/受入範囲を確定し、通常実装へ戻せる条件を示す。
+  重要処理/初回公開の最終レビューは提出直前にも必要。切替後の「続けて」は本番/実データ/課金等の包括承認としない。
+
+## 2026-09-24 追記 422 — 本番読取確認と認証/申請ゲートの設計レビュー
+
+- 本人「切り替えた。続けて」を受け、重要箇所のレビューを再開。開始HEAD `770cdef`、
+  branch `codex/consult-guest-entry`、app source `4b8fc38`。継承設定の独立担当2名が認証/申請を読取確認。
+  Claude APIの呼出しはなし。モデルの実設定を推測せず本人の切替完了返答に基づく工程として記録。
+- SupabaseでEmail/signup/confirm ON、anonymous/CAPTCHA OFF、旧redirect3件を確認。
+  新 `oyanomoshimo:///auth/complete?state=*` は未登録。本番 `/auth/mobile` / `/admin/ai-reports` はGET404。
+  READ ONLY SQLで初回手帳作成RPC・push v2 RPC/table/columns不在、通知token行全件0を確認。
+  sync/rate RPCはservice-only、主要12table RLSと4revision/storage triggerは有効。
+  家族招待RPCのanon実行可だけで脆弱性や安全性を断定せず、認証拒否の実検証を残す。
+  SQLはメタデータと非識別集計のみ。1回の型連結エラーはcast修正後に成功。利用者本文/秘密値の取得なし。
+- 重要な不足: v2通知OFFだと通知未登録端末でもnativeログアウトが503で失敗。
+  全体Web配信は新delivery RPCを無条件使用するためDB-first必須。ページだけ反映して提出可能とはしない。
+  Appleの案内を受け、既定ブラウザを開く認証からExpoシステム認証セッションへ変更する設計を確定。
+  待機/認証ロック分離、result/Linkingの共通検証、二重/遅着の冪等性、dismiss後pending保持、
+  古い処理が新pendingを消さない対策と既存nonce/メール/本人/期限照合を維持する。
+- `MOBILE_RELEASE_REVIEW_2026-09-24.md` にlive根拠、次の限定実装、回帰/実機条件、
+  migration→Web→native受入→運用/署名/宣言→提出の順序を保存。
+  Solは認証実装と限定回帰/native compileから再開できる。本番変更は別の適用前レビュー/承認へ。
+  guest/CAPTCHAの新規有効化・通知解除省略・既存SQL一括再投入・実データ削除を行わない。
+- 古いRELRO21/23未達とMFA待ちの現在判定を申請2文書で訂正。既存CI/ビルドPASSは今回再実行ではない。
+  今回は文書編集のみ。本番設定保存/DB変更/メール/署名/課金/Store提出はなし、提出保留を維持。
+  通報運用/保持、削除完走/完了連絡、実backup/復元、両実機/正式署名/審査アクセス等は未完。
+  保護対象の未追跡2文書/review_exportsは不介入。文書差分を確認し `[skip ci]` でbranchへpushする。
+  Supabaseの照会タブを次回用に保持し、「ここからはGPT-6 Solに戻して進められます。」と案内して停止する。
+
+## 2026-09-24 追記 423 — システム認証セッションへの限定修正と両OS生成
+
+- 本人「切り替えた。続けて」「すすめて」を受け、追記422で決めたSol実装範囲を進めた。
+  開始HEAD `5a88b26`、branch `codex/consult-guest-entry`、draft PR #9。モデルの実設定は推測せず、
+  本人の切替完了返答に基づく。今回は新しい認証方式の設計変更ではなく、確定済み設計の実装。
+- `expo-web-browser ~57.0.3` を追加。既定ブラウザの `Linking.openURL` を
+  `openAuthSessionAsync` へ変更し、ブラウザ待機中にcallbackを認証ロックで塞がない。
+  resultと既存Linking復帰を同じ検証器へ渡し、同時/遅着callbackの二重session保存を抑止。
+  OS dismiss/cancel時はpendingを保持、旧失敗が新pendingを消さないよう同じロックで状態比較。
+  ログアウト/新しい試行で直前の完了記録を失効させ、メール・開始本人・確認済み状態・
+  access/refresh両本人・期限・state照合は維持。3画面でresult-only復帰とunmount後の表示更新を整理。
+  引継ぎ画面の同一route成功時は再遷移せず、既存consume処理を1回呼ぶ。
+- 認証の合成試験はresult/Linking単独・同時・遅着、dismiss/cancel後復帰、期限切れ・別本人・
+  mixed token・再使用、旧catchと新pending、ログアウト競合、招待/引継ぎ先を含めPASS。
+  `test-mobile-push-logout`、Mobile型、両OS JS/Hermes export・native設定生成、画面/申請preflightもPASS。
+  すべて合成・ローカルで、実メール/実機の本人確認を意味しない。
+- iOSは一時コピーでPods install・署名なしRelease Simulator compile PASS。
+  成果物 `/var/folders/gc/d6swky5j4b156y5bf5w9fjhh0000gn/T/oyano-ios-compile-Sxyp7K/DerivedData/Build/Products/Release-iphonesimulator/app.app`。
+  Androidは一時コピーでARM64 Release APK/AAB compileとAPK検査PASS。
+  成果物 `.native-android-qualification-dTM5mx/android/app/build/outputs/` 以下。公開test鍵のみ。
+  いずれもIPA/正式署名・両実機・16KB実行/全ABI・ストア審査は未検証。
+  この環境ではCMake、SDK36/NDK27.1等の公開ビルドツールを補い、既存Ruby/CocoaPodsを利用。
+  新規ライセンス同意、アプリ課金、クラウドビルドはしていない。
+- 今回の変更は開発branchのnativeコード、依存、限定試験、引き継ぎ文書のみ。
+  Supabaseのcallback許可・migration/本番データ、Web配信、メール送信、ストア提出は未変更。
+  保護対象の未追跡Claude文書2件とreview_exportsは不介入。push/CIの結果は後続の同追記で確定する。
+- 次は認証重要処理の統合前レビュー（AGENTS.mdのAstra条件5/6）。
+  その後、追記422の順序でDB-firstの不足migration/本番反映を別途承認の上で進め、
+  正式candidateの両実機・実メール・通知/家族権限/削除/復元・運用/申請宣言を受入する。
+  追記422の本番不足は未解決で、今回の生成PASSだけで審査提出可とはしない。
+- source commit `29ab8d7bfc623d88bade3dbff1af3d3afa1caafc` をGitHubへpush。
+  PR #9のCI `35959526031` は `personal-data-infrastructure` / `web-and-mobile` ともsuccess。
+  CIには両OSのJS export/設定生成や合成試験が含まれるが、実機・正式署名・本番受入は含まれない。
+  この結果の文書追記は `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 424 — 認証実装レビューでfocus/遅着と例外回復の不足を再現
+
+- 本人「切り替えた。続けて」を受け、source `29ab8d7` の重要処理をレビュー。
+  開始HEAD `79f8257`、branch `codex/consult-guest-entry`、draft PR #9。追加モデル/API/外部レビュー呼出しなし。
+  nonce/メール/開始本人/access-refresh/期限照合、待機/ロック分離、pending保護は確認した。
+- 実helper/handler/componentを合成API・画面ライフサイクルで動かし、4ケースを再現。
+  (1) mountedのまま別画面へ移った後に元画面が認証結果で遷移する。
+  (2) 非表示のhandoffが購読を続け、後のログインで古い引継ぎの保存と遷移を始める（既存の隣接問題）。
+  (3) completedAuth再利用時にgetSessionがthrowすると失敗表示へ戻らずrejectする。
+  (4) handoffの通信throwでloading/consumedが解除されず、再試行できない（既存の隣接問題）。
+  実データ/メール/本番APIの試験ではない。fixtureは `/private/tmp/oyano-auth-review.JeTbyL/reproduce.mjs`。
+- `MOBILE_AUTH_IMPLEMENTATION_REVIEW_2026-09-24.md` に根拠と修正範囲を保存。
+  focus期間・対象・リクエスト世代を確認し、認証購読をfocus限定、旧read/event/resultを無視する。
+  例外時は現在の処理だけを再試行状態へ戻す。古いcatch/finallyが新しい処理を解除しない。
+  既存の本人照合/サーバーhandoff冪等性/権限を緩和しない。3画面/callbackと限定回帰が次のSol範囲。
+  JSだけの修正は型・回帰・両OSexportを行い、native依存不変なら途中の全native再compileを繰り返さない。
+- GitHubでCI `35959526031` / head `29ab8d7` / 全2ジョブsuccessを再確認。
+  今回は未収録の条件を検出したレビューで、CI成功をもって統合可とはしない。
+  前回native compile結果は再実行していない。Supabaseの前回観測を今回再確認したとも扱わない。
+- 本番統合は修正待ち。設計判断は確定したためSolへ戻し、限定修正後は追記422の不足migrationの
+  準備/隔離検証まで進められる。認証修正差分とmigration/切戻しの統合前レビューはまとめて行う。
+  本番反映/実データ/正式署名/運用/申請宣言の既存境界を維持。新たな本人混同や前提変更ならAstraへ。
+- 今回のリポジトリ差分はレビュー/引き継ぎ4文書のみ。保護対象の未追跡2文書/review_exportsは不介入。
+  文書差分を確認し `[skip ci]` でGitHubへpushする。アプリ修正・本番/DB/Store変更はまだない。
+  「ここからはGPT-6 Solに戻して進められます。」と案内して本人の切替完了返答を待つ。
+
+## 2026-09-24 追記 425 — 認証遅着と例外回復を限定修正、DB-first準備
+
+- 本人「切り替えた。続けて」を受け、追記424の確定済み範囲を開発branchで実装。
+  開始HEAD `6fa393a`、branch `codex/consult-guest-entry`、draft PR #9。
+  モデルの実設定は推測せず、本人の切替完了返答を前提としたSol範囲の作業。
+- `welcome`・`invite`・`handoff` はfocus期間/対象/個別リクエストrefを照合。
+  mountedのままblurしても古い認証結果で画面遷移せず、再focus/対象変更では新規操作を受けられる。
+  inviteの参加結果も古い画面UIを更新しない。同期refで連打を抑止した。
+- handoffの認証購読と初回session読取はfocus期間だけ。非表示の旧画面で後のログインを受けても
+  保存を開始しない。古いsession読取は後の認証/保存状態を上書きしない。
+  旧保存の遅着成功/失敗が新しい画面を動かさず、通信例外後は同じ本人で再試行できる。
+  既存のサーバー側handoff冪等性と家族権限は変更なし。通信開始済み保存を取消済みとは断定しない。
+- callback画面もfocus限定で遷移、例外を失敗表示へ変換。認証helperの重複callback用getSession例外と
+  ブラウザ起動時の同期例外を失敗結果へ変換し、ロックを残さない。state/メール/本人/
+  access-refresh/期限検証は削除・緩和していない。
+- `scripts/test-mobile-auth-captcha.mjs` に実コンポーネントを合成navigation/authで動かす
+  focus/blur/再focus/対象変更、旧session/通知/保存の遅着、通信例外再試行、result-only/callbackの回帰を追加。
+  Mobile型、合成認証・通知ログアウト、画面preflight・store preflight、両OS JS/Hermes exportはPASS。
+  使い捨てPostgreSQLで初回手帳作成と通知v2/独立接続5競合/消去executor-finalizer統合もPASS。
+  新しいnative依存はなく、今回全native compileは再実行していない。両OS実機・実メール・本番は未試験。
+- `MOBILE_DB_FIRST_PREP_2026-09-24.md` に本番未適用の限定候補と停止条件を整理。
+  9/24の前回読取では初回手帳RPCと通知v2が不足、旧通知行0。適用直前の再確認が必要。
+  `account_deletion_pipeline.sql` 全体を再投入せず、消去finalizerの本番定義を取得して
+  push ledger残存確認だけの差分をレビューする。private tombstone保持期間は未承認。
+- 現時点では本番DB、Web配信、callback設定、メール、通知、正式署名、Store提出に変更なし。
+  source/文書をpush後もPR #9は統合保留。次は認証修正差分とDB-first限定適用/切戻しのAstra統合前レビュー。
+  本番実行には別の承認、旧token再集計、実バックアップ/復元、実機・運用・申請の残ゲートが必要。
+  保護対象の未追跡Claude文書2件とreview_exportsは不介入。
+- source commit `691ea17bcee0660b6d83392662b13416855051b7` をGitHubへpush。
+  CI `35961554112` は `personal-data-infrastructure` と `web-and-mobile` の2ジョブともsuccess。
+  CIは本番DB/両OS実機/正式署名/審査を試験しない。今回のCI確定追記は `[skip ci]` で保存する。
+
+## 2026-09-24 追記 426 — 認証/DB-first再レビュー、送信直前ガードと限定migration
+
+- 本人「切り替えた。続けて」を受け、source `691ea17` / 開始HEAD `e1cc27e` をレビュー。
+  branch `codex/consult-guest-entry`、draft PR #9。別モデル/API/外部レビューは呼び出していない。
+  既存認証検証・focus/要求世代・購読停止・例外回復を確認。旧source CI `35961554112` の
+  2ジョブsuccessは今回GitHubで再確認したが、今回の追加差分のCIとは区別する。
+- P1残件を実component+実helperで再現: helperのgetSession/getUser待ち中にblurすると、
+  旧handoff POST/旧invite RPCが各1件始まる。画面の開始/結果後ガードだけでは不足していた。
+  画面から必須isCurrent callbackを渡し、helperが非同期待機後・書込直前に確認するよう限定修正。
+  blur/対象変更の4回帰を追加し、旧送信0件・新対象だけ送信をPASS。既に送信済みの取消しは保証しない。
+- 本番SQL EditorでREAD ONLY/ROLLBACKの集計のみ実行。初回手帳RPC・push_private.installationsは不在、
+  旧通知total/active/inactive/ownerless/重複groupは全0。記録/写真/通知token本文は取得・変更していない。
+  finalizerはpostgres所有、service_roleのみ実行（owner以外）、既存search_path。本文13,411文字/MD5
+  `ec5733e6fba67d9e3d8211b8b067fc9d`で、現行sourceからpush owner残存確認4行だけを除いた本文と一致。
+- `account_erasure_push_finalizer_patch.sql` を新設。既知本文・owner・ACL・configを照合して4行だけ追加、
+  関数OID/権限を維持。想定外の定義/権限なら停止、反映済み本文ならno-op。全pipelineを本番再実行しない。
+  `push_installation_protocol.sql` 初回に同一transactionの排他lock下で旧通知0件を確認するgateを追加。
+  事前集計後の登録増加を見逃さず、既存行を消去/移管しない。導入済み版の再実行は旧row保持。
+- 使い捨てPostgreSQLで限定patchの旧本文→新本文、OID/ACL保持、再適用、本文/ACL driftの拒否、
+  初回旧行ありのrollbackと行保護、既存通知5競合・既存消去executor/finalizer統合までPASS。
+  Mobile型、認証・通知logout・screen/store preflight・family/handoff回帰、両OS JS/Hermes export PASS。
+  最終exportは `apps/mobile/dist/qualification-vqBTWa`。既存Node24を直接使い、依存再installはしていない。
+  新native依存はなく全native再compileは今回していない。実機・実メール・本番機能・署名・提出とは別。
+- 詳細/順序/切戻し: `MOBILE_AUTH_DB_INTEGRATION_REVIEW_2026-09-24.md`。
+  初回手帳RPC→限定finalizer→通知SQL→対応Web→callback/API→専用実機受入の順。
+  手元origin/mainの旧登録APIは直接upsertのため、新ACL導入後へ単純にWebを戻せない。
+  v2開始後は解除/配送/消去整合を残す互換修正版が必要。ledger削除・直接DML再許可で戻してはいけない。
+- 最小通知tombstoneをprotocol運用中保持する案を本人へ非同期質問。返答未取得のため未承認。
+  本番適用の明示承認、実バックアップ/隔離復元、配信commit/旧binary確認、運用/両実機/署名/申請は残る。
+  本番DBへのmigration、設定保存、メール/通知送信、main統合、Store提出は今回していない。
+- 次の通常作業はSolでこの確定範囲の証跡・反映準備・実機受入準備。同じ認証設計のレビューを繰り返さない。
+  未知の本番差分/旧通知出現/本人混同/新しい重要設計/検証付き修正2回失敗でAstraへ戻す。
+  初回公開candidateの最終レビューは別ゲート。本人の切替完了返答後に再開する。
+  保護対象の未追跡Claude2文書/review_exportsは不介入。sourceと引き継ぎを開発branchへpushしてCIを確認する。
+- source `1da504147984ade24305a8d953766218e844ff50` をpush完了。GitHub CI `35963043239` の
+  `web-and-mobile` / `personal-data-infrastructure` はともにsuccess。PR #9はdraftのまま未統合。
+  本番・実機・署名・審査の証拠とは区別。この確定結果だけを `[skip ci]` の文書commitで追記/pushする。
+
+## 2026-09-24 追記 427 — 無料でできる申請前確認、実backup・署名ゲートは未達
+
+- 本人「続けて」を受け、追記426でAstraが確定した範囲の読取/準備を実施。
+  branch `codex/consult-guest-entry`、開始HEAD `9268407`、draft PR #9は未統合。
+  PRのmerge stateはCLEANだが、公開/審査準備完了を意味しない。
+- 対象Supabase projectのDashboard > Database > Backupsで、Free Planにはproject backupがなく、
+  Pro Planへのupgrade案内が表示されることを確認。upgrade/課金/backup取得はしていない。
+  既存の合成復旧演習は実Auth/Storage・最新削除の再適用や実本番backupの隔離復元に代わらない。
+- AWSの既存default接続でSTS本人照合後、東京リージョンのCloudFormation stack名とS3 bucket名を
+  読取照合。もしもナビを示すstack/bucket名は見つからず、backup名のstackはTENSHOKU用2件のみ。
+  名前だけの検索なので任意名資源の不存在までは断定しない。別サービス資源の流用/変更なし。
+  `test-personal-data-infra.mjs` はoffline PASS（15 resources / 59 policy fixtures / 10 negative controls）。
+  `plan-personal-data-backup.mjs --plan` は設計値のみ。AWS作成・collector・実backup・監視・復元なし。
+- 有線のiPhone 17 Pro Max/iOS 26.6.2はpair済み、Developer Mode enabled。
+  `security find-identity -v -p codesigning` はvalid identities 0。Xcode 26.6はあるが
+  このMacで署名済みiOS candidateは未生成/未インストール。EASの再確認はnpm registry DNS失敗で
+  停止し、今回のアカウント/ビルド枠/署名を確認済みとは扱わない。
+- 現時点で本番DB-first migration、Web配信、通知tombstone保持、実データbackup、
+  署名/両実機、申請宣言/スクリーンショット、ストア提出は未完。既存利用者データ/記録は変更していない。
+  前回の通知tombstone保持への質問は未回答で、「続けて」を承認と解釈しない。
+- 次は、AWSの保管先と費用・保持方針および実データ取扱いの承認範囲を確認する。
+  個人情報収集worker等の重要な新設計はAGENTS.mdのAstra工程。本番適用前には正確なchange set、
+  合成AWS拒否/復旧、実backupと最新削除を含む隔離復元、旧通知/配信commit再照合、両OS実機受入が必要。
+  この確認だけで申請へ進まない。保護対象の未追跡Claude2文書/review_exportsには不介入。
+
+## 2026-09-24 追記 428 — 実backupの最小実装設計・消去後の証跡不足と公開復元gate
+
+- 本人「切り替えた」後、開始HEAD `f8674ab` / `codex/consult-guest-entry`でAstra設計工程。
+  `PRODUCTION_BACKUP_IMPLEMENTATION_REVIEW_2026-09-24.md`へ限定実装契約を保存し、9/8構成書の入口にもリンク。
+  既存認証DB-first判断（追記426）は変更しない。今回は文書のみ、別モデル/API/外部review呼出しなし。
+- 本番SQL EditorでREAD ONLY/8秒timeout/ROLLBACKのmetadata集計。PG17.6、DB15,772,819 bytes、
+  `home-photos`14行/申告7,519,641 bytes、size/version欠落0、versioned/archived/delete-marker各0。
+  指定候補のapp/private schemaはpublic/account_delete_private、対象private table3、verified MFA factor1。
+  実dumpサイズや写真実体の照合ではない。本人名/記録/写真/token/秘密を取得せず、DB変更なし。
+- account消去sourceを照合: 完了時に元user/family/path情報と単独所有familyの旧receiptが消える。
+  後追いreceiptコピーだけでは削除範囲を証明できず、古い所有関係からの推定は移譲済みfamilyへ影響する。
+  AI記憶reset/履歴削除、編集での情報除去、写真差替え、家族退会/権限変更も別途対象になる。
+  最初は本番消去関数に手を入れず、全対象metadataの存在/HMAC/親scope比較で不一致範囲を隔離する設計。
+  15分checkpointは最後の変更の完全証明ではない。source全損やfinal cutoff不明では利用者向け復元公開を拒否。
+  この範囲は完全災害復旧/RPOゼロ/RTO達成ではなく、source存続時の隔離復元実証を先行するもの。
+- 既存writerがcomplete markerまで書けるため、機械VerifierRole/prefix分離を次の修正対象に確定。
+  Supabase S3キーは全bucket全操作/RLS迂回であり「読取専用」ではないことを公式確認。
+  source資格への新規アクセスは別承認、狭いJWT/RLS主体を導入するなら別限定レビュー。
+  Solは本番secretのない合成adapterで収集/照合/入場判定・PG17回帰を先に実装する。
+- AWS公式東京価格を9/24再取得（S3/ECS/Secrets/Lambdaのregional price JSON、KMS/IPv4/CloudTrail公式）。
+  全世代10GB、2KMS鍵、3Secrets、日次10分収集＋10分照合、15分checkpoint等の仮定で基本小計$4.35620048/月。
+  監視/ログ/API/通信/復元/税等を除く。支払上限/実請求/承認済みではない。AWS作成・secret登録なし。
+- 既存 `test-backup-generation.mjs` PASS62、`test-personal-data-infra.mjs` PASS15resources/59policy/10negative。
+  `test-synthetic-recovery.mjs --plan`で既存PG16/未検証境界を確認しただけで、今回は復旧演習を実行していない。
+  `git diff --check` PASS。新設計の実装/PG17/実IAM/CloudTrail/通知受信/実backup/隔離復元は未実施。
+- 次は本人のSol切替完了後、レビュー§7のpure契約→IAM template分離→合成adapter/PG17の順に実装。
+  本番自動切替は作らず、publicReleaseAllowedは常にfalse。実装完了後の重要差分レビューは別ゲート。
+  source権限方式変更/未知schema/同期消去journal/公開復元の自動化/新重大リスクは再Astra判断。
+  AWS作成/個人情報転送/保持と権限拡大の承認、通知tombstone回答、署名/両OS実機/申請は未完。
+  本番・利用者データ・Web配信・Storeに変更なし。保護対象の未追跡Claude2文書/review_exportsに不介入。
+
+## 2026-09-24 追記 429 — backup隔離判定・Verifier分離・PG17合成復元
+
+- 本人のSol切替完了後「すすめて」を受け、追記428でAstraが確定した限定範囲を開発branchで実装。
+  開始HEAD `7203e47`、branch `codex/consult-guest-entry`、draft PR #9は未統合。
+  本番source/秘密・AWS資源・利用者データは読取/変更していない。
+- `scripts/lib/backup-privacy-checkpoint.mjs` を新設。表ごとのID・内容・所属scopeを
+  domain分離したHMAC-SHA256で照合し、古いcheckpointからの削除/変更・scope変更を
+  隔離候補にする。未知表、重複行、別source/schema/key、古いcheckpoint等は拒否。
+  `assessIsolatedRestore` の自動判定は常に `publicReleaseAllowed:false`。
+  source消失・latest不在・cutoff未証明では公開を許さない。計15合成ケースPASS。
+  ただし対象表一覧/一貫snapshotは呼出元の証拠が必要で、現在のpure moduleだけでは
+  本番全表の取得や削除RPOゼロを保証しない。checkpointは匿名情報ではなく仮名化metadata。
+- `backup-vault.cfn.json` にCollectorの完了marker/検証receipt書込を明示拒否するbucket policyを追加。
+  vault templateのTemplateBody上限を守るため、機械VerifierRole/Policyは
+  `backup-verifier.cfn.json` に分離。Verifierは指定prefix/version読取とmarker書込のみ、
+  artifact/candidateの書換・削除/保持変更は拒否する設計。人用RestoreReaderとは別。
+  offline試験はvault 15資源、policy条件61件、Verifier 2資源/条件13件、mutation12件PASS。
+  AWSの本物のIAM評価/暗号化・conditional write/CloudTrail/通知実受信は未検証。
+- 既存byte照合62ケースPASS。東京向け `cfn-lint==1.53.3` で2templateを検証してPASS。
+  固定digestの使い捨てPostgreSQL17 containerをnetwork/volume/host bindなしで2個作り、
+  56表・role/ACL/RLS/trigger・合成写真byte・新しい日記削除receiptの再適用/復活拒否、
+  同じ合成DBの削除前後checkpoint比較をPASS。終了後のcontainer cleanupもPASS。
+  PG17のdump/restoreの合成成功であり、実Auth/MFA因子・Storage API・対象者/アカウント削除・
+  実sourceのsnapshot cutoff・本番バックアップ・実RPO/RTOの証明ではない。
+- 未完: 合成source/Storage adapter、独立Verifierの実bytes/VersionId照合と失敗注入、
+  全対象table分類/網羅の実証、実AWS合成権限拒否、費用・保持・source秘密権限の承認、
+  承認後の実backup/隔離復元、DB-first反映、署名/両OS実機、Store申請。
+  source Storage S3鍵の広い全操作/RLS迂回権限を読取専用とは呼ばず、無断で配布しない。
+  重要なIAM/個人情報処理差分は統合・公開前にAstra/独立レビューが必要。
+  本番/public restore自動化は今回作っていない。
+- 変更をcommit/pushしてCI確認後もPR #9をdraftに保つ。保護対象の未追跡Claude2文書と
+  `review_exports/` には不介入。sourceと実環境、CI、Store提出の各証拠を混同しない。
+- source `0728a2cc24a5d2cd291e858ab45556a15e3237dd` をpush。初回CI `35969937795` は
+  Stage A安全検査が旧cfn-lint引数を期待したため失敗（templateのlint job自体はsuccess）。
+  `test-stage-a-local-runner.mjs` を2template検査へ更新し `34d33bb80282f347bfca2cac9225071223d4cc99`
+  をpush。再実行CI `35970165450` はWeb/mobile・個人情報インフラの2ジョブともsuccess。
+  CI結果の確定追記は文書のみの `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 430 — 合成source収集と独立Verifierの候補/完了境界
+
+- 本人「すすめて」で前回のSol工程を継続。開始HEAD `3f5242f`、branch `codex/consult-guest-entry`、
+  PR #9はdraft。本番のSupabase SQL Editorが画面にあるが今回は操作せず、利用者データ/秘密/AWSは未接続。
+- `scripts/lib/backup-synthetic-collector.mjs` を新設。明示注入されたsource/宛先だけを使い、
+  `synthetic-` source ID/PG17/同じsnapshot ID/schema hash/source epochを要求。
+  DB・role・storage catalog＋写真全件をbounded streamとして条件付き新規書込し、
+  photo count/page/cursor/重複/版、取得前後inventory、各chunk/総bytes/時間を確認。
+  応答喪失・読取途中失敗・partial upload・close失敗で候補成功を返さず、書込不確実時に再送しない。
+  候補だけを返し、`complete.json`を作る能力は持たない。実source資格/URL/AWS SDKを内蔵せず、
+  **本番の収集adapterではない**。snapshot ID/件数は注入sourceの申告で、DBの真のsnapshot/全件性は証明しない。
+- `test-backup-synthetic-collector.mjs` の16合成ケースPASS。独立Verifier adapterだけで
+  版指定再読/byte照合後にmarkerを作り、版/byte差替えでは作らない。欠けた/重複page、
+  cursor循環、版不一致、収集中の変更、stream中断/過大chunk、409/412、応答喪失、
+  早期write応答、timeout、close失敗を拒否。error/stackへ合成のprivate markerを出さない。
+  既存byte照合62、checkpoint15、offline IAM/Stage AもPASS。CIへ新テストを追加。
+- 未実施: 実sourceの`pg_dump --snapshot`、全対象table分類/未知schema gate、Storageの実page/version/byte、
+  source権限・credential配置、worker/container/schedule、実AWS権限/条件付き書込、
+  実backupとAuth/MFA/写真を含む隔離復元、旧削除の公開防止実証、両OS実機/署名/Store提出。
+  合成候補の孤立artifactは完了扱いせず、保持・清掃設計は別承認。自動公開許可は常にfalse。
+- この差分はAstraの追記428で確定した実装範囲内。重要な個人情報/IAM処理の統合・公開前に
+  Astra/既存独立レビューを行い、実source資格方式や未知schema等の新前提が出たら先に設計確認。
+  今回の「すすめて」をAWS作成・秘密配布・本番転送・Store申請への包括承認と扱わない。
+  保護対象の未追跡Claude2文書と`review_exports/`は不介入。
+- source `3c74a4e3bf455adf66563a46ab1bd1304aa89805` をpush。CI `35971328612` の
+  `web-and-mobile` と `personal-data-infrastructure` はともにsuccess。合成収集16ケースもCI通過。
+  次工程は実source接続の資格・RLSを含む全表読取可否・Storage S3鍵の全操作権限・秘密配布・
+  失敗時の停止を決める必要があるため、AGENTS.mdの重要な個人情報/権限設計としてAstraへ切替。
+  Astraは追記428の範囲を前提に、最小権限の実source adapter方式と網羅性の証明、
+  統合前レビュー条件を決める。Solへ戻せるのは実装範囲・拒否条件・合成/実環境検証が明確になった後。
+  このCI結果は文書のみの `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 431 — source資格・全表網羅のAstra限定レビュー
+
+- 本人「続けて」を受け追記430の設計gateを確認。開始HEAD `49634fc`、
+  branch `codex/consult-guest-entry`、PR #9はOPEN/draft/main向けと再確認。
+  結果は `BACKUP_SOURCE_ACCESS_REVIEW_2026-09-24.md`。
+  追記428の自動公開禁止/分離/承認境界を維持し、資格/全表/snapshot契約だけ具体化した。
+- 本番SQL EditorでREAD ONLY / 10秒timeout / ROLLBACKのcatalog照会。
+  92表（public50/auth27/storage8/private3/realtime3/vault1）、最初4schemaの88表はPKあり、
+  FORCE RLS8表。metadataだけを同日付inventory JSONへ記録、件数/重複をローカル検査PASS。
+  sourceロールpostgresはnon-superuser・BYPASSRLS・CREATEROLE。新role作成能力は未試験。
+  日記/写真/Authユーザー/鍵は未取得。前の利用者クエリは残し、別の診断クエリを使用した。
+- 新しい要修正: 通知管理 `claim_due_scheduled_notifications(integer)` と
+  `reset_stale_sending_notifications(interval)` にPUBLIC/anon/authenticatedの実効EXECUTEがあり、
+  本番関数本文にcaller制限なし。定義hashはレビュー文書に記録。実関数呼出/外部悪用試験は未実施。
+  Solでservice_role専用の限定ACL patch＋初期定義/pending bundle/api_grants再適用回帰を準備する。
+  残りの家族招待等を一括で制限しない。本番適用は承認前に行わない。
+- 合成Collector/checkpointの5不備を実行再現: plan途中変更でsynthetic gate通過、
+  timer starvationで期限後成功、保存済みlost ackが一般timeoutへ変化、nested digest書換、
+  source/schema/key metadataをnullで揃えた比較の成功。
+  一時証跡 `/tmp/oyano-backup-review-20260924.mjs` のREPRODUCEDは不備検出であり受入PASSではない。
+  修正は未実装。既存Collector16/checkpoint15/byte62は今回もPASS（その5境界は未網羅）。
+- 実source方式: DBは明示SELECT＋BYPASSRLSの専用role（PUBLIC関数等の実効権限検査必須）、
+  Storageはbucket限定カスタムroleの短命JWT注入。管理者/S3全操作鍵/署名秘密をCollectorへ配布しない。
+  owner-only private表の例外読取、provider上の権限追加、token発行・自動更新は別承認/実証。
+  未対応なら停止し、広い資格へfallbackしない。
+- Sol実装は上のACL/5不備に加え、使い捨て合成PG17の実exported snapshot、
+  全表/列型/PK分類（数値を丸めない）、Storage stub、v2世代にsource契約/baselineを結合する範囲。
+  初版は全rowのglobal scopeで変更時に全体隔離。v1/56表試験を完全な本番backupとしない。
+  関連公式仕様を確認し、pg_dumpallだけでは共通snapshotを保証しない点も明記した。
+- 重要判断と次の検証範囲を確定したのでSolへ戻す案内で停止する。
+  同じ理由で再設計を繰り返さず、重大前提変化/重要差分の統合前に再レビューする。
+  Claude独立レビュー、実source/Storage/IAM/隔離Auth復元/実機/署名/申請は別gateとして未完。
+  本番権限変更・データ移動・AWS作成・費用・保持の承認は今回取得/実行していない。
+  文書のみを `[skip ci]` でcommit/pushし、PRはdraft、保護対象の未追跡文書/review_exportsは不介入。
+
+## 2026-09-24 追記 432 — 通知ACL・合成backup境界のSol実装
+
+- 本人「続けて」で追記431のSol実装範囲を再開。開始HEAD `a8d914b`、branch
+  `codex/consult-guest-entry`、PR #9 draft。新たな本番権限変更/実backupの承認は得ていない。
+- 通知管理2RPCに対してPUBLIC/anon/authenticatedのEXECUTEを明示取消し、service_roleを維持。
+  `notification_delivery_hardening.sql`、`production_pending_hardening.sql`、`api_grants.sql`再適用の
+  全経路に同じガードを入れた。`notification_rpc_acl_regression.sql`を使い捨てDBで各再適用後に実行。
+  本番候補`notification_rpc_acl_live_patch.sql`は、観測時の2関数hash・owner postgres・
+  SECURITY DEFINER・signature/ACLを一transactionで先に照合し、差異ならROLLBACK。
+  fixture hashだけを置換し、公開EXECUTEを模した状態から同候補で取り消す回帰も隔離PG16でPASS。
+  本番ownerは未再照合で、
+  **本番patchは未実行**。ほか8つのSECURITY DEFINER関数の利用権は変更しない。
+- 合成Collectorのplanとadapterをawait前に固定、snapshot/photoもコピー/freeze。
+  単調deadlineをawait/stream/成功直前に確認し、保存dispatch後のlost ack/timeoutは
+  `ARTIFACT_WRITE_UNCERTAIN`。総bytes上限をchunk yield前に判定して自動再送しない。
+  checkpointはnestedまでfreezeし、比較前にsource/schema/key/scope形式を再検証。
+  unsafeなJS整数は拒否。恒久回帰へ移し、Collector21、checkpoint18、byte62ケースPASS。
+- `backup-source-catalog.mjs`で対象表・列型・PK・分類の厳格な照合とSQL側text値の順序付けを追加。
+  使い捨てnetwork:none PG17の3合成表で実`pg_export_snapshot`を保持し、遅いcommit後も
+  別接続と`pg_dump --snapshot`が同じ古い行を見る試験をPASS。bigint/numeric桁、
+  FORCE RLSの通常roleによる欠落、未知表/型/PK、Storage stub期限切れ/別bucket/PUT拒否を確認。
+  純粋catalog6ケース、PG17合成実行PASS。これは本番88表や本物のStorage JWT権限試験ではない。
+- `backup-generation.mjs`にschema v2を追加。source契約artifactとbaseline checkpoint artifactを
+  固定VersionIdで再読/byte照合した後、allowlist hash・source/epoch/schema/snapshot、
+  sealed/excluded表、roles/storage catalog hash、全rowのglobal scope hashを照合。
+  v2合成6ケースPASS、従来v1のbyte62ケースもPASS。証拠スコープはbyte＋自己申告契約の整合に限り、
+  HMAC鍵/sourceの真正性、全対象表の取得/復元を証明しない。既存合成Collectorはv1を返すまま。
+- `node scripts/test-stage-a-local-runner.mjs`もPASS。`pnpm run`は依存再設置の確認が非TTYで停止したので
+  依存削除を承認せず、直接Nodeでpure試験を実施。Web/mobileは変更しておらず今回再buildなし。
+- 次: 実source資格の権限設計を変えず、合成Collectorからv2を出す経路、snapshot内全表/列型/ACL/
+  function/extension・role catalogの照合、Storage version/page/転送中変更の実装と拒否試験。
+  実providerへのrole/JWT発行・AWS作成・個人情報転送・本番ACL適用は別承認。
+  重要処理の統合/公開前はAstraおよび既存Claude独立レビューが必要。Store申請の実機・署名・
+  本番受入ゲートも未完。保護対象の未追跡Claude文書2件と`review_exports/`には不介入。
+- source `9e5700c`（主要差分）、`47abe9f`（公開ACLを模す回帰）、`57dcee4`
+  （合成コンテナ中断時のcleanup）をGitHubへpush。最終sourceのCI `35983117294` は
+  `web-and-mobile` と `personal-data-infrastructure` ともsuccess。
+  PR #9はOPEN/draftのまま。上記successは本番の権限適用・実backup・復元・署名・実機・
+  Store審査の合格を意味しない。文書のみの結果追記は`[skip ci]`で保存する。

@@ -1,11 +1,9 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
-import { demoResult } from "@/lib/demoData";
-import { activateDemoSession } from "@/lib/demoSession";
 import { sendMagicLink } from "@/lib/auth";
-import { consumeWebHandoff } from "@/lib/handoff";
+import { useMobileSession } from "@/components/MobileSessionProvider";
 import { colors, radius, shadow } from "@/lib/theme";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
@@ -14,16 +12,31 @@ type AuthMode = "signup" | "login";
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function WelcomeScreen() {
+  const focusedRef = useRef(false);
+  const requestRef = useRef<object | null>(null);
+  const session = useMobileSession();
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const caseId = typeof params.caseId === "string" ? params.caseId : undefined;
   const token = typeof params.token === "string" ? params.token : undefined;
   const hasHandoff = Boolean(caseId && token && caseId !== "demo" && token !== "demo");
   const authTitle = authMode === "login" ? "登録済みの方のログイン" : "新規会員登録";
 
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    requestRef.current = null;
+    setSubmitting(false);
+    return () => {
+      focusedRef.current = false;
+      requestRef.current = null;
+    };
+  }, [caseId, token]));
+
   async function continueToApp() {
+    if (!focusedRef.current || requestRef.current) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
@@ -33,25 +46,23 @@ export default function WelcomeScreen() {
     const redirectPath = hasHandoff
       ? `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`
       : undefined;
-    const result = await sendMagicLink(trimmedEmail, redirectPath);
+    const request = {};
+    requestRef.current = request;
+    setSubmitting(true);
+    const result = await sendMagicLink(trimmedEmail, redirectPath).catch(() => ({ message: "本人確認を始められませんでした。もう一度お試しください。", redirectPath: undefined }));
+    if (!focusedRef.current || requestRef.current !== request) return;
+    requestRef.current = null;
+    setSubmitting(false);
     setMessage(result.message);
+    if (result.redirectPath) router.replace(result.redirectPath);
 
-    if (result.sent) return;
-
-    const handoff = await consumeWebHandoff(caseId, token);
-    if (handoff) {
-      setMessage(`Web診断を引き継ぎました。タスク ${handoff.tasksCreated}件`);
-    }
-    router.replace("/(tabs)/dashboard");
-  }
-
-  async function continueDemo() {
-    activateDemoSession();
-    setMessage(`見本で開きます。確認用タスク ${demoResult.tasks.length}件を表示します。`);
-    router.replace("/(tabs)/dashboard");
   }
 
   function openAuth(mode: AuthMode) {
+    if (authMode !== mode) {
+      requestRef.current = null;
+      setSubmitting(false);
+    }
     setAuthMode(mode);
     setMessage("");
   }
@@ -111,9 +122,15 @@ export default function WelcomeScreen() {
       <View style={styles.startPanel}>
         <Text style={styles.panelEyebrow}>ここからです</Text>
         <Text style={styles.startTitle}>会員登録して続ける</Text>
-        <Text style={styles.body}>親の名前と今の状況を入れると、家族ボード、期限、担当、写真メモをこのアプリで管理できます。</Text>
-        <MascotGuide compact message="迷ったら、登録前に見本を開いてください。使うと決めた時だけ、メールで本人確認します。" />
-        <Pressable onPress={() => openAuth("signup")} style={styles.primaryButton}>
+        <Text style={styles.body}>親御さんの呼び名と今の状況を登録すると、家族ボード、期限、担当、日々の記録をこのアプリで管理できます。</Text>
+        <MascotGuide compact message="手帳を開くにはメールで本人確認します。急なときの案内は登録なしでも読めます。" />
+        {session.status === "unconfigured" ? <Text style={styles.message}>アプリの接続設定が不足しています。最新版のアプリでお試しください。現在は手帳を開いたり、記録を保存したりできません。</Text> : null}
+        {session.status === "error" ? <Text style={styles.message}>ログイン状態を確認できませんでした。アプリを開き直して、もう一度お試しください。</Text> : null}
+        {session.status === "signed-out" ? <Text style={styles.body}>現在ログインしていません。登録済みの方は、同じメールアドレスでログインしてください。</Text> : null}
+        {session.status === "signed-in" ? <Pressable onPress={() => router.replace("/(tabs)/dashboard")} style={styles.primaryButton}>
+          <Text style={styles.primaryButtonText}>ログイン中の手帳を開く</Text>
+        </Pressable> : null}
+        <Pressable disabled={session.status === "unconfigured" || session.status === "loading"} onPress={() => openAuth("signup")} style={styles.primaryButton}>
           <Text style={styles.primaryButtonText}>ここから新規会員登録</Text>
           <MaterialCommunityIcons color="#fff" name="arrow-right" size={20} />
         </Pressable>
@@ -121,11 +138,7 @@ export default function WelcomeScreen() {
           <MaterialCommunityIcons color={colors.greenDark} name="book-open-page-variant-outline" size={20} />
           <Text style={styles.webButtonText}>使い方・安心設計を読む</Text>
         </Pressable>
-        <Pressable onPress={continueDemo} style={styles.previewButton}>
-          <MaterialCommunityIcons color={colors.greenDark} name="eye-outline" size={20} />
-          <Text style={styles.previewButtonText}>登録前に見本を見る</Text>
-        </Pressable>
-        <Pressable onPress={() => openAuth("login")} style={styles.loginButton}>
+        <Pressable disabled={session.status === "unconfigured" || session.status === "loading"} onPress={() => openAuth("login")} style={styles.loginButton}>
           <Text style={styles.loginText}>登録済みの方はログイン</Text>
         </Pressable>
       </View>
@@ -148,8 +161,8 @@ export default function WelcomeScreen() {
           title="家族の担当"
         />
         <FeatureRow
-          icon="image-multiple-outline"
-          text="書類の場所、写真、実家のメモ"
+          icon="notebook-outline"
+          text="日々の記録、書類の場所、実家のメモ"
           title="あとで必要になる記録"
         />
       </View>
@@ -165,7 +178,7 @@ export default function WelcomeScreen() {
       {authMode ? (
         <View style={styles.authPanel}>
           <Text style={styles.authTitle}>{authTitle}</Text>
-          <Text style={styles.authLead}>パスワードは使いません。メールに届く確認リンクから入れます。</Text>
+          <Text style={styles.authLead}>アプリ内の確認画面で同じメールを入力し、この端末で届いた確認リンクを開いてください。</Text>
           <TextInput
             autoCapitalize="none"
             inputMode="email"
@@ -175,8 +188,8 @@ export default function WelcomeScreen() {
             style={styles.input}
             value={email}
           />
-          <Pressable onPress={continueToApp} style={styles.primaryButton}>
-            <Text style={styles.primaryButtonText}>{hasHandoff ? "確認メールを送って保存する" : "確認メールを送る"}</Text>
+          <Pressable disabled={submitting} onPress={continueToApp} style={[styles.primaryButton, submitting && styles.disabledButton]}>
+            <Text style={styles.primaryButtonText}>{submitting ? "準備中…" : "安全確認をしてメールを送る"}</Text>
             <MaterialCommunityIcons color="#fff" name="email-fast-outline" size={20} />
           </Pressable>
           <View style={styles.privacyNote}>
@@ -234,7 +247,7 @@ const styles = StyleSheet.create({
   screen: { gap: 16, padding: 16, paddingBottom: 36, paddingTop: 16 },
   photoHero: { borderRadius: 18, minHeight: 390, overflow: "hidden", ...shadow },
   heroPhoto: { borderRadius: 18 },
-  photoShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.22)" },
+  photoShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.22)" },
   heroContent: { flex: 1, gap: 12, justifyContent: "flex-end", padding: 20 },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   brandPill: { alignItems: "center", backgroundColor: "rgba(255,253,247,0.94)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },

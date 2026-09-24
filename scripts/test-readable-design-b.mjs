@@ -664,7 +664,7 @@ assert.match(home, /notebookInteractionRef\.current\.inert = reconciliationBusy/
 assert.match(home, /<main ref=\{notebookInteractionRef\} aria-busy=\{reconciliationBusy\}/);
 assert.match(home, /disabled=\{cloudContentReadOnly\} onClick=\{\(\) => saveDiary\(activeCase\.id\)\}/);
 assert.match(home, /disabled=\{cloudContentReadOnly \|\| !editForm\.body\.trim\(\)\}/);
-assert.match(home, /disabled=\{reconciliationBusy \|\| !cloudUserEmail \|\| cloudIdentityStatus !== "ready"/);
+assert.match(home, /disabled=\{reconciliationBusy \|\| !cloudUserId \|\| cloudIdentityStatus !== "ready"/);
 assert.match(home, /この記録はまだ保存できていません/);
 assert.match(home, /今はこの端末に保存/);
 assert.match(home, /ナビからのヒントを見る/);

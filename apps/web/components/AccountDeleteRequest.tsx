@@ -8,6 +8,7 @@ import {
   sendMagicLink
 } from "@/lib/browserSupabase";
 import { resetLocalNotebookData } from "@/lib/store";
+import { AuthCaptcha, useAuthCaptcha } from "@/components/AuthCaptcha";
 
 type AuthState = "checking" | "unavailable" | "signed-out" | "sending" | "sent" | "ready";
 type DeleteRequestStatus = "requested" | "reviewing" | "needs_followup" | "completed";
@@ -44,6 +45,7 @@ function formatDate(value: string | null) {
 }
 
 export function AccountDeleteRequest() {
+  const authCaptcha = useAuthCaptcha();
   const [authState, setAuthState] = useState<AuthState>("checking");
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [email, setEmail] = useState("");
@@ -104,6 +106,7 @@ export function AccountDeleteRequest() {
   }, []);
 
   async function requestSignIn() {
+    if (authState === "sending") return;
     const normalizedEmail = email.trim().toLowerCase();
     if (!looksLikeEmail(normalizedEmail)) {
       setError("メールアドレスを確認してください。");
@@ -111,7 +114,7 @@ export function AccountDeleteRequest() {
     }
     setAuthState("sending");
     setError("");
-    const result = await sendMagicLink(normalizedEmail, "/account/delete");
+    const result = await sendMagicLink(normalizedEmail, "/account/delete", { captchaToken: authCaptcha.consumeToken() });
     if (result.ok) {
       setAuthState("sent");
       setMessage("確認メールを送りました。メール内のリンクを開くと、この画面に戻ります。");
@@ -220,7 +223,8 @@ export function AccountDeleteRequest() {
                 value={email}
               />
             </label>
-            <button disabled={authState === "sending"} onClick={() => void requestSignIn()} type="button">
+            <AuthCaptcha control={authCaptcha} />
+            <button disabled={authState === "sending" || !authCaptcha.ready} onClick={() => void requestSignIn()} type="button">
               {authState === "sending" ? "送信しています…" : "確認メールを送る"}
             </button>
           </div>

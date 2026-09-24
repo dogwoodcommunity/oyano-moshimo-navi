@@ -3,7 +3,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import {
-  demoDashboardData,
   fetchFamilyMembers,
   fetchTasks,
   updateTaskAssignee,
@@ -68,14 +67,26 @@ function priorityLabel(priority: number) {
 
 export default function TasksScreen() {
   const params = useLocalSearchParams<{ id: string; filter?: string }>();
-  const [tasks, setTasks] = useState<MobileTask[]>(demoDashboardData().tasks);
+  const [tasks, setTasks] = useState<MobileTask[]>([]);
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [message, setMessage] = useState("");
   const [assigneeTask, setAssigneeTask] = useState<MobileTask | null>(null);
 
   useEffect(() => {
-    fetchTasks(params.id).then(setTasks);
-    fetchFamilyMembers(params.id).then(setMembers);
+    let active = true;
+    setTasks([]);
+    setMembers([]);
+    setMessage("");
+    void Promise.all([fetchTasks(params.id), fetchFamilyMembers(params.id)])
+      .then(([nextTasks, nextMembers]) => {
+        if (!active) return;
+        setTasks(nextTasks);
+        setMembers(nextMembers);
+      })
+      .catch(() => {
+        if (active) setMessage("確認リストを読み込めませんでした。通信状況を確かめて、もう一度開いてください。");
+      });
+    return () => { active = false; };
   }, [params.id]);
 
   async function moveTask(task: MobileTask, status: MobileTask["status"]) {
@@ -114,7 +125,7 @@ export default function TasksScreen() {
   }
 
   const selfMember = members.find((member) => member.isCurrentUser) ?? members[0] ?? null;
-  const filteredTasks = tasks.filter((task) => matchesFilter(task, params.filter));
+  const filteredTasks = tasks.filter((task) => task.status !== "skipped" && matchesFilter(task, params.filter));
   const columns = [
     ["未着手", filteredTasks.filter((task) => task.status === "todo")],
     ["進行中", filteredTasks.filter((task) => task.status === "doing")],
@@ -254,7 +265,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.paper, gap: 14, padding: 16 },
   header: { borderRadius: 18, gap: 8, justifyContent: "flex-end", minHeight: 220, overflow: "hidden", padding: 18, ...shadow },
   headerImage: { borderRadius: 18 },
-  headerShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.28)" },
+  headerShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.28)" },
   headerBrand: { alignItems: "center", alignSelf: "flex-start", backgroundColor: "rgba(255,253,247,0.92)", borderRadius: 999, flexDirection: "row", gap: 6, overflow: "hidden", paddingHorizontal: 8, paddingVertical: 5 },
   kicker: { color: colors.greenDark, fontWeight: "900" },
   title: { color: "#fffdf7", fontSize: 32, fontWeight: "900", lineHeight: 37, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },

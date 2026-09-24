@@ -33,6 +33,10 @@ begin
   if auth.uid() is null then
     raise exception 'not_authenticated';
   end if;
+  -- Anonymous consultation accounts must register before sharing a family.
+  if coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
+    raise exception 'registered_account_required';
+  end if;
 
   if p_invited_email is null or length(trim(p_invited_email)) = 0 then
     raise exception 'invited_email_required';
@@ -163,6 +167,9 @@ declare
 begin
   if auth.uid() is null then
     raise exception 'not_authenticated';
+  end if;
+  if coalesce((auth.jwt()->>'is_anonymous')::boolean, false) then
+    raise exception 'registered_account_required';
   end if;
 
   select family_id into v_family_id

@@ -17,6 +17,8 @@ import {
   type ConsultAnswer
 } from "@oyano/shared";
 import { getBrowserSupabase } from "@/lib/browserSupabase";
+import { prepareConsultNotebook } from "@/lib/consultNotebookPreparation";
+import { ConsultGuestCheck } from "@/components/ConsultGuestCheck";
 import { japanDateInputValue } from "@/lib/date";
 import { trackFunnel } from "@/lib/funnel";
 import { markMonitorActivity } from "@/lib/monitorSession";
@@ -249,7 +251,7 @@ function appendDurableIdentifier(params: URLSearchParams, identifier: DurablePer
   }
 }
 
-async function requestDurableMemory(caseRecord: CaseRecord, historyOffset = 0): Promise<MemoryLoadResult> {
+async function requestDurableMemory(caseRecord: CaseRecord, historyOffset = 0, expectedUserId?: string): Promise<MemoryLoadResult> {
   const client = getBrowserSupabase();
   if (!client) {
     return { mode: "temporary", reason: "クラウド保存の環境設定がないため、長期記憶を準備できません。" };
@@ -257,6 +259,7 @@ async function requestDurableMemory(caseRecord: CaseRecord, historyOffset = 0): 
   const sessionData = (await client.auth.getSession()).data;
   const accessToken = sessionData.session?.access_token;
   const authUserId = sessionData.session?.user.id;
+  if (expectedUserId && authUserId !== expectedUserId) throw new Error("ログイン先が変わったため、相談を止めました。");
   if (!accessToken) {
     return { mode: "temporary", reason: "メール確認とクラウド保存をすると、この人専用の長期記憶を使えます。" };
   }
@@ -295,7 +298,7 @@ function formatMemoryDate(value?: string | null, withTime = false) {
   }).format(date);
 }
 
-async function requestDurableConsent(caseRecord: CaseRecord): Promise<{
+async function requestDurableConsent(caseRecord: CaseRecord, expectedUserId?: string): Promise<{
   active: boolean;
   revision: number;
   canManageSharedMemory: boolean;
@@ -304,6 +307,7 @@ async function requestDurableConsent(caseRecord: CaseRecord): Promise<{
   const client = getBrowserSupabase();
   if (!client) return { active: false, revision: 0, canManageSharedMemory: false, reason: "クラウド保存の環境設定がありません。" };
   const session = (await client.auth.getSession()).data.session;
+  if (expectedUserId && session?.user.id !== expectedUserId) throw new Error("ログイン先が変わったため、相談を止めました。");
   const accessToken = session?.access_token;
   if (!accessToken) return { active: false, revision: 0, canManageSharedMemory: false, reason: "メール確認とクラウド保存を先に設定してください。" };
   const identifier = durablePersonIdentifier(caseRecord, session.user.id);
@@ -328,9 +332,10 @@ async function requestDurableConsent(caseRecord: CaseRecord): Promise<{
   }
 }
 
-async function changeDurableConsent(caseRecord: CaseRecord, action: "accept" | "revoke", revision: number) {
+async function changeDurableConsent(caseRecord: CaseRecord, action: "accept" | "revoke", revision: number, expectedUserId?: string) {
   const client = getBrowserSupabase();
   const session = client ? (await client.auth.getSession()).data.session : null;
+  if (expectedUserId && session?.user.id !== expectedUserId) throw new Error("ログイン先が変わったため、同意の変更を止めました。");
   const accessToken = session?.access_token;
   if (!accessToken) throw new Error("メール確認とクラウド保存を先に設定してください。");
   const identifier = durablePersonIdentifier(caseRecord, session.user.id);
@@ -419,9 +424,35 @@ export function ConsultPanel() {
   const [memoryMessage, setMemoryMessage] = useState("");
   const [deleteIntent, setDeleteIntent] = useState<MemoryDeleteScope | null>(null);
   const [memoryDetailsOpen, setMemoryDetailsOpen] = useState(false);
+  const [firstUseOpen, setFirstUseOpen] = useState(false);
+  const [firstUseAccepted, setFirstUseAccepted] = useState(false);
+  const [guestCapability, setGuestCapability] = useState<{ enabled: boolean; captchaSiteKey?: string } | null>(null);
+  const [requiresGuestSession, setRequiresGuestSession] = useState(false);
+  const [guestSession, setGuestSession] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState("");
+  const [captchaAttempt, setCaptchaAttempt] = useState(0);
   const memoryRequestRef = useRef(0);
+  const sendingRef = useRef(false);
+  const actionGenerationRef = useRef(0);
+  const activeCaseRef = useRef(activeCaseId);
+  activeCaseRef.current = activeCaseId;
   const questionRef = useRef<HTMLTextAreaElement>(null);
+  const firstConsentRef = useRef<HTMLInputElement>(null);
   const memoryDetailsRef = useRef<HTMLDetailsElement>(null);
+
+  useEffect(() => () => { actionGenerationRef.current += 1; }, []);
+  useEffect(() => {
+    if (firstUseOpen) {
+      firstConsentRef.current?.focus({ preventScroll: true });
+      firstConsentRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }, [firstUseOpen]);
+  useEffect(() => {
+    setFirstUseAccepted(false);
+    setFirstUseOpen(false);
+    setCaptchaToken("");
+    actionGenerationRef.current += 1;
+  }, [activeCaseId]);
 
   useEffect(() => {
     const localCases = listLocalCases();
@@ -457,6 +488,16 @@ export function ConsultPanel() {
         const data = client ? (await client.auth.getSession()).data : null;
         if (cancelled) return;
         const token = data?.session?.access_token;
+        setRequiresGuestSession(!token);
+        setGuestSession(data?.session?.user.is_anonymous === true);
+        if (!token) {
+          const capabilityResponse = await fetch("/api/consult/guest", { cache: "no-store" });
+          const capability = await capabilityResponse.json().catch(() => null);
+          if (cancelled) return;
+          setGuestCapability(capabilityResponse.ok && capability?.enabled === true
+            && typeof capability.captchaSiteKey === "string"
+            ? { enabled: true, captchaSiteKey: capability.captchaSiteKey } : { enabled: false });
+        }
         const response = await fetch("/api/consult", {
           headers: token ? { Authorization: `Bearer ${token}` } : undefined
         });
@@ -482,16 +523,14 @@ export function ConsultPanel() {
     || question.trim().length < 4
     || phase === "loading";
   const consultButtonLabel = phase === "loading"
-    ? "整理しています…"
+    ? "記録を確認して回答を準備しています…"
     : memoryMode === "checking"
       ? "専用AIの記憶を確認しています…"
     : !authChecked
       ? "利用条件を確認しています…"
       : turns.length > 0
         ? "続けて相談する"
-      : consultAccess?.dailyFreeAvailable
-        ? "今日の無料AI相談を使う"
-        : "AI相談をはじめる";
+      : "AIに相談する";
 
   useEffect(() => {
     if (!durableMemoryEnabled) return;
@@ -825,14 +864,6 @@ export function ConsultPanel() {
     setPhase("idle");
   }
 
-  function showConsultSetup() {
-    setMemoryDetailsOpen(true);
-    window.setTimeout(() => {
-      memoryDetailsRef.current?.querySelector("summary")?.focus();
-      memoryDetailsRef.current?.scrollIntoView({ block: "center", behavior: "smooth" });
-    }, 40);
-  }
-
   function recheckConsultSetup() {
     if (durableMemoryEnabled || memoryMode === "checking" || phase === "loading" || consentSaving
       || memoryAction !== "idle" || memoryEditing || historyLoading || deleteIntent) return;
@@ -856,17 +887,75 @@ export function ConsultPanel() {
 
   async function submit() {
     if (submitDisabled || needsPlus || !activeCase || !durableMemoryEnabled || !memoryPayload?.personId || question.trim().length < 4) return;
+    await submitPrepared(false);
+  }
+
+  async function startFirstConsult() {
+    if (!activeCase || !authChecked || memoryMode === "checking" || consentSaving || phase === "loading"
+      || sendingRef.current || !hasSubstance || question.trim().length < 4 || question.length > CONSULT_MAX_QUESTION_LENGTH) return;
+    if (!firstUseAccepted) { setFirstUseOpen(true); return; }
+    if (requiresGuestSession && (!guestCapability?.enabled || !captchaToken)) {
+      setFirstUseOpen(true);
+      return;
+    }
+    await submitPrepared(true);
+  }
+
+  async function submitPrepared(firstUse: boolean) {
+    if (!activeCase || sendingRef.current || (firstUse && !firstUseAccepted)) return;
+    sendingRef.current = true;
+    const submittedCaseId = activeCase.id;
+    const generation = ++actionGenerationRef.current;
+    const assertCurrent = () => {
+      if (generation !== actionGenerationRef.current || activeCaseRef.current !== submittedCaseId) {
+        throw new Error("相談する相手が変わったため、送信を止めました。");
+      }
+    };
 
     const submittedQuestion = question.trim();
+    let consultRequestStarted = false;
     setPhase("loading");
     setErrorMessage("");
 
     try {
+      const prepared = await prepareConsultNotebook({
+        caseId: submittedCaseId, allowCreate: firstUse, captchaToken, assertCurrent
+      });
+      assertCurrent();
+      setRequiresGuestSession(false);
+      setGuestSession(prepared.guest);
+      let currentConsent = await requestDurableConsent(prepared.caseRecord, prepared.authUserId);
+      assertCurrent();
+      await prepared.assertIdentity();
+      if (!currentConsent.active) {
+        if (!firstUse || !firstUseAccepted || currentConsent.reason) throw new Error(currentConsent.reason || "保存とAI送信への同意をもう一度確認してください。");
+        currentConsent = await changeDurableConsent(prepared.caseRecord, "accept", currentConsent.revision, prepared.authUserId);
+        assertCurrent();
+        await prepared.assertIdentity();
+      }
+      if (!currentConsent.active) throw new Error("同意を確認できなかったため、AIへは送信していません。");
+      const ready = await requestDurableMemory(prepared.caseRecord, 0, prepared.authUserId);
+      assertCurrent();
+      await prepared.assertIdentity();
+      if (ready.mode !== "durable") throw new Error(ready.reason);
+      setConsent(true);
+      setConsentRevision(currentConsent.revision);
+      setConsentCanManageSharedMemory(currentConsent.canManageSharedMemory);
+      setMemoryMode("durable");
+      setMemoryPayload(ready.payload);
+      setMemoryDraft(ready.payload.memory.userSummary);
+      setTurns(ready.payload.turns);
+      setFirstUseOpen(false);
+      setMemoryReason("");
       const client = getBrowserSupabase();
       const sessionData = client ? (await client.auth.getSession()).data : null;
       const accessToken = sessionData?.session?.access_token;
+      assertCurrent();
+      if (!accessToken || sessionData?.session?.user.id !== prepared.authUserId) throw new Error("ログイン状態が変わったため、相談は送信していません。");
       setAuthChecked(true);
+      await prepared.assertIdentity();
 
+      consultRequestStarted = true;
       const response = await fetch("/api/consult", {
         method: "POST",
         headers: {
@@ -875,11 +964,13 @@ export function ConsultPanel() {
         },
         body: JSON.stringify({
           question: submittedQuestion,
-          personId: memoryPayload.personId,
+          personId: ready.payload.personId,
           memoryConsentVersion: CONSULT_MEMORY_CONSENT_VERSION
         })
       });
       const data: unknown = await response.json().catch(() => null);
+      assertCurrent();
+      await prepared.assertIdentity();
 
       const responseData = recordValue(data);
       const answer = normalizeConsultAnswer(responseData?.answer);
@@ -918,9 +1009,9 @@ export function ConsultPanel() {
       setOpenedFromRecord(false);
       const accessResponse = await fetch("/api/consult", {
         headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : undefined
-      });
-      const access = await accessResponse.json().catch(() => null) as ConsultAccess | null;
-      if (accessResponse.ok && access) setConsultAccess(access);
+      }).catch(() => null);
+      const access = await accessResponse?.json().catch(() => null) as ConsultAccess | null | undefined;
+      if (accessResponse?.ok && access) setConsultAccess(access);
       trackFunnel("consult_asked");
       markMonitorActivity("aiConsultCompleted");
       setPhase("done");
@@ -930,9 +1021,20 @@ export function ConsultPanel() {
       window.setTimeout(() => {
         document.getElementById(`consult-turn-${turnId}`)?.scrollIntoView({ block: "start", behavior: "smooth" });
       }, 80);
-    } catch {
-      setErrorMessage("通信できませんでした。電波のよい場所でもう一度お試しください。");
-      setPhase("error");
+    } catch (error) {
+      if (generation === actionGenerationRef.current) {
+        const currentSession = await getBrowserSupabase()?.auth.getSession().catch(() => null);
+        setRequiresGuestSession(!currentSession?.data.session);
+        setGuestSession(currentSession?.data.session?.user.is_anonymous === true);
+        setErrorMessage(consultRequestStarted
+          ? "相談が届いている可能性があります。通信または保存先の状態が変わったため、結果を確認できませんでした。再送する前に、元の保存先で相談履歴を確認してください。入力内容はこの画面に残しています。"
+          : error instanceof Error ? error.message : "通信できませんでした。電波のよい場所でもう一度お試しください。");
+        setPhase("error");
+      }
+    } finally {
+      sendingRef.current = false;
+      setCaptchaToken("");
+      setCaptchaAttempt((value) => value + 1);
     }
   }
 
@@ -1114,8 +1216,32 @@ export function ConsultPanel() {
           <p className="consult-send-note" id="consult-send-note">
             {durableMemoryEnabled ? "記録とこれまでの相談を踏まえて答えます。"
               : memoryMode === "checking" ? "保存設定を確認中です。相談文は先に書けます。"
-              : "初回の送信前に、メール確認と保存・AI送信への同意をお願いします。入力しただけでは送信されません。"}
+              : "入力しただけでは送信されません。初回だけ、保存とAIへの送信を確認します。"}
           </p>
+          {!durableMemoryEnabled && firstUseOpen ? (
+            <div className="consult-first-use" aria-label="はじめての相談の確認">
+              <strong>次回も、この記録から相談できます</strong>
+              <p>この人の手帳・相談を保存し、必要な内容を外部AI（Claude）へ送ります。</p>
+              <label className="consult-consent">
+                <input ref={firstConsentRef} type="checkbox" checked={firstUseAccepted} disabled={phase === "loading"}
+                  onChange={(event) => { setFirstUseAccepted(event.target.checked); setCaptchaToken(""); }} />
+                <span>保存とAIへの送信に同意する</span>
+              </label>
+              <details><summary>保存・送信する情報と、取り消しについて</summary>
+                <p>{CONSULT_MEMORY_CONSENT_TEXT}</p>
+                <p>本人を特定できる情報は入力しないでください。写真の画像はこの準備では送信せず、端末に残します。保存する記憶や同意は下の「AIが覚えていること・相談の保存先」で確認・変更できます。</p>
+                <p>新しくメール登録なしで始める場合、不正利用防止のためCloudflareの安全確認を使います。IPアドレス等の接続情報が同社へ送られます。</p>
+                <p>メール未登録のままログアウト・ブラウザのデータ削除・機種変更をすると、元の記録へアクセスできなくなります。引き継ぎ用のメール登録は後からできます。</p>
+              </details>
+              {requiresGuestSession || guestSession ? <p className="consult-recovery-note">メール未登録では、データ削除や端末変更後に復元できません。</p> : null}
+              {requiresGuestSession && firstUseAccepted && guestCapability?.enabled && guestCapability.captchaSiteKey ? (
+                <ConsultGuestCheck key={captchaAttempt} siteKey={guestCapability.captchaSiteKey} onToken={setCaptchaToken} />
+              ) : null}
+              {requiresGuestSession && guestCapability?.enabled === false ? (
+                <p role="status">メール登録なしの相談は、現在準備中です。入力内容はこの画面に残しています。<Link href="/home#cloud-backup" target="_blank" rel="noopener noreferrer">登録済みの保存先を開く</Link></p>
+              ) : null}
+            </div>
+          ) : null}
           {durableMemoryEnabled && needsPlus ? (
             <div className="consult-followup-gate">
               <strong>今日の無料AI相談は利用済みです。</strong>
@@ -1126,20 +1252,23 @@ export function ConsultPanel() {
             <button
               className="consult-submit"
               disabled={durableMemoryEnabled ? submitDisabled
-                : !authChecked || memoryMode === "checking" || consentSaving || question.trim().length < 4 || phase === "loading"}
-              onClick={durableMemoryEnabled ? submit : showConsultSetup}
+                : !authChecked || memoryMode === "checking" || consentSaving || !hasSubstance || question.trim().length < 4 || phase === "loading"
+                  || (firstUseAccepted && requiresGuestSession && (!guestCapability?.enabled || !captchaToken))}
+              onClick={durableMemoryEnabled ? submit : startFirstConsult}
               type="button"
             >
-              {durableMemoryEnabled ? consultButtonLabel : memoryMode === "checking" ? "確認しています…" : "AIに相談する"}
+              {phase === "loading" ? "記録を確認して回答を準備しています…" : durableMemoryEnabled ? consultButtonLabel
+                : memoryMode === "checking" ? "確認しています…" : firstUseAccepted ? "同意してAIに相談する" : "AIに相談する"}
             </button>
           )}
-          {durableMemoryEnabled && !hasSubstance ? (
+          {!hasSubstance ? (
             <p className="consult-hint">
               先に手帳へ記録を1件書くか、プロフィールを2つ以上埋めてください。
               <Link href="/home#today-diary">今日の記録を書く</Link>
             </p>
           ) : null}
           {phase === "error" ? <p className="consult-error" role="status">{errorMessage}</p> : null}
+          {durableMemoryEnabled && guestSession ? <p className="consult-recovery-note">相談はこの保存先に残ります。機種変更やブラウザのデータ削除に備えて、<Link href="/home#cloud-backup">メールを登録して記録を引き継ぐ</Link>（任意）</p> : null}
           {turns.length === 0 ? (
             <details className="consult-question-examples">
               <summary>何を聞けばいい？ 質問例を見る</summary>
@@ -1156,7 +1285,7 @@ export function ConsultPanel() {
         </div>
 
         <details className="consult-memory-details" ref={memoryDetailsRef} open={memoryDetailsOpen} onToggle={(event) => setMemoryDetailsOpen(event.currentTarget.open)}>
-          <summary>{durableMemoryEnabled ? "AIが覚えていること・相談の保存先" : "初回の確認・設定"}</summary>
+          <summary>{durableMemoryEnabled ? "AIが覚えていること・相談の保存先" : "保存・記憶の設定"}</summary>
 
         {memoryMode === "consent-required" ? (
           <section className="consult-memory-fallback is-consent" aria-label="この人専用AIの長期記憶への同意">
@@ -1168,10 +1297,7 @@ export function ConsultPanel() {
             <p>
               相談時は必要な要約と関連記録だけを外部の生成AIへ送ります。氏名・住所・病名など、本人を特定できる情報は記録や相談文に入力しないでください。
             </p>
-            <label className="consult-consent consult-memory-consent">
-              <input checked={consent} disabled={consentSaving} onChange={(event) => void toggleConsent(event.target.checked)} type="checkbox" />
-              <span>{consentSaving ? "同意状態を保存しています…" : "長期記憶への保存と、相談時のAI送信に同意します。"}</span>
-            </label>
+            <p>相談文を書き、上の「AIに相談する」から同意して始められます。</p>
             {memoryReason ? <p className="consult-error" role="status">{memoryReason}</p> : null}
             {memoryMessage ? <p className="consult-memory-message" role="status">{memoryMessage}</p> : null}
             <details className="consult-memory-delete">
@@ -1213,11 +1339,10 @@ export function ConsultPanel() {
           <p role="status">記録の保存先を確認しています。相談文は先に書けます。</p>
         ) : memoryMode === "temporary" ? (
           <section className="consult-setup-note" aria-label="相談を続けて使うための設定">
-            <h3>はじめての相談は、メール確認をお願いします</h3>
-            <p>この人の記録と相談を次回にも引き継ぐため、メール確認とクラウド保存が必要です。設定済みの方は、下の「設定を確認する」を押してください。</p>
-            <a className="secondary" href="/home#cloud-backup" target="_blank" rel="noopener noreferrer">メール確認・保存設定を開く（別タブ）</a>
-            <p>この相談画面を閉じずに設定してください。戻ったら「設定を確認する」を押すと、書きかけの相談を続けられます。確認だけでは送信しません。</p>
-            <button className="secondary" onClick={recheckConsultSetup} type="button">設定を確認する</button>
+            <h3>相談の記録は、次回にも引き継ぎます</h3>
+            <p>はじめての方は、上の相談ボタンから始めてください。登録済みの手帳を使う場合だけ、元の保存先へログインしてください。</p>
+            <a className="secondary" href="/home#cloud-backup" target="_blank" rel="noopener noreferrer">登録済みの保存先を開く（別タブ）</a>
+            <button className="secondary" onClick={recheckConsultSetup} type="button">保存先を確認し直す</button>
             {memoryReason ? <details><summary>設定を確認できない場合の詳細</summary><p>{memoryReason}</p></details> : null}
           </section>
         ) : memoryPayload ? (

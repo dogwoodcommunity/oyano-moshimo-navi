@@ -3,7 +3,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Link, useRouter } from "expo-router";
 import { ImageBackground, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { statusLabel } from "@oyano/shared";
-import { demoDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
+import { emptyDashboardData, fetchDashboardData, type DashboardData } from "@/lib/mobileData";
 import { colors, radius, shadow } from "@/lib/theme";
 import { MascotGuide, MascotMark } from "@/components/MascotGuide";
 
@@ -33,11 +33,11 @@ function dueLabel(value?: string) {
  * Link asChild は子へ style を渡すため、Pressable の関数形式の style が壊れて
  * 背景も並びも消える。押した時の反応を残したいので、遷移は router.push で行う。
  */
-function ConsultCard() {
+function ConsultCard({ personId }: { personId: string }) {
   const router = useRouter();
   return (
     <Pressable
-      onPress={() => router.push("/consult")}
+      onPress={() => router.push({ pathname: "/consult", params: { personId } })}
       style={({ pressed }) => [styles.consultCard, pressed && styles.consultCardPressed]}
     >
       <MaterialCommunityIcons color={colors.blue} name="comment-question-outline" size={26} />
@@ -150,7 +150,10 @@ function NextActionCard({ action }: { action: NextAction }) {
 }
 
 export default function DashboardScreen() {
-  const [data, setData] = useState<DashboardData>(demoDashboardData());
+  const [data, setData] = useState<DashboardData>(emptyDashboardData);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [loadVersion, setLoadVersion] = useState(0);
   const activeTasks = data.tasks.filter((task) => task.status !== "done" && task.status !== "skipped");
   const todayTasks = activeTasks.filter((task) => {
     const days = daysUntil(task.dueDate);
@@ -163,10 +166,45 @@ export default function DashboardScreen() {
   const unassignedTasks = activeTasks.filter((task) => !task.assignedMemberId);
 
   useEffect(() => {
-    fetchDashboardData()
-      .then(setData)
-      .catch(() => setData(demoDashboardData()));
-  }, []);
+    let active = true;
+    setLoading(true);
+    setLoadError("");
+    setData(emptyDashboardData());
+
+    async function load() {
+      try {
+        const nextData = await fetchDashboardData();
+        if (active) setData(nextData);
+      } catch {
+        if (active) setLoadError("家族ボードを読み込めませんでした。通信状態を確認して、もう一度お試しください。");
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+
+    void load();
+    return () => {
+      active = false;
+    };
+  }, [loadVersion]);
+
+  if (loading || loadError) {
+    return (
+      <ScrollView contentContainerStyle={styles.screen}>
+        <CrisisBanner />
+        <View style={styles.card}>
+          <Text accessibilityRole={loadError ? "alert" : undefined} style={styles.body}>
+            {loading ? "家族ボードを読み込んでいます。" : loadError}
+          </Text>
+          {!loading && loadError ? (
+            <Pressable accessibilityRole="button" onPress={() => setLoadVersion((current) => current + 1)} style={styles.nextButton}>
+              <Text style={styles.nextButtonText}>もう一度読み込む</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </ScrollView>
+    );
+  }
 
   if (data.source === "empty") {
     return (
@@ -268,7 +306,7 @@ export default function DashboardScreen() {
           <Link href={`/people/new?anchorPersonId=${data.person.id}`} style={styles.secondaryButton}>対象者を追加</Link>
         </View>
       </View>
-      <ConsultCard />
+      <ConsultCard personId={data.person.id} />
       <View style={styles.card}>
         <View style={styles.sectionHeader}>
           <View style={styles.summaryText}>
@@ -437,7 +475,7 @@ const styles = StyleSheet.create({
   screen: { backgroundColor: colors.paper, gap: 14, padding: 16, paddingBottom: 28 },
   hero: { borderRadius: 18, gap: 10, minHeight: 240, justifyContent: "flex-end", overflow: "hidden", padding: 18, ...shadow },
   heroImage: { borderRadius: 18 },
-  heroShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,35,28,0.26)" },
+  heroShade: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(20,35,28,0.26)" },
   brandRow: { alignItems: "center", flexDirection: "row", flexWrap: "wrap", gap: 8 },
   title: { color: "#fffdf7", fontSize: 34, fontWeight: "900", lineHeight: 39, textShadowColor: "rgba(0,0,0,0.18)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
   heroBody: { color: "rgba(255,253,247,0.92)", fontWeight: "700", lineHeight: 23, textShadowColor: "rgba(0,0,0,0.16)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },

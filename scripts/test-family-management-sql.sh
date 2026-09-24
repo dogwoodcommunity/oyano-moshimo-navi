@@ -77,7 +77,37 @@ run_sql supabase/family_management_rpc.sql
 run_sql supabase/family_owner_succession.sql
 run_sql supabase/production_pending_hardening.sql
 run_sql supabase/api_grants.sql
+run_sql supabase/notification_rpc_acl_regression.sql
+# Both historical bundles and the broad API grants are rerunnable. None may
+# restore EXECUTE on the cron-only notification RPCs.
+run_sql supabase/notification_delivery_hardening.sql
+run_sql supabase/api_grants.sql
+run_sql supabase/notification_rpc_acl_regression.sql
+run_sql supabase/production_pending_hardening.sql
+run_sql supabase/api_grants.sql
+run_sql supabase/notification_rpc_acl_regression.sql
+# Exercise the guarded review-candidate patch against this disposable schema.
+# Its production fingerprints are replaced only in this test's stdin stream.
+run_inline_sql <<'SQL'
+grant execute on function public.claim_due_scheduled_notifications(integer) to public, authenticated;
+grant execute on function public.reset_stale_sending_notifications(interval) to public, authenticated;
+SQL
+NOTIFICATION_CLAIM_HASH="$(docker exec "$REGRESSION_CONTAINER_NAME" psql -At -U postgres -d postgres -c \
+  "select md5(pg_get_functiondef('public.claim_due_scheduled_notifications(integer)'::regprocedure));")"
+NOTIFICATION_RESET_HASH="$(docker exec "$REGRESSION_CONTAINER_NAME" psql -At -U postgres -d postgres -c \
+  "select md5(pg_get_functiondef('public.reset_stale_sending_notifications(interval)'::regprocedure));")"
+if [[ ! "$NOTIFICATION_CLAIM_HASH" =~ ^[a-f0-9]{32}$ || ! "$NOTIFICATION_RESET_HASH" =~ ^[a-f0-9]{32}$ ]]; then
+  echo "Invalid notification fixture fingerprint" >&2
+  exit 1
+fi
+sed -e "s/169ff1b8efe60179327d36ea999f46f6/$NOTIFICATION_CLAIM_HASH/g" \
+  -e "s/7105328bfc4ddb697b634660666f90b2/$NOTIFICATION_RESET_HASH/g" \
+  "$REPO_ROOT/supabase/notification_rpc_acl_live_patch.sql" | run_inline_sql
+run_sql supabase/notification_rpc_acl_regression.sql
 run_sql supabase/family_invite_contract_regression.sql
+run_sql supabase/consult_guest_restrictions.sql
+run_sql supabase/consult_guest_restrictions.sql
+run_sql supabase/consult_guest_restrictions_regression.sql
 run_sql supabase/family_first_creation_concurrency_setup.sql
 
 docker exec "$REGRESSION_CONTAINER_NAME" psql -v ON_ERROR_STOP=1 -U postgres -d postgres -c \

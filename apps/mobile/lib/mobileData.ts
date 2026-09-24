@@ -4,6 +4,9 @@ import { demoPerson, demoResult, demoTimeline } from "./demoData";
 import { getSupabase } from "./supabase";
 import { canCreateNotebook, NOTEBOOK_LIMIT_MESSAGE, statusLabel } from "@oyano/shared";
 
+const connectionError = "アプリの接続設定が不足しています。最新版のアプリでお試しください。";
+const readError = "手帳を読み込めませんでした。通信とログインを確認してもう一度お試しください。";
+
 /**
  * 家族の誰かが記録を足す・状態を更新したとき、離れた家族へ「変化があった」ことを届ける。
  * 書き込みが成功した後に呼ぶ。通知が失敗しても記録自体は残るので、黙って続ける。
@@ -303,7 +306,7 @@ export function emptyDashboardData(): DashboardData {
 
 export async function fetchDashboardData(): Promise<DashboardData> {
   const supabase = getSupabase();
-  if (!supabase) return demoDashboardData();
+  if (!supabase) throw new Error(connectionError);
 
   const { data: peopleWithProfile, error: peopleError } = await supabase
     .from("people")
@@ -316,6 +319,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
       .from("people")
       .select("id, display_name, relationship_to_family, current_status")
       .order("created_at", { ascending: true });
+    if (fallback.error) throw new Error(readError);
     people = fallback.data as PersonRow[] | null;
   }
 
@@ -329,7 +333,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
     person: personFromRow(personRow),
     people: personList,
     tasks,
-    registryItems: demoResult.registryItems,
+    registryItems: [],
     firstSteps: tasks.slice(0, 3).map((task) => task.title),
     source: "supabase"
   };
@@ -337,7 +341,7 @@ export async function fetchDashboardData(): Promise<DashboardData> {
 
 export async function fetchPerson(personId: string): Promise<MobilePerson> {
   const supabase = getSupabase();
-  if (!supabase) return demoPerson;
+  if (!supabase) throw new Error(connectionError);
 
   const { data, error } = await supabase
     .from("people")
@@ -352,27 +356,29 @@ export async function fetchPerson(personId: string): Promise<MobilePerson> {
       .select("id, display_name, relationship_to_family, current_status")
       .eq("id", personId)
       .single();
+    if (fallback.error) throw new Error(readError);
     personData = fallback.data as PersonRow | null;
   }
 
   const row = personData;
-  if (!row) return demoPerson;
+  if (!row) throw new Error("この手帳を開けません。対象者と家族共有の状態を確認してください。");
 
   return personFromRow(row);
 }
 
 export async function fetchTasks(personId: string): Promise<MobileTask[]> {
   const supabase = getSupabase();
-  if (!supabase) return demoTasksFromResult(demoResult);
+  if (!supabase) throw new Error(connectionError);
 
   const members = await fetchFamilyMembers(personId);
   const memberLabels = new Map(members.map((member) => [member.id, member.displayName]));
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("tasks")
     .select("id, title, description, status, due_date, priority, category, assigned_member_id")
     .eq("person_id", personId)
     .order("due_date", { ascending: true });
+  if (error) throw new Error(readError);
 
   const rows = (data ?? []) as TaskRow[];
   if (rows.length === 0) return [];
@@ -392,22 +398,23 @@ export async function fetchTasks(personId: string): Promise<MobileTask[]> {
 
 export async function fetchFamilyMembers(personId: string): Promise<FamilyMember[]> {
   const supabase = getSupabase();
-  if (!supabase) return demoFamilyMembers;
+  if (!supabase) throw new Error(connectionError);
 
   const familyId = await fetchFamilyId(personId);
-  if (!familyId) return demoFamilyMembers;
+  if (!familyId) throw new Error(readError);
 
   const { data: userResult } = await supabase.auth.getUser();
   const currentUserId = userResult.user?.id;
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("family_members")
     .select("id, user_id, role, relationship")
     .eq("family_id", familyId)
     .order("created_at", { ascending: true });
+  if (error) throw new Error(readError);
 
   const rows = (data ?? []) as FamilyMemberRow[];
-  if (rows.length === 0) return demoFamilyMembers;
+  if (rows.length === 0) return [];
 
   return rows.map((row) => {
     const displayName = row.relationship || (row.role === "owner" ? "家族代表" : row.role);
@@ -451,15 +458,7 @@ export async function createPersonForFamily({
 
   const supabase = getSupabase();
   if (!supabase) {
-    return {
-      source: "demo",
-      person: {
-        id: `demo-person-${Date.now()}`,
-        displayName: normalizedName,
-        relationship: relationship?.trim() || undefined,
-        currentStatus
-      }
-    };
+    return { source: "supabase", error: connectionError };
   }
 
   const familyId = await fetchFamilyId(anchorPersonId);
@@ -549,15 +548,7 @@ export async function createInitialFamilyPerson({
 
   const supabase = getSupabase();
   if (!supabase) {
-    return {
-      source: "demo",
-      person: {
-        id: `demo-person-${Date.now()}`,
-        displayName: normalizedName,
-        relationship: relationship?.trim() || undefined,
-        currentStatus
-      }
-    };
+    return { source: "supabase", error: connectionError };
   }
 
   const { data, error } = await supabase.rpc("create_initial_family_person", {
@@ -593,13 +584,7 @@ export async function createFamilyInvite(
   const supabase = getSupabase();
 
   if (!supabase) {
-    const token = "demo-invite-token";
-    return {
-      source: "demo",
-      token,
-      inviteUrl: `${appScheme}://invite?token=${token}`,
-      fallbackUrl: webBaseUrl ? `${webBaseUrl}/invite/${token}` : undefined
-    };
+    return { source: "supabase", error: connectionError };
   }
 
   const familyId = await fetchFamilyId(personId);
@@ -646,14 +631,18 @@ export async function promoteFamilyMemberToOwner(
   };
 }
 
-export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInviteResult> {
+export async function acceptFamilyInvite(token: string, isCurrent: () => boolean): Promise<AcceptFamilyInviteResult> {
+  const cancelled: AcceptFamilyInviteResult = { source: "supabase", accepted: false, error: "画面が変わったため参加を中止しました。" };
+  if (!isCurrent()) return cancelled;
   const normalizedToken = token.trim();
   if (!normalizedToken) return { source: "demo", accepted: false, error: "招待リンクが正しくありません。" };
 
   const supabase = getSupabase();
-  if (!supabase) return { source: "demo", accepted: true };
+  if (!supabase) return { source: "supabase", accepted: false, error: connectionError };
 
   const { data: userResult } = await supabase.auth.getUser();
+  // A delayed user verification must not join a no-longer-visible invite.
+  if (!isCurrent()) return cancelled;
   if (!userResult.user) {
     return { source: "supabase", accepted: false, error: "ログインが必要です。" };
   }
@@ -681,7 +670,7 @@ export async function updatePersonStatus(
   nextStatus: ParentStatus
 ): Promise<{ source: "supabase" | "demo"; error?: string }> {
   const supabase = getSupabase();
-  if (!supabase) return { source: "demo" };
+  if (!supabase) return { source: "supabase", error: connectionError };
 
   const { error } = await supabase.from("person_status_events").insert({
     person_id: personId,
@@ -706,15 +695,7 @@ export async function updatePersonProfile(
   };
 
   if (!supabase) {
-    return {
-      source: "demo",
-      person: {
-        ...demoPerson,
-        displayName: nextProfile.displayName || demoPerson.displayName,
-        relationship: nextProfile.relationship || demoPerson.relationship,
-        profile: nextProfile
-      }
-    };
+    return { source: "supabase", error: connectionError };
   }
 
   const primaryUpdate = await supabase
@@ -754,7 +735,7 @@ export async function updatePersonProfile(
 
 export async function fetchTimelineEntries(personId: string): Promise<MobileTimelineEntry[]> {
   const supabase = getSupabase();
-  if (!supabase) return demoTimelineEntries(personId);
+  if (!supabase) throw new Error(connectionError);
 
   const timelineResult = await supabase
     .from("timeline_events")
@@ -773,6 +754,7 @@ export async function fetchTimelineEntries(personId: string): Promise<MobileTime
       .order("event_date", { ascending: false })
       .order("created_at", { ascending: false })
       .limit(30);
+    if (fallback.error) throw new Error(readError);
     timelineData = fallback.data as TimelineRow[] | null;
   }
 
@@ -811,19 +793,7 @@ export async function addTimelineEntry({
   const supabase = getSupabase();
 
   if (!supabase) {
-    return {
-      source: "demo",
-      entry: {
-        id: `demo-timeline-${Date.now()}`,
-        personId,
-        eventType: "diary",
-        date: entryDate,
-        title: entryTitle,
-        body: normalizedBody || "写真・資料を追加しました。",
-        mood,
-        attachments
-      }
-    };
+    return { source: "supabase", error: connectionError };
   }
 
   const { data: userResult } = await supabase.auth.getUser();
@@ -874,7 +844,7 @@ export async function updateTaskStatus(
   status: MobileTask["status"]
 ): Promise<{ source: "supabase" | "demo"; error?: string }> {
   const supabase = getSupabase();
-  if (!supabase) return { source: "demo" };
+  if (!supabase) return { source: "supabase", error: connectionError };
 
   const { error } = await supabase
     .from("tasks")
@@ -894,7 +864,7 @@ export async function updateTaskAssignee(
   memberId: string | null
 ): Promise<{ source: "supabase" | "demo"; error?: string }> {
   const supabase = getSupabase();
-  if (!supabase) return { source: "demo" };
+  if (!supabase) return { source: "supabase", error: connectionError };
 
   const { error } = await supabase
     .from("tasks")

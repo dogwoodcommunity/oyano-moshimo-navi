@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { sendMagicLink } from "@/lib/auth";
 import { acceptFamilyInvite } from "@/lib/mobileData";
@@ -7,24 +7,59 @@ import { getSupabase } from "@/lib/supabase";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function InviteScreen() {
+  const focusedRef = useRef(false);
+  const requestRef = useRef<object | null>(null);
   const params = useLocalSearchParams<{ token?: string }>();
   const token = typeof params.token === "string" ? params.token : "";
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  async function accept() {
-    if (submitting) return;
-    setSubmitting(true);
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    requestRef.current = null;
+    setSubmitting(false);
+    return () => {
+      focusedRef.current = false;
+      requestRef.current = null;
+    };
+  }, [token]));
 
-    const session = await getSupabase()?.auth.getSession();
+  async function accept() {
+    if (!focusedRef.current || requestRef.current) return;
+    const request = {};
+    requestRef.current = request;
+    setSubmitting(true);
+    let session;
+    try { session = await getSupabase()?.auth.getSession(); }
+    catch {
+      if (focusedRef.current && requestRef.current === request) {
+        requestRef.current = null;
+        setSubmitting(false);
+        setMessage("ログイン状態を確認できませんでした。もう一度お試しください。");
+      }
+      return;
+    }
+    if (!focusedRef.current || requestRef.current !== request) return;
     if (!session?.data.session) {
+      requestRef.current = null;
       setMessage("参加するにはメールログインが必要です。メールアドレスを入力してください。");
       setSubmitting(false);
       return;
     }
 
-    const result = await acceptFamilyInvite(token);
+    let result;
+    try { result = await acceptFamilyInvite(token, () => focusedRef.current && requestRef.current === request); }
+    catch {
+      if (focusedRef.current && requestRef.current === request) {
+        requestRef.current = null;
+        setSubmitting(false);
+        setMessage("招待を確認できませんでした。もう一度お試しください。");
+      }
+      return;
+    }
+    if (!focusedRef.current || requestRef.current !== request) return;
+    requestRef.current = null;
     setMessage(result.accepted ? "共有された手帳に参加しました。" : result.error ?? "招待を受け取れませんでした。");
     setSubmitting(false);
 
@@ -34,17 +69,23 @@ export default function InviteScreen() {
   }
 
   async function login() {
+    if (!focusedRef.current || requestRef.current) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
       return;
     }
 
+    const request = {};
+    requestRef.current = request;
     setSubmitting(true);
     const redirectPath = `/invite?token=${encodeURIComponent(token)}`;
-    const result = await sendMagicLink(trimmedEmail, redirectPath);
+    const result = await sendMagicLink(trimmedEmail, redirectPath).catch(() => ({ message: "本人確認を始められませんでした。もう一度お試しください。", redirectPath: undefined }));
+    if (!focusedRef.current || requestRef.current !== request) return;
+    requestRef.current = null;
     setMessage(result.message);
     setSubmitting(false);
+    if (result.redirectPath) router.replace(result.redirectPath);
   }
 
   return (
@@ -74,8 +115,8 @@ export default function InviteScreen() {
           style={styles.input}
           value={email}
         />
-        <Pressable style={styles.secondaryButton} onPress={login}>
-          <Text style={styles.secondaryButtonText}>ログインメールを送る</Text>
+        <Pressable disabled={submitting} style={[styles.secondaryButton, submitting && styles.buttonDisabled]} onPress={login}>
+          <Text style={styles.secondaryButtonText}>安全確認をしてメールを送る</Text>
         </Pressable>
       </View>
 

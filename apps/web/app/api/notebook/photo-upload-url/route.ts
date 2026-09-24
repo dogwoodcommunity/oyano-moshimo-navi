@@ -134,6 +134,9 @@ export async function POST(request: Request) {
   if (userError || !userId) {
     return NextResponse.json({ error: "Invalid authorization token" }, { status: 401 });
   }
+  if (userResult.user?.is_anonymous === true) {
+    return NextResponse.json({ error: "registered_account_required", message: "写真をクラウドに保存する前に、手帳からメールを登録してください。" }, { status: 403 });
+  }
 
   const userRateLimited = await checkUserUploadUrlRateLimit(supabase, userId);
   if (userRateLimited) return userRateLimited;

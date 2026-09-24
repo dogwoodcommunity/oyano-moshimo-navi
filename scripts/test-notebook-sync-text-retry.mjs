@@ -108,7 +108,7 @@ function scenario(status) {
   const context = {
     ...store, Date, console,
     loaded: true, reconciliationBusy: false,
-    cloudUserId: userId, cloudUserEmail: email, cloudFamilyId: familyId, cloudIdentityStatus: "ready",
+    cloudUserId: userId, cloudUserEmail: email, cloudIsGuest: false, cloudFamilyId: familyId, cloudIdentityStatus: "ready",
     cases: store.listLocalCases(), diaryEntries: { [caseId]: store.listDiaryEntries(caseId) },
     cloudAuthGenerationRef: ref(1), diaryCloudDeletionInFlightRef: ref(false),
     personNotebookDeletionInFlightRef: ref(false), pendingAutoSyncPayloadRef: ref(null),
