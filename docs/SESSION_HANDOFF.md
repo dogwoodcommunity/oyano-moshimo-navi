@@ -15931,3 +15931,8 @@ https://mitene.us/
   実providerへのrole/JWT発行・AWS作成・個人情報転送・本番ACL適用は別承認。
   重要処理の統合/公開前はAstraおよび既存Claude独立レビューが必要。Store申請の実機・署名・
   本番受入ゲートも未完。保護対象の未追跡Claude文書2件と`review_exports/`には不介入。
+- source `9e5700c`（主要差分）、`47abe9f`（公開ACLを模す回帰）、`57dcee4`
+  （合成コンテナ中断時のcleanup）をGitHubへpush。最終sourceのCI `35983117294` は
+  `web-and-mobile` と `personal-data-infrastructure` ともsuccess。
+  PR #9はOPEN/draftのまま。上記successは本番の権限適用・実backup・復元・署名・実機・
+  Store審査の合格を意味しない。文書のみの結果追記は`[skip ci]`で保存する。

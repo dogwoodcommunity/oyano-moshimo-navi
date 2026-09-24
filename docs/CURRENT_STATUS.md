@@ -23,6 +23,8 @@
 - `pnpm run`はローカル依存の再設置確認が非TTYで止まったため、依存を消さずに直接Nodeで検証。
   Stage A runner PASS。本番変更・利用者データ読取/移動・AWS作成・Store提出なし。
   PR #9はdraftのまま。重要処理の統合/公開前にAstraと既存のClaude独立レビューが必要。
+- source `57dcee4` をGitHubへpush。CI `35983117294` はWeb/mobile・個人情報インフラの
+  両ジョブsuccess。CI成功は本番source権限・AWS・実backup・隔離復元・Store受入の証明ではない。
 
 ## 今回完了（2026-09-24 source権限のAstra限定レビュー）
 
