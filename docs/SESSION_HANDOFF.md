@@ -15760,3 +15760,34 @@ https://mitene.us/
   個人情報収集worker等の重要な新設計はAGENTS.mdのAstra工程。本番適用前には正確なchange set、
   合成AWS拒否/復旧、実backupと最新削除を含む隔離復元、旧通知/配信commit再照合、両OS実機受入が必要。
   この確認だけで申請へ進まない。保護対象の未追跡Claude2文書/review_exportsには不介入。
+
+## 2026-09-24 追記 428 — 実backupの最小実装設計・消去後の証跡不足と公開復元gate
+
+- 本人「切り替えた」後、開始HEAD `f8674ab` / `codex/consult-guest-entry`でAstra設計工程。
+  `PRODUCTION_BACKUP_IMPLEMENTATION_REVIEW_2026-09-24.md`へ限定実装契約を保存し、9/8構成書の入口にもリンク。
+  既存認証DB-first判断（追記426）は変更しない。今回は文書のみ、別モデル/API/外部review呼出しなし。
+- 本番SQL EditorでREAD ONLY/8秒timeout/ROLLBACKのmetadata集計。PG17.6、DB15,772,819 bytes、
+  `home-photos`14行/申告7,519,641 bytes、size/version欠落0、versioned/archived/delete-marker各0。
+  指定候補のapp/private schemaはpublic/account_delete_private、対象private table3、verified MFA factor1。
+  実dumpサイズや写真実体の照合ではない。本人名/記録/写真/token/秘密を取得せず、DB変更なし。
+- account消去sourceを照合: 完了時に元user/family/path情報と単独所有familyの旧receiptが消える。
+  後追いreceiptコピーだけでは削除範囲を証明できず、古い所有関係からの推定は移譲済みfamilyへ影響する。
+  AI記憶reset/履歴削除、編集での情報除去、写真差替え、家族退会/権限変更も別途対象になる。
+  最初は本番消去関数に手を入れず、全対象metadataの存在/HMAC/親scope比較で不一致範囲を隔離する設計。
+  15分checkpointは最後の変更の完全証明ではない。source全損やfinal cutoff不明では利用者向け復元公開を拒否。
+  この範囲は完全災害復旧/RPOゼロ/RTO達成ではなく、source存続時の隔離復元実証を先行するもの。
+- 既存writerがcomplete markerまで書けるため、機械VerifierRole/prefix分離を次の修正対象に確定。
+  Supabase S3キーは全bucket全操作/RLS迂回であり「読取専用」ではないことを公式確認。
+  source資格への新規アクセスは別承認、狭いJWT/RLS主体を導入するなら別限定レビュー。
+  Solは本番secretのない合成adapterで収集/照合/入場判定・PG17回帰を先に実装する。
+- AWS公式東京価格を9/24再取得（S3/ECS/Secrets/Lambdaのregional price JSON、KMS/IPv4/CloudTrail公式）。
+  全世代10GB、2KMS鍵、3Secrets、日次10分収集＋10分照合、15分checkpoint等の仮定で基本小計$4.35620048/月。
+  監視/ログ/API/通信/復元/税等を除く。支払上限/実請求/承認済みではない。AWS作成・secret登録なし。
+- 既存 `test-backup-generation.mjs` PASS62、`test-personal-data-infra.mjs` PASS15resources/59policy/10negative。
+  `test-synthetic-recovery.mjs --plan`で既存PG16/未検証境界を確認しただけで、今回は復旧演習を実行していない。
+  `git diff --check` PASS。新設計の実装/PG17/実IAM/CloudTrail/通知受信/実backup/隔離復元は未実施。
+- 次は本人のSol切替完了後、レビュー§7のpure契約→IAM template分離→合成adapter/PG17の順に実装。
+  本番自動切替は作らず、publicReleaseAllowedは常にfalse。実装完了後の重要差分レビューは別ゲート。
+  source権限方式変更/未知schema/同期消去journal/公開復元の自動化/新重大リスクは再Astra判断。
+  AWS作成/個人情報転送/保持と権限拡大の承認、通知tombstone回答、署名/両OS実機/申請は未完。
+  本番・利用者データ・Web配信・Storeに変更なし。保護対象の未追跡Claude2文書/review_exportsに不介入。

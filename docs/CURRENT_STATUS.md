@@ -2,7 +2,21 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
-## 今回完了（2026-09-24 申請前の実環境確認）
+## 今回完了（2026-09-24 実backupのAstra設計）
+
+- 本人「切り替えた」後、backup収集/独立照合/隔離復元の限定実装を設計（追記428）。
+  `PRODUCTION_BACKUP_IMPLEMENTATION_REVIEW_2026-09-24.md` が次のSol実装契約。
+  消去完了後は元ID/receiptが消えるため、日記receiptの後追い収集だけでは削除復活を防げない。
+  最初は本番消去関数を変更せず、全対象metadata比較で変更/欠落範囲を隔離する方式。
+  最終cutoff不明・source全損では利用者への公開復元を拒否。完全災害復旧/RTO達成とは扱わない。
+- READ ONLY集計: 本番PG17.6、DB15,772,819 bytes、home-photos14件/7,519,641申告bytes。
+  写真本文/秘密値は未取得。writerがcomplete markerを書ける既存IAM設計も次の修正対象。
+  Storageの広いsource鍵配布は別承認、読取専用と誤称しない。まず合成adapter/PG17で実装・検証する。
+- AWS単価を再確認。全世代10GB等の仮定で基本小計約$4.36/月＋監視/操作/通信/復元等。
+  資源作成・保持・転送・新規アクセスは未承認/未実施。開発branch/draft PR維持、アプリsourceは今回不変。
+  次は本人のSol切替完了後にこの限定実装。認証設計の再議論や本番操作は不要。
+
+## 前回完了（申請前の実環境確認）
 
 - 前回Astraレビューの確定範囲で、費用・本番データ変更なしの申請準備を継続（追記427）。
   Supabase対象projectのBackups画面はFree Planで、自動project backupなし。

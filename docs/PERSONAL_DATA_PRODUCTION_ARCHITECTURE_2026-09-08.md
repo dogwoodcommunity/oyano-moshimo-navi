@@ -2,6 +2,11 @@
 
 作成日: 2026-09-08。状態: **設計・構成コード。AWS未作成、実データ未取得、正式公開NO-GO**。
 
+2026-09-24の実装境界は [最小実装レビュー](PRODUCTION_BACKUP_IMPLEMENTATION_REVIEW_2026-09-24.md) を優先。
+既存templateのwriter/verifier分離、削除証跡の欠落、source Storage資格の広い権限を追加確認した。
+現在のtemplateをそのまま自動backup完了構成として適用しない。15分checkpointだけで最新削除を保証しない。
+以下の9/8費用は旧概算。最新案の収集/照合/checkpointを含む基本小計は上記レビューを参照する。
+
 ## 方針
 
 手元のMacをサービスの災害復旧先にする前提をやめ、運営が管理するAWS東京リージョンの保管庫を設ける。
