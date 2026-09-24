@@ -15906,7 +15906,8 @@ https://mitene.us/
   全経路に同じガードを入れた。`notification_rpc_acl_regression.sql`を使い捨てDBで各再適用後に実行。
   本番候補`notification_rpc_acl_live_patch.sql`は、観測時の2関数hash・owner postgres・
   SECURITY DEFINER・signature/ACLを一transactionで先に照合し、差異ならROLLBACK。
-  fixture hashだけを置換した同候補の構文/回帰も隔離PG16でPASS。本番ownerは未再照合で、
+  fixture hashだけを置換し、公開EXECUTEを模した状態から同候補で取り消す回帰も隔離PG16でPASS。
+  本番ownerは未再照合で、
   **本番patchは未実行**。ほか8つのSECURITY DEFINER関数の利用権は変更しない。
 - 合成Collectorのplanとadapterをawait前に固定、snapshot/photoもコピー/freeze。
   単調deadlineをawait/stream/成功直前に確認し、保存dispatch後のlost ack/timeoutは

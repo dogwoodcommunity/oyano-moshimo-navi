@@ -7,7 +7,8 @@
 - 追記432。通知管理2RPCのPUBLIC/anon/authenticated実行権限を取り消すSQLを初期定義・
   pending bundle・`api_grants.sql`再適用後に追加。観測済み関数本文hash/owner/ACLを照合して
   想定外ならROLLBACKする本番用patch候補も用意したが、本番には適用していない。
-  隔離PostgreSQL16で再適用とguard patchの回帰PASS。正規service_roleは維持。
+  隔離PostgreSQL16で公開EXECUTEを模した状態からの取消し、再適用とguard patchの回帰PASS。
+  正規service_roleは維持。
 - 合成Collectorのplan/photo途中変更、timer遅延、保存後応答喪失、stream総量を修正。
   checkpointのnested書換と無効metadata・重複scope・危険なJS整数を拒否。
   pure試験はCollector21、checkpoint18、byte Verifier62ケースPASS。

@@ -88,6 +88,10 @@ run_sql supabase/api_grants.sql
 run_sql supabase/notification_rpc_acl_regression.sql
 # Exercise the guarded review-candidate patch against this disposable schema.
 # Its production fingerprints are replaced only in this test's stdin stream.
+run_inline_sql <<'SQL'
+grant execute on function public.claim_due_scheduled_notifications(integer) to public, authenticated;
+grant execute on function public.reset_stale_sending_notifications(interval) to public, authenticated;
+SQL
 NOTIFICATION_CLAIM_HASH="$(docker exec "$REGRESSION_CONTAINER_NAME" psql -At -U postgres -d postgres -c \
   "select md5(pg_get_functiondef('public.claim_due_scheduled_notifications(integer)'::regprocedure));")"
 NOTIFICATION_RESET_HASH="$(docker exec "$REGRESSION_CONTAINER_NAME" psql -At -U postgres -d postgres -c \
