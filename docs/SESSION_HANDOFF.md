@@ -15665,3 +15665,32 @@ https://mitene.us/
 - 今回のリポジトリ差分はレビュー/引き継ぎ4文書のみ。保護対象の未追跡2文書/review_exportsは不介入。
   文書差分を確認し `[skip ci]` でGitHubへpushする。アプリ修正・本番/DB/Store変更はまだない。
   「ここからはGPT-6 Solに戻して進められます。」と案内して本人の切替完了返答を待つ。
+
+## 2026-09-24 追記 425 — 認証遅着と例外回復を限定修正、DB-first準備
+
+- 本人「切り替えた。続けて」を受け、追記424の確定済み範囲を開発branchで実装。
+  開始HEAD `6fa393a`、branch `codex/consult-guest-entry`、draft PR #9。
+  モデルの実設定は推測せず、本人の切替完了返答を前提としたSol範囲の作業。
+- `welcome`・`invite`・`handoff` はfocus期間/対象/個別リクエストrefを照合。
+  mountedのままblurしても古い認証結果で画面遷移せず、再focus/対象変更では新規操作を受けられる。
+  inviteの参加結果も古い画面UIを更新しない。同期refで連打を抑止した。
+- handoffの認証購読と初回session読取はfocus期間だけ。非表示の旧画面で後のログインを受けても
+  保存を開始しない。古いsession読取は後の認証/保存状態を上書きしない。
+  旧保存の遅着成功/失敗が新しい画面を動かさず、通信例外後は同じ本人で再試行できる。
+  既存のサーバー側handoff冪等性と家族権限は変更なし。通信開始済み保存を取消済みとは断定しない。
+- callback画面もfocus限定で遷移、例外を失敗表示へ変換。認証helperの重複callback用getSession例外と
+  ブラウザ起動時の同期例外を失敗結果へ変換し、ロックを残さない。state/メール/本人/
+  access-refresh/期限検証は削除・緩和していない。
+- `scripts/test-mobile-auth-captcha.mjs` に実コンポーネントを合成navigation/authで動かす
+  focus/blur/再focus/対象変更、旧session/通知/保存の遅着、通信例外再試行、result-only/callbackの回帰を追加。
+  Mobile型、合成認証・通知ログアウト、画面preflight・store preflight、両OS JS/Hermes exportはPASS。
+  使い捨てPostgreSQLで初回手帳作成と通知v2/独立接続5競合/消去executor-finalizer統合もPASS。
+  新しいnative依存はなく、今回全native compileは再実行していない。両OS実機・実メール・本番は未試験。
+- `MOBILE_DB_FIRST_PREP_2026-09-24.md` に本番未適用の限定候補と停止条件を整理。
+  9/24の前回読取では初回手帳RPCと通知v2が不足、旧通知行0。適用直前の再確認が必要。
+  `account_deletion_pipeline.sql` 全体を再投入せず、消去finalizerの本番定義を取得して
+  push ledger残存確認だけの差分をレビューする。private tombstone保持期間は未承認。
+- 現時点では本番DB、Web配信、callback設定、メール、通知、正式署名、Store提出に変更なし。
+  source/文書をpush後もPR #9は統合保留。次は認証修正差分とDB-first限定適用/切戻しのAstra統合前レビュー。
+  本番実行には別の承認、旧token再集計、実バックアップ/復元、実機・運用・申請の残ゲートが必要。
+  保護対象の未追跡Claude文書2件とreview_exportsは不介入。push/CI結果は次の追記で確定する。

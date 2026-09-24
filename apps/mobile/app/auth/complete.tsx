@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { useURL } from "expo-linking";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { handleAuthRedirectUrl } from "@/lib/auth";
 import { colors, radius } from "@/lib/theme";
@@ -8,16 +8,18 @@ import { colors, radius } from "@/lib/theme";
 export default function CompleteMobileAuthScreen() {
   const url = useURL();
   const [message, setMessage] = useState("メールの本人確認をしています…");
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     if (!url) return;
     let active = true;
     void handleAuthRedirectUrl(url).then((result) => {
       if (!active) return;
       setMessage(result.message);
       if (result.handled && result.redirectPath) router.replace(result.redirectPath);
+    }).catch(() => {
+      if (active) setMessage("本人確認を完了できませんでした。元の画面からもう一度お試しください。");
     });
     return () => { active = false; };
-  }, [url]);
+  }, [url]));
   return <View style={styles.screen}>
     <Text style={styles.title}>メールの本人確認</Text>
     <Text style={styles.message}>{message}</Text>

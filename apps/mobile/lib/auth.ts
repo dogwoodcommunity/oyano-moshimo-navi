@@ -47,10 +47,14 @@ export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRE
   } finally { authBusy = false; }
 
   if (!prepared) return { sent: false, demo: false, message: retryMessage };
-  const flight = {
-    state: prepared.state,
-    promise: WebBrowser.openAuthSessionAsync(prepared.browserUrl, `${MOBILE_AUTH_CALLBACK}?state=${prepared.state}`)
-  };
+  let browserPromise: ReturnType<typeof WebBrowser.openAuthSessionAsync>;
+  try {
+    browserPromise = WebBrowser.openAuthSessionAsync(prepared.browserUrl, `${MOBILE_AUTH_CALLBACK}?state=${prepared.state}`);
+  } catch {
+    await removePendingIfMatching(prepared.state).catch(() => undefined);
+    return { sent: false, demo: false, message: "本人確認の画面を開けませんでした。通信とアプリの更新を確認して、もう一度お試しください。" };
+  }
+  const flight = { state: prepared.state, promise: browserPromise };
   browserFlight = flight;
   try {
     const browserResult = await flight.promise;
@@ -106,9 +110,13 @@ async function restoreOrReuseAuthRedirect(url: string): Promise<AuthRedirectResu
   if (!callback) return { handled: false, message: retryMessage };
   const finished = completedAuth;
   if (finished && !callback.error && callback.state === finished.state && Date.now() < finished.expiresAt && !authBusy) {
-    const current = await getSupabase()?.auth.getSession();
-    if (!current?.error && current?.data.session?.user.id === finished.userId
-      && completedAuth === finished) return { handled: true, message: "本人確認ができました。", redirectPath: finished.redirectPath };
+    try {
+      const current = await getSupabase()?.auth.getSession();
+      if (!current?.error && current?.data.session?.user.id === finished.userId
+        && completedAuth === finished) return { handled: true, message: "本人確認ができました。", redirectPath: finished.redirectPath };
+    } catch {
+      return { handled: false, message: retryMessage };
+    }
   }
   return restoreAuthRedirect(url);
 }

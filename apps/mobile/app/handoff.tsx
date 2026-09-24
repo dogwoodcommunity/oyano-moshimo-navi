@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { sendMagicLink } from "@/lib/auth";
 import { consumeWebHandoff } from "@/lib/handoff";
@@ -7,78 +7,99 @@ import { getSupabase } from "@/lib/supabase";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function HandoffScreen() {
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const focusedRef = useRef(false);
+  const focusEpochRef = useRef(0);
+  const requestRef = useRef<object | null>(null);
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("Webの整理結果をアプリに保存します。");
   const [isLoading, setIsLoading] = useState(false);
-  const consumedRef = useRef(false);
-
   const caseId = typeof params.caseId === "string" ? params.caseId : undefined;
   const token = typeof params.token === "string" ? params.token : undefined;
   const hasHandoff = Boolean(caseId && token);
 
-  const consume = useCallback(async () => {
-    if (!hasHandoff || consumedRef.current) return;
-
-    consumedRef.current = true;
+  const consume = useCallback(async (expectedEpoch: number) => {
+    if (!hasHandoff || !focusedRef.current || focusEpochRef.current !== expectedEpoch || requestRef.current) return;
+    const request = {};
+    requestRef.current = request;
     setIsLoading(true);
     setMessage("保存しています。");
-
-    const result = await consumeWebHandoff(caseId, token);
-    setIsLoading(false);
-
-    if (!result || result.error === "login_required") {
-      consumedRef.current = false;
-      setMessage("メールで本人確認をすると、整理結果を保存できます。");
-      return;
+    try {
+      const result = await consumeWebHandoff(caseId, token);
+      if (!focusedRef.current || focusEpochRef.current !== expectedEpoch || requestRef.current !== request) return;
+      if (!result || result.error === "login_required") {
+        requestRef.current = null;
+        setIsLoading(false);
+        setMessage("メールで本人確認をすると、整理結果を保存できます。");
+        return;
+      }
+      if (result.error || !result.personId) {
+        requestRef.current = null;
+        setIsLoading(false);
+        setMessage("保存できませんでした。結果が不明な場合も、同じ本人で再試行できます。");
+        return;
+      }
+      setIsLoading(false);
+      setMessage(`保存しました。タスク ${result.tasksCreated}件を家族ボードに追加しました。`);
+      router.replace(`/people/${result.personId}/tasks`);
+    } catch {
+      if (!focusedRef.current || focusEpochRef.current !== expectedEpoch || requestRef.current !== request) return;
+      requestRef.current = null;
+      setIsLoading(false);
+      setMessage("通信を確認できませんでした。同じ本人で再試行してください。");
     }
-
-    if (result.error || !result.personId) {
-      consumedRef.current = false;
-      setMessage("保存できませんでした。時間をおいてもう一度お試しください。");
-      return;
-    }
-
-    setMessage(`保存しました。タスク ${result.tasksCreated}件を家族ボードに追加しました。`);
-    router.replace(`/people/${result.personId}/tasks`);
   }, [caseId, hasHandoff, token]);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    const epoch = ++focusEpochRef.current;
+    focusedRef.current = true;
+    requestRef.current = null;
+    setIsLoading(false);
     const supabase = getSupabase();
-    if (!supabase) return;
-
-    void supabase.auth.getSession().then(({ data }) => {
-      if (data.session) void consume();
-      else setMessage("メールで本人確認をすると、整理結果を保存できます。");
-    });
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session) void consume();
-    });
-
-    return () => listener.subscription.unsubscribe();
-  }, [consume]);
+    let authEventSeen = false;
+    if (supabase && hasHandoff) {
+      void supabase.auth.getSession().then(({ data }) => {
+        if (!focusedRef.current || focusEpochRef.current !== epoch || authEventSeen || requestRef.current) return;
+        if (data.session) void consume(epoch);
+        else setMessage("メールで本人確認をすると、整理結果を保存できます。");
+      }).catch(() => {
+        if (focusedRef.current && focusEpochRef.current === epoch && !authEventSeen && !requestRef.current) {
+          setMessage("ログイン状態を確認できませんでした。もう一度お試しください。");
+        }
+      });
+    }
+    const listener = supabase && hasHandoff ? supabase.auth.onAuthStateChange((_event, session) => {
+      if (!focusedRef.current || focusEpochRef.current !== epoch) return;
+      authEventSeen = true;
+      if (session) void consume(epoch);
+    }) : null;
+    return () => {
+      focusedRef.current = false;
+      focusEpochRef.current += 1;
+      requestRef.current = null;
+      listener?.data.subscription.unsubscribe();
+    };
+  }, [consume, hasHandoff]));
 
   async function sendLoginLink() {
-    if (isLoading) return;
+    if (!focusedRef.current || requestRef.current) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
       return;
     }
 
+    const epoch = focusEpochRef.current;
+    const request = {};
+    requestRef.current = request;
     setIsLoading(true);
     const redirectPath = `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`;
-    const result = await sendMagicLink(trimmedEmail, redirectPath);
-    if (!mountedRef.current) return;
+    const result = await sendMagicLink(trimmedEmail, redirectPath).catch(() => ({ message: "本人確認を始められませんでした。もう一度お試しください。", redirectPath: undefined }));
+    if (!focusedRef.current || focusEpochRef.current !== epoch || requestRef.current !== request) return;
+    requestRef.current = null;
     setIsLoading(false);
     setMessage(result.message);
-    if (result.redirectPath === redirectPath) void consume();
+    if (result.redirectPath === redirectPath) void consume(epoch);
     else if (result.redirectPath) router.replace(result.redirectPath);
   }
 
@@ -118,7 +139,7 @@ export default function HandoffScreen() {
         <Pressable disabled={isLoading} onPress={sendLoginLink} style={[styles.button, isLoading && styles.disabledButton]}>
           <Text style={styles.buttonText}>安全確認をしてメールを送る</Text>
         </Pressable>
-        <Pressable disabled={isLoading} onPress={consume} style={styles.secondaryButton}>
+        <Pressable disabled={isLoading} onPress={() => { void consume(focusEpochRef.current); }} style={styles.secondaryButton}>
           <Text style={styles.secondaryButtonText}>ログイン済みなので保存する</Text>
         </Pressable>
         <Text style={styles.note}>親の病気・入院・死亡に関する情報は、家族の支援に必要な範囲だけ保存してください。</Text>

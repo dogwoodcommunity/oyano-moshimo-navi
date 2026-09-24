@@ -1,6 +1,6 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useEffect, useRef, useState } from "react";
-import { router, useLocalSearchParams } from "expo-router";
+import { useCallback, useRef, useState } from "react";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { sendMagicLink } from "@/lib/auth";
 import { useMobileSession } from "@/components/MobileSessionProvider";
@@ -12,11 +12,8 @@ type AuthMode = "signup" | "login";
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function WelcomeScreen() {
-  const mountedRef = useRef(true);
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => { mountedRef.current = false; };
-  }, []);
+  const focusedRef = useRef(false);
+  const requestRef = useRef<object | null>(null);
   const session = useMobileSession();
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
@@ -28,8 +25,18 @@ export default function WelcomeScreen() {
   const hasHandoff = Boolean(caseId && token && caseId !== "demo" && token !== "demo");
   const authTitle = authMode === "login" ? "登録済みの方のログイン" : "新規会員登録";
 
+  useFocusEffect(useCallback(() => {
+    focusedRef.current = true;
+    requestRef.current = null;
+    setSubmitting(false);
+    return () => {
+      focusedRef.current = false;
+      requestRef.current = null;
+    };
+  }, [caseId, token]));
+
   async function continueToApp() {
-    if (submitting) return;
+    if (!focusedRef.current || requestRef.current) return;
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setMessage("メールアドレスを入力してください。");
@@ -39,9 +46,12 @@ export default function WelcomeScreen() {
     const redirectPath = hasHandoff
       ? `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`
       : undefined;
+    const request = {};
+    requestRef.current = request;
     setSubmitting(true);
-    const result = await sendMagicLink(trimmedEmail, redirectPath);
-    if (!mountedRef.current) return;
+    const result = await sendMagicLink(trimmedEmail, redirectPath).catch(() => ({ message: "本人確認を始められませんでした。もう一度お試しください。", redirectPath: undefined }));
+    if (!focusedRef.current || requestRef.current !== request) return;
+    requestRef.current = null;
     setSubmitting(false);
     setMessage(result.message);
     if (result.redirectPath) router.replace(result.redirectPath);
@@ -49,6 +59,10 @@ export default function WelcomeScreen() {
   }
 
   function openAuth(mode: AuthMode) {
+    if (authMode !== mode) {
+      requestRef.current = null;
+      setSubmitting(false);
+    }
     setAuthMode(mode);
     setMessage("");
   }
