@@ -16,6 +16,9 @@
 - 次は合成source/Storage adapterと保管先の失敗注入試験をSolで続け、重要なIAM/個人情報処理差分は
   統合・AWS作成前にAstra/独立レビューへ渡す。AWS作成・source秘密配布・個人情報転送・
   本番切替/ストア提出は別承認と実環境受入が必要。PR #9はdraftのまま。
+- source `0728a2c` とCI文字列検査修正 `34d33bb` をpush。最初のCIは旧検査文字列で失敗、
+  修正版のCI `35970165450` はWeb/mobile・個人情報インフラ両ジョブsuccess。
+  CI成功は実AWS権限・実本番backup・実機/署名/審査の代用ではない。
 
 ## 今回完了（2026-09-24 実backupのAstra設計）
 

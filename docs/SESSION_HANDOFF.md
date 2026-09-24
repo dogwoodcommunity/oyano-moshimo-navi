@@ -15824,3 +15824,8 @@ https://mitene.us/
   本番/public restore自動化は今回作っていない。
 - 変更をcommit/pushしてCI確認後もPR #9をdraftに保つ。保護対象の未追跡Claude2文書と
   `review_exports/` には不介入。sourceと実環境、CI、Store提出の各証拠を混同しない。
+- source `0728a2cc24a5d2cd291e858ab45556a15e3237dd` をpush。初回CI `35969937795` は
+  Stage A安全検査が旧cfn-lint引数を期待したため失敗（templateのlint job自体はsuccess）。
+  `test-stage-a-local-runner.mjs` を2template検査へ更新し `34d33bb80282f347bfca2cac9225071223d4cc99`
+  をpush。再実行CI `35970165450` はWeb/mobile・個人情報インフラの2ジョブともsuccess。
+  CI結果の確定追記は文書のみの `[skip ci]` commitで保存する。
