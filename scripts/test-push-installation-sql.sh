@@ -34,11 +34,28 @@ run_sql supabase/schema.sql
 run_sql supabase/api_grants.sql
 run_sql supabase/production_rls.sql
 run_query "insert into auth.users(id,email) values ('a1100000-0000-4000-8000-000000000004','push-legacy@example.test');
-insert into public.profiles(id,email) values ('a1100000-0000-4000-8000-000000000004','push-legacy@example.test');
-insert into public.push_tokens(id,user_id,expo_push_token,platform,device_name,is_active,created_at,updated_at) values
+insert into public.profiles(id,email) values ('a1100000-0000-4000-8000-000000000004','push-legacy@example.test');"
+seed_legacy_tokens() {
+run_query "insert into public.push_tokens(id,user_id,expo_push_token,platform,device_name,is_active,created_at,updated_at) values
 ('a1400000-0000-4000-8000-000000000001','a1100000-0000-4000-8000-000000000004','ExpoPushToken[legacy-active]','ios','legacy-fixture',true,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z'),
 ('a1400000-0000-4000-8000-000000000002','a1100000-0000-4000-8000-000000000004','ExpoPushToken[legacy-inactive]','ios','legacy-fixture',false,'2026-01-01T00:00:00Z','2026-01-01T00:00:00Z');"
+}
+seed_legacy_tokens
+if run_sql supabase/push_installation_protocol.sql > "$REGRESSION_LOG_DIR/legacy-gate.log" 2>&1; then
+  echo "First push migration accepted nonempty legacy inventory" >&2; exit 1
+fi
+if ! grep -q 'push_legacy_inventory_not_empty' "$REGRESSION_LOG_DIR/legacy-gate.log"; then
+  sed -n '1,50p' "$REGRESSION_LOG_DIR/legacy-gate.log"; exit 1
+fi
+run_query "do \$test\$ begin
+  if to_regclass('push_private.installations') is not null or (select count(*) from public.push_tokens) <> 2 then
+    raise exception 'legacy gate mutated existing rows or schema';
+  end if;
+end; \$test\$;"
+# Only the two named synthetic fixtures in this disposable database are reset.
+run_query "delete from public.push_tokens where id in ('a1400000-0000-4000-8000-000000000001','a1400000-0000-4000-8000-000000000002');"
 run_sql supabase/push_installation_protocol.sql
+seed_legacy_tokens
 run_sql supabase/push_installation_protocol.sql
 # A routine base ACL reapplication must not reopen either the old direct DML
 # path or service-only RPCs to general authenticated clients.
@@ -144,6 +161,29 @@ run_sql supabase/account_erasure_execution_gate.sql
 run_sql supabase/account_deletion_pipeline.sql
 run_sql supabase/api_grants.sql
 run_sql supabase/account_erasure_execution_gate.sql
+run_sql supabase/account_erasure_push_finalizer_regression_setup.sql
+run_sql supabase/account_erasure_push_finalizer_patch.sql
+run_sql supabase/account_erasure_push_finalizer_patch.sql
+run_sql supabase/account_erasure_push_finalizer_regression_assert.sql
+# A different deployed body must fail closed, not overwrite an operator fix.
+run_query "do \$test\$ declare d text; begin select definition into d from finalizer_patch_regression.original; execute replace(d, E'\\nbegin\\n', E'\\nbegin\\n  -- regression drift\\n'); end; \$test\$;"
+if run_sql supabase/account_erasure_push_finalizer_patch.sql > "$REGRESSION_LOG_DIR/finalizer-drift.log" 2>&1; then
+  echo "Finalizer patch accepted an unreviewed body" >&2; exit 1
+fi
+if ! grep -q 'finalizer_patch_definition_drift' "$REGRESSION_LOG_DIR/finalizer-drift.log"; then
+  sed -n '1,50p' "$REGRESSION_LOG_DIR/finalizer-drift.log"; exit 1
+fi
+run_query "do \$test\$ declare d text; begin select definition into d from finalizer_patch_regression.original; execute d; end; \$test\$;"
+run_sql supabase/account_erasure_push_finalizer_regression_assert.sql
+run_query "grant execute on function public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer) to authenticated;"
+if run_sql supabase/account_erasure_push_finalizer_patch.sql > "$REGRESSION_LOG_DIR/finalizer-acl.log" 2>&1; then
+  echo "Finalizer patch accepted unreviewed grants" >&2; exit 1
+fi
+if ! grep -q 'finalizer_patch_security_drift' "$REGRESSION_LOG_DIR/finalizer-acl.log"; then
+  sed -n '1,50p' "$REGRESSION_LOG_DIR/finalizer-acl.log"; exit 1
+fi
+run_query "revoke execute on function public.finalize_account_erasure_v1(uuid,uuid,uuid,boolean,boolean,integer) from authenticated;"
+run_sql supabase/account_erasure_push_finalizer_regression_assert.sql
 run_sql supabase/push_installation_erasure_regression_hooks.sql
 run_sql supabase/account_erasure_regression.sql
 # Sequence increments survive that regression's intentional fixture rollback,

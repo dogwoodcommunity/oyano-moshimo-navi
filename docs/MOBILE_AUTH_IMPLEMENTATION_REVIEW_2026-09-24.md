@@ -1,5 +1,8 @@
 # モバイル認証の統合前レビュー — 2026-09-24
 
+後続の修正・再レビュー結果は `MOBILE_AUTH_DB_INTEGRATION_REVIEW_2026-09-24.md`（追記426）を参照。
+以下はsource `29ab8d7` 時点の指摘記録であり、現在の未修正一覧ではない。
+
 判定: **修正後に再確認。現状の認証差分を本番統合しない。**
 
 対象は `29ab8d7`、レビュー開始HEAD `79f8257`、branch `codex/consult-guest-entry` / draft PR #9。

@@ -15697,3 +15697,38 @@ https://mitene.us/
 - source commit `691ea17bcee0660b6d83392662b13416855051b7` をGitHubへpush。
   CI `35961554112` は `personal-data-infrastructure` と `web-and-mobile` の2ジョブともsuccess。
   CIは本番DB/両OS実機/正式署名/審査を試験しない。今回のCI確定追記は `[skip ci]` で保存する。
+
+## 2026-09-24 追記 426 — 認証/DB-first再レビュー、送信直前ガードと限定migration
+
+- 本人「切り替えた。続けて」を受け、source `691ea17` / 開始HEAD `e1cc27e` をレビュー。
+  branch `codex/consult-guest-entry`、draft PR #9。別モデル/API/外部レビューは呼び出していない。
+  既存認証検証・focus/要求世代・購読停止・例外回復を確認。旧source CI `35961554112` の
+  2ジョブsuccessは今回GitHubで再確認したが、今回の追加差分のCIとは区別する。
+- P1残件を実component+実helperで再現: helperのgetSession/getUser待ち中にblurすると、
+  旧handoff POST/旧invite RPCが各1件始まる。画面の開始/結果後ガードだけでは不足していた。
+  画面から必須isCurrent callbackを渡し、helperが非同期待機後・書込直前に確認するよう限定修正。
+  blur/対象変更の4回帰を追加し、旧送信0件・新対象だけ送信をPASS。既に送信済みの取消しは保証しない。
+- 本番SQL EditorでREAD ONLY/ROLLBACKの集計のみ実行。初回手帳RPC・push_private.installationsは不在、
+  旧通知total/active/inactive/ownerless/重複groupは全0。記録/写真/通知token本文は取得・変更していない。
+  finalizerはpostgres所有、service_roleのみ実行（owner以外）、既存search_path。本文13,411文字/MD5
+  `ec5733e6fba67d9e3d8211b8b067fc9d`で、現行sourceからpush owner残存確認4行だけを除いた本文と一致。
+- `account_erasure_push_finalizer_patch.sql` を新設。既知本文・owner・ACL・configを照合して4行だけ追加、
+  関数OID/権限を維持。想定外の定義/権限なら停止、反映済み本文ならno-op。全pipelineを本番再実行しない。
+  `push_installation_protocol.sql` 初回に同一transactionの排他lock下で旧通知0件を確認するgateを追加。
+  事前集計後の登録増加を見逃さず、既存行を消去/移管しない。導入済み版の再実行は旧row保持。
+- 使い捨てPostgreSQLで限定patchの旧本文→新本文、OID/ACL保持、再適用、本文/ACL driftの拒否、
+  初回旧行ありのrollbackと行保護、既存通知5競合・既存消去executor/finalizer統合までPASS。
+  Mobile型、認証・通知logout・screen/store preflight・family/handoff回帰、両OS JS/Hermes export PASS。
+  最終exportは `apps/mobile/dist/qualification-vqBTWa`。既存Node24を直接使い、依存再installはしていない。
+  新native依存はなく全native再compileは今回していない。実機・実メール・本番機能・署名・提出とは別。
+- 詳細/順序/切戻し: `MOBILE_AUTH_DB_INTEGRATION_REVIEW_2026-09-24.md`。
+  初回手帳RPC→限定finalizer→通知SQL→対応Web→callback/API→専用実機受入の順。
+  手元origin/mainの旧登録APIは直接upsertのため、新ACL導入後へ単純にWebを戻せない。
+  v2開始後は解除/配送/消去整合を残す互換修正版が必要。ledger削除・直接DML再許可で戻してはいけない。
+- 最小通知tombstoneをprotocol運用中保持する案を本人へ非同期質問。返答未取得のため未承認。
+  本番適用の明示承認、実バックアップ/隔離復元、配信commit/旧binary確認、運用/両実機/署名/申請は残る。
+  本番DBへのmigration、設定保存、メール/通知送信、main統合、Store提出は今回していない。
+- 次の通常作業はSolでこの確定範囲の証跡・反映準備・実機受入準備。同じ認証設計のレビューを繰り返さない。
+  未知の本番差分/旧通知出現/本人混同/新しい重要設計/検証付き修正2回失敗でAstraへ戻す。
+  初回公開candidateの最終レビューは別ゲート。本人の切替完了返答後に再開する。
+  保護対象の未追跡Claude2文書/review_exportsは不介入。sourceと引き継ぎを開発branchへpushしてCIを確認する。

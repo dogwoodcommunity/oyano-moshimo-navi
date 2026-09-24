@@ -631,7 +631,9 @@ export async function promoteFamilyMemberToOwner(
   };
 }
 
-export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInviteResult> {
+export async function acceptFamilyInvite(token: string, isCurrent: () => boolean): Promise<AcceptFamilyInviteResult> {
+  const cancelled: AcceptFamilyInviteResult = { source: "supabase", accepted: false, error: "画面が変わったため参加を中止しました。" };
+  if (!isCurrent()) return cancelled;
   const normalizedToken = token.trim();
   if (!normalizedToken) return { source: "demo", accepted: false, error: "招待リンクが正しくありません。" };
 
@@ -639,6 +641,8 @@ export async function acceptFamilyInvite(token: string): Promise<AcceptFamilyInv
   if (!supabase) return { source: "supabase", accepted: false, error: connectionError };
 
   const { data: userResult } = await supabase.auth.getUser();
+  // A delayed user verification must not join a no-longer-visible invite.
+  if (!isCurrent()) return cancelled;
   if (!userResult.user) {
     return { source: "supabase", accepted: false, error: "ログインが必要です。" };
   }

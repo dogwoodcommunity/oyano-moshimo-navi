@@ -25,7 +25,9 @@ export default function HandoffScreen() {
     setIsLoading(true);
     setMessage("保存しています。");
     try {
-      const result = await consumeWebHandoff(caseId, token);
+      const result = await consumeWebHandoff(caseId, token, () =>
+        focusedRef.current && focusEpochRef.current === expectedEpoch && requestRef.current === request
+      );
       if (!focusedRef.current || focusEpochRef.current !== expectedEpoch || requestRef.current !== request) return;
       if (!result || result.error === "login_required") {
         requestRef.current = null;

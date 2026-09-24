@@ -393,7 +393,7 @@ for (const options of [{ unconfigured: true }, { webBase: "http://invalid.test" 
     () => api.createInitialFamilyPerson({ displayName: "synthetic", currentStatus: "preparing" }),
     () => api.createPersonForFamily({ displayName: "synthetic", currentStatus: "preparing", anchorPersonId: "synthetic-person" }),
     () => api.createFamilyInvite("synthetic-person", user.email),
-    () => api.acceptFamilyInvite("synthetic-token"),
+    () => api.acceptFamilyInvite("synthetic-token", () => true),
     () => api.updatePersonStatus("synthetic-person", "preparing", "hospitalized"),
     () => api.updatePersonProfile("synthetic-person", { displayName: "synthetic" }),
     () => api.addTimelineEntry({ personId: "synthetic-person", body: "synthetic", mood: "stable" }),
@@ -712,5 +712,70 @@ for (const [file, params, newTarget, button] of [
   assert.deepEqual(screen.navigations, [], "callback result cannot navigate after blur");
   screen.render(); screen.focus(); await tick();
   assert.deepEqual(screen.navigations, [invite], "callback can resume when actively focused again");
+}
+for (const move of ["blur", "target-change"]) {
+  const waiting = deferred();
+  let reads = 0;
+  const postedTargets = [];
+  const supabase = { auth: {
+    getSession: () => (++reads === 1 ? Promise.resolve({ data: { session } }) : waiting.promise),
+    onAuthStateChange: () => ({ data: { subscription: { unsubscribe() {} } } })
+  } };
+  const helper = evaluate(read("apps/mobile/lib/handoff.ts"), {
+    process: { env: { EXPO_PUBLIC_WEB_BASE_URL: "https://web.example.test" } },
+    require(name) { assert.equal(name, "./supabase"); return { getSupabase: () => supabase }; },
+    fetch: async (_url, init) => {
+      postedTargets.push(JSON.parse(init.body).caseId);
+      return { ok: true, json: async () => ({ personId: "current-person", tasksCreated: 1 }) };
+    }
+  });
+  const screen = screenScenario("apps/mobile/app/handoff.tsx", {
+    params: { caseId: "00000000-0000-4000-8000-000000000011", token: `handoff_${"b".repeat(48)}` },
+    supabase, consumeWebHandoff: helper.consumeWebHandoff
+  });
+  screen.render(); screen.focus(); await tick();
+  assert.equal(reads, 2, "real handoff helper is waiting for its session read before POST");
+  screen.blur();
+  if (move === "target-change") {
+    screen.params.caseId = "00000000-0000-4000-8000-000000000012";
+    screen.render(); screen.focus();
+  }
+  waiting.resolve({ data: { session } });
+  await tick();
+  assert.deepEqual(postedTargets, move === "blur" ? [] : ["00000000-0000-4000-8000-000000000012"],
+    "only the currently focused target may begin a POST after session read");
+  if (move === "blur") assert.deepEqual(screen.navigations, []);
+}
+for (const move of ["blur", "target-change"]) {
+  const waiting = deferred();
+  const acceptedTokens = [];
+  const supabase = {
+    auth: { getSession: async () => ({ data: { session } }), getUser: () => waiting.promise },
+    rpc: async (name, args) => {
+      assert.equal(name, "accept_family_invite"); acceptedTokens.push(args.p_token); return { error: null };
+    }
+  };
+  const helper = evaluate(read("apps/mobile/lib/mobileData.ts"), {
+    process: { env: {} },
+    require(name) {
+      if (name === "./supabase") return { getSupabase: () => supabase };
+      if (name === "@/lib/funnel" || name === "./demoData" || name === "@oyano/shared") return {};
+      throw Error(`Unexpected invite dependency ${name}`);
+    }
+  });
+  const screen = screenScenario("apps/mobile/app/invite.tsx", {
+    params: { token: "old-token" }, supabase, acceptFamilyInvite: helper.acceptFamilyInvite
+  });
+  screen.render(); screen.focus(); screen.render();
+  const old = screen.enabledPress("共有手帳に参加する"); await tick();
+  screen.blur();
+  if (move === "target-change") {
+    screen.params.token = "current-token";
+    screen.render(); screen.focus(); screen.render();
+    screen.enabledPress("共有手帳に参加する"); await tick();
+  }
+  waiting.resolve({ data: { user } }); await old; await tick();
+  assert.deepEqual(acceptedTokens, move === "blur" ? [] : ["current-token"],
+    "only the currently focused invite may begin joining after user verification");
 }
 console.log("mobile CAPTCHA auth: PASS (real helpers/handlers; synthetic Auth, storage, email and native links only)");

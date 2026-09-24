@@ -1,6 +1,20 @@
--- Apply only after the legacy-token inventory/release review. Never rewrites
--- existing tokens. Duplicate active physical tokens abort the whole migration.
+-- Apply only after the legacy-token inventory/release review. The first install
+-- requires an empty legacy inventory; a populated deployment needs a separately
+-- reviewed migration. Reruns never rewrite existing tokens.
 begin;
+set local lock_timeout = '5s';
+set local statement_timeout = '30s';
+-- Close the race between the read-only inventory and legacy API registration.
+-- Hold this lock through ACL revocation; do not silently adopt late old rows.
+lock table public.push_tokens in access exclusive mode;
+do $gate$
+begin
+  if to_regclass('push_private.installations') is null
+    and exists (select 1 from public.push_tokens) then
+    raise exception 'push_legacy_inventory_not_empty';
+  end if;
+end;
+$gate$;
 
 create schema if not exists push_private authorization postgres;
 revoke all on schema push_private from public, anon, authenticated, service_role;

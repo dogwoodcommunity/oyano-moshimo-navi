@@ -27,7 +27,8 @@
 raw secret、メール、記録本文、Expo token本文はledgerに保存しない。
 
 `push_tokens`のinstallation_id/installation_revisionがNULLのrowは旧方式のまま。
-migrationは旧rowを変更しない。有効token全体の重複や1 installationの有効重複はunique indexで拒否する。
+migrationは旧rowを変更しない。追記426の初回導入gateは同一transactionの排他lock下で旧rowが0件でなければ停止する。
+導入済み版の再実行は旧rowを保持する。有効token全体の重複や1 installationの有効重複はunique indexで拒否する。
 既存重複があればmigration全体が失敗し、自動的な無効化/削除で通過させない。
 
 登録/解除RPCの署名：

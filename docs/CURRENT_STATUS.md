@@ -4,6 +4,20 @@
 
 ## 今回完了
 
+- 本人のAstra切替完了返答後、source `691ea17` の認証/DB-first統合レビューを実施（追記426）。
+  実helperの本人確認待ち中にblur/対象変更すると旧保存・旧招待参加の通信が始まる残件を再現し、
+  送信直前のfocus/要求照合を補強した。実component＋helperの4回帰、型、関連回帰、両OS export PASS。
+- 本番READ ONLYで初回手帳RPC/通知ledger不在、旧通知0件を再確認。消去finalizerはpush owner残存
+  チェックの4行だけ不足と本文ハッシュ/ACLで照合し、想定外差分で停止する限定patchを準備。
+  通知初回migrationに同一transaction排他lock下の旧登録0件gateを追加。
+  隔離PostgreSQLで再適用/本文・ACL差分の停止/旧行保護/5競合/削除統合 PASS。
+- 最新判断: `MOBILE_AUTH_DB_INTEGRATION_REVIEW_2026-09-24.md`。本番変更/ストア提出はまだなし。
+  次はSolで確定範囲のバックアップ/隔離復元証跡・配信準備・運用/実機受入準備。
+  最小通知tombstone保持方針を本人へ質問済み、返答は未取得。本番適用承認も未取得。
+  既存データ・guest/CAPTCHA OFF・通知解除/削除安全性を維持。最終candidateの公開前レビューは別途必要。
+
+## 前回完了（限定実装とDB準備）
+
 - 本人「切り替えた。続けて」を受け、追記424で確定した限定修正を開発branchへ実装。
   認証3画面のfocus/対象/個別要求ガード、非表示handoffの購読停止と保存の遅着抑止、
   callback/保存通信例外からの再試行、ブラウザ同期例外を補強した。実コンポーネントの

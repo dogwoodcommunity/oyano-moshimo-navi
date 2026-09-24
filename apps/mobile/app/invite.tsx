@@ -49,7 +49,7 @@ export default function InviteScreen() {
     }
 
     let result;
-    try { result = await acceptFamilyInvite(token); }
+    try { result = await acceptFamilyInvite(token, () => focusedRef.current && requestRef.current === request); }
     catch {
       if (focusedRef.current && requestRef.current === request) {
         requestRef.current = null;
