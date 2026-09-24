@@ -44,6 +44,18 @@ test("HMAC inventory omits source IDs and note text", () => {
   assert.equal(earlier.rowCount, 5);
   assert.equal(earlier.publicReleaseAllowed, false);
 });
+test("checkpoint and comparison results are deeply immutable", () => {
+  assert(Object.isFrozen(earlier.tables));
+  assert(Object.isFrozen(earlier.tables[0]));
+  assert(Object.isFrozen(earlier.tables[0].rows[0]));
+  assert(Object.isFrozen(earlier.tables[0].rows[0].scopes));
+  assert.throws(() => { earlier.tables[0].rows[0].bodyDigest = "b".repeat(64); }, TypeError);
+  const result = comparePrivacyCheckpoints(earlier, later((value) => {
+    value.tables[3].rows[0].body.text = "updated";
+  }));
+  assert(Object.isFrozen(result.changes[0]));
+  assert(Object.isFrozen(result.isolatedScopeHashes));
+});
 test("stable canonical row order", () => {
   const current = later((value) => { value.tables[3].rows[0].body = { resetAt: null, text: secret }; });
   assert.equal(comparePrivacyCheckpoints(earlier, current).status, "NO_OLDER_ROW_DIFFERENCE");
@@ -120,6 +132,11 @@ test("no raw weak key or invalid time", () => {
   const invalid = clone(baseline); invalid.capturedAt = "2026-02-30T00:00:00.000Z";
   fails("INVALID_TIME", () => checkpoint(invalid));
 });
+test("unsafe JS integer is rejected instead of silently rounded", () => {
+  const value = clone(baseline);
+  value.tables[3].rows[0].body.count = 9007199254740993;
+  fails("INVALID_ROW", () => checkpoint(value));
+});
 test("different source, epoch, schema or key cannot be compared", () => {
   for (const field of ["sourceId", "sourceEpoch", "schemaHash", "keyVersion"]) {
     const next = clone(baseline); next[field] = field === "schemaHash" ? "b".repeat(64) : "other";
@@ -134,6 +151,14 @@ test("older and forged checkpoints fail closed", () => {
   fails("INVALID_CHECKPOINT", () => comparePrivacyCheckpoints(earlier, forged));
   const partial = clone(earlier); partial.rowCount = 1;
   fails("INVALID_CHECKPOINT", () => comparePrivacyCheckpoints(earlier, partial));
+});
+test("forged matching metadata and duplicate scopes fail validation", () => {
+  const source = clone(earlier); source.sourceId = "bad source id";
+  fails("INVALID_SOURCE", () => comparePrivacyCheckpoints(earlier, source));
+  const schema = clone(earlier); schema.schemaHash = "not-a-hash";
+  fails("INVALID_SCHEMA", () => comparePrivacyCheckpoints(earlier, schema));
+  const scope = clone(earlier); scope.tables[0].rows[0].scopes.push(scope.tables[0].rows[0].scopes[0]);
+  fails("INVALID_SCOPE", () => comparePrivacyCheckpoints(earlier, scope));
 });
 
 console.log(JSON.stringify({ result: "BACKUP_PRIVACY_CHECKPOINT_TEST_PASS", cases,

@@ -15896,3 +15896,37 @@ https://mitene.us/
   Claude独立レビュー、実source/Storage/IAM/隔離Auth復元/実機/署名/申請は別gateとして未完。
   本番権限変更・データ移動・AWS作成・費用・保持の承認は今回取得/実行していない。
   文書のみを `[skip ci]` でcommit/pushし、PRはdraft、保護対象の未追跡文書/review_exportsは不介入。
+
+## 2026-09-24 追記 432 — 通知ACL・合成backup境界のSol実装
+
+- 本人「続けて」で追記431のSol実装範囲を再開。開始HEAD `a8d914b`、branch
+  `codex/consult-guest-entry`、PR #9 draft。新たな本番権限変更/実backupの承認は得ていない。
+- 通知管理2RPCに対してPUBLIC/anon/authenticatedのEXECUTEを明示取消し、service_roleを維持。
+  `notification_delivery_hardening.sql`、`production_pending_hardening.sql`、`api_grants.sql`再適用の
+  全経路に同じガードを入れた。`notification_rpc_acl_regression.sql`を使い捨てDBで各再適用後に実行。
+  本番候補`notification_rpc_acl_live_patch.sql`は、観測時の2関数hash・owner postgres・
+  SECURITY DEFINER・signature/ACLを一transactionで先に照合し、差異ならROLLBACK。
+  fixture hashだけを置換した同候補の構文/回帰も隔離PG16でPASS。本番ownerは未再照合で、
+  **本番patchは未実行**。ほか8つのSECURITY DEFINER関数の利用権は変更しない。
+- 合成Collectorのplanとadapterをawait前に固定、snapshot/photoもコピー/freeze。
+  単調deadlineをawait/stream/成功直前に確認し、保存dispatch後のlost ack/timeoutは
+  `ARTIFACT_WRITE_UNCERTAIN`。総bytes上限をchunk yield前に判定して自動再送しない。
+  checkpointはnestedまでfreezeし、比較前にsource/schema/key/scope形式を再検証。
+  unsafeなJS整数は拒否。恒久回帰へ移し、Collector21、checkpoint18、byte62ケースPASS。
+- `backup-source-catalog.mjs`で対象表・列型・PK・分類の厳格な照合とSQL側text値の順序付けを追加。
+  使い捨てnetwork:none PG17の3合成表で実`pg_export_snapshot`を保持し、遅いcommit後も
+  別接続と`pg_dump --snapshot`が同じ古い行を見る試験をPASS。bigint/numeric桁、
+  FORCE RLSの通常roleによる欠落、未知表/型/PK、Storage stub期限切れ/別bucket/PUT拒否を確認。
+  純粋catalog6ケース、PG17合成実行PASS。これは本番88表や本物のStorage JWT権限試験ではない。
+- `backup-generation.mjs`にschema v2を追加。source契約artifactとbaseline checkpoint artifactを
+  固定VersionIdで再読/byte照合した後、allowlist hash・source/epoch/schema/snapshot、
+  sealed/excluded表、roles/storage catalog hash、全rowのglobal scope hashを照合。
+  v2合成6ケースPASS、従来v1のbyte62ケースもPASS。証拠スコープはbyte＋自己申告契約の整合に限り、
+  HMAC鍵/sourceの真正性、全対象表の取得/復元を証明しない。既存合成Collectorはv1を返すまま。
+- `node scripts/test-stage-a-local-runner.mjs`もPASS。`pnpm run`は依存再設置の確認が非TTYで停止したので
+  依存削除を承認せず、直接Nodeでpure試験を実施。Web/mobileは変更しておらず今回再buildなし。
+- 次: 実source資格の権限設計を変えず、合成Collectorからv2を出す経路、snapshot内全表/列型/ACL/
+  function/extension・role catalogの照合、Storage version/page/転送中変更の実装と拒否試験。
+  実providerへのrole/JWT発行・AWS作成・個人情報転送・本番ACL適用は別承認。
+  重要処理の統合/公開前はAstraおよび既存Claude独立レビューが必要。Store申請の実機・署名・
+  本番受入ゲートも未完。保護対象の未追跡Claude文書2件と`review_exports/`には不介入。

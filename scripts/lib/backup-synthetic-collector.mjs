@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { types } from "node:util";
+import { performance } from "node:perf_hooks";
 import { artifactKey, createOpaqueId, validateGeneration } from "./backup-generation.mjs";
 
 // Offline contract exercise only. It accepts injected synthetic adapters and
@@ -28,7 +29,10 @@ const exact = (value, keys, code) => {
     && Reflect.ownKeys(value).every((key) => keys.includes(key)
       && Object.hasOwn(Object.getOwnPropertyDescriptor(value, key), "value")), code);
 };
-const check = (signal) => { if (signal.aborted) fail("COLLECTION_ABORTED"); };
+const check = (signal, deadline) => {
+  if (performance.now() >= deadline) fail("COLLECTION_TIMEOUT");
+  if (signal.aborted) fail("COLLECTION_ABORTED");
+};
 const safeCall = async (operation, code) => {
   try { return await operation(); }
   catch (error) { if (error instanceof SyntheticCollectionError) throw error; fail(code); }
@@ -38,18 +42,18 @@ const photoIdentity = (entry) => {
   requireValue(typeof entry.id === "string" && ID.test(entry.id)
     && typeof entry.version === "string" && VERSION.test(entry.version)
     && entry.version.toLowerCase() !== "null", "INVALID_PHOTO_INVENTORY");
-  return { id: entry.id, version: entry.version };
+  return Object.freeze({ id: entry.id, version: entry.version });
 };
-const sortedInventory = (entries) => entries.sort((a, b) => a.id.localeCompare(b.id));
+const sortedInventory = (entries) => Object.freeze(entries.sort((a, b) => a.id.localeCompare(b.id)));
 
-async function inventory(adapter, snapshotId, count, pass, signal) {
+async function inventory(adapter, snapshotId, count, pass, signal, deadline) {
   const entries = [];
   const cursors = new Set();
   let cursor = null;
   for (let page = 0; page < MAX_PAGES; page++) {
-    check(signal);
+    check(signal, deadline);
     const result = await safeCall(() => adapter.listPhotos(Object.freeze({ snapshotId, cursor, pass }), { signal }), "PHOTO_PAGE_FAILED");
-    check(signal);
+    check(signal, deadline);
     exact(result, ["snapshotId", "entries", "nextCursor"], "INVALID_PHOTO_PAGE");
     requireValue(result.snapshotId === snapshotId && !types.isProxy(result.entries) && Array.isArray(result.entries)
       && Object.getPrototypeOf(result.entries) === Array.prototype
@@ -70,10 +74,10 @@ async function inventory(adapter, snapshotId, count, pass, signal) {
   fail("PHOTO_PAGE_LIMIT");
 }
 
-async function writeOne(adapter, snapshotId, runId, kind, photo, signal) {
-  check(signal);
+async function writeOne(adapter, snapshotId, runId, kind, photo, signal, deadline, state, remainingBytes) {
+  check(signal, deadline);
   const source = await safeCall(() => adapter.readArtifact(Object.freeze({ snapshotId, kind, photo }), { signal }), "SOURCE_READ_FAILED");
-  check(signal);
+  check(signal, deadline);
   exact(source, ["snapshotId", "sourceVersion", "body"], "INVALID_SOURCE_RESPONSE");
   requireValue(source.snapshotId === snapshotId && source.sourceVersion === (photo?.version ?? null)
     && source.body != null && typeof source.body[Symbol.asyncIterator] === "function", "INVALID_SOURCE_RESPONSE");
@@ -85,12 +89,13 @@ async function writeOne(adapter, snapshotId, runId, kind, photo, signal) {
   let submitted = false;
   const body = (async function* () {
     for await (const chunk of source.body) {
-      check(signal);
+      check(signal, deadline);
       requireValue(chunk instanceof Uint8Array, "INVALID_SOURCE_CHUNK");
       const length = typedArrayByteLength.call(chunk);
       requireValue(length > 0 && length <= MAX_CHUNK_BYTES, "INVALID_SOURCE_CHUNK");
       bytes += length;
       requireValue(bytes <= MAX_ARTIFACT_BYTES, "ARTIFACT_TOO_LARGE");
+      requireValue(bytes <= remainingBytes, "GENERATION_TOO_LARGE");
       digest.update(chunk);
       yield chunk;
     }
@@ -98,13 +103,15 @@ async function writeOne(adapter, snapshotId, runId, kind, photo, signal) {
   })();
   try {
     submitted = true;
+    state.writePending = true;
     const response = await adapter.writeArtifact(Object.freeze({ key, kind, ifNoneMatch: "*", body }), { signal });
-    check(signal);
+    check(signal, deadline);
     if (response?.status === 409 || response?.status === 412) fail("ARTIFACT_WRITE_CONFLICT");
     exact(response, ["status", "key", "versionId"], "ARTIFACT_WRITE_UNCERTAIN");
     requireValue(response.status === 200 && response.key === key && complete && bytes > 0
       && typeof response.versionId === "string" && VERSION.test(response.versionId)
       && response.versionId.toLowerCase() !== "null", "ARTIFACT_WRITE_UNCERTAIN");
+    state.writePending = false;
     return { id, kind, key, versionId: response.versionId, bytes,
       sha256: digest.digest("hex"), photo };
   } catch (error) {
@@ -130,44 +137,53 @@ export async function collectSyntheticCandidate(plan, adapter, options = { timeo
   exact(options, ["timeoutMs"], "INVALID_OPTIONS");
   requireValue(Number.isSafeInteger(options.timeoutMs) && options.timeoutMs > 0
     && options.timeoutMs <= MAX_DURATION_MS, "INVALID_OPTIONS");
+  // Never rely on caller-owned objects again after an awaited adapter call.
+  const fixedPlan = Object.freeze({ ...plan });
+  const fixedAdapter = Object.freeze({ ...adapter });
+  const deadline = performance.now() + options.timeoutMs;
   const controller = new AbortController();
+  const state = { writePending: false };
   let rejectTimeout;
   const timeout = new Promise((_, reject) => { rejectTimeout = reject; });
-  const timer = setTimeout(() => { controller.abort(); rejectTimeout(new SyntheticCollectionError("COLLECTION_TIMEOUT")); }, options.timeoutMs);
+  const timer = setTimeout(() => { controller.abort(); rejectTimeout(new SyntheticCollectionError(
+    state.writePending ? "ARTIFACT_WRITE_UNCERTAIN" : "COLLECTION_TIMEOUT")); }, options.timeoutMs);
   const startedAt = new Date().toISOString();
   try {
     const work = (async () => {
       let snapshot;
       try {
-        snapshot = await safeCall(() => adapter.openSnapshot({ signal: controller.signal }), "SOURCE_OPEN_FAILED");
-        check(controller.signal);
+        snapshot = await safeCall(() => fixedAdapter.openSnapshot({ signal: controller.signal }), "SOURCE_OPEN_FAILED");
+        check(controller.signal, deadline);
         exact(snapshot, ["snapshotId", "sourceId", "sourceEpoch", "schemaHash", "pgMajor", "photoCount"], "INVALID_SNAPSHOT");
+        snapshot = Object.freeze({ ...snapshot });
         requireValue(typeof snapshot.snapshotId === "string" && /^[A-Za-z0-9_-]{1,128}$/.test(snapshot.snapshotId)
-          && snapshot.sourceId === plan.sourceId && snapshot.sourceEpoch === plan.sourceEpoch
-          && snapshot.schemaHash === plan.schemaHash && snapshot.pgMajor === 17
+          && snapshot.sourceId === fixedPlan.sourceId && snapshot.sourceEpoch === fixedPlan.sourceEpoch
+          && snapshot.schemaHash === fixedPlan.schemaHash && snapshot.pgMajor === 17
           && Number.isSafeInteger(snapshot.photoCount) && snapshot.photoCount >= 0
           && snapshot.photoCount <= MAX_PHOTOS, "SNAPSHOT_MISMATCH");
-        const before = await inventory(adapter, snapshot.snapshotId, snapshot.photoCount, "before", controller.signal);
+        const before = await inventory(fixedAdapter, snapshot.snapshotId, snapshot.photoCount, "before", controller.signal, deadline);
         const artifacts = [];
         let totalBytes = 0;
         for (const [kind, photo] of [
           ["database", null], ["roles", null], ["storage_catalog", null],
           ...before.map((item) => ["photo", item])
         ]) {
-          const artifact = await writeOne(adapter, snapshot.snapshotId, plan.runId, kind, photo, controller.signal);
+          const artifact = await writeOne(fixedAdapter, snapshot.snapshotId, fixedPlan.runId, kind, photo,
+            controller.signal, deadline, state, MAX_TOTAL_BYTES - totalBytes);
           artifacts.push(artifact);
           totalBytes += artifact.bytes;
           requireValue(totalBytes <= MAX_TOTAL_BYTES, "GENERATION_TOO_LARGE");
         }
-        const after = await inventory(adapter, snapshot.snapshotId, snapshot.photoCount, "after", controller.signal);
+        const after = await inventory(fixedAdapter, snapshot.snapshotId, snapshot.photoCount, "after", controller.signal, deadline);
         requireValue(JSON.stringify(before) === JSON.stringify(after), "SOURCE_INVENTORY_CHANGED");
-        const generation = validateGeneration({ schemaVersion: 1, runId: plan.runId,
-          releaseSha: plan.releaseSha, startedAt, finishedAt: new Date().toISOString(),
+        check(controller.signal, deadline);
+        const generation = validateGeneration({ schemaVersion: 1, runId: fixedPlan.runId,
+          releaseSha: fixedPlan.releaseSha, startedAt, finishedAt: new Date().toISOString(),
           inventoryBefore: before, inventoryAfter: after, artifacts });
         return Object.freeze({ generation, sourceSnapshotId: snapshot.snapshotId,
           status: "CANDIDATE_ONLY", publicReleaseAllowed: false, productionReady: false });
       } finally {
-        if (snapshot) await safeCall(() => adapter.closeSnapshot(Object.freeze({ snapshotId: snapshot.snapshotId }),
+        if (snapshot) await safeCall(() => fixedAdapter.closeSnapshot(Object.freeze({ snapshotId: snapshot.snapshotId }),
           { signal: AbortSignal.timeout(1000) }), "SOURCE_CLOSE_FAILED");
       }
     })();

@@ -2,6 +2,27 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
+## 今回完了（2026-09-24 Sol限定実装・本番未適用）
+
+- 追記432。通知管理2RPCのPUBLIC/anon/authenticated実行権限を取り消すSQLを初期定義・
+  pending bundle・`api_grants.sql`再適用後に追加。観測済み関数本文hash/owner/ACLを照合して
+  想定外ならROLLBACKする本番用patch候補も用意したが、本番には適用していない。
+  隔離PostgreSQL16で再適用とguard patchの回帰PASS。正規service_roleは維持。
+- 合成Collectorのplan/photo途中変更、timer遅延、保存後応答喪失、stream総量を修正。
+  checkpointのnested書換と無効metadata・重複scope・危険なJS整数を拒否。
+  pure試験はCollector21、checkpoint18、byte Verifier62ケースPASS。
+- 使い捨てnetwork:none PostgreSQL17の3合成表で実exported snapshotを保持し、遅いcommit後も
+  別接続と`pg_dump --snapshot`が古い一貫した行を読むことを確認。表/列型/PKの厳格な分類、
+  bigint/numericの文字列保持、FORCE RLSの限定role、未知表、Storage権限stubを試験。
+  source catalog純粋試験6、PG17合成試験PASS。
+- 世代v2のsource契約とbaseline checkpoint artifactを、VersionId/byte hashと意味的に照合する
+  pure検証を追加（v2合成6ケースPASS）。v1をv2として受け入れない。
+  **Collectorはまだv1合成候補のみ**。v2の実source Collector、全88表のACL/拡張/型分類、
+  本番資格・Storage API・HMAC/source真正性・AWS・復元は未接続/未証明。
+- `pnpm run`はローカル依存の再設置確認が非TTYで止まったため、依存を消さずに直接Nodeで検証。
+  Stage A runner PASS。本番変更・利用者データ読取/移動・AWS作成・Store提出なし。
+  PR #9はdraftのまま。重要処理の統合/公開前にAstraと既存のClaude独立レビューが必要。
+
 ## 今回完了（2026-09-24 source権限のAstra限定レビュー）
 
 - 詳細: `BACKUP_SOURCE_ACCESS_REVIEW_2026-09-24.md`、追記431。

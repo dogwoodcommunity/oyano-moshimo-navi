@@ -97,6 +97,8 @@ as $$
   left join tasks on tasks.id = claimed.task_id;
 $$;
 
+revoke all on function public.claim_due_scheduled_notifications(int)
+  from public, anon, authenticated;
 grant execute on function public.claim_due_scheduled_notifications(int) to service_role;
 
 create or replace function public.reset_stale_sending_notifications(p_before interval default interval '15 minutes')
@@ -120,4 +122,6 @@ begin
 end;
 $$;
 
+revoke all on function public.reset_stale_sending_notifications(interval)
+  from public, anon, authenticated;
 grant execute on function public.reset_stale_sending_notifications(interval) to service_role;

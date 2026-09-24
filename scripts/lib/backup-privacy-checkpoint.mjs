@@ -39,7 +39,7 @@ function canonical(value, depth = 0, seen = new WeakSet()) {
   requireValue(depth <= 24, "INVALID_ROW");
   if (value === null || typeof value === "string" || typeof value === "boolean") return JSON.stringify(value);
   if (typeof value === "number") {
-    requireValue(Number.isFinite(value), "INVALID_ROW");
+    requireValue(Number.isFinite(value) && (!Number.isInteger(value) || Number.isSafeInteger(value)), "INVALID_ROW");
     return JSON.stringify(value);
   }
   requireValue(value !== null && typeof value === "object" && !types.isProxy(value) && !seen.has(value), "INVALID_ROW");
@@ -103,16 +103,17 @@ export function createPrivacyCheckpoint(input, hmacKey) {
       requireValue(new Set(scopes).size === scopes.length, "DUPLICATE_SCOPE");
       const body = canonical(row.body);
       requireValue(Buffer.byteLength(body) <= 2 * 1024 * 1024, "INVALID_ROW");
-      return { rowId, bodyDigest: digest(hmacKey, "row-body-v1", body), scopes: scopes.sort() };
+      return Object.freeze({ rowId, bodyDigest: digest(hmacKey, "row-body-v1", body),
+        scopes: Object.freeze(scopes.sort()) });
     });
     rows.sort((left, right) => left.rowId.localeCompare(right.rowId));
-    return { name: table.name, rows };
+    return Object.freeze({ name: table.name, rows: Object.freeze(rows) });
   }).sort((left, right) => left.name.localeCompare(right.name));
   return Object.freeze({
     schemaVersion: 1, sourceId: input.sourceId, sourceEpoch: input.sourceEpoch,
     schemaHash: input.schemaHash, keyVersion: input.keyVersion,
     snapshotId: input.snapshotId, capturedAt: input.capturedAt,
-    expectedTables: expected, tables: result, rowCount: totalRows,
+    expectedTables: Object.freeze(expected), tables: Object.freeze(result), rowCount: totalRows,
     publicReleaseAllowed: false,
   });
 }
@@ -121,13 +122,18 @@ function validateCheckpoint(value) {
   exact(value, ["schemaVersion", "sourceId", "sourceEpoch", "schemaHash", "keyVersion", "snapshotId",
     "capturedAt", "expectedTables", "tables", "rowCount", "publicReleaseAllowed"]);
   requireValue(value.schemaVersion === 1 && value.publicReleaseAllowed === false, "INVALID_CHECKPOINT");
+  for (const field of ["sourceId", "sourceEpoch", "keyVersion", "snapshotId"])
+    requireValue(typeof value[field] === "string" && ID.test(value[field]), "INVALID_SOURCE");
+  requireValue(typeof value.schemaHash === "string" && SHA.test(value.schemaHash), "INVALID_SCHEMA");
   utc(value.capturedAt);
   array(value.expectedTables, MAX_TABLES);
   array(value.tables, MAX_TABLES);
+  for (const table of value.tables) exact(table, ["name", "rows"]);
   requireValue(value.expectedTables.length > 0 && value.tables.length === value.expectedTables.length
     && JSON.stringify(value.expectedTables) === JSON.stringify(value.tables.map((table) => table.name)), "TABLE_COVERAGE_UNPROVEN");
   requireValue(value.expectedTables.every((name) => typeof name === "string" && TABLE.test(name))
-    && new Set(value.expectedTables).size === value.expectedTables.length, "INVALID_SCHEMA");
+    && new Set(value.expectedTables).size === value.expectedTables.length
+    && value.expectedTables.every((name, index) => value.tables[index].name === name), "INVALID_SCHEMA");
   let rowCount = 0;
   for (const table of value.tables) {
     exact(table, ["name", "rows"]);
@@ -141,11 +147,19 @@ function validateCheckpoint(value) {
       requireValue(!ids.has(row.rowId), "DUPLICATE_ROW");
       ids.add(row.rowId);
       array(row.scopes, 8);
-      requireValue(row.scopes.length > 0 && row.scopes.every((scope) => typeof scope === "string" && SHA.test(scope)), "INVALID_SCOPE");
+      requireValue(row.scopes.length > 0 && row.scopes.every((scope) => typeof scope === "string" && SHA.test(scope))
+        && new Set(row.scopes).size === row.scopes.length, "INVALID_SCOPE");
     }
   }
   requireValue(Number.isSafeInteger(value.rowCount) && value.rowCount === rowCount && rowCount <= MAX_ROWS,
     "INVALID_CHECKPOINT");
+}
+
+// Structural validation only. This does not prove the HMAC key, source, or
+// snapshot provenance of an externally supplied checkpoint.
+export function validatePrivacyCheckpoint(value) {
+  validateCheckpoint(value);
+  return true;
 }
 
 export function comparePrivacyCheckpoints(backup, latest) {
@@ -167,14 +181,14 @@ export function comparePrivacyCheckpoints(backup, latest) {
         && JSON.stringify(oldRow.scopes) === JSON.stringify(current.scopes)) continue;
       for (const scope of oldRow.scopes) isolated.add(scope);
       for (const scope of current?.scopes ?? []) isolated.add(scope);
-      changes.push({ table: oldTable.name, rowId: oldRow.rowId,
-        kind: current ? "CHANGED" : "REMOVED" });
+      changes.push(Object.freeze({ table: oldTable.name, rowId: oldRow.rowId,
+        kind: current ? "CHANGED" : "REMOVED" }));
     }
   }
   return Object.freeze({ publicReleaseAllowed: false,
     status: changes.length ? "ISOLATION_REQUIRED" : "NO_OLDER_ROW_DIFFERENCE",
-    changes: changes.sort((a, b) => `${a.table}:${a.rowId}`.localeCompare(`${b.table}:${b.rowId}`)),
-    isolatedScopeHashes: [...isolated].sort(),
+    changes: Object.freeze(changes.sort((a, b) => `${a.table}:${a.rowId}`.localeCompare(`${b.table}:${b.rowId}`))),
+    isolatedScopeHashes: Object.freeze([...isolated].sort()),
     laterRowsNotRecovered: latest.rowCount - backup.rowCount + changes.filter((change) => change.kind === "REMOVED").length,
   });
 }

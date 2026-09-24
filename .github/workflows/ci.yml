@@ -81,11 +81,17 @@ jobs:
       - name: Test backup byte integrity and interrupted completion
         run: pnpm run test:backup-generation
 
+      - name: Test v2 source and baseline artifact binding
+        run: pnpm run test:backup-generation-v2
+
       - name: Test synthetic backup collection failures and separate verification
         run: pnpm run test:backup-synthetic-collector
 
       - name: Test backup privacy checkpoint and restore admission
         run: pnpm run test:backup-privacy-checkpoint
+
+      - name: Test backup source catalog fail-closed classification
+        run: pnpm run test:backup-source-catalog
 
       - name: Test monitor timeline
         run: pnpm run test:monitor-timeline

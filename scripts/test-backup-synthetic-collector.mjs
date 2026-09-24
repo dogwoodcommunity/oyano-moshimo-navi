@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { performance } from "node:perf_hooks";
 import { collectSyntheticCandidate } from "./lib/backup-synthetic-collector.mjs";
 import { finalizeGeneration, manifestKey } from "./lib/backup-generation.mjs";
 
@@ -88,6 +89,25 @@ await test("real source ID rejected before opening", async () => {
   await assert.rejects(() => collectSyntheticCandidate({ ...plan, sourceId: "production" }, ctx.adapter), codeIs("INVALID_PLAN"));
   assert.deepEqual(ctx.events, []);
 });
+await test("caller changing a synthetic plan during open cannot authorize a real source", async () => {
+  const ctx = fixture(); const mutable = { ...plan };
+  ctx.adapter.openSnapshot = async () => {
+    mutable.sourceId = "production";
+    return { snapshotId: "snapshot-1", sourceId: "production", sourceEpoch: plan.sourceEpoch,
+      schemaHash: plan.schemaHash, pgMajor: 17, photoCount: 1 };
+  };
+  await assert.rejects(() => collectSyntheticCandidate(mutable, ctx.adapter), codeIs("SNAPSHOT_MISMATCH"));
+  assert.equal(ctx.objects.size, 0);
+});
+await test("adapter cannot rewrite a photo version during collection", async () => {
+  const ctx = fixture(); const original = ctx.adapter.readArtifact;
+  ctx.adapter.readArtifact = async (request, options) => {
+    if (request.kind === "photo") request.photo.version = "mutated-version";
+    return original(request, options);
+  };
+  await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter), codeIs("SOURCE_READ_FAILED"));
+  assert.equal(ctx.objects.has(manifestKey(runId)), false);
+});
 
 await test("wrong PG major and source identity are rejected before writing", async () => {
   for (const change of [{ pgMajor: 16 }, { sourceId: "synthetic-other" }, { schemaHash: "e".repeat(64) }]) {
@@ -152,6 +172,15 @@ await test("lost write acknowledgement stays uncertain, no retry", async () => {
   assert.equal(writes, 1); assert.equal(ctx.objects.size, 1);
   assert.equal(ctx.objects.has(manifestKey(runId)), false);
 });
+await test("timed out acknowledgement after persisted bytes is uncertain", async () => {
+  const ctx = fixture(); const original = ctx.adapter.writeArtifact; let writes = 0;
+  ctx.adapter.writeArtifact = async (...args) => {
+    writes++; await original(...args); return new Promise(() => {});
+  };
+  await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter, { timeoutMs: 10 }),
+    codeIs("ARTIFACT_WRITE_UNCERTAIN"));
+  assert.equal(writes, 1); assert.equal(ctx.objects.size, 1);
+});
 
 await test("conditional-write conflict is not retried", async () => {
   const ctx = fixture(); let writes = 0;
@@ -183,6 +212,20 @@ await test("oversized source chunk stops without a candidate", async () => {
     return response;
   };
   await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter), codeIs("ARTIFACT_WRITE_UNCERTAIN"));
+  assert.equal(ctx.objects.has(manifestKey(runId)), false);
+});
+await test("generation byte cap rejects the next chunk before an oversized candidate", async () => {
+  const ctx = fixture();
+  const photos = [photoId, "e".repeat(32)].map((id) => ({ id, version: "photo-version-1" }));
+  const originalOpen = ctx.adapter.openSnapshot;
+  ctx.adapter.openSnapshot = async (...args) => ({ ...(await originalOpen(...args)), photoCount: 2 });
+  ctx.adapter.listPhotos = async ({ snapshotId }) => ({ snapshotId, entries: photos, nextCursor: null });
+  ctx.adapter.readArtifact = async ({ snapshotId, kind, photo }) => ({
+    snapshotId, sourceVersion: photo?.version ?? null,
+    body: (async function* () { for (let i = 0; i < 128; i++) yield Buffer.alloc(64 * 1024); })(),
+  });
+  await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter), codeIs("ARTIFACT_WRITE_UNCERTAIN"));
+  assert.equal(ctx.objects.size, 4);
   assert.equal(ctx.objects.has(manifestKey(runId)), false);
 });
 
@@ -224,6 +267,17 @@ await test("collector timeout aborts and cannot make a candidate", async () => {
   ctx.adapter.openSnapshot = async ({ signal: passed }) => { signal = passed; return new Promise(() => {}); };
   await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter, { timeoutMs: 10 }), codeIs("COLLECTION_TIMEOUT"));
   assert.equal(signal.aborted, true); assert.equal(ctx.objects.size, 0);
+});
+await test("event-loop starvation still cannot return a late candidate", async () => {
+  const ctx = fixture(); const original = ctx.adapter.listPhotos;
+  ctx.adapter.listPhotos = async (...args) => {
+    const until = performance.now() + 30;
+    while (performance.now() < until) { /* starve the timeout callback */ }
+    return original(...args);
+  };
+  await assert.rejects(() => collectSyntheticCandidate(plan, ctx.adapter, { timeoutMs: 10 }),
+    codeIs("COLLECTION_TIMEOUT"));
+  assert.equal(ctx.objects.size, 0);
 });
 
 await test("snapshot close failure is not reported as candidate", async () => {
