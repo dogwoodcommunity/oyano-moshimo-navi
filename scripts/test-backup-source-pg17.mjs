@@ -87,10 +87,12 @@ try {
   assert.equal(command(["image", "inspect", imageId, "--format", "{{.Id}}"])
     .stdout.toString().trim(), imageId);
   phase = "create-isolated-pg17";
+  // Track the exact name before dispatch: Docker can create a container even
+  // when its CLI response is interrupted. Cleanup still checks our run label.
+  created = true;
   const id = command(["create", "--pull=never", "--network=none", "--rm", "--name", name,
     "--label", label, "--env", "POSTGRES_HOST_AUTH_METHOD=trust", imageId]).stdout.toString().trim();
   assert.match(id, /^[a-f0-9]{64}$/);
-  created = true;
   const inspected = JSON.parse(command(["inspect", name]).stdout.toString())[0];
   assert.equal(inspected.Config.Labels["oyano.backup-source"], runId);
   assert.equal(inspected.HostConfig.NetworkMode, "none");
