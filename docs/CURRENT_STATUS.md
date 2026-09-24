@@ -2,7 +2,20 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
-## 今回完了
+## 今回完了（2026-09-24 申請前の実環境確認）
+
+- 前回Astraレビューの確定範囲で、費用・本番データ変更なしの申請準備を継続（追記427）。
+  Supabase対象projectのBackups画面はFree Planで、自動project backupなし。
+  AWS東京の読取確認では、名前が一致するもしもナビ用stack/bucketは見当たらず、
+  見つかったbackup stackは別サービス用。既存資源の流用・作成はしていない。
+- 有線接続のiPhone 17 Pro Max（iOS 26.6.2）はペアリング/Developer Mode有効。
+  Macのコード署名identityは0件。EAS CLIの今回の再確認はnpm registryのDNS失敗で未完。
+  内部配布build、両OS実機受入、正式署名、申請は未実施。
+- 既存AWS保管庫コードのoffline回帰はPASS（15 resources / 59 policy fixtures / 10 negative controls）。
+  実IAM/CloudTrail・収集worker・実backup/隔離復元は未検証。PR #9はdraft、未統合。
+  本番DB/配信/利用者記録に変更なし。通知tombstone保持方針と有料保管先/費用の承認も未取得。
+
+## 前回完了（認証・DB-first再レビュー）
 
 - 本人のAstra切替完了返答後、source `691ea17` の認証/DB-first統合レビューを実施（追記426）。
   実helperの本人確認待ち中にblur/対象変更すると旧保存・旧招待参加の通信が始まる残件を再現し、

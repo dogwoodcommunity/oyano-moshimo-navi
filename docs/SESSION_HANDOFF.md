@@ -15735,3 +15735,28 @@ https://mitene.us/
 - source `1da504147984ade24305a8d953766218e844ff50` をpush完了。GitHub CI `35963043239` の
   `web-and-mobile` / `personal-data-infrastructure` はともにsuccess。PR #9はdraftのまま未統合。
   本番・実機・署名・審査の証拠とは区別。この確定結果だけを `[skip ci]` の文書commitで追記/pushする。
+
+## 2026-09-24 追記 427 — 無料でできる申請前確認、実backup・署名ゲートは未達
+
+- 本人「続けて」を受け、追記426でAstraが確定した範囲の読取/準備を実施。
+  branch `codex/consult-guest-entry`、開始HEAD `9268407`、draft PR #9は未統合。
+  PRのmerge stateはCLEANだが、公開/審査準備完了を意味しない。
+- 対象Supabase projectのDashboard > Database > Backupsで、Free Planにはproject backupがなく、
+  Pro Planへのupgrade案内が表示されることを確認。upgrade/課金/backup取得はしていない。
+  既存の合成復旧演習は実Auth/Storage・最新削除の再適用や実本番backupの隔離復元に代わらない。
+- AWSの既存default接続でSTS本人照合後、東京リージョンのCloudFormation stack名とS3 bucket名を
+  読取照合。もしもナビを示すstack/bucket名は見つからず、backup名のstackはTENSHOKU用2件のみ。
+  名前だけの検索なので任意名資源の不存在までは断定しない。別サービス資源の流用/変更なし。
+  `test-personal-data-infra.mjs` はoffline PASS（15 resources / 59 policy fixtures / 10 negative controls）。
+  `plan-personal-data-backup.mjs --plan` は設計値のみ。AWS作成・collector・実backup・監視・復元なし。
+- 有線のiPhone 17 Pro Max/iOS 26.6.2はpair済み、Developer Mode enabled。
+  `security find-identity -v -p codesigning` はvalid identities 0。Xcode 26.6はあるが
+  このMacで署名済みiOS candidateは未生成/未インストール。EASの再確認はnpm registry DNS失敗で
+  停止し、今回のアカウント/ビルド枠/署名を確認済みとは扱わない。
+- 現時点で本番DB-first migration、Web配信、通知tombstone保持、実データbackup、
+  署名/両実機、申請宣言/スクリーンショット、ストア提出は未完。既存利用者データ/記録は変更していない。
+  前回の通知tombstone保持への質問は未回答で、「続けて」を承認と解釈しない。
+- 次は、AWSの保管先と費用・保持方針および実データ取扱いの承認範囲を確認する。
+  個人情報収集worker等の重要な新設計はAGENTS.mdのAstra工程。本番適用前には正確なchange set、
+  合成AWS拒否/復旧、実backupと最新削除を含む隔離復元、旧通知/配信commit再照合、両OS実機受入が必要。
+  この確認だけで申請へ進まない。保護対象の未追跡Claude2文書/review_exportsには不介入。
