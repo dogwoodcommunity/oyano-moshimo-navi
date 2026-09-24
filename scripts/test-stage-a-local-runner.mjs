@@ -70,7 +70,7 @@ assert.equal(packageJson.scripts["test:backup-generation"], "node scripts/test-b
 assert.match(ci, /pnpm run test:backup-generation/);
 assert.match(ci, /pnpm run test:personal-data-infra/);
 assert.match(ci, /cfn-lint==1\.53\.3/);
-assert.match(ci, /cfn-lint -t infra\/aws-personal-data\/backup-vault\.cfn\.json -r ap-northeast-1/);
+assert.match(ci, /cfn-lint -t infra\/aws-personal-data\/backup-vault\.cfn\.json infra\/aws-personal-data\/backup-verifier\.cfn\.json -r ap-northeast-1/);
 assert.equal(packageJson.scripts["test:diary-unsaved-changes"], "node scripts/test-diary-unsaved-changes.mjs");
 assert.match(ci, /pnpm run test:diary-unsaved-changes/, "unsaved diary guard must remain in CI as well as local qualification");
 assert.match(ci, /docker pull docker\.io\/library\/postgres:16-bookworm/, "fresh CI must explicitly prepare the image before offline SQL scripts");
