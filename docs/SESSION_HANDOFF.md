@@ -15578,3 +15578,29 @@ https://mitene.us/
   現在の選択モデルは確認できないため推測せず、本人の切替完了返答を待つ。
   Astraは未完ゲートの優先度と安全な実装/受入範囲を確定し、通常実装へ戻せる条件を示す。
   重要処理/初回公開の最終レビューは提出直前にも必要。切替後の「続けて」は本番/実データ/課金等の包括承認としない。
+
+## 2026-09-24 追記 422 — 本番読取確認と認証/申請ゲートの設計レビュー
+
+- 本人「切り替えた。続けて」を受け、重要箇所のレビューを再開。開始HEAD `770cdef`、
+  branch `codex/consult-guest-entry`、app source `4b8fc38`。継承設定の独立担当2名が認証/申請を読取確認。
+  Claude APIの呼出しはなし。モデルの実設定を推測せず本人の切替完了返答に基づく工程として記録。
+- SupabaseでEmail/signup/confirm ON、anonymous/CAPTCHA OFF、旧redirect3件を確認。
+  新 `oyanomoshimo:///auth/complete?state=*` は未登録。本番 `/auth/mobile` / `/admin/ai-reports` はGET404。
+  READ ONLY SQLで初回手帳作成RPC・push v2 RPC/table/columns不在、通知token行全件0を確認。
+  sync/rate RPCはservice-only、主要12table RLSと4revision/storage triggerは有効。
+  家族招待RPCのanon実行可だけで脆弱性や安全性を断定せず、認証拒否の実検証を残す。
+  SQLはメタデータと非識別集計のみ。1回の型連結エラーはcast修正後に成功。利用者本文/秘密値の取得なし。
+- 重要な不足: v2通知OFFだと通知未登録端末でもnativeログアウトが503で失敗。
+  全体Web配信は新delivery RPCを無条件使用するためDB-first必須。ページだけ反映して提出可能とはしない。
+  Appleの案内を受け、既定ブラウザを開く認証からExpoシステム認証セッションへ変更する設計を確定。
+  待機/認証ロック分離、result/Linkingの共通検証、二重/遅着の冪等性、dismiss後pending保持、
+  古い処理が新pendingを消さない対策と既存nonce/メール/本人/期限照合を維持する。
+- `MOBILE_RELEASE_REVIEW_2026-09-24.md` にlive根拠、次の限定実装、回帰/実機条件、
+  migration→Web→native受入→運用/署名/宣言→提出の順序を保存。
+  Solは認証実装と限定回帰/native compileから再開できる。本番変更は別の適用前レビュー/承認へ。
+  guest/CAPTCHAの新規有効化・通知解除省略・既存SQL一括再投入・実データ削除を行わない。
+- 古いRELRO21/23未達とMFA待ちの現在判定を申請2文書で訂正。既存CI/ビルドPASSは今回再実行ではない。
+  今回は文書編集のみ。本番設定保存/DB変更/メール/署名/課金/Store提出はなし、提出保留を維持。
+  通報運用/保持、削除完走/完了連絡、実backup/復元、両実機/正式署名/審査アクセス等は未完。
+  保護対象の未追跡2文書/review_exportsは不介入。文書差分を確認し `[skip ci]` でbranchへpushする。
+  Supabaseの照会タブを次回用に保持し、「ここからはGPT-6 Solに戻して進められます。」と案内して停止する。

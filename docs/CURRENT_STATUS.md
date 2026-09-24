@@ -4,6 +4,18 @@
 
 ## 今回完了
 
+- 本人「切り替えた。続けて」を受け、認証/申請ゲートをレビュー（追記422）。Supabaseで設定と
+  READ ONLYのRPC/ACL/RLS/同期trigger・通知件数を確認。新callback未登録、本番 `/auth/mobile` と
+  `/admin/ai-reports` は404。初回手帳作成RPCと通知v2は未導入。既存通知行は0。
+  sync/rate RPCのservice-only ACLと主要RLS/4triggerは存在。既存記録の取得/変更なし。
+  通知v2がOFFだと現行nativeはログアウト失敗、Web全体は通知SQLのDB-first配信が必要と確定。
+  認証はシステム認証セッションへ変更し、nonce/本人照合/競合対策を維持する設計を確定。
+  次のSol範囲は限定認証実装と回帰・native compile。本番/実機/運用/署名/申請は未完、提出保留。
+  詳細と完了条件: `MOBILE_RELEASE_REVIEW_2026-09-24.md`。本人のSol切替完了返答後に再開する。
+  今回は文書のみ。新たな本番反映/認証設定保存/DB変更/メール送信/Store操作なし。
+
+## 前回完了（Astraへ引き継ぎ）
+
 - 9月24日、本人「審査提出まで」で公開作業を再開。Codexブラウザで対象Supabase project Dashboardの表示と
   `Healthy` を読取確認（追記421）。これでDashboard到達は確認済み。DB操作権限、実データ受入、
   migration適用状況は未確認。ストア提出ゲートの実機・正式署名・認証/削除/通知/通報の受入、
