@@ -16,6 +16,9 @@
 - 次は全対象table分類と実source資格方式を実装前にレビューし、合成PG17/Storage stubで
   snapshot・catalogの整合性を広げる。重要な個人情報/IAM実装は統合・公開前にAstra/独立レビュー。
   AWS作成/secret配布/本番データ転送/申請はしていない。PR #9はdraftのまま。
+- source `3c74a4e` をpushし、CI `35971328612` はWeb/mobile・個人情報インフラともsuccess。
+  次に実source接続の資格・全表網羅・Storage権限を決める前にAstra設計確認が必要。
+  合成試験のPASSは実データ利用許可やStore提出許可ではない。
 
 ## 今回完了（2026-09-24 backup隔離判定と権限分離のローカル実装）
 

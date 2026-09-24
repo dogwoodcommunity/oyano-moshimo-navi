@@ -15854,3 +15854,10 @@ https://mitene.us/
   Astra/既存独立レビューを行い、実source資格方式や未知schema等の新前提が出たら先に設計確認。
   今回の「すすめて」をAWS作成・秘密配布・本番転送・Store申請への包括承認と扱わない。
   保護対象の未追跡Claude2文書と`review_exports/`は不介入。
+- source `3c74a4e3bf455adf66563a46ab1bd1304aa89805` をpush。CI `35971328612` の
+  `web-and-mobile` と `personal-data-infrastructure` はともにsuccess。合成収集16ケースもCI通過。
+  次工程は実source接続の資格・RLSを含む全表読取可否・Storage S3鍵の全操作権限・秘密配布・
+  失敗時の停止を決める必要があるため、AGENTS.mdの重要な個人情報/権限設計としてAstraへ切替。
+  Astraは追記428の範囲を前提に、最小権限の実source adapter方式と網羅性の証明、
+  統合前レビュー条件を決める。Solへ戻せるのは実装範囲・拒否条件・合成/実環境検証が明確になった後。
+  このCI結果は文書のみの `[skip ci]` commitで保存する。
