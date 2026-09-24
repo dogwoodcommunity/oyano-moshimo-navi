@@ -15829,3 +15829,28 @@ https://mitene.us/
   `test-stage-a-local-runner.mjs` を2template検査へ更新し `34d33bb80282f347bfca2cac9225071223d4cc99`
   をpush。再実行CI `35970165450` はWeb/mobile・個人情報インフラの2ジョブともsuccess。
   CI結果の確定追記は文書のみの `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 430 — 合成source収集と独立Verifierの候補/完了境界
+
+- 本人「すすめて」で前回のSol工程を継続。開始HEAD `3f5242f`、branch `codex/consult-guest-entry`、
+  PR #9はdraft。本番のSupabase SQL Editorが画面にあるが今回は操作せず、利用者データ/秘密/AWSは未接続。
+- `scripts/lib/backup-synthetic-collector.mjs` を新設。明示注入されたsource/宛先だけを使い、
+  `synthetic-` source ID/PG17/同じsnapshot ID/schema hash/source epochを要求。
+  DB・role・storage catalog＋写真全件をbounded streamとして条件付き新規書込し、
+  photo count/page/cursor/重複/版、取得前後inventory、各chunk/総bytes/時間を確認。
+  応答喪失・読取途中失敗・partial upload・close失敗で候補成功を返さず、書込不確実時に再送しない。
+  候補だけを返し、`complete.json`を作る能力は持たない。実source資格/URL/AWS SDKを内蔵せず、
+  **本番の収集adapterではない**。snapshot ID/件数は注入sourceの申告で、DBの真のsnapshot/全件性は証明しない。
+- `test-backup-synthetic-collector.mjs` の16合成ケースPASS。独立Verifier adapterだけで
+  版指定再読/byte照合後にmarkerを作り、版/byte差替えでは作らない。欠けた/重複page、
+  cursor循環、版不一致、収集中の変更、stream中断/過大chunk、409/412、応答喪失、
+  早期write応答、timeout、close失敗を拒否。error/stackへ合成のprivate markerを出さない。
+  既存byte照合62、checkpoint15、offline IAM/Stage AもPASS。CIへ新テストを追加。
+- 未実施: 実sourceの`pg_dump --snapshot`、全対象table分類/未知schema gate、Storageの実page/version/byte、
+  source権限・credential配置、worker/container/schedule、実AWS権限/条件付き書込、
+  実backupとAuth/MFA/写真を含む隔離復元、旧削除の公開防止実証、両OS実機/署名/Store提出。
+  合成候補の孤立artifactは完了扱いせず、保持・清掃設計は別承認。自動公開許可は常にfalse。
+- この差分はAstraの追記428で確定した実装範囲内。重要な個人情報/IAM処理の統合・公開前に
+  Astra/既存独立レビューを行い、実source資格方式や未知schema等の新前提が出たら先に設計確認。
+  今回の「すすめて」をAWS作成・秘密配布・本番転送・Store申請への包括承認と扱わない。
+  保護対象の未追跡Claude2文書と`review_exports/`は不介入。

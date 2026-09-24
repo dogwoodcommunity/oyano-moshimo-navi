@@ -81,6 +81,9 @@ jobs:
       - name: Test backup byte integrity and interrupted completion
         run: pnpm run test:backup-generation
 
+      - name: Test synthetic backup collection failures and separate verification
+        run: pnpm run test:backup-synthetic-collector
+
       - name: Test backup privacy checkpoint and restore admission
         run: pnpm run test:backup-privacy-checkpoint
 

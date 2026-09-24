@@ -2,6 +2,21 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
+## 今回完了（2026-09-24 合成バックアップ収集の失敗試験）
+
+- 前回のcheckpoint/Verifier分離に続き、注入された合成sourceからDB/role/catalog/写真を取得して
+  条件付きで候補artifactを作る小さなoffline収集契約を追加。source IDは `synthetic-` に限定し、
+  認証情報・URL・AWS SDK・本番接続を持たない。Collectorは候補だけを返し、完了markerは
+  別のVerifier adapterによる版指定の再読/byte照合後にのみ作る。
+- 16合成ケース: 欠けた/重複した写真一覧・循環cursor・版不一致・収集中の写真変更・
+  stream中断/過大chunk・書込応答消失/条件付き書込競合・独立再読での版/byte差替え・
+  timeout/close失敗を拒否。既存byte62、checkpoint15、offline IAM条件/Stage AもPASS。
+  sourceが申告するsnapshot/全件件数の真正性、本番Storage page網羅、実PG17 exported snapshot、
+  実S3条件付き書込/実IAM/実backup・隔離復元は依然未証明。
+- 次は全対象table分類と実source資格方式を実装前にレビューし、合成PG17/Storage stubで
+  snapshot・catalogの整合性を広げる。重要な個人情報/IAM実装は統合・公開前にAstra/独立レビュー。
+  AWS作成/secret配布/本番データ転送/申請はしていない。PR #9はdraftのまま。
+
 ## 今回完了（2026-09-24 backup隔離判定と権限分離のローカル実装）
 
 - 追記428の確定範囲で、HMAC付きの全件checkpoint比較と隔離復元判定をpure moduleで追加。
