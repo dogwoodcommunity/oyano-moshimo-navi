@@ -12,6 +12,7 @@
 - `MOBILE_DB_FIRST_PREP_2026-09-24.md` に不足RPCと通知v2の限定適用候補、
   消去finalizerの本番定義比較、旧token再集計・保持期間などの停止条件を整理。
   使い捨てPostgreSQLの手帳作成・通知v2/消去統合回帰はPASS。本番DBには未適用。
+  source `691ea17` をGitHubへpushし、CI `35961554112` の2ジョブともsuccessを確認。
   次は認証差分とDB-first計画のAstra統合前レビュー。本番変更/審査提出は引き続き保留。
 
 ## 前回完了（認証統合前レビュー）

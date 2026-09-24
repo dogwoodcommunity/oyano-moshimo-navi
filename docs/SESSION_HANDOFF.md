@@ -15693,4 +15693,7 @@ https://mitene.us/
 - 現時点では本番DB、Web配信、callback設定、メール、通知、正式署名、Store提出に変更なし。
   source/文書をpush後もPR #9は統合保留。次は認証修正差分とDB-first限定適用/切戻しのAstra統合前レビュー。
   本番実行には別の承認、旧token再集計、実バックアップ/復元、実機・運用・申請の残ゲートが必要。
-  保護対象の未追跡Claude文書2件とreview_exportsは不介入。push/CI結果は次の追記で確定する。
+  保護対象の未追跡Claude文書2件とreview_exportsは不介入。
+- source commit `691ea17bcee0660b6d83392662b13416855051b7` をGitHubへpush。
+  CI `35961554112` は `personal-data-infrastructure` と `web-and-mobile` の2ジョブともsuccess。
+  CIは本番DB/両OS実機/正式署名/審査を試験しない。今回のCI確定追記は `[skip ci]` で保存する。
