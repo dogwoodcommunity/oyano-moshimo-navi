@@ -15635,3 +15635,7 @@ https://mitene.us/
   その後、追記422の順序でDB-firstの不足migration/本番反映を別途承認の上で進め、
   正式candidateの両実機・実メール・通知/家族権限/削除/復元・運用/申請宣言を受入する。
   追記422の本番不足は未解決で、今回の生成PASSだけで審査提出可とはしない。
+- source commit `29ab8d7bfc623d88bade3dbff1af3d3afa1caafc` をGitHubへpush。
+  PR #9のCI `35959526031` は `personal-data-infrastructure` / `web-and-mobile` ともsuccess。
+  CIには両OSのJS export/設定生成や合成試験が含まれるが、実機・正式署名・本番受入は含まれない。
+  この結果の文書追記は `[skip ci]` commitで保存する。

@@ -12,6 +12,7 @@
   合成認証/通知ログアウト、Mobile型、両OS JS/Hermes export・設定生成・画面/申請preflightはPASS。
   iOSの署名なしRelease Simulator app生成とAndroid ARM64 Release APK/AAB生成・APK検査もPASS。
   生成物はテスト用で、実機・正式署名・実メール復帰の受入ではない。詳細は追記423。
+  source `29ab8d7` をpush、CI `35959526031` は2ジョブともsuccess。
   本番/DB/メール/ストア提出は未変更。重要な認証実装と初回公開の統合前レビューは残る。
 
 ## 前回完了（Astra設計レビュー）
