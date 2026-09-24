@@ -15861,3 +15861,38 @@ https://mitene.us/
   Astraは追記428の範囲を前提に、最小権限の実source adapter方式と網羅性の証明、
   統合前レビュー条件を決める。Solへ戻せるのは実装範囲・拒否条件・合成/実環境検証が明確になった後。
   このCI結果は文書のみの `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 431 — source資格・全表網羅のAstra限定レビュー
+
+- 本人「続けて」を受け追記430の設計gateを確認。開始HEAD `49634fc`、
+  branch `codex/consult-guest-entry`、PR #9はOPEN/draft/main向けと再確認。
+  結果は `BACKUP_SOURCE_ACCESS_REVIEW_2026-09-24.md`。
+  追記428の自動公開禁止/分離/承認境界を維持し、資格/全表/snapshot契約だけ具体化した。
+- 本番SQL EditorでREAD ONLY / 10秒timeout / ROLLBACKのcatalog照会。
+  92表（public50/auth27/storage8/private3/realtime3/vault1）、最初4schemaの88表はPKあり、
+  FORCE RLS8表。metadataだけを同日付inventory JSONへ記録、件数/重複をローカル検査PASS。
+  sourceロールpostgresはnon-superuser・BYPASSRLS・CREATEROLE。新role作成能力は未試験。
+  日記/写真/Authユーザー/鍵は未取得。前の利用者クエリは残し、別の診断クエリを使用した。
+- 新しい要修正: 通知管理 `claim_due_scheduled_notifications(integer)` と
+  `reset_stale_sending_notifications(interval)` にPUBLIC/anon/authenticatedの実効EXECUTEがあり、
+  本番関数本文にcaller制限なし。定義hashはレビュー文書に記録。実関数呼出/外部悪用試験は未実施。
+  Solでservice_role専用の限定ACL patch＋初期定義/pending bundle/api_grants再適用回帰を準備する。
+  残りの家族招待等を一括で制限しない。本番適用は承認前に行わない。
+- 合成Collector/checkpointの5不備を実行再現: plan途中変更でsynthetic gate通過、
+  timer starvationで期限後成功、保存済みlost ackが一般timeoutへ変化、nested digest書換、
+  source/schema/key metadataをnullで揃えた比較の成功。
+  一時証跡 `/tmp/oyano-backup-review-20260924.mjs` のREPRODUCEDは不備検出であり受入PASSではない。
+  修正は未実装。既存Collector16/checkpoint15/byte62は今回もPASS（その5境界は未網羅）。
+- 実source方式: DBは明示SELECT＋BYPASSRLSの専用role（PUBLIC関数等の実効権限検査必須）、
+  Storageはbucket限定カスタムroleの短命JWT注入。管理者/S3全操作鍵/署名秘密をCollectorへ配布しない。
+  owner-only private表の例外読取、provider上の権限追加、token発行・自動更新は別承認/実証。
+  未対応なら停止し、広い資格へfallbackしない。
+- Sol実装は上のACL/5不備に加え、使い捨て合成PG17の実exported snapshot、
+  全表/列型/PK分類（数値を丸めない）、Storage stub、v2世代にsource契約/baselineを結合する範囲。
+  初版は全rowのglobal scopeで変更時に全体隔離。v1/56表試験を完全な本番backupとしない。
+  関連公式仕様を確認し、pg_dumpallだけでは共通snapshotを保証しない点も明記した。
+- 重要判断と次の検証範囲を確定したのでSolへ戻す案内で停止する。
+  同じ理由で再設計を繰り返さず、重大前提変化/重要差分の統合前に再レビューする。
+  Claude独立レビュー、実source/Storage/IAM/隔離Auth復元/実機/署名/申請は別gateとして未完。
+  本番権限変更・データ移動・AWS作成・費用・保持の承認は今回取得/実行していない。
+  文書のみを `[skip ci]` でcommit/pushし、PRはdraft、保護対象の未追跡文書/review_exportsは不介入。

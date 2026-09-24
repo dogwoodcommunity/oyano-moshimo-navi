@@ -2,6 +2,23 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
+## 今回完了（2026-09-24 source権限のAstra限定レビュー）
+
+- 詳細: `BACKUP_SOURCE_ACCESS_REVIEW_2026-09-24.md`、追記431。
+  本番READ ONLYで構成92表を確認。検証済みローカル56表とは別。
+  通知管理2RPCにPUBLIC/anon/authenticated実行権限が残っており、本文にcaller制限なし。
+  実呼出・データ変更はせず、service_role限定の局所patch/再適用回帰を次の最優先とした。
+- 合成Collector/checkpointで、plan途中変更、期限超過成功、保存後timeoutの不確実性消失、
+  nested書換、無効source metadataの比較受入の5不備を再現。既存16/15/62試験はPASSだが未網羅。
+  修正はまだ行っていない。実データ接続/統合NO-GOを維持。
+- source方式は専用DB全行読取role（明示SELECT＋BYPASSRLS、PUBLIC関数経由も監査）と
+  bucket限定Storage roleの短命JWT注入。管理者/S3全操作鍵や署名秘密をCollectorへ配布しない。
+  providerでの権限作成・JWT正負試験は未実証で別承認。自動token issuerも未導入。
+- 次はSolで通知2RPCの限定ACL修正、5不備の回帰、実exported snapshotを使う合成PG17、
+  全表分類/数値精度/Storage stub/v2世代結合。最初はglobal scopeで全体隔離を保つ。
+  同じ設計の再レビューは不要だが、重要処理の統合前レビューと実環境受入は残す。
+  AWS作成、鍵発行/配布、実backup、本番変更、Store提出は今回もしていない。
+
 ## 今回完了（2026-09-24 合成バックアップ収集の失敗試験）
 
 - 前回のcheckpoint/Verifier分離に続き、注入された合成sourceからDB/role/catalog/写真を取得して

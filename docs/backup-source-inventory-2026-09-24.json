@@ -1,0 +1,40 @@
+{
+  "status": "OBSERVED_METADATA_ONLY_NOT_EXECUTABLE_POLICY",
+  "observedOn": "2026-09-24",
+  "sourceCode": "3c74a4e3bf455adf66563a46ab1bd1304aa89805",
+  "ordinaryAndPartitionedTableCount": 92,
+  "rowBodiesRead": false,
+  "credentialsRead": false,
+  "publicReleaseAllowed": false,
+  "schemas": {
+    "public": {
+      "classification": "sealed_backup_and_global_checkpoint_candidate",
+      "tables": ["account_delete_executors", "account_delete_requests", "account_erasure_jobs", "admin_notes", "ai_consult_daily_claims", "ai_consult_threads", "ai_consult_turns", "ai_memory_consents", "app_admins", "asset_categories", "asset_items", "audit_logs", "case_photos", "case_results", "cases", "consent_logs", "families", "family_invites", "family_members", "funnel_events", "home_diagnoses", "home_photos", "homes", "notebook_diary_deletion_receipts", "notebook_storage_deletion_jobs", "notebook_sync_receipts", "notification_preferences", "people", "person_ai_memories", "person_notebook_deletion_receipts", "person_notebook_storage_deletion_jobs", "person_status_events", "products", "profiles", "provider_categories", "provider_recommendations", "providers", "public_api_rate_limits", "purchases", "push_tokens", "referrals", "scheduled_notifications", "share_links", "subscriptions", "support_packs", "support_reviews", "task_comments", "task_templates", "tasks", "timeline_events"]
+    },
+    "auth": {
+      "classification": "sealed_sensitive_auth_backup_candidate_no_automatic_reactivation",
+      "tables": ["audit_log_entries", "custom_oauth_providers", "flow_state", "identities", "instances", "mfa_amr_claims", "mfa_challenges", "mfa_factors", "mfa_recovery_code_sets", "mfa_recovery_codes", "oauth_authorizations", "oauth_client_states", "oauth_clients", "oauth_consents", "one_time_tokens", "refresh_tokens", "saml_providers", "saml_relay_states", "schema_migrations", "scim_tokens", "scim_users", "sessions", "sso_domains", "sso_providers", "users", "webauthn_challenges", "webauthn_credentials"]
+    },
+    "storage": {
+      "classification": "sealed_catalog_candidate_object_bytes_need_separate_verification",
+      "tables": ["buckets", "buckets_analytics", "buckets_vectors", "migrations", "objects", "s3_multipart_uploads", "s3_multipart_uploads_parts", "vector_indexes"]
+    },
+    "account_delete_private": {
+      "classification": "sealed_private_authority_candidate_no_automatic_reactivation",
+      "tables": ["account_erasure_execution_control", "account_erasure_execution_grants", "operator_identity_events"]
+    },
+    "realtime": {
+      "classification": "rebuild_runtime_explicit_exclusion",
+      "tables": ["messages", "schema_migrations", "subscription"]
+    },
+    "vault": {
+      "classification": "separate_secret_escrow_approval_required_excluded",
+      "tables": ["secrets"]
+    }
+  },
+  "inspectedPrimaryKeyAndRlsSchemas": ["public", "auth", "storage", "account_delete_private"],
+  "inspectedTablesHavePrimaryKey": 88,
+  "forceRlsTables": ["account_delete_private.account_erasure_execution_control", "account_delete_private.account_erasure_execution_grants", "account_delete_private.operator_identity_events", "public.account_delete_executors", "public.account_erasure_jobs", "public.ai_consult_daily_claims", "public.person_notebook_deletion_receipts", "public.person_notebook_storage_deletion_jobs"],
+  "publicExecuteSecurityDefinerFunctions": ["public.accept_family_invite", "public.claim_due_scheduled_notifications", "public.create_family_invite", "public.funnel_summary", "public.generate_tasks_for_status_event", "public.is_app_admin", "public.is_family_admin", "public.is_family_member", "public.reset_stale_sending_notifications", "public.schedule_notifications_for_task"],
+  "unverified": ["per_column_type_and_pk_order", "other_relation_kinds", "effective_backup_role_permissions", "provider_custom_role_creation", "storage_custom_jwt_acceptance_and_denials", "complete_managed_auth_restore", "secret_escrow", "source_row_coverage", "production_approval"]
+}
