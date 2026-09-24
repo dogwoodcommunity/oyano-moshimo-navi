@@ -15556,3 +15556,25 @@ https://mitene.us/
   強制ログアウト、本番DB操作は実施していない。ブラウザの認証用URLや秘密値は記録しない。
 - 文書のみの更新。現在の実行モデルは断定しない。今回の画面表示・現状確認はSol範囲。
   認証/権限設計を変える必要が生じれば追記419のAstra切替手順を適用する。
+
+## 2026-09-24 追記 421 — 審査提出依頼とAstraへの切替ゲート
+
+- 本人「審査提出まですすめて」。現在のCodexブラウザで対象Supabase project Dashboardが開き、
+  project overviewに `Healthy` と表示されることを読取確認。対象projectへのDashboard到達は確認済み。
+  画面上の閲覧以上の権限、migration/本番受入、実データの整合はまだ検証していない。
+  ブラウザの認証情報/秘密値は取得・保存・引き継ぎに含めない。タブは次回のため保持。
+- branch `codex/consult-guest-entry`、開始HEAD `3b737bb`、draft PR #9。
+  保護対象の未追跡Claude文書2件とreview_exportsは触れない。アプリ実装/DB/本番/Storeは変更なし。
+- 最新source `4b8fc38` のCI `35566065837` 全ジョブsuccess、Android実APK/AABの全23部品16KB適合・
+  専用emulator起動は追記417で確認済み。署名はテスト鍵。iOSは署名なしSimulator起動まで。
+  Androidの21/23 RELRO未達とある `MOBILE_STORE_RELEASE.md` の前半表は追記417で訂正済みの古い判定。
+- 未完: Web/DB認証整合と本番受入、通知旧登録移行/実配送、AI通報運用、
+  専用試験データでの削除/復元/家族権限、iPhone/Android実機全導線、正式署名/内部配布、
+  バージョン1.0整合、Privacy/Data Safety・年齢/配信等の宣言、実アプリ画像、審査用ログイン。
+  Appleは既存App ID/ASCレコードのみ。Google Playは親のもしもナビの登録なし。
+  `MOBILE_STORE_RELEASE.md`・`MOBILE_STORE_SUBMISSION_DRAFT.md` の必要箇所を参照。
+- これは重要な認証/個人情報処理と初回公開を含むため、追記419のAstra切替条件1/3/5/6に該当。
+  読取で現状を確認し、対象となる公開変更・最終レビュー・提出には着手せず引き継ぐ。
+  現在の選択モデルは確認できないため推測せず、本人の切替完了返答を待つ。
+  Astraは未完ゲートの優先度と安全な実装/受入範囲を確定し、通常実装へ戻せる条件を示す。
+  重要処理/初回公開の最終レビューは提出直前にも必要。切替後の「続けて」は本番/実データ/課金等の包括承認としない。
