@@ -4,6 +4,18 @@
 
 ## 今回完了
 
+- 本人「切り替えた。続けて」後、追記422の限定範囲でnativeの認証ブラウザを
+  `expo-web-browser` のシステム認証セッションへ変更。既存のnonce・メール・本人・期限・
+  access/refresh照合は維持し、ブラウザ待機と認証ロックを分離した。
+  result/Linking重複・遅着、cancel/dismiss、古い試行とログアウトの競合を合成回帰に追加。
+  認証3画面の結果遷移とunmount後の表示更新を整理。手帳の実データは変更していない。
+  合成認証/通知ログアウト、Mobile型、両OS JS/Hermes export・設定生成・画面/申請preflightはPASS。
+  iOSの署名なしRelease Simulator app生成とAndroid ARM64 Release APK/AAB生成・APK検査もPASS。
+  生成物はテスト用で、実機・正式署名・実メール復帰の受入ではない。詳細は追記423。
+  本番/DB/メール/ストア提出は未変更。重要な認証実装と初回公開の統合前レビューは残る。
+
+## 前回完了（Astra設計レビュー）
+
 - 本人「切り替えた。続けて」を受け、認証/申請ゲートをレビュー（追記422）。Supabaseで設定と
   READ ONLYのRPC/ACL/RLS/同期trigger・通知件数を確認。新callback未登録、本番 `/auth/mobile` と
   `/admin/ai-reports` は404。初回手帳作成RPCと通知v2は未導入。既存通知行は0。

@@ -1,21 +1,34 @@
-import * as Linking from "expo-linking";
 import * as Crypto from "expo-crypto";
 import * as SecureStore from "expo-secure-store";
+import * as WebBrowser from "expo-web-browser";
 import { getSupabase, createMobileAuthVerifier } from "./supabase";
 import { withDevicePushRevoked } from "./notifications";
-import { DEFAULT_REDIRECT_PATH, MOBILE_AUTH_PENDING_KEY, mobileAuthBrowserUrl, normalizeMobileEmail, parseMobileAuthCallback, parsePendingMobileAuth, sanitizeRedirectPath, type PendingMobileAuth } from "./authFlow";
+import { DEFAULT_REDIRECT_PATH, MOBILE_AUTH_CALLBACK, MOBILE_AUTH_MAX_AGE_MS, MOBILE_AUTH_PENDING_KEY, mobileAuthBrowserUrl, normalizeMobileEmail, parseMobileAuthCallback, parsePendingMobileAuth, sanitizeRedirectPath, type PendingMobileAuth } from "./authFlow";
 
 let authBusy = false;
+let browserFlight: { state: string; promise: ReturnType<typeof WebBrowser.openAuthSessionAsync> } | null = null;
+let completedAuth: { state: string; userId: string; redirectPath: string; expiresAt: number } | null = null;
 const retryMessage = "本人確認を完了できませんでした。アプリの元の画面で、もう一度メールの確認を始めてください。";
+type MagicLinkResult = { sent: false; demo: false; browserOpened?: boolean; message: string; redirectPath?: string };
+
+async function removePendingIfMatching(state: string) {
+  if (authBusy) return;
+  authBusy = true;
+  try {
+    const pending = parsePendingMobileAuth(await SecureStore.getItemAsync(MOBILE_AUTH_PENDING_KEY));
+    if (pending?.state === state) await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY);
+  } finally { authBusy = false; }
+}
 
 /** Updated native logins use the Web challenge, also when CAPTCHA is off. */
-export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRECT_PATH) {
-  if (authBusy) return { sent: false, demo: false, message: "本人確認の準備中です。少しお待ちください。" };
+export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRECT_PATH): Promise<MagicLinkResult> {
+  if (authBusy || browserFlight) return { sent: false, demo: false, message: "本人確認の準備中です。少しお待ちください。" };
   const supabase = getSupabase();
   if (!supabase) return { sent: false, demo: false, message: "アプリの接続設定が不足しています。最新版のアプリでお試しください。" };
   const normalizedEmail = normalizeMobileEmail(email);
   if (!normalizedEmail) return { sent: false, demo: false, message: "メールアドレスを確認してください。" };
   authBusy = true;
+  let prepared: { state: string; browserUrl: string } | null = null;
   try {
     const bytes = await Crypto.getRandomBytesAsync(32);
     const state = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -27,12 +40,34 @@ export async function sendMagicLink(email: string, redirectPath = DEFAULT_REDIRE
       redirectPath: sanitizeRedirectPath(redirectPath), startingUserId: data.session?.user.id ?? null
     };
     await SecureStore.setItemAsync(MOBILE_AUTH_PENDING_KEY, JSON.stringify(pending));
-    await Linking.openURL(browserUrl);
-    return { sent: false, demo: false, browserOpened: true, message: "ブラウザで同じメールアドレスを入力し、安全確認のあと確認メールを送ってください。届いたリンクはこの端末で15分以内に開いてください。" };
+    completedAuth = null;
+    prepared = { state, browserUrl };
   } catch {
-    await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY).catch(() => undefined);
     return { sent: false, demo: false, message: "本人確認の画面を開けませんでした。通信とアプリの更新を確認して、もう一度お試しください。" };
   } finally { authBusy = false; }
+
+  if (!prepared) return { sent: false, demo: false, message: retryMessage };
+  const flight = {
+    state: prepared.state,
+    promise: WebBrowser.openAuthSessionAsync(prepared.browserUrl, `${MOBILE_AUTH_CALLBACK}?state=${prepared.state}`)
+  };
+  browserFlight = flight;
+  try {
+    const browserResult = await flight.promise;
+    if (browserResult.type === "success") {
+      const result = await handleAuthRedirectUrl(browserResult.url);
+      if (result.handled) return { sent: false, demo: false, browserOpened: true, message: result.message, redirectPath: result.redirectPath };
+      return { sent: false, demo: false, browserOpened: true, message: result.message };
+    }
+    // Android can report dismiss before the email callback is delivered.
+    // Keep the pending state until an explicit new attempt, logout, or expiry.
+    return { sent: false, demo: false, browserOpened: true, message: "確認画面を閉じました。メールのリンクをこの端末で開くか、元の画面からもう一度お試しください。" };
+  } catch {
+    await removePendingIfMatching(flight.state).catch(() => undefined);
+    return { sent: false, demo: false, message: "本人確認の画面を開けませんでした。通信とアプリの更新を確認して、もう一度お試しください。" };
+  } finally {
+    if (browserFlight === flight) browserFlight = null;
+  }
 }
 
 /** Only revoke this installation's session; never delete account or family data. */
@@ -40,6 +75,7 @@ export async function signOutThisDevice() {
   if (authBusy) return { ok: false, message: "本人確認の処理中です。完了してからもう一度ログアウトしてください。" };
   authBusy = true;
   try {
+    completedAuth = null;
     await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY);
     const supabase = getSupabase();
     if (!supabase) return { ok: false, message: "アプリの接続設定を確認できないため、ログアウトを完了できませんでした。" };
@@ -58,11 +94,23 @@ let activeCallback: { url: string; promise: Promise<AuthRedirectResult> } | null
 
 export function handleAuthRedirectUrl(url: string): Promise<AuthRedirectResult> {
   if (activeCallback) return activeCallback.url === url ? activeCallback.promise : Promise.resolve({ handled: false, message: retryMessage });
-  const promise = restoreAuthRedirect(url).finally(() => {
+  const promise = restoreOrReuseAuthRedirect(url).finally(() => {
     if (activeCallback?.promise === promise) activeCallback = null;
   });
   activeCallback = { url, promise };
   return promise;
+}
+
+async function restoreOrReuseAuthRedirect(url: string): Promise<AuthRedirectResult> {
+  const callback = parseMobileAuthCallback(url);
+  if (!callback) return { handled: false, message: retryMessage };
+  const finished = completedAuth;
+  if (finished && !callback.error && callback.state === finished.state && Date.now() < finished.expiresAt && !authBusy) {
+    const current = await getSupabase()?.auth.getSession();
+    if (!current?.error && current?.data.session?.user.id === finished.userId
+      && completedAuth === finished) return { handled: true, message: "本人確認ができました。", redirectPath: finished.redirectPath };
+  }
+  return restoreAuthRedirect(url);
 }
 
 async function restoreAuthRedirect(url: string): Promise<AuthRedirectResult> {
@@ -108,6 +156,7 @@ async function restoreAuthRedirect(url: string): Promise<AuthRedirectResult> {
     await SecureStore.deleteItemAsync(MOBILE_AUTH_PENDING_KEY);
     const { error } = await supabase.auth.setSession({ access_token: candidate.access_token, refresh_token: candidate.refresh_token });
     if (error) return { handled: false, message: retryMessage };
+    completedAuth = { state: pending.state, userId: user.id, redirectPath: pending.redirectPath, expiresAt: pending.createdAt + MOBILE_AUTH_MAX_AGE_MS };
     return { handled: true, message: "本人確認ができました。", redirectPath: pending.redirectPath };
   } catch { return { handled: false, message: retryMessage }; }
   finally { authBusy = false; }

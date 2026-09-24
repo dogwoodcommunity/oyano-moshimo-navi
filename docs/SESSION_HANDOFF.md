@@ -15604,3 +15604,34 @@ https://mitene.us/
   通報運用/保持、削除完走/完了連絡、実backup/復元、両実機/正式署名/審査アクセス等は未完。
   保護対象の未追跡2文書/review_exportsは不介入。文書差分を確認し `[skip ci]` でbranchへpushする。
   Supabaseの照会タブを次回用に保持し、「ここからはGPT-6 Solに戻して進められます。」と案内して停止する。
+
+## 2026-09-24 追記 423 — システム認証セッションへの限定修正と両OS生成
+
+- 本人「切り替えた。続けて」「すすめて」を受け、追記422で決めたSol実装範囲を進めた。
+  開始HEAD `5a88b26`、branch `codex/consult-guest-entry`、draft PR #9。モデルの実設定は推測せず、
+  本人の切替完了返答に基づく。今回は新しい認証方式の設計変更ではなく、確定済み設計の実装。
+- `expo-web-browser ~57.0.3` を追加。既定ブラウザの `Linking.openURL` を
+  `openAuthSessionAsync` へ変更し、ブラウザ待機中にcallbackを認証ロックで塞がない。
+  resultと既存Linking復帰を同じ検証器へ渡し、同時/遅着callbackの二重session保存を抑止。
+  OS dismiss/cancel時はpendingを保持、旧失敗が新pendingを消さないよう同じロックで状態比較。
+  ログアウト/新しい試行で直前の完了記録を失効させ、メール・開始本人・確認済み状態・
+  access/refresh両本人・期限・state照合は維持。3画面でresult-only復帰とunmount後の表示更新を整理。
+  引継ぎ画面の同一route成功時は再遷移せず、既存consume処理を1回呼ぶ。
+- 認証の合成試験はresult/Linking単独・同時・遅着、dismiss/cancel後復帰、期限切れ・別本人・
+  mixed token・再使用、旧catchと新pending、ログアウト競合、招待/引継ぎ先を含めPASS。
+  `test-mobile-push-logout`、Mobile型、両OS JS/Hermes export・native設定生成、画面/申請preflightもPASS。
+  すべて合成・ローカルで、実メール/実機の本人確認を意味しない。
+- iOSは一時コピーでPods install・署名なしRelease Simulator compile PASS。
+  成果物 `/var/folders/gc/d6swky5j4b156y5bf5w9fjhh0000gn/T/oyano-ios-compile-Sxyp7K/DerivedData/Build/Products/Release-iphonesimulator/app.app`。
+  Androidは一時コピーでARM64 Release APK/AAB compileとAPK検査PASS。
+  成果物 `.native-android-qualification-dTM5mx/android/app/build/outputs/` 以下。公開test鍵のみ。
+  いずれもIPA/正式署名・両実機・16KB実行/全ABI・ストア審査は未検証。
+  この環境ではCMake、SDK36/NDK27.1等の公開ビルドツールを補い、既存Ruby/CocoaPodsを利用。
+  新規ライセンス同意、アプリ課金、クラウドビルドはしていない。
+- 今回の変更は開発branchのnativeコード、依存、限定試験、引き継ぎ文書のみ。
+  Supabaseのcallback許可・migration/本番データ、Web配信、メール送信、ストア提出は未変更。
+  保護対象の未追跡Claude文書2件とreview_exportsは不介入。push/CIの結果は後続の同追記で確定する。
+- 次は認証重要処理の統合前レビュー（AGENTS.mdのAstra条件5/6）。
+  その後、追記422の順序でDB-firstの不足migration/本番反映を別途承認の上で進め、
+  正式candidateの両実機・実メール・通知/家族権限/削除/復元・運用/申請宣言を受入する。
+  追記422の本番不足は未解決で、今回の生成PASSだけで審査提出可とはしない。

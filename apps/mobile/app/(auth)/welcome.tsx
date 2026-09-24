@@ -1,5 +1,5 @@
 import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { ImageBackground, Linking, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { sendMagicLink } from "@/lib/auth";
@@ -12,6 +12,11 @@ type AuthMode = "signup" | "login";
 const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL?.replace(/\/$/, "");
 
 export default function WelcomeScreen() {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const session = useMobileSession();
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [authMode, setAuthMode] = useState<AuthMode | null>(null);
@@ -36,8 +41,10 @@ export default function WelcomeScreen() {
       : undefined;
     setSubmitting(true);
     const result = await sendMagicLink(trimmedEmail, redirectPath);
+    if (!mountedRef.current) return;
     setSubmitting(false);
     setMessage(result.message);
+    if (result.redirectPath) router.replace(result.redirectPath);
 
   }
 
@@ -157,7 +164,7 @@ export default function WelcomeScreen() {
       {authMode ? (
         <View style={styles.authPanel}>
           <Text style={styles.authTitle}>{authTitle}</Text>
-          <Text style={styles.authLead}>ブラウザで安全確認をしたあと、この端末でメールに届く確認リンクを開いてください。</Text>
+          <Text style={styles.authLead}>アプリ内の確認画面で同じメールを入力し、この端末で届いた確認リンクを開いてください。</Text>
           <TextInput
             autoCapitalize="none"
             inputMode="email"

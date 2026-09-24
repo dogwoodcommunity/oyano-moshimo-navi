@@ -86,7 +86,12 @@ function nativeScenario(options = {}) {
       if (name === "./notifications") return { withDevicePushRevoked: async (signOut) => ({ completed: true, result: await signOut() }) };
       if (name === "./supabase") return { getSupabase: () => options.unconfigured ? null : native, createMobileAuthVerifier: () => verifier };
       if (name === "expo-crypto") return { getRandomBytesAsync: async () => new Uint8Array(32).fill(++randomness) };
-      if (name === "expo-linking") return { openURL: async (url) => { calls.push(["openURL", url]); if (options.openFailure) throw Error("offline"); } };
+      if (name === "expo-web-browser") return { openAuthSessionAsync: async (url, redirectUrl) => {
+        calls.push(["openAuthSession", url, redirectUrl]);
+        options.onBrowserOpen?.(url, redirectUrl);
+        if (options.openFailure) throw Error("offline");
+        return options.browserWait ?? (typeof options.browserResult === "function" ? options.browserResult(url, redirectUrl) : options.browserResult ?? { type: "dismiss" });
+      } };
       if (name === "expo-secure-store") return {
         getItemAsync: async () => stored,
         setItemAsync: async (_key, value) => { if (options.storeFailure) throw Error("locked"); stored = value; calls.push(["store"]); },
@@ -95,7 +100,7 @@ function nativeScenario(options = {}) {
       throw Error(`Unexpected native dependency ${name}`);
     }
   });
-  return { api, calls, stored: () => stored, currentUser: () => currentUser };
+  return { api, calls, stored: () => stored, setStored: (next) => { stored = next; }, currentUser: () => currentUser };
 }
 
 for (const redirectPath of [handoff, invite, "/(tabs)/dashboard"]) {
@@ -105,7 +110,7 @@ for (const redirectPath of [handoff, invite, "/(tabs)/dashboard"]) {
   assert.equal(result.redirectPath, redirectPath);
   assert.equal(fixture.stored(), null);
   assert.deepEqual(fixture.calls.map(([method]) => method), ["getUser", "refreshSession", "getUser", "remove", "setSession"]);
-  assert.equal((await fixture.api.handleAuthRedirectUrl(callback())).handled, false, "consumed nonce cannot be replayed");
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback())).handled, true, "duplicate completion can return to its already verified user");
   assert.equal(fixture.calls.filter(([method]) => method === "setSession").length, 1);
 }
 for (const options of [
@@ -152,19 +157,87 @@ for (const options of [
   const firstState = JSON.parse(fixture.stored()).state;
   assert.equal(JSON.parse(fixture.stored()).email, user.email);
   assert.equal(JSON.parse(fixture.stored()).redirectPath, handoff);
-  assert.equal(fixture.calls.find(([method]) => method === "openURL")[1], `https://web.example.test/auth/mobile#state=${firstState}`);
+  assert.deepEqual(fixture.calls.find(([method]) => method === "openAuthSession"), [
+    "openAuthSession", `https://web.example.test/auth/mobile#state=${firstState}`, `${flow.MOBILE_AUTH_CALLBACK}?state=${firstState}`
+  ]);
   await fixture.api.sendMagicLink(user.email, invite);
   assert.notEqual(JSON.parse(fixture.stored()).state, firstState);
   assert.equal((await fixture.api.handleAuthRedirectUrl(callback(firstState))).handled, false, "resend invalidates the earlier nonce");
 }
 for (const options of [{ openFailure: true }, { storeFailure: true }, { webBase: "http://unsafe.test" }]) {
   const fixture = nativeScenario(options);
+  const previousPending = fixture.stored();
   const result = await fixture.api.sendMagicLink(user.email);
   assert.equal(result.browserOpened, undefined);
   assert.equal(result.demo, false);
-  assert.equal(fixture.stored(), null);
+  assert.equal(fixture.stored(), options.openFailure ? null : previousPending, "failure before a new attempt must preserve earlier pending state");
 }
 assert.equal((await nativeScenario({ unconfigured: true }).api.sendMagicLink(user.email)).demo, false, "missing setup must never enable demo entry");
+
+{
+  const fixture = nativeScenario({ browserResult: (_url, redirectUrl) => ({ type: "success", url: `${redirectUrl}#access_token=synthetic-access&refresh_token=synthetic-refresh&type=magiclink` }) });
+  const result = await fixture.api.sendMagicLink(user.email, invite);
+  assert.equal(result.redirectPath, invite, "iOS result-only completion returns to the requested screen");
+  assert.equal(fixture.calls.filter(([method]) => method === "setSession").length, 1);
+  const verifiedState = new URL(fixture.calls.find(([method]) => method === "openAuthSession")[2]).searchParams.get("state");
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback(verifiedState))).redirectPath, invite, "a late duplicate returns to the verified screen");
+  assert.equal(fixture.calls.filter(([method]) => method === "setSession").length, 1);
+}
+{
+  const fixture = nativeScenario({ browserResult: { type: "cancel" } });
+  await fixture.api.sendMagicLink(user.email);
+  const created = JSON.parse(fixture.stored());
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback(created.state))).handled, true, "email callback after closing browser still works");
+}
+{
+  const fixture = nativeScenario({ browserResult: { type: "dismiss" } });
+  await fixture.api.sendMagicLink(user.email);
+  assert.ok(fixture.stored(), "Android dismiss must not discard a possible later redirect");
+  const created = JSON.parse(fixture.stored());
+  assert.equal((await fixture.api.handleAuthRedirectUrl(callback(created.state))).handled, true);
+}
+{
+  let opened;
+  const browserOpened = new Promise((resolve) => { opened = resolve; });
+  let finish;
+  const browserWait = new Promise((resolve) => { finish = resolve; });
+  const fixture = nativeScenario({ browserWait, onBrowserOpen: (_url, redirectUrl) => opened(redirectUrl) });
+  const sending = fixture.api.sendMagicLink(user.email, handoff);
+  const redirectUrl = await browserOpened;
+  const url = `${redirectUrl}#access_token=synthetic-access&refresh_token=synthetic-refresh&type=magiclink`;
+  const linking = fixture.api.handleAuthRedirectUrl(url);
+  finish({ type: "success", url });
+  assert.equal((await sending).redirectPath, handoff);
+  assert.equal((await linking).handled, true);
+  assert.equal(fixture.calls.filter(([method]) => method === "setSession").length, 1, "result and Linking share one session write");
+}
+{
+  let opened;
+  const browserOpened = new Promise((resolve) => { opened = resolve; });
+  let fail;
+  const browserWait = new Promise((_resolve, reject) => { fail = reject; });
+  const fixture = nativeScenario({ browserWait, onBrowserOpen: (_url, redirectUrl) => opened(redirectUrl) });
+  const sending = fixture.api.sendMagicLink(user.email);
+  await browserOpened;
+  const newer = pending({ state: "e".repeat(64) });
+  fixture.setStored(JSON.stringify(newer));
+  fail(Error("offline"));
+  assert.equal((await sending).browserOpened, undefined);
+  assert.equal(JSON.parse(fixture.stored()).state, newer.state, "old browser failure must not delete a newer attempt");
+}
+{
+  let opened;
+  const browserOpened = new Promise((resolve) => { opened = resolve; });
+  let finish;
+  const browserWait = new Promise((resolve) => { finish = resolve; });
+  const fixture = nativeScenario({ browserWait, currentUser: user, onBrowserOpen: (_url, redirectUrl) => opened(redirectUrl) });
+  const sending = fixture.api.sendMagicLink(user.email);
+  const redirectUrl = await browserOpened;
+  assert.equal((await fixture.api.signOutThisDevice()).ok, true);
+  finish({ type: "success", url: `${redirectUrl}#access_token=synthetic-access&refresh_token=synthetic-refresh&type=magiclink` });
+  assert.equal((await sending).redirectPath, undefined, "late login cannot reverse a logout");
+  assert.equal(fixture.currentUser(), null);
+}
 
 {
   const fixture = nativeScenario({ currentUser: user });
@@ -402,11 +475,31 @@ function functionSource(file, name) {
 {
   const calls = [];
   const api = evaluate(`${functionSource("apps/mobile/app/(auth)/welcome.tsx", "continueToApp")}\nexport { continueToApp };`, {
-    submitting: false, email: user.email, hasHandoff: false, setSubmitting() {}, setMessage() {},
+    submitting: false, email: user.email, hasHandoff: false, mountedRef: { current: true }, setSubmitting() {}, setMessage() {},
     sendMagicLink: async () => ({ sent: false, demo: false, browserOpened: true, message: "ブラウザで確認" }),
     consumeWebHandoff: async () => { calls.push("handoff"); }, router: { replace: () => calls.push("navigate") }
   });
   await api.continueToApp();
   assert.deepEqual(calls, [], "opening CAPTCHA must not bypass login or prematurely consume handoff");
+}
+for (const [file, handler, redirectPath, extra] of [
+  ["apps/mobile/app/(auth)/welcome.tsx", "continueToApp", "/(tabs)/dashboard", { submitting: false, hasHandoff: false }],
+  ["apps/mobile/app/invite.tsx", "login", invite, { submitting: false, token: "z".repeat(24) }],
+  ["apps/mobile/app/handoff.tsx", "sendLoginLink", handoff, { isLoading: false, caseId: "00000000-0000-4000-8000-000000000011", token: `handoff_${"b".repeat(48)}` }]
+]) {
+  for (const mounted of [true, false]) {
+    const navigations = [];
+    const consumptions = [];
+    const api = evaluate(`${functionSource(file, handler)}\nexport { ${handler} };`, {
+      ...extra, email: user.email, mountedRef: { current: mounted },
+      setSubmitting() {}, setIsLoading() {}, setMessage() {},
+      sendMagicLink: async () => ({ sent: false, demo: false, browserOpened: true, message: "本人確認ができました。", redirectPath }),
+      consume: async () => consumptions.push("consume"),
+      router: { replace: (path) => navigations.push(path) }
+    });
+    await api[handler]();
+    assert.deepEqual(navigations, mounted && handler !== "sendLoginLink" ? [redirectPath] : [], `${file} must return from result-only auth only while mounted`);
+    assert.deepEqual(consumptions, mounted && handler === "sendLoginLink" ? ["consume"] : [], "handoff must consume once without remounting its own route");
+  }
 }
 console.log("mobile CAPTCHA auth: PASS (real helpers/handlers; synthetic Auth, storage, email and native links only)");

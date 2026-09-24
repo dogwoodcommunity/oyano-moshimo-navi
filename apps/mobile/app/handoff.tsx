@@ -7,6 +7,11 @@ import { getSupabase } from "@/lib/supabase";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function HandoffScreen() {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const params = useLocalSearchParams<{ caseId?: string; token?: string }>();
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("Webの整理結果をアプリに保存します。");
@@ -70,8 +75,11 @@ export default function HandoffScreen() {
     setIsLoading(true);
     const redirectPath = `/handoff?${new URLSearchParams({ caseId: caseId ?? "", token: token ?? "" }).toString()}`;
     const result = await sendMagicLink(trimmedEmail, redirectPath);
+    if (!mountedRef.current) return;
     setIsLoading(false);
     setMessage(result.message);
+    if (result.redirectPath === redirectPath) void consume();
+    else if (result.redirectPath) router.replace(result.redirectPath);
   }
 
   if (!hasHandoff) {

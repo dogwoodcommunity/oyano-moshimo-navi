@@ -178,7 +178,7 @@ function native(options = {}) {
     if (name === "./supabase") return { getSupabase: () => supabase };
     if (name === "expo-secure-store") return secure;
     if (name === "./authFlow") return { MOBILE_AUTH_PENDING_KEY: "pending-auth" };
-    if (["expo-linking", "expo-crypto"].includes(name)) return {};
+    if (["expo-web-browser", "expo-crypto"].includes(name)) return {};
     throw Error("Unexpected auth import " + name);
   });
   return { helper, auth, calls, storage, backend, delayed, user: () => userId,

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, StyleSheet, Text, TextInput, View } from "react-native";
 import { sendMagicLink } from "@/lib/auth";
@@ -7,6 +7,11 @@ import { getSupabase } from "@/lib/supabase";
 import { colors, radius, shadow } from "@/lib/theme";
 
 export default function InviteScreen() {
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
   const params = useLocalSearchParams<{ token?: string }>();
   const token = typeof params.token === "string" ? params.token : "";
   const [email, setEmail] = useState("");
@@ -44,8 +49,10 @@ export default function InviteScreen() {
     setSubmitting(true);
     const redirectPath = `/invite?token=${encodeURIComponent(token)}`;
     const result = await sendMagicLink(trimmedEmail, redirectPath);
+    if (!mountedRef.current) return;
     setMessage(result.message);
     setSubmitting(false);
+    if (result.redirectPath) router.replace(result.redirectPath);
   }
 
   return (
