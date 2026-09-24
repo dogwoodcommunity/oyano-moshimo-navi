@@ -1,0 +1,94 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "UNDEPLOYED: separate machine verification role for the Oyano Moshimo Navi vault. Requires the vault template's collector marker denies.",
+  "Metadata": {
+    "DeploymentStatus": "DRAFT_UNDEPLOYED_REQUIRES_APPROVAL_AND_VAULT_MARKER_DENIES",
+    "Scope": "Separate verifier identity only. No compute, source credential, schedule or backup collection.",
+    "SecurityBoundary": "The verifier reads exact object versions and writes only completion markers. This template does not make an untrusted source truthful or independently attest restoration."
+  },
+  "Parameters": {
+    "TargetRegion": { "Type": "String", "Default": "ap-northeast-1", "AllowedValues": ["ap-northeast-1"] },
+    "VerifierSourceRoleArn": { "Type": "String", "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$" },
+    "CollectorRoleArn": { "Type": "String", "AllowedPattern": "^arn:aws:iam::[0-9]{12}:role/[A-Za-z0-9+=,.@_/-]+$" },
+    "BackupBucketArn": { "Type": "String", "AllowedPattern": "^arn:aws:s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$" },
+    "ReceiptBucketArn": { "Type": "String", "AllowedPattern": "^arn:aws:s3:::[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$" },
+    "BackupKmsKeyArn": { "Type": "String", "AllowedPattern": "^arn:aws:kms:ap-northeast-1:[0-9]{12}:key/[a-f0-9-]{36}$" }
+  },
+  "Rules": {
+    "SeparateMachineIdentities": { "Assertions": [{
+      "Assert": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "VerifierSourceRoleArn" }, { "Ref": "CollectorRoleArn" }] }] },
+      "AssertDescription": "Verifier and collector source roles must be distinct."
+    }] },
+    "DistinctVaultBuckets": { "Assertions": [{
+      "Assert": { "Fn::Not": [{ "Fn::Equals": [{ "Ref": "BackupBucketArn" }, { "Ref": "ReceiptBucketArn" }] }] },
+      "AssertDescription": "Backup and receipt buckets must be distinct."
+    }] }
+  },
+  "Conditions": { "TokyoOnly": { "Fn::Equals": [{ "Ref": "AWS::Region" }, { "Ref": "TargetRegion" }] } },
+  "Resources": {
+    "BackupVerifierRole": {
+      "Type": "AWS::IAM::Role", "Condition": "TokyoOnly",
+      "Properties": {
+        "Description": "Machine role for exact-version reading and one-time completion markers only.",
+        "MaxSessionDuration": 3600,
+        "AssumeRolePolicyDocument": { "Version": "2012-10-17", "Statement": [{
+          "Effect": "Allow", "Principal": { "AWS": { "Ref": "VerifierSourceRoleArn" } }, "Action": "sts:AssumeRole"
+        }] },
+        "Tags": [{ "Key": "Application", "Value": "oyano-moshimo-navi" },
+          { "Key": "Purpose", "Value": "backup-independent-verification" }]
+      }
+    },
+    "BackupVerifierPolicy": {
+      "Type": "AWS::IAM::Policy", "Condition": "TokyoOnly",
+      "Properties": {
+        "PolicyName": "VaultScopedMachineVerifier", "Roles": [{ "Ref": "BackupVerifierRole" }],
+        "PolicyDocument": { "Version": "2012-10-17", "Statement": [
+          { "Sid": "ReadArtifactAndCandidateVersions", "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+            "Resource": [
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/artifacts/*" },
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/candidate/*" },
+              { "Fn::Sub": "${ReceiptBucketArn}/receipts/candidate/*" }
+            ] },
+          { "Sid": "ReadOwnCompletedVersions", "Effect": "Allow",
+            "Action": ["s3:GetObject", "s3:GetObjectVersion"],
+            "Resource": [
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/complete.json" },
+              { "Fn::Sub": "${ReceiptBucketArn}/receipts/verified/*" }
+            ] },
+          { "Sid": "WriteOnlyCompletionMarkers", "Effect": "Allow", "Action": "s3:PutObject",
+            "Resource": [
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/complete.json" },
+              { "Fn::Sub": "${ReceiptBucketArn}/receipts/verified/*" }
+            ] },
+          { "Sid": "DecryptAndEncryptOnlyThroughVaultS3", "Effect": "Allow",
+            "Action": ["kms:Decrypt", "kms:GenerateDataKey"], "Resource": { "Ref": "BackupKmsKeyArn" },
+            "Condition": { "StringEquals": {
+              "kms:ViaService": { "Fn::Sub": "s3.${AWS::Region}.${AWS::URLSuffix}" },
+              "kms:CallerAccount": { "Ref": "AWS::AccountId" },
+              "kms:EncryptionContext:aws:s3:arn": [
+                { "Ref": "BackupBucketArn" },
+                { "Ref": "ReceiptBucketArn" }
+              ]
+            } }
+          },
+          { "Sid": "DenyDeletionAndRetentionChange", "Effect": "Deny",
+            "Action": ["s3:DeleteObject*", "s3:PutObjectRetention", "s3:PutObjectLegalHold", "s3:BypassGovernanceRetention"],
+            "Resource": [{ "Fn::Sub": "${BackupBucketArn}/*" }, { "Fn::Sub": "${ReceiptBucketArn}/*" }] },
+          { "Sid": "DenyVerifierArtifactWrites", "Effect": "Deny", "Action": "s3:PutObject",
+            "Resource": [
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/artifacts/*" },
+              { "Fn::Sub": "${BackupBucketArn}/backups/*/candidate/*" },
+              { "Fn::Sub": "${ReceiptBucketArn}/receipts/candidate/*" }
+            ] }
+        ] }
+      }
+    }
+  },
+  "Outputs": {
+    "VerifierRoleArn": { "Condition": "TokyoOnly", "Value": { "Fn::GetAtt": ["BackupVerifierRole", "Arn"] } },
+    "DeploymentBoundary": { "Value": { "Fn::If": ["TokyoOnly",
+      "Verifier role only. Vault marker denies and actual S3/KMS tests remain mandatory.",
+      "No resources created outside Tokyo; treat as invalid preflight."] } }
+  }
+}

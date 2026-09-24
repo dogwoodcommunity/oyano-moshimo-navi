@@ -12,6 +12,7 @@ import { createBackupPlan, parseArguments } from "./plan-personal-data-backup.mj
 // actual conditional-write races, KMS cryptography, or CloudTrail delivery.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const templatePath = path.join(root, "infra/aws-personal-data/backup-vault.cfn.json");
+const verifierTemplatePath = path.join(root, "infra/aws-personal-data/backup-verifier.cfn.json");
 const plannerPath = path.join(root, "scripts/plan-personal-data-backup.mjs");
 const account = "111122223333";
 const parameters = {
@@ -215,6 +216,10 @@ function checkPolicies(template) {
     expect(policy, change({ "s3:x-amz-server-side-encryption": "aws:kms", "s3:x-amz-server-side-encryption-aws-kms-key-id": arn("AuditKmsKey") }), "Deny");
     expect(policy, change({ "s3:x-amz-server-side-encryption-customer-algorithm": "AES256" }), "Deny");
     expect(policy, { ...request, resource: `${arn(bucket)}/outside-prefix/file` }, "ImplicitDeny");
+    const marker = bucket === "BackupBucket" ? `${arn(bucket)}/backups/opaque-run/complete.json`
+      : `${arn(bucket)}/receipts/verified/opaque-run`;
+    expect([...policy, { Effect: "Allow", Action: "s3:*", Resource: "*" }],
+      { ...request, resource: marker }, "Deny");
     for (const action of ["s3:GetObject", "s3:GetObjectVersion", "s3:DeleteObject", "s3:DeleteObjectVersion",
       "s3:PutObjectRetention", "s3:PutObjectLegalHold", "s3:BypassGovernanceRetention"]) {
       // Add a synthetic broad identity grant so an omitted explicit Deny cannot
@@ -282,6 +287,70 @@ function checkPolicies(template) {
   return fixtureCount;
 }
 
+function checkVerifierTemplate(template, vault) {
+  assert.equal(template.AWSTemplateFormatVersion, "2010-09-09");
+  assert.deepEqual(Object.keys(template.Resources).sort(), ["BackupVerifierPolicy", "BackupVerifierRole"]);
+  assert.equal(template.Resources.BackupVerifierRole.Condition, "TokyoOnly");
+  assert.equal(template.Resources.BackupVerifierPolicy.Condition, "TokyoOnly");
+  const props = template.Resources.BackupVerifierRole.Properties;
+  assert.equal(props.MaxSessionDuration, 3600);
+  assert.equal(props.ManagedPolicyArns, undefined);
+  assert.equal(props.Policies, undefined);
+  assert.deepEqual(props.AssumeRolePolicyDocument.Statement, [{ Effect: "Allow",
+    Principal: { AWS: { Ref: "VerifierSourceRoleArn" } }, Action: "sts:AssumeRole" }]);
+  const vals = { ...parameters,
+    VerifierSourceRoleArn: `arn:aws:iam::${account}:role/synthetic-Verifier`,
+    BackupBucketArn: resolve({ "Fn::GetAtt": ["BackupBucket", "Arn"] }),
+    ReceiptBucketArn: resolve({ "Fn::GetAtt": ["ReceiptBucket", "Arn"] }),
+    BackupKmsKeyArn: resolve({ "Fn::GetAtt": ["BackupKmsKey", "Arn"] }) };
+  const rules = () => Object.values(template.Rules).every((rule) =>
+    rule.Assertions.every((item) => resolve(item.Assert, vals)));
+  assert.equal(rules(), true);
+  assert.equal(resolve(template.Conditions.TokyoOnly, vals), true);
+  assert.equal(resolve(template.Conditions.TokyoOnly, { ...vals, "AWS::Region": "us-east-1" }), false);
+  for (const field of ["VerifierSourceRoleArn", "BackupBucketArn"]) {
+    const bad = { ...vals, [field]: field === "VerifierSourceRoleArn" ? vals.CollectorRoleArn : vals.ReceiptBucketArn };
+    assert.equal(Object.values(template.Rules).every((rule) => rule.Assertions.every((item) => resolve(item.Assert, bad))), false);
+  }
+  const verifier = resolve(template.Resources.BackupVerifierPolicy.Properties.PolicyDocument.Statement, vals);
+  const backupPolicy = resolve(vault.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement);
+  const receiptPolicy = resolve(vault.Resources.ReceiptBucketPolicy.Properties.PolicyDocument.Statement);
+  const principal = `arn:aws:iam::${account}:role/BackupVerifierRole`;
+  const secure = { "aws:SecureTransport": "true", "aws:PrincipalIsAWSService": "false", "s3:TlsVersion": 1.2,
+    "aws:PrincipalArn": principal, "s3:ObjectCreationOperation": "true", "s3:if-none-match": "*" };
+  const requests = [
+    ["BackupBucket", "backups/opaque-run/artifacts/opaque-file"],
+    ["ReceiptBucket", "receipts/candidate/opaque-checkpoint"]
+  ];
+  let cases = 0;
+  for (const [bucket, key] of requests) {
+    const bucketArn = vals[`${bucket}Arn`];
+    const policy = [...verifier, ...(bucket === "BackupBucket" ? backupPolicy : receiptPolicy)];
+    const base = { principal, resource: `${bucketArn}/${key}`, context: secure };
+    const expect = (action, resource, result, statements = policy) => {
+      cases++;
+      assert.equal(fixtureDecision(statements, { ...base, action, resource }), result);
+    };
+    expect("s3:GetObjectVersion", base.resource, "Allow");
+    expect("s3:PutObject", base.resource, "Deny", [...policy, { Effect: "Allow", Action: "s3:*", Resource: "*" }]);
+    expect("s3:DeleteObjectVersion", base.resource, "Deny", [...policy, { Effect: "Allow", Action: "s3:*", Resource: "*" }]);
+    const marker = bucket === "BackupBucket" ? `${bucketArn}/backups/opaque-run/complete.json`
+      : `${bucketArn}/receipts/verified/opaque-checkpoint`;
+    expect("s3:PutObject", marker, "Allow");
+    expect("s3:GetObjectVersion", marker, "Allow");
+  }
+  const kms = { principal, resource: vals.BackupKmsKeyArn, action: "kms:Decrypt", context: {
+    "kms:ViaService": "s3.ap-northeast-1.amazonaws.com", "kms:CallerAccount": account,
+    "kms:EncryptionContext:aws:s3:arn": vals.BackupBucketArn
+  } };
+  assert.equal(fixtureDecision(verifier, kms), "Allow"); cases++;
+  assert.equal(fixtureDecision(verifier, { ...kms, context: { ...kms.context,
+    "kms:ViaService": "s3.us-east-1.amazonaws.com" } }), "ImplicitDeny"); cases++;
+  assert.equal(fixtureDecision(verifier, { ...kms, context: { ...kms.context,
+    "kms:EncryptionContext:aws:s3:arn": vals.ReceiptBucketArn } }), "Allow"); cases++;
+  return cases;
+}
+
 function checkPlanner() {
   const plan = createBackupPlan();
   assert.equal(plan.mode, "OFFLINE_DESIGN_ONLY"); assert.equal(plan.deployment, "NOT_CREATED");
@@ -324,8 +393,12 @@ try {
   const templateSource = fs.readFileSync(templatePath, "utf8");
   assert(Buffer.byteLength(templateSource, "utf8") <= 51_200, "template must fit CloudFormation TemplateBody limit");
   const template = JSON.parse(templateSource);
+  const verifierSource = fs.readFileSync(verifierTemplatePath, "utf8");
+  assert(Buffer.byteLength(verifierSource, "utf8") <= 51_200, "verifier template must fit TemplateBody limit");
+  const verifierTemplate = JSON.parse(verifierSource);
   phase = "structure-and-region"; checkStructure(template);
   phase = "policy-fixtures"; const policyFixtures = checkPolicies(template);
+  phase = "verifier-fixtures"; const verifierFixtures = checkVerifierTemplate(verifierTemplate, template);
   const mutations = [
     ["public-access-block-disabled", (copy) => { copy.Resources.BackupBucket.Properties.PublicAccessBlockConfiguration.BlockPublicPolicy = false; }],
     ["region-guard-removed", (copy) => { delete copy.Resources.ReceiptBucket.Condition; }],
@@ -336,7 +409,9 @@ try {
     ["multipart-exemption-removed", (copy) => { for (const statement of copy.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement) if (statement.Sid.startsWith("DenyObjectCreation")) delete statement.Condition.Bool; }],
     ["tls-floor-removed", (copy) => { copy.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement = copy.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement.filter((item) => item.Sid !== "DenyTlsBelow12"); }],
     ["audit-self-writes-enabled", (copy) => { copy.Resources.AuditTrail.Properties.EventSelectors[1].ReadWriteType = "All"; }],
-    ["dependency-cycle-added", (copy) => { copy.Resources.BackupWriterRole.DependsOn = ["BackupKmsKey"]; }]
+    ["dependency-cycle-added", (copy) => { copy.Resources.BackupWriterRole.DependsOn = ["BackupKmsKey"]; }],
+    ["collector-completion-deny-removed", (copy) => { copy.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement = copy.Resources.BackupBucketPolicy.Properties.PolicyDocument.Statement.filter((item) => item.Sid !== "DenyCollectorCompletionMarker"); }],
+    ["collector-verification-deny-removed", (copy) => { copy.Resources.ReceiptBucketPolicy.Properties.PolicyDocument.Statement = copy.Resources.ReceiptBucketPolicy.Properties.PolicyDocument.Statement.filter((item) => item.Sid !== "DenyCollectorVerificationReceipt"); }]
   ];
   for (const [name, mutate] of mutations) {
     phase = `negative-control:${name}`;
@@ -344,8 +419,8 @@ try {
     assert.throws(() => { checkStructure(copy); checkPolicies(copy); }, "intentional security regression was not detected");
   }
   phase = "offline-planner"; checkPlanner();
-  console.log(JSON.stringify({ result: "OFFLINE_INFRA_REGRESSION_PASS", resources: 15,
-    policyFixtures, mutationNegativeControls: mutations.length, planner: "PASS",
+  console.log(JSON.stringify({ result: "OFFLINE_INFRA_REGRESSION_PASS", vaultResources: 15, verifierResources: 2,
+    policyFixtures, verifierFixtures, mutationNegativeControls: mutations.length, planner: "PASS",
     scope: "SOURCE_AND_SYNTHETIC_CONDITION_MATCHING_ONLY", awsIamBehavior: "NOT_TESTED",
     cloudTrailDelivery: "NOT_TESTED", actualConditionalWrites: "NOT_TESTED", deployment: "NOT_CREATED",
     productionData: "NOT_ACCESSED", networkCalls: 0, credentialsRead: false }));

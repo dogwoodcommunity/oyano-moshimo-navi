@@ -5,12 +5,15 @@ import path from "node:path";
 import { createHash, randomUUID } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createPrivacyCheckpoint, comparePrivacyCheckpoints } from "./lib/backup-privacy-checkpoint.mjs";
 
 // Synthetic fixtures only. No project URL, connection string, input dump,
 // output directory, image override or existing container is accepted.
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const image = "docker.io/library/postgres:16-bookworm";
-const imageId = "sha256:60f4761b9035e0b8d5218f701a8c3382f641bf12b1604822574cf5be3baeb537";
+const image = process.argv.includes("--pg17") ? "docker.io/library/postgres:17" : "docker.io/library/postgres:16-bookworm";
+const imageId = process.argv.includes("--pg17")
+  ? "sha256:0b657ff48d7f76a1e907f381b1693eb4f2bf54c1d2df4feb6743d7dc601768dd"
+  : "sha256:60f4761b9035e0b8d5218f701a8c3382f641bf12b1604822574cf5be3baeb537";
 const migrations = [
   "ai_consult_memory_regression_bootstrap", "family_role_rls_regression_bootstrap",
   "account_erasure_regression_bootstrap", "schema", "api_grants", "production_rls",
@@ -27,16 +30,17 @@ const scope = {
   webAndRealDeviceAcceptance: "NOT_TESTED", providerRpoRto: "NOT_TESTED"
 };
 const argv = process.argv.slice(2);
-if (argv.length && !(argv.length === 1 && argv[0] === "--plan")) {
-  console.error("Usage: node scripts/test-synthetic-recovery.mjs [--plan]");
+if (!["", "--plan", "--pg17", "--pg17,--plan"].includes(argv.join(","))) {
+  console.error("Usage: node scripts/test-synthetic-recovery.mjs [--pg17] [--plan]");
   process.exit(2);
 }
-if (argv[0] === "--plan") {
+if (argv.includes("--plan")) {
   console.log(JSON.stringify({ scope: "synthetic-local-recovery", image, imageId, migrations,
     isolation: "two newly created containers; local Unix socket; no network, ports, host binds or existing volumes",
     checks: ["binary pg_dump/pg_restore", "all fixture table rows", "roles/ACL/RLS/functions/triggers",
       "family boundary and viewer rejection", "deletion receipts and pending jobs", "synthetic object bytes/hash",
-      "post-backup synthetic diary receipt replay, idempotence and resurrection rejection"], ...scope }, null, 2));
+      "post-backup synthetic diary receipt replay, idempotence and resurrection rejection",
+      "post-backup privacy checkpoint detects deletion and never approves public release"], ...scope }, null, 2));
   process.exit(0);
 }
 
@@ -52,6 +56,22 @@ let catalogDifferences;
 let env = Object.fromEntries(["PATH", "HOME", "TMPDIR"].filter(key => process.env[key]).map(key => [key, process.env[key]]));
 env = { ...env, LANG: "C", LC_ALL: "C" };
 const hash = bytes => createHash("sha256").update(bytes).digest("hex");
+const privacyFixtureQuery = `select coalesce(jsonb_agg(jsonb_build_object(
+  'id', e.id::text,
+  'scopes', jsonb_build_array(jsonb_build_object('kind', 'family', 'id', p.family_id::text)),
+  'body', jsonb_build_object('personId', e.person_id::text, 'title', e.title,
+    'body', e.body, 'attachments', e.attachments, 'metadata', e.metadata,
+    'cloudRevision', e.cloud_revision, 'cloudHash', e.cloud_hash)
+) order by e.id), '[]'::jsonb)::text
+from public.timeline_events e join public.people p on p.id=e.person_id
+where e.id='ea000000-0000-4000-8000-000000000040';`;
+function privacyFixtureCheckpoint(container, snapshotId, capturedAt, schemaHash) {
+  return createPrivacyCheckpoint({ sourceId: "synthetic-pg-recovery", sourceEpoch: "fixture-v1",
+    schemaHash, keyVersion: "synthetic-key-v1", snapshotId, capturedAt,
+    expectedTables: ["public.timeline_events"],
+    tables: [{ name: "public.timeline_events", rows: JSON.parse(sql(container, privacyFixtureQuery)) }]
+  }, Buffer.alloc(32, 0x73));
+}
 function command(args, input, { allowFailure = false, timeout = 60_000 } = {}) {
   const child = spawnSync("docker", args, { env, cwd: root, input, timeout,
     maxBuffer: 32 * 1024 * 1024, stdio: ["pipe", "pipe", "pipe"] });
@@ -386,6 +406,7 @@ try {
   const dump = command(["exec", source, "pg_dump", "-U", "postgres", "-d", "postgres", "--format=custom"]).stdout;
   assert.ok(dump.length > 0);
   const dumpHash = hash(dump);
+  const backupPrivacyCheckpoint = privacyFixtureCheckpoint(source, "before-deletion", new Date(backupAt).toISOString(), hash(sourceCatalog));
   phase = "delete-after-backup-completion";
   const backupDatabaseTime = sql(source, `select to_char(clock_timestamp() at time zone 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"');`);
   assert.match(backupDatabaseTime, /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{6}Z$/);
@@ -402,6 +423,13 @@ try {
     from public.notebook_diary_deletion_receipts r where local_diary_id='synthetic-live';`));
   assert.equal(newerReceipt.strictlyAfterBackup, true);
   validateNewerDiaryReceipt(newerReceipt.receipt);
+  const latestPrivacyCheckpoint = privacyFixtureCheckpoint(source, "after-deletion", new Date().toISOString(), hash(sourceCatalog));
+  const privacyComparison = comparePrivacyCheckpoints(backupPrivacyCheckpoint, latestPrivacyCheckpoint);
+  assert.equal(privacyComparison.publicReleaseAllowed, false);
+  assert.equal(privacyComparison.status, "ISOLATION_REQUIRED");
+  assert.equal(privacyComparison.changes.length, 1);
+  assert.equal(privacyComparison.changes[0].kind, "REMOVED");
+  assert.equal(privacyComparison.isolatedScopeHashes.length, 1);
   const restoreStartedAt = Date.now();
   const destination = await createContainer("restore");
   phase = "restore-role-bootstrap";
@@ -441,7 +469,8 @@ try {
     checks: { binaryDumpRestore: "PASS", fixtureRows: "PASS", catalogAndRoles: "PASS",
       familyRlsAndViewerRejection: "PASS", deletionReceiptsAndPendingJobs: "PASS",
       sentNotificationReceipt: "PASS", executionGateClosed: "PASS", objectBytesAndHash: "PASS",
-      objectReference: "PASS", objectCorruptionDetection: "PASS" },
+      objectReference: "PASS", objectCorruptionDetection: "PASS",
+      privacyCheckpointDeletionNoRelease: "PASS" },
     syntheticObjectCount: 1, syntheticObjectBytes: object.size, syntheticObjectSha256: object.sha256,
     backupStartedAt: new Date(backupAt).toISOString(), restoreStartedAt: new Date(restoreStartedAt).toISOString(),
     acceptanceCompletedAt: new Date(completedAt).toISOString(), syntheticRestoreDurationMs: completedAt - restoreStartedAt,

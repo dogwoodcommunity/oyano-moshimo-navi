@@ -15791,3 +15791,36 @@ https://mitene.us/
   source権限方式変更/未知schema/同期消去journal/公開復元の自動化/新重大リスクは再Astra判断。
   AWS作成/個人情報転送/保持と権限拡大の承認、通知tombstone回答、署名/両OS実機/申請は未完。
   本番・利用者データ・Web配信・Storeに変更なし。保護対象の未追跡Claude2文書/review_exportsに不介入。
+
+## 2026-09-24 追記 429 — backup隔離判定・Verifier分離・PG17合成復元
+
+- 本人のSol切替完了後「すすめて」を受け、追記428でAstraが確定した限定範囲を開発branchで実装。
+  開始HEAD `7203e47`、branch `codex/consult-guest-entry`、draft PR #9は未統合。
+  本番source/秘密・AWS資源・利用者データは読取/変更していない。
+- `scripts/lib/backup-privacy-checkpoint.mjs` を新設。表ごとのID・内容・所属scopeを
+  domain分離したHMAC-SHA256で照合し、古いcheckpointからの削除/変更・scope変更を
+  隔離候補にする。未知表、重複行、別source/schema/key、古いcheckpoint等は拒否。
+  `assessIsolatedRestore` の自動判定は常に `publicReleaseAllowed:false`。
+  source消失・latest不在・cutoff未証明では公開を許さない。計15合成ケースPASS。
+  ただし対象表一覧/一貫snapshotは呼出元の証拠が必要で、現在のpure moduleだけでは
+  本番全表の取得や削除RPOゼロを保証しない。checkpointは匿名情報ではなく仮名化metadata。
+- `backup-vault.cfn.json` にCollectorの完了marker/検証receipt書込を明示拒否するbucket policyを追加。
+  vault templateのTemplateBody上限を守るため、機械VerifierRole/Policyは
+  `backup-verifier.cfn.json` に分離。Verifierは指定prefix/version読取とmarker書込のみ、
+  artifact/candidateの書換・削除/保持変更は拒否する設計。人用RestoreReaderとは別。
+  offline試験はvault 15資源、policy条件61件、Verifier 2資源/条件13件、mutation12件PASS。
+  AWSの本物のIAM評価/暗号化・conditional write/CloudTrail/通知実受信は未検証。
+- 既存byte照合62ケースPASS。東京向け `cfn-lint==1.53.3` で2templateを検証してPASS。
+  固定digestの使い捨てPostgreSQL17 containerをnetwork/volume/host bindなしで2個作り、
+  56表・role/ACL/RLS/trigger・合成写真byte・新しい日記削除receiptの再適用/復活拒否、
+  同じ合成DBの削除前後checkpoint比較をPASS。終了後のcontainer cleanupもPASS。
+  PG17のdump/restoreの合成成功であり、実Auth/MFA因子・Storage API・対象者/アカウント削除・
+  実sourceのsnapshot cutoff・本番バックアップ・実RPO/RTOの証明ではない。
+- 未完: 合成source/Storage adapter、独立Verifierの実bytes/VersionId照合と失敗注入、
+  全対象table分類/網羅の実証、実AWS合成権限拒否、費用・保持・source秘密権限の承認、
+  承認後の実backup/隔離復元、DB-first反映、署名/両OS実機、Store申請。
+  source Storage S3鍵の広い全操作/RLS迂回権限を読取専用とは呼ばず、無断で配布しない。
+  重要なIAM/個人情報処理差分は統合・公開前にAstra/独立レビューが必要。
+  本番/public restore自動化は今回作っていない。
+- 変更をcommit/pushしてCI確認後もPR #9をdraftに保つ。保護対象の未追跡Claude2文書と
+  `review_exports/` には不介入。sourceと実環境、CI、Store提出の各証拠を混同しない。

@@ -1080,6 +1080,14 @@
        }
       },
       {
+       "Sid": "DenyCollectorCompletionMarker",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": { "Fn::Sub": "${BackupBucket.Arn}/backups/*/complete.json" },
+       "Condition": { "ArnEquals": { "aws:PrincipalArn": { "Fn::GetAtt": ["BackupWriterRole", "Arn"] } } }
+      },
+      {
        "Sid": "DenyWriterReadDeleteAndRetentionChanges",
        "Effect": "Deny",
        "Principal": "*",
@@ -1271,6 +1279,14 @@
          "s3:ObjectCreationOperation": "true"
         }
        }
+      },
+      {
+       "Sid": "DenyCollectorVerificationReceipt",
+       "Effect": "Deny",
+       "Principal": "*",
+       "Action": "s3:PutObject",
+       "Resource": { "Fn::Sub": "${ReceiptBucket.Arn}/receipts/verified/*" },
+       "Condition": { "ArnEquals": { "aws:PrincipalArn": { "Fn::GetAtt": ["BackupWriterRole", "Arn"] } } }
       },
       {
        "Sid": "DenyWriterReadDeleteAndRetentionChanges",

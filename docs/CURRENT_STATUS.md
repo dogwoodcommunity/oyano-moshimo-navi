@@ -2,6 +2,21 @@
 
 短い再開用メモ。過去の詳細は `SESSION_HANDOFF.md` の指定追記へ。Gitと実環境が優先。
 
+## 今回完了（2026-09-24 backup隔離判定と権限分離のローカル実装）
+
+- 追記428の確定範囲で、HMAC付きの全件checkpoint比較と隔離復元判定をpure moduleで追加。
+  削除・編集・所属範囲変更を検出しても自動公開せず、source全損/最終cutoff不明は拒否する。
+  これは入力された対象表の比較であり、本番表の網羅・正しいsnapshot取得を証明する収集adapterは未実装。
+- 既存vault templateでCollectorから `complete.json` と検証済みreceiptへの書込を明示拒否。
+  別templateの機械VerifierRoleは候補/指定version読取とmarker書込に限定。
+  AWS未適用で、実IAM挙動/CloudTrail/実資格は未検証。
+- 合成pure 15ケース、offline IAM条件61＋Verifier13＋mutation12、既存byte照合62ケース、
+  CloudFormation東京向けlint、使い捨てPG17で56表/role/RLS/写真byte/新しい日記削除receipt再適用と
+  checkpointによる削除検出はPASS。実本番backup/隔離復元・Auth/MFA/全削除範囲・実機・申請は未完。
+- 次は合成source/Storage adapterと保管先の失敗注入試験をSolで続け、重要なIAM/個人情報処理差分は
+  統合・AWS作成前にAstra/独立レビューへ渡す。AWS作成・source秘密配布・個人情報転送・
+  本番切替/ストア提出は別承認と実環境受入が必要。PR #9はdraftのまま。
+
 ## 今回完了（2026-09-24 実backupのAstra設計）
 
 - 本人「切り替えた」後、backup収集/独立照合/隔離復元の限定実装を設計（追記428）。
