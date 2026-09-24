@@ -15639,3 +15639,29 @@ https://mitene.us/
   PR #9のCI `35959526031` は `personal-data-infrastructure` / `web-and-mobile` ともsuccess。
   CIには両OSのJS export/設定生成や合成試験が含まれるが、実機・正式署名・本番受入は含まれない。
   この結果の文書追記は `[skip ci]` commitで保存する。
+
+## 2026-09-24 追記 424 — 認証実装レビューでfocus/遅着と例外回復の不足を再現
+
+- 本人「切り替えた。続けて」を受け、source `29ab8d7` の重要処理をレビュー。
+  開始HEAD `79f8257`、branch `codex/consult-guest-entry`、draft PR #9。追加モデル/API/外部レビュー呼出しなし。
+  nonce/メール/開始本人/access-refresh/期限照合、待機/ロック分離、pending保護は確認した。
+- 実helper/handler/componentを合成API・画面ライフサイクルで動かし、4ケースを再現。
+  (1) mountedのまま別画面へ移った後に元画面が認証結果で遷移する。
+  (2) 非表示のhandoffが購読を続け、後のログインで古い引継ぎの保存と遷移を始める（既存の隣接問題）。
+  (3) completedAuth再利用時にgetSessionがthrowすると失敗表示へ戻らずrejectする。
+  (4) handoffの通信throwでloading/consumedが解除されず、再試行できない（既存の隣接問題）。
+  実データ/メール/本番APIの試験ではない。fixtureは `/private/tmp/oyano-auth-review.JeTbyL/reproduce.mjs`。
+- `MOBILE_AUTH_IMPLEMENTATION_REVIEW_2026-09-24.md` に根拠と修正範囲を保存。
+  focus期間・対象・リクエスト世代を確認し、認証購読をfocus限定、旧read/event/resultを無視する。
+  例外時は現在の処理だけを再試行状態へ戻す。古いcatch/finallyが新しい処理を解除しない。
+  既存の本人照合/サーバーhandoff冪等性/権限を緩和しない。3画面/callbackと限定回帰が次のSol範囲。
+  JSだけの修正は型・回帰・両OSexportを行い、native依存不変なら途中の全native再compileを繰り返さない。
+- GitHubでCI `35959526031` / head `29ab8d7` / 全2ジョブsuccessを再確認。
+  今回は未収録の条件を検出したレビューで、CI成功をもって統合可とはしない。
+  前回native compile結果は再実行していない。Supabaseの前回観測を今回再確認したとも扱わない。
+- 本番統合は修正待ち。設計判断は確定したためSolへ戻し、限定修正後は追記422の不足migrationの
+  準備/隔離検証まで進められる。認証修正差分とmigration/切戻しの統合前レビューはまとめて行う。
+  本番反映/実データ/正式署名/運用/申請宣言の既存境界を維持。新たな本人混同や前提変更ならAstraへ。
+- 今回のリポジトリ差分はレビュー/引き継ぎ4文書のみ。保護対象の未追跡2文書/review_exportsは不介入。
+  文書差分を確認し `[skip ci]` でGitHubへpushする。アプリ修正・本番/DB/Store変更はまだない。
+  「ここからはGPT-6 Solに戻して進められます。」と案内して本人の切替完了返答を待つ。
