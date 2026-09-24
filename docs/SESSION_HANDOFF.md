@@ -15732,3 +15732,6 @@ https://mitene.us/
   未知の本番差分/旧通知出現/本人混同/新しい重要設計/検証付き修正2回失敗でAstraへ戻す。
   初回公開candidateの最終レビューは別ゲート。本人の切替完了返答後に再開する。
   保護対象の未追跡Claude2文書/review_exportsは不介入。sourceと引き継ぎを開発branchへpushしてCIを確認する。
+- source `1da504147984ade24305a8d953766218e844ff50` をpush完了。GitHub CI `35963043239` の
+  `web-and-mobile` / `personal-data-infrastructure` はともにsuccess。PR #9はdraftのまま未統合。
+  本番・実機・署名・審査の証拠とは区別。この確定結果だけを `[skip ci]` の文書commitで追記/pushする。
